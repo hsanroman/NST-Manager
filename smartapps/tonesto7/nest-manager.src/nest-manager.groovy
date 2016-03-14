@@ -37,14 +37,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "0.7.1" }
-def appVerDate() { "3-13-2016" }
+def appVersion() { "0.7.2" }
+def appVerDate() { "3-14-2016" }
 def appVerInfo() {
 
-	"V0.7.0 (Mar 11th, 2016)\n" +
+	"V0.7.2 (Mar 14th, 2016)\n" +
+    "Added: Added in polling preference that allows you to enable updating children only when there is new data.\n" +
+    "Added: Split up device and structure polling into to schedules and an additional 90 second follow up poll.\n" +
     "Added: Preference option to turn off the icons in the App\n" +
     "Added: Preference option to disable protect alarm state events from spamming device activity feed\n" +
-    "Added: Select Modes now that will trigger Nest Home/Away\n\n" +
+    "Added: Select Modes now that will trigger Nest Home/Away\n" +
+    "Added: Use Modes to as notification quiet times.\n\n" +
     
 	"V0.6.5 (Mar 10th, 2016)\n" +
     "Fixed: UI Polish and fixed a bug in notifications... \n" +
@@ -102,7 +105,8 @@ mappings {
 
 def authPage() {
     //log.trace "authPage()"
-    getWebAppParams()
+    getWebFileData()
+    //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     if(!state.accessToken) { //this is an access token for the 3rd party to make a call to the connect app
         state.accessToken = createAccessToken()
     }
@@ -173,8 +177,8 @@ def authPage() {
                     			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")) 
                     }
                     state?.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Use Nest as Presence Device?", type: "bool", required: false, submitOnChange: true, 
-                    			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_presence_Icon.png")) 
+                    input(name: "presDevice", title:"Use Nest as Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
+                    			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")) 
                     state?.presDevice = presDevice ? true : false
                 }
                 
@@ -220,8 +224,9 @@ def prefsPage() {
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png")
         }
         section("Nest Presence Automation:") {
-        	href "modePresPage", title: "Nest Presence Automation", description: "Tap to configure...",
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_presence_Icon.png")
+        	def presDesc = (awayModes && homeModes) ? "Modes are Selected\n\nTap to configure..." : "Tap to configure..."
+        	href "modePresPage", title: "Nest Presence Automation", description: presDesc,
+            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
        	}
         
         section("Notifications:") {
@@ -323,98 +328,108 @@ def onAppTouch(event) {
 |								API/Device Polling Methods										|
 *************************************************************************************************/
 
-def pollFollow() {
-	if(isPollAllowed()) { poll() }
-}
+def pollFollow() { if(isPollAllowed()) { poll() } }
 
 def pollWatcher(evt) {
-	//log.debug "pollWatcher Event received..."
-    if( isPollAllowed() && !ok2PollDevice()) { 
-    	//log.debug("pollWatcher Event can't poll...")
-        return 
-    }
-    else if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { 
-    	//log.info("pollWatcher Event polling...")
-        poll()
-    }
-    else { 
-    	//log.debug("pollWatcher Event returned...")
-        return }
+    if( isPollAllowed() && !ok2PollDevice()) { return }
+    else if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
+    else { return }
 }
 
 def poll(force = false, type = null) {
 	setStateVar()
+    runIn(90, "pollFollow",[overwrite: true])
    	if(isPollAllowed()) { 
    		def dev = false
         def str = false
         if (force == true) {
-          	log.warn "poll(force) received..."
-			def lastFrcdPoll = getLastForcedPollSec()
-            def pollWaitVal = !state?.pollWaitValue ? 10 : state?.pollWaitValue.toInteger()
-    		if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
-   				LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
-    			if(type == "dev") { 
-                	log.debug "Forcing Device Data Poll..."
-                    dev = getApiDeviceData() 
-                }
-               	else if (type == "str") { 
-                	log.debug "Forcing Structure Data Poll..."
-                    str = getApiStructureData() 
-                }
-                else {
-                	log.debug "Forcing Device and Structure Data Poll..."
-                	dev = getApiDeviceData()
-                	str = getApiStructureData()
-                }
-               	def now = new Date()
-    			atomicState?.lastForcePoll = formatDt(now).toString()
-                schedulePoll()
-        	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum of (10)...", "debug", true) }
+          	forcedPoll()
 		}
-   		else if(!force && (ok2PollDevice() || ok2PollStruct())) {
+   		else if(!force && (ok2PollDevice())) {
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
-                dev = getApiDeviceData()
-                //log.debug "dev: ${dev}"
-            	schedulePoll()
-            } 
-            if(ok2PollStruct()) { 
-            	LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
-                str = getApiStructureData()
-                //log.debug "str: ${str}"
+            	dev = getApiDeviceData()
+                scheduleNextPoll()
             } 
             else { 
-    			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastDevicePollSec()}) seconds ago...", "info", false) 
-    			pollDevScheduler()
+    			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
+    			scheduleNextPoll()
     		}
 		}
-       	updateChildData() 
-        getWebAppParams() //This reads a JSON file from a web server with timing values and version numbers
-        checkNotify() //Checks if a notification needs to be sent for a specific event
+        if(state.updChildOnNewOnly) {
+        	if (force || dev || (getLastChildUpdSec() > 1800)) {
+       			updateChildData() 
+            }
+        }
+        else { updateChildData() }
+        
+        getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+        notificationCheck() //Checks if a notification needs to be sent for a specific event
 	}
 }
 
-def schedulePoll(val = null) {
+def pollStr() {
+   	if(isPollAllowed()) { 
+        def str = false
+        if(ok2PollStruct()) {
+   			LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
+            str = getApiStructureData()
+            scheduleNextPoll()
+       	} 
+        if(str) { updateChildDevice() }
+    }
+}
+
+def schedDevPoll(val = null) {
 	def pollVal = !val ? state?.pollValue.toInteger() : val.toInteger()
-    log.debug "scheduling Poll for (${pollVal}) seconds"
+    log.debug "scheduling Device Poll for (${pollVal}) seconds"
 	runIn(pollVal, "poll",[overwrite: true])
     runIn(90, "pollFollow",[overwrite: true])
 }
 
-def pollDevScheduler() {
-	def lastDevPoll = getLastDevicePollSec()
-    def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
-    def newPollVal = (int) ( pollVal - lastDevPoll)
-    if	(newPollVal < pollVal) { schedulePoll(newPollVal) }
-    else { schedulePoll(pollVal) }
+def schedStrPoll(val = null) {
+	def pollStrVal = !val ? state?.pollStrValue.toInteger() : val.toInteger()
+    log.debug "scheduling Structure Poll for (${pollStrVal}) seconds"
+	runIn(pollStrVal, "pollStr",[overwrite: true])
 }
 
-def pollStrScheduler() {
+def scheduleNextPoll() {
+	def lastDevPoll = getLastDevicePollSec()
+    def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
+    def newPollVal = ((pollVal.toInteger() - lastDevPoll.toInteger()) < 6) ? pollVal : (int) (pollVal - lastDevPoll)
+    if	(newPollVal < pollVal) { schedDevPoll(newPollVal) }
+    else { schedDevPoll(pollVal) }
+
 	def lastStrPoll = getLastStructPollSec()
     def pollStrVal = state?.pollStrValue ? state?.pollStrValue.toInteger() : 60
-    def newPollVal = (int) ( pollStrVal - lastStrPoll)
-    if	(newPollVal < pollStrVal) { schedulePoll(newPollVal) }
-    else { schedulePoll(pollVal) }
+    def newStrPollVal = ((pollStrVal.toInteger() - lastStrPoll.toInteger()) < 6) ? pollStrVal : (int) (pollStrVal - lastStrPoll)
+    if	(newStrPollVal < pollStrVal) { schedStrPoll(newStrPollVal) }
+    else { schedStrPoll(pollStrVal) }
+}
+
+def forcedPoll(type = "dev") {
+	log.warn "poll(force) received..."
+	def lastFrcdPoll = getLastForcedPollSec()
+    def pollWaitVal = !state?.pollWaitValue ? 10 : state?.pollWaitValue.toInteger()
+    if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
+   		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
+    	if(type == "dev") { 
+           	log.debug "Forcing Device Data Poll..."
+            getApiDeviceData() 
+        }
+       	else if (type == "str") { 
+           	log.debug "Forcing Structure Data Poll..."
+            getApiStructureData() 
+        }
+        else {
+           	log.debug "Forcing Device and Structure Data Poll..."
+           	getApiDeviceData()
+          	getApiStructureData()
+        }
+       	def now = new Date()
+       	atomicState?.lastForcePoll = formatDt(now).toString()
+       	scheduleNextPoll()
+   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${state.pollWaitValue})...", "debug", true) }
 }
 
 def getApiStructureData() {
@@ -507,6 +522,8 @@ def getApiDeviceData() {
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
 	try {
+    	def now = new Date()
+    	atomicState?.lastChildUpdDt = formatDt(now).toString()
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
 			
@@ -527,9 +544,8 @@ def updateChildData() {
         	}
             
             else if(state?.presDevice && devId == "NestPresenceDevice") {
-            	LogTrace("UpdateChildData >> Presence id: ${devId} | pData: ${pData}")
-                def pData = [api:apiIssues(), pres:locationPresence()] 
-            	it.generateEvent(null) //parse received message from parent
+            	LogTrace("UpdateChildData >> Presence id: ${devId}")
+            	it.updateData() //parse received message from parent
                 state?.presDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	} 
@@ -564,9 +580,9 @@ def apiIssues() {
     LogAction("API Issues: ${state.apiIssues}", "debug", false) 
 }
 
-def modeWatcher(evt) { checkMode() }
+def modeWatcher(evt) { checkPresMode() }
 
-def checkMode() { 
+def checkPresMode() { 
 	if (homeModes) {
     	homeModes?.each { m ->
         	if(m.toString() == location.mode.toString()) { 
@@ -591,7 +607,7 @@ def ok2PollStruct() { return (getLastStructPollSec() > (!state.pollStrValue ? 60
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
-
+def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
 
 /************************************************************************************************
 |										Nest API Commands										|
@@ -678,7 +694,7 @@ def setTargetTemp(child, unit, temp) {
     catch (ex) { 
     	LogAction("setTargetTemp Exception: ${ex}", "error", true, true) 
     	if(childDebug && child) { child?.log("setTargetTemp Exception: ${ex}", "error") }
-		return result
+		return false
     }
 }
 
@@ -778,7 +794,7 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 |								Push Notification Functions										|
 *************************************************************************************************/
 
-def checkNotify() {
+def notificationCheck() {
 	if(recipients) {
 		if (state?.missedPollNotif) { missedPollNotify() }
 		if (state?.updNotif) { newUpdNotify() }
@@ -801,14 +817,16 @@ def newUpdNotify() {
 	try {
     	def appUpd = isAppUpdateAvail()
     	def pUpd = isProtUpdateAvail()
+        def prUpd = isPresUpdateAvail()
     	def tUpd = isTstatUpdateAvail()
 		if(dayOk() && timeOk() && quietModeOk() ) { 
-            if((appUpd || pUpd || tUpd) && (getLastUpdMsgSec() > state.updNotifyWaitVal.toInteger())) {
+            if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > state.updNotifyWaitVal.toInteger())) {
     			def appl = !appUpd ? "" : "Manager App: v${state?.appData.versions.app.ver.toString()}, "
     			def prot = !pUpd ? "" : "Protect: v${state?.appData.versions.protect.ver.toString()}, "
+                def pres = !prUpd ? "" : "Presence: v${state?.appData.versions.presence.ver.toString()}, "
         		def tstat = !tUpd ? "" : "Thermostat: v${state?.appData.versions.thermostat.ver.toString()}"
                 def now = new Date()
-        		sendMsg("Info", "Update(s) are available: ${appl}${prot}${tstat}...  Please visit the IDE to Update your code...")
+        		sendMsg("Info", "Update(s) are available: ${appl}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
         		state?.lastUpdMsgDt = formatDt(now)
             }
         }
@@ -850,7 +868,7 @@ def getLastUpdMsgSec() { return !state?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds
 def getLastMisPollMsgSec() { return !state?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastMisPollMsgDt).toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
-def getWebAppParams() {
+def getWebFileData() {
 	def params = [ 
         uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
        	contentType: 'application/json'
@@ -861,7 +879,15 @@ def getWebAppParams() {
             //LogAction("getGitAppData Resp: ${resp?.data}", "debug", false)
         }	
     }
-	catch (ex) { LogAction("getGitAppParams Exception: ${ex}", "error", true, true) }
+	catch (ex) {
+    	if(ex instanceof groovyx.net.http.HttpResponseException) {
+           	log.warn  "appParams.json file not found..."
+            return false
+        } else { 
+        	LogAction("getWebFileData Exception: ${ex}", "error", true, true) 
+        	return false
+        }
+    }
 }
 
 def refresh() {
@@ -885,6 +911,18 @@ def isAppUpdateAvail() {
        		return true 
     	} else { return false }
    	} catch (ex) { LogAction("isAppUpdateAvail Exception: ${ex}", "error", true, true) }
+}
+
+def isPresUpdateAvail() {
+	try {
+        def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
+    	def newPVer = !state?.appData.versions.presence.ver ? "0.0.0" : state?.appData.versions.presence.ver.toString()
+		if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
+       		(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
+       		(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
+       		return true 
+    	} else { return false }
+    } catch (ex) { LogAction("isPresUpdateAvail Exception: ${ex}", "error", true, true) }
 }
 
 def isProtUpdateAvail() {
@@ -933,7 +971,7 @@ def getNestStructures() {
             	def dni = [strucData.structure_id].join('.')
             	struct[dni] = strucData.name.toString()
             }
-            if (!state?.thermostats || !state?.protects || ok2PollDevice()) {
+            if (state?.thermostats || state?.protects && ok2PollDevice()) {
             	getApiDeviceData() 
             }
         } 
@@ -1056,8 +1094,9 @@ def addRemoveDevices() {
     	if(devsCrt > 0) { LogAction("Created (${tstats?.size()}) Thermostat(s) and ${nProtects?.size()} Protect(s)", "debug", true) }
    		
         if(state?.presDevice) {
-        	def dni = "NestPresenceDevice"
-        	def d3 = getChildDevice(dni)
+        	try {
+        		def dni = "NestPresenceDevice"
+        		def d3 = getChildDevice(dni)
         		if(!d3) {
             		d3 = addChildDevice(app.namespace, "Nest Presence", dni, null, [label: "Nest Presence Device"])
             		d3.take()
@@ -1067,6 +1106,7 @@ def addRemoveDevices() {
             		LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
         		}
         		return d3
+            } catch (ex) { LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) }
         }
         
     	def delete  // Delete any that are no longer in settings
@@ -1295,7 +1335,6 @@ def clientSecret() {
 *************************************************************************************************/
 
 def LogTrace(msg) { if(state?.advAppDebug) { Logger(msg, "trace") } }
-
 def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 	if(showAlways) { Logger(msg, type) }
     
@@ -1416,7 +1455,7 @@ def setStateVar(frc = false) {
 }
 
 def stateCleanup() {
-	//This that I need to clear up on updates go here
+    //This that I need to clear up on updates go here
 }
 
 
@@ -1438,10 +1477,11 @@ private debugStatus() { return state?.appDebug ? "On" : "Off" } //Keep this
 private childDebugStatus() { return state?.childDebug ? "On" : "Off" } //Keep this
 private isAppDebug() { return state?.appDebug ? true : false } //Keep This
 private isChildDebug() { return state?.childDebug ? true : false } //Keep This
-def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset") ? "Sunset" : "Sunrise") }
-def getQTimeStopLbl() { return (qStopInput == "A specific time") ? (qStopTime ? "Stop: ${time2Str(qStopTime)}" : null) : ((qStopInput == "sunset") ? "Sunset" : "Sunrise") }
-def getQDayLbl() { return quietDays ? "\nDays: ${quietDays}" : "" }
-def getQTimeLabel() { return (getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}${getQDayLbl()}" : "Tap to Set..." }
+def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset" || qStartInput == "sunrise") ? "Start: ${qstartInput.toString().capitalize()}" : null) }
+def getQTimeStopLbl() { return (qStopInput == "A specific time") ? (qStopTime ? "Stop: ${time2Str(qStopTime)}" : null) : ((qStopInput == "sunset" || qStopInput == "sunrise") ? "Stop : ${qStopInput.toString().capitalize()}" : null) }
+def getQModesLbl() { return quietModes ? "Quiet Mode(s): ${quietModes}" : null }
+def getQDayLbl() { return quietDays ? "Days: ${quietDays}" : null }
+def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl() || getQModesLbl()) ? "${(getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}\n" : ""}${(quietDays ? "${getQDayLbl()}" : "")}${(quietModes ? "\n${getQModesLbl()}" : "")}" : "Tap to Set..." }
 
 def formatDt(dt) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
@@ -1584,6 +1624,10 @@ def pollPrefPage() {
             input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: null, metadata: [values:waitValEnum()], description: tempChgWaitValDesc, submitOnChange: true)
        		state?.tempChgWaitVal = !tempChgWaitVal ? 4 : tempChgWaitVal.toInteger()
         }
+        section("Other Options:") {
+        	input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", required: false, defaultValue: false, submitOnChange: true
+            state.updChildOnNewOnly = updChildOnNewOnly ? true : false
+        }
         section("Advanced Polling Options:") {
         	paragraph "If you are still experiencing Polling issues then you can select these devices to use there events to determine if a scheduled poll was missed\nPlease select as FEW devices as possible!\nMore devices will not make for a better polling."
             input "temperatures", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", multiple: true, required: false, image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/temperature.png")
@@ -1678,10 +1722,13 @@ def devPrefPage() {
 		if(state?.protects) {
         	section("Protect Devices:") {
         		input "showProtAlarmStateEvts", "bool", title: "Disable Alarm State in Device Activity Feed?", required: false, defaultValue: false, submitOnChange: true, 
-                			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
+                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
         	}
+			section(" ") {
+            	
+            }
         }
-    	if(state?.protects) {
+    	if(state?.thermostats) {
 			section("Thermostat Devices:") {
         		paragraph "Nothing Here Yet:  More to come soon!!!"
             }        
@@ -1689,18 +1736,19 @@ def devPrefPage() {
 	}
 }
 
-
 def quietTimePage() {
 	dynamicPage(name: "quietTimePage", title: "Quiet during certain times", uninstall: false) {
 		section() {
-			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: "A specific time", submitOnChange: true, required: false
+			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null,submitOnChange: true, required: false
+            //state?.qStartInput = qStartInput ? qStartInput : null
 			if(qStartInput == "A specific time") { 
-            	input "qStartTime", "time", title: "Start time", required: false } 
+            	input "qStartTime", "time", title: "Start time", required: true } 
 		}
 		section() {
-			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: "A specific time", submitOnChange: true, required: false
+			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false
+            //state?.qStopInput = qStopInput ? qStopInput : null
 			if(qStopInput == "A specific time") { 
-            	input "qStopTime", "time", title: "Stop time", required: false } 
+            	input "qStopTime", "time", title: "Stop time", required: true } 
 		}
         section() {
         	input "quietDays", "enum", title: "Only on certain days of the week", multiple: true, required: false,
@@ -1717,12 +1765,12 @@ def modePresPage() {
 	dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
 		section() {
 			input "homeModes", "mode", title: "These modes set Nest to 'Home'", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_home_icon.png")
+            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_home_Icon.png")
 			if(homeModes) { state.homeModes = homeModes }
 		}
 		section() {
 			input "awayModes", "mode", title: "These modes set Nest to 'Away'", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_away_icon.png")
+            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_away_Icon.png")
 			if(awayModes) { state.awayModes = awayModes }
 		}
 	}

@@ -4,10 +4,10 @@
 Nest Manager is the unofficial user created SmartThings SmartApp and device handler for Nest devices to be used with SmartThings.
 This SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
 
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
@@ -18,7 +18,7 @@ This SmartApp and Device Handlers work together to provide integration to the Sm
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v0.7.1*__
+* Nest Manager - __*v0.7.2*__
  
 __Latest Device Versions:__
 

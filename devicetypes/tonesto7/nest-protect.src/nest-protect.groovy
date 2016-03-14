@@ -31,11 +31,10 @@ preferences {
                 "testCO": "CO Alert",
                 "testWarnSmoke": "Smoke Warning",
                 "testWarnCO": "CO Warning"])
-
     }
 }
 
-def devVer() { return "0.3.5" }
+def devVer() { return "0.3.6" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
@@ -175,13 +174,15 @@ def refresh() {
         break;
         default:
 			parent.refresh()
-    
+            
+        log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
     }
     
 }
 
 def generateEvent(Map results)
 {	
+	state.testMode = testMode ? testMode : null
     Logger("Gen Event parsing data ${results}")
 	if(results)
 	{
@@ -194,7 +195,7 @@ def generateEvent(Map results)
         batteryStateEvent(results?.battery_health.toString())
         carbonStateEvent(results?.co_alarm_state.toString())
         smokeStateEvent(results?.smoke_alarm_state.toString())
-        alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString())
+        if (!state.testMode) { alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString()) }
         uiColorEvent(results?.ui_color_state.toString())
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())

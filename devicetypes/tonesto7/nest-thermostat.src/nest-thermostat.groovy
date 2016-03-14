@@ -35,7 +35,6 @@ metadata {
 	definition (name: "Nest Thermostat", namespace: "tonesto7", author: "Anthony S.") {
 		capability "Actuator"
         capability "Polling"
-        //capability "Presence Sensor"
 		capability "Relative Humidity Measurement"
         capability "Refresh"
         capability "Sensor"
@@ -51,11 +50,12 @@ metadata {
         command "refresh"
         command "poll"
         
+        command "away"
+        command "present"
 		command "setAway"
         command "setHome"
         command "setPresMode"
         command "setFanMode"
-		//command "setPresence"
         command "setThermostatMode"
         command "setTemperature"
         command "temperatureUp"
@@ -307,6 +307,8 @@ def generateEvent(Map results) {
 				}
                 
                 //Logger("heatingSetpointC: ${heatingSetpoint} | coolingSetpointC: ${coolingSetpoint}")
+                temperatureEvent(temp)
+                targetTempEvent(targetTemp)
 				coolingSetpointEvent(coolingSetpoint)
 				heatingSetpointEvent(heatingSetpoint)
 				break;
@@ -838,6 +840,18 @@ def setPresMode() {
     }
 }
 
+// backward compatibility for previous nest thermostat (and rule machine)
+def away() {
+    log.trace "away()..."
+    setAway()
+}
+
+// backward compatibility for previous nest thermostat (and rule machine)
+def present() {
+    log.trace "present()..."
+    setHome()
+}
+
 def setAway() {
 	Logger("setAway Command Received")
 	presenceEvent("away") 
@@ -876,6 +890,10 @@ def heat() {
         	hvacModeEvent(currentMode) // reset the tile back
     	}
     }
+}
+
+def emergencyHeat() {
+    log.trace "emergencyHeat()..."
 }
 
 def cool() {
@@ -920,6 +938,10 @@ def fanAuto() {
    		parent.setFanMode(this,false)
         fanModeEvent("false")
     }
+}
+
+def setThermostatFanMode(str) {
+    log.trace "setThermostatFanMode()..."
 }
 
 def fanOff() {

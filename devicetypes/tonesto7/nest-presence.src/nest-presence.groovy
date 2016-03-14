@@ -1,7 +1,8 @@
 /**
  *  Nest Presence
+ *	Author: Ben W. (@desertBlade)
  *	Author: Anthony S. (@tonesto7)
- *  Author: Ben W. (@desertBlade)
+ *  
  *
  
  * Copyright (C) 2016 Ben W, Anthony S.
@@ -74,16 +75,13 @@ metadata {
         	state "ok", label: "API Status:\nOK"
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
-        
-        	standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
+        standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
 		main ("presence")
 		details ("presence", "nestPresence", "refresh")
 	}
 }
-
-
 
 def initialize() {
 	log.debug "initialize"
@@ -107,18 +105,17 @@ def refresh() {
 }
 
 def generateEvent(Map results) {
-	Logger("generateEvents Parsing data ${results}")
+	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
 	updateData()
-
-    lastUpdatedEvent()
- return null
+ 	return null
 }
 
 def updateData() {
 	apiStatusEvent(parent?.apiIssues())
     debugOnEvent(parent.settings?.childDebug)
     presenceEvent(parent?.locationPresence())
+    lastUpdatedEvent()
 }
 
 def getDataByName(String name) {
@@ -200,7 +197,7 @@ def setHome() {
     presenceEvent("home")
 }
 
-// Local Application Logging
+// Local Device Logging
 def Logger(msg, logType = "debug") {
  	if(parent.settings?.childDebug) { 
     	switch (logType) {
