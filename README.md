@@ -8,6 +8,7 @@ This SmartApp and Device Handlers work together to provide integration to the Sm
 
 ### The Devices Types
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500">
+
 ## Author
 * @tonesto7
 
@@ -17,25 +18,26 @@ This SmartApp and Device Handlers work together to provide integration to the Sm
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v0.7.0*__
+* Nest Manager - __*v0.7.1*__
  
 __Latest Device Versions:__
 
-* Nest Thermostat Device - __*v0.4.10*__
-* Nest Protect Device - __*v0.3.5*__
+* Nest Presence Device - __*v0.1.1*__
+* Nest Protect Device - __*v0.3.6*__
+* Nest Thermostat Device - __*v0.5.0*__
 
 ## What's New
 Everything! 
 
 ## Links
 #### GitHub Issues Link
-__[GitHub Project Issues Link](https://github.com/tonesto7/st-nest-unofficial/issues)__
+__[GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)__
 
 #### Forum Link
 __[https://community.smartthings.com/t/beta-full-nest-manager] (https://community.smartthings.com/t/beta-full-nest-manager)__
 
 #### Wiki
-__[Wiki Home Page](https://github.com/tonesto7/st-nest-unofficial/wiki/Home)__
+__[Wiki Home Page](https://github.com/tonesto7/nest-manager/wiki/Home)__
 
 ## Things to Know
  * __This is still a BETA so you may experience issues!!!__
@@ -82,8 +84,8 @@ _This is the by far the easiest way to install and get the latest updates for Ne
  * Go to My SmartApps in the IDE
  * Click on Settings
  * Click on Add new repository
- * Owner: __tonesto7__, Name: __st-nest-unofficial__, Branch: __master__
- * Under My SmartApps Click on _Update from Repo_ and select the _st-nest-unofficial_
+ * Owner: __tonesto7__, Name: __nest-manager__, Branch: __master__
+ * Under My SmartApps Click on _Update from Repo_ and select the _nest-manager_
  * Check the box next to _nest-manager_ and click _Execute Update_
  * Click on the _nest manager_ app link and select _publish_ and _publish for me_ 
  
@@ -94,9 +96,9 @@ _This is the by far the easiest way to install and get the latest updates for Ne
  * Go to My Device Types in the IDE (Not necessary if you added repository for the app)
  * Click on Settings
  * Click on Add new repository
- * Owner: __tonesto7__, Name: __st-nest-unofficial__, Branch: __master__
- * Under My Device Types Click on _Update from Repo_ and select the _st-nest-unofficial_
- * Check the box next to _nest-protect_ and _nest-thermostat_ then click _Execute Update_
+ * Owner: __tonesto7__, Name: __nest-manager__, Branch: __master__
+ * Under My Device Types Click on _Update from Repo_ and select the _nest-manager_
+ * Check the box next to _nest-presence_, _nest-protect_ and _nest-thermostat_ then click _Execute Update_
  * Click on each device link and select _publish_ and _publish for me_
  
 That's it your Done in the IDE... Just install __'Nest Manager'__ from the Marketplace > MyApps
@@ -114,11 +116,12 @@ When updates are made you will see the color change in the IDE.
  * Go into SmartApp __Nest Manager__ Settings
  * Click on App Settings and enable OAuth and click update
  
-####__Adding the Thermostat and Protect Device Handlers__
+####__Adding the Presence, Protect, and Thermostat Device Handlers__
  * Goto My Device Handlers
  * Create New Device Handler
  * Choose "From Code"
  * Copy Source code from nest-protect.src
+ * Repeat for nest-presence.src
  * Repeat for nest-thermostat.src
  * Remember to open each device and click _Publish for Me_
 
