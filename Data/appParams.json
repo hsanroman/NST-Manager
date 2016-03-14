@@ -1,0 +1,25 @@
+{
+  "state": {
+    "stateVarVer": 1
+  },
+  "timings": {
+    "devPollVal": 60,
+    "forcePollWait": 10,
+    "strPollVal": 180,
+    "tempWaitVal": 4
+  },
+  "versions": {
+    "app": {
+      "type": "beta",
+      "ver": "0.7.0"
+    },
+    "thermostat": {
+      "type": "beta",
+      "ver": "0.4.10"
+    },
+    "protect": {
+      "type": "beta",
+      "ver": "0.3.5"
+    }
+  }
+}
