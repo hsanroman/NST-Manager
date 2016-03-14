@@ -136,7 +136,7 @@ When updates are made you will see the color change in the IDE.
  * Choose **Protects**
  * *Done*
 
-## Issues and Troubleshooting
+## Issues
 _If you are experiencing any issues, please let us know by heading over to projects issues page on GitHub. If you don't see the issue reported please help open an new one and provide as much detail as you can._ 
   [Project Issues Link](https://github.com/tonesto7/st-nest-unofficial/issues) 
 In an effort to make it easier for some of you troubleshoot without having to use the IDE constantly.  I have added in a diagnostic option under the preference section of the SmartApp.  
@@ -144,6 +144,11 @@ Once this is enabled it will begin to store non-user identifiable error logs fro
 This feature will help you to view and export the logs (_also see the tip below_) directly from the Smart App. This also allows you to copy & paste them into the issues form on GitHub.
 *add screen shot of the diagnostic pages*
 __Tip:__ If you enable diagnostic logs in the app you can share the logs from with in the app you can store the direct link to log JSON file on you computer and browse directly to the log everytime you need to review the errors.
+
+## Troubleshooting
+**The most common issue is forgetting to enable oAuth for the app under SmartThings**
+
+Check the Wiki before posting question in the forums __[Wiki Home Page](https://github.com/tonesto7/nest-manager/wiki/Home)__
 
 ### Feature Requests
  * We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.
