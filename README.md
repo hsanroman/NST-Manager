@@ -153,3 +153,4 @@ __Tip:__ If you enable diagnostic logs in the app you can share the logs from wi
 
  To view the json returned from the API just get your authToken from the SmartApp state data and add it to this url
  https://developer-api.nest.com/devices?auth=_yourAuthTokenHere_
+ 
