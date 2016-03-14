@@ -20,6 +20,10 @@
     "protect": {
       "type": "beta",
       "ver": "0.3.5"
+    },
+    "presence": {
+      "type": "beta",
+      "ver": "0.1.1"
     }
   }
 }
