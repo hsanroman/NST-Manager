@@ -37,10 +37,15 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "0.7.2" }
-def appVerDate() { "3-14-2016" }
+def appVersion() { "0.7.3" }
+def appVerDate() { "3-15-2016" }
 def appVerInfo() {
 
+	"V0.7.3 (Mar 15th, 2016)\n" +
+    "Fixed: Structure scheduling.\n" +
+    "Fixed: Post Command data updates.\n" +
+    "Fixed: I broke new device selection in last update.\n\n" +
+    
 	"V0.7.2 (Mar 14th, 2016)\n" +
     "Added: Added in polling preference that allows you to enable updating children only when there is new data.\n" +
     "Added: Split up device and structure polling into to schedules and an additional 90 second follow up poll.\n" +
@@ -94,6 +99,8 @@ preferences {
     page(name: "quietTimePage")
     page(name: "modePresPage")
     page(name: "devPrefPage")
+    page(name: "nestLoginPrefPage")
+    page(name: "nestTokenResetPage")
 }
 
 mappings {
@@ -157,7 +164,6 @@ def authPage() {
 			if (structures) {
                	state?.structures = structures ? structures : null
                 def stats = getNestThermostats()
-                
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats" 
     			LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
 
@@ -253,6 +259,9 @@ def prefsPage() {
             	input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true)
             	state.disAppIcons = disAppIcons ? true : false
         }
+        section("Nest Login:") {
+        	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure..."
+        }
 		section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false 
     	}
@@ -342,28 +351,30 @@ def poll(force = false, type = null) {
    	if(isPollAllowed()) { 
    		def dev = false
         def str = false
-        if (force == true) {
-          	forcedPoll()
-		}
+        if (force == true) { forcedPoll() }
    		else if(!force && (ok2PollDevice())) {
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
             	dev = getApiDeviceData()
-                scheduleNextPoll()
-            } 
+                scheduleNextPoll("dev")
+            }
+            if(ok2PollStruct()) {
+            	if(getLastStructPollSec() > state?.pollStrValue) {
+                	pollStr()
+                }
+            }    
             else { 
     			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
     			scheduleNextPoll()
     		}
 		}
         if(state.updChildOnNewOnly) {
-        	if (force || dev || (getLastChildUpdSec() > 1800)) {
-       			updateChildData() 
-            }
+        	if (force || dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
-        
-        getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+        if(getLastWebUpdSec() > 1800) {
+        	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+        }
         notificationCheck() //Checks if a notification needs to be sent for a specific event
 	}
 }
@@ -374,9 +385,9 @@ def pollStr() {
         if(ok2PollStruct()) {
    			LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
             str = getApiStructureData()
-            scheduleNextPoll()
+            scheduleNextPoll("str")
        	} 
-        if(str) { updateChildDevice() }
+        if(str) { updateChildData() }
     }
 }
 
@@ -393,18 +404,21 @@ def schedStrPoll(val = null) {
 	runIn(pollStrVal, "pollStr",[overwrite: true])
 }
 
-def scheduleNextPoll() {
-	def lastDevPoll = getLastDevicePollSec()
-    def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
-    def newPollVal = ((pollVal.toInteger() - lastDevPoll.toInteger()) < 6) ? pollVal : (int) (pollVal - lastDevPoll)
-    if	(newPollVal < pollVal) { schedDevPoll(newPollVal) }
-    else { schedDevPoll(pollVal) }
-
-	def lastStrPoll = getLastStructPollSec()
-    def pollStrVal = state?.pollStrValue ? state?.pollStrValue.toInteger() : 60
-    def newStrPollVal = ((pollStrVal.toInteger() - lastStrPoll.toInteger()) < 6) ? pollStrVal : (int) (pollStrVal - lastStrPoll)
-    if	(newStrPollVal < pollStrVal) { schedStrPoll(newStrPollVal) }
-    else { schedStrPoll(pollStrVal) }
+def scheduleNextPoll(type = null) {
+    if(type == "dev" || !type) {
+    	def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
+    	def lastDevPoll = getLastDevicePollSec().toInteger()
+    	def newPollVal = ((pollVal - lastDevPoll) > 6) ? (int) (pollVal - lastDevPoll) : pollVal 
+    	if	(newPollVal < pollVal) { schedDevPoll(newPollVal) }
+    	else { schedDevPoll(pollVal) }
+	}
+    if(type == "str" || !type) {
+    	def pollStrVal = state?.pollStrValue ? state?.pollStrValue.toInteger() : 180
+    	def lastStrPoll = getLastStructPollSec().toInteger()
+    	def newStrPollVal = ((pollStrVal - lastStrPoll) > 6) ? (int) (pollStrVal - lastStrPoll) : pollStrVal
+    	if	(newStrPollVal < pollStrVal) { schedStrPoll(newStrPollVal) }
+    	else { schedStrPoll(pollStrVal) }
+    }
 }
 
 def forcedPoll(type = "dev") {
@@ -429,8 +443,12 @@ def forcedPoll(type = "dev") {
        	def now = new Date()
        	atomicState?.lastForcePoll = formatDt(now).toString()
        	scheduleNextPoll()
+        updateChildData()
    	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${state.pollWaitValue})...", "debug", true) }
 }
+
+def postStrCmd() { forcedPoll("str") }
+def postDevCmd() { forcedPoll("dev") }
 
 def getApiStructureData() {
 	LogAction("getApiStructureData()", "info", false)
@@ -545,7 +563,7 @@ def updateChildData() {
             
             else if(state?.presDevice && devId == "NestPresenceDevice") {
             	LogTrace("UpdateChildData >> Presence id: ${devId}")
-            	it.updateData() //parse received message from parent
+                it.generateEvent(null)
                 state?.presDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	} 
@@ -608,7 +626,7 @@ def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTim
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
-
+def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
 /************************************************************************************************
 |										Nest API Commands										|
 *************************************************************************************************/
@@ -650,10 +668,10 @@ def setStructureAway(child, value) {
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${temp})${unit}") }
     try {
 		if(val) { 	
-        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { poll(true, "str") } 
+        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { runIn(3, "postStrCmd") } 
         }
     	else { 		
-        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "home", child)) { poll(true, "str") } 
+        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "home", child)) { runIn(3, "postStrCmd") } 
         }
     	return true
     }
@@ -668,7 +686,7 @@ def setHvacMode(child, mode) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
 	LogAction("setHvacMode: ${devId} (${mode})", "debug", false, true)
     try {
-    	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.hvacMode, mode.toString(), child)) { poll(true, "dev") }
+    	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.hvacMode, mode.toString(), child)) { runIn(3, "postDevCmd") }
     	return true
     }
     catch (ex) { 
@@ -684,10 +702,10 @@ def setTargetTemp(child, unit, temp) {
     if(childDebug && child) { child?.log("setTargetTemp: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetC, temp, child)) { poll(true, "dev") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetC, temp, child)) { runIn(3, "postDevCmd") }
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetF, temp, child)) { poll(true, "dev") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetF, temp, child)) { runIn(3, "postDevCmd") }
         }
     	return true
     }
@@ -704,10 +722,10 @@ def setTargetTempLow(child, unit, temp) {
     if(childDebug && child) { child?.log("setTargetTempLow: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowC, temp, child)) { poll(true, "dev") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowC, temp, child)) { runIn(3, "postDevCmd") }
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowF, temp, child)) { poll(true, "dev") } 
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowF, temp, child)) { runIn(3, "postDevCmd") } 
         }
     	return true
     }
@@ -724,10 +742,10 @@ def setTargetTempHigh(child, unit, temp) {
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
     try {
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().targetHighC, temp, child)) { poll(true, "dev") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().targetHighC, temp, child)) { runIn(3, "postDevCmd") }
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, child)) { poll(true, "dev") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, child)) { runIn(3, "postDevCmd") }
         }
     	return true
     }
@@ -744,7 +762,7 @@ def setFanMode(child, fanOn) {
 	LogAction("setFanMode: ${devId} (${val})", "debug", false, true)
     if(childDebug) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val}, timeVal: ${timeVal}") }
     try {	
-		if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.fanActive, val, child)) { poll(true, "dev") }
+		if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.fanActive, val, child)) { runIn(3, "postDevCmd") }
      }
     catch (ex) { 
     	LogAction("setFanMode Exception: ${ex}", "error", true, true) 
@@ -869,13 +887,19 @@ def getLastMisPollMsgSec() { return !state?.lastMisPollMsgDt ? 1000 : GetTimeDif
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 def getWebFileData() {
+	def now = new Date()
 	def params = [ 
         uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
        	contentType: 'application/json'
     ]
     try {
+    	
         httpGet(params) { resp ->
-       		state?.appData = resp?.data
+			if(resp.data) {
+            	LogAction("Retrieving Latest appParams.json File from Web", "info", true)
+				state?.appData = resp?.data
+                atomicState?.lastWebUpdDt = formatDt(now).toString()
+            }
             //LogAction("getGitAppData Resp: ${resp?.data}", "debug", false)
         }	
     }
@@ -971,7 +995,7 @@ def getNestStructures() {
             	def dni = [strucData.structure_id].join('.')
             	struct[dni] = strucData.name.toString()
             }
-            if (state?.thermostats || state?.protects && ok2PollDevice()) {
+            if (ok2PollDevice()) {
             	getApiDeviceData() 
             }
         } 
@@ -1433,8 +1457,9 @@ def setStateVar(frc = false) {
 	try {
     	//If the developer changes the version in the web appParams JSON it will trigger 
         //the app to create any new state values that might not exist or reset those that do to prevent errors 
+        def stateVer = 2
 		def stateVar = !state?.stateVarVer ? 0 : state?.stateVarVer.toInteger()
-		if(!state?.stateVarUpd || frc || (stateVar < state?.appData.state.stateVarVer.toInteger())) { 
+		if(!state?.stateVarUpd || frc || (stateVer < state?.appData.state.stateVarVer.toInteger())) { 
 	 		if (!state?.pollValue) { state.pollValue = 60 }
      		if (!state?.pollStrValue) { state.pollStrValue = 180 }
      		if (!state?.pollWaitVal) { state.pollWaitVal = 10 }
@@ -1447,6 +1472,7 @@ def setStateVar(frc = false) {
      		if (!state?.misPollNotifyWaitVal) { state.misPollNotifyWaitVal = 300 }
      		if (!state?.misPollNotifyMsgWaitVal) { state.misPollNotifyMsgWaitVal = 3600 }
      		if (!state?.updNotifyWaitVal) { state.updNotifyWaitVal = 7200 }
+            if (!state.updChildOnNewOnly) { state.updChildOnNewOnly = false }
         	state?.stateVarUpd = true
         	state?.stateVarVer = state?.appData.state.stateVarVer ? state?.appData.state.stateVarVer.toInteger() : 0
             stateCleanup()
@@ -1850,6 +1876,25 @@ def resetDiagQueuePage() {
     	section ("Diagnostic Log Queue Reset..") {
             state.exLogs = []
             paragraph "Diagnostic Logs have been reset...\nPress Done to return to previous page..." 
+        }
+    }
+}
+
+def nestLoginPrefPage () {
+    dynamicPage(name: "nestLoginPrefPage", install: false) {
+        section("Nest Login Preferences:") {
+       	    href "nestTokenResetPage", title: "Reset your Nest Token", description: "Tap to Reset the Token...",
+            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
+       	}
+    }
+}
+
+def nestTokenResetPage() {
+	return dynamicPage(name: "nestTokenResetPage", install: false) {
+    	section ("Resetting Nest Token..") {
+        	revokeNestToken()
+            state.authToken = null
+            paragraph "Token has been reset...\nPress Done to return to previous page..." 
         }
     }
 }

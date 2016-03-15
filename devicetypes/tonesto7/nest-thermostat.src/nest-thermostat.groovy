@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.5.0" }
+def devVer() { return "0.5.1" }
 
 // for the UI
 metadata {
@@ -157,7 +157,7 @@ metadata {
 			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
         
-        valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, decoration: "flat", wordWrap: true) {
+        valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true) {
 			state("default", label: 'Firmware:\nv${currentValue}')
 		}
         
@@ -175,9 +175,6 @@ metadata {
 		}
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
 			state("default", label: '${currentValue}')
-		}
-        valueTile("filler1", "device.filler1", width: 6, height: 1, decoration: "flat") {
-			state("default", label: 'Auto-Mode Controls')
 		}
         standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false,  decoration: "flat") {
 			state "heatingSetpointUp", label:'  ', action:"heatingSetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#bc2323"
@@ -209,7 +206,7 @@ metadata {
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 	    }
-        valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
+        valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
         	state "ok", label: "API Status:\nOK"
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}

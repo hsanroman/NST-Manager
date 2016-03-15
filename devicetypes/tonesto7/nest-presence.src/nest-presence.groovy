@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.1.1" }
+def devVer() { return "0.1.2" }
 
 // for the UI
 metadata {
@@ -46,6 +46,7 @@ metadata {
         command "refresh"
 		command "log"
 		command "updateData"
+        command "updatePresence"
         
         attribute "lastConnection", "string"
         attribute "apiStatus", "string"
@@ -59,14 +60,14 @@ metadata {
 
 	tiles(scale: 2) {
 		standardTile("presence", "device.presence", width: 4, height: 4, canChangeBackground: true) {
-			state("present", labelIcon:"st.presence.tile.mobile-present", backgroundColor:"#53a7c0", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
-			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
+			state("present", 	labelIcon:"st.presence.tile.mobile-present", 	backgroundColor:"#53a7c0", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
+			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-			state "present", 	action: "setPresMode",	icon: "https://dl.dropboxusercontent.com/s/7ct5leup1tfsp1b/home_pres_Icon.png"
-			state "away", 		action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/7sm7utrefb8ucnr/away_pres_Icon.png"
+			state "present",	action: "setPresMode",	icon: "https://dl.dropboxusercontent.com/s/7ct5leup1tfsp1b/home_pres_Icon.png"
+            state "away", 		action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/7sm7utrefb8ucnr/away_pres_Icon.png"
             state "auto-away", 	action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/ja7x30x7n3x5utj/autoaway_pres_Icon.png"
-        	state "unknown",	action: "setPresMode", 	icon: "st.unknown.unknown.unknown"
+        	state "unknown", action: "setPresMode", 	icon: "st.unknown.unknown.unknown"
 		}
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
@@ -107,15 +108,14 @@ def refresh() {
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
-	updateData()
+    log.debug "presence: ${parent?.locationPresence()}"
+	if(!results) {
+    	apiStatusEvent(parent?.apiIssues())
+    	debugOnEvent(parent.settings?.childDebug)
+    	presenceEvent(parent?.locationPresence())
+    	lastUpdatedEvent()
+   	}
  	return null
-}
-
-def updateData() {
-	apiStatusEvent(parent?.apiIssues())
-    debugOnEvent(parent.settings?.childDebug)
-    presenceEvent(parent?.locationPresence())
-    lastUpdatedEvent()
 }
 
 def getDataByName(String name) {
@@ -150,7 +150,7 @@ def presenceEvent(presence) {
     if(!val.equals(pres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
-		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", linkText: linkText, displayed: true, isStateChange: true, state: pres )
+		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true, state: pres )
    		state?.present = (pres == "present") ? true : false
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
@@ -181,6 +181,18 @@ def setPresMode() {
         parent.setStructureAway(this, "true")
         presenceEvent("away")
     }
+}
+
+// backward compatibility for previous nest thermostat (and rule machine)
+def away() {
+    log.trace "away()..."
+    setAway()
+}
+
+// backward compatibility for previous nest thermostat (and rule machine)
+def present() {
+    log.trace "present()..."
+    setHome()
 }
 
 def setAway() {
@@ -240,61 +252,4 @@ def log(message, level = "trace") {
             break;
     }            
     return null // always child interface call with a return value
-}
-
-
-// Standard Mobile Presnece
-
-def parse2(String description) {
-	def name = parseName(description)
-	def value = parseValue(description)
-	def linkText = getLinkText(device)
-	def descriptionText = parseDescriptionText(linkText, value, description)
-	def handlerName = getState(value)
-	def isStateChange = isStateChange(device, name, value)
-
-	def results = [
-		name: name,
-		value: value,
-		unit: null,
-		linkText: linkText,
-		descriptionText: descriptionText,
-		handlerName: handlerName,
-		isStateChange: isStateChange,
-		displayed: displayed(description, isStateChange)
-	]
-	log.debug "Parse returned $results.descriptionText"
-	return results
-
-}
-
-private String parseName(String description) {
-	if (description?.startsWith("presence: ")) {
-		return "presence"
-	}
-	null
-}
-
-private String parseValue(String description) {
-	switch(description) {
-		case "presence: 1": return "present"
-		case "presence: 0": return "not present"
-		default: return description
-	}
-}
-
-private parseDescriptionText(String linkText, String value, String description) {
-	switch(value) {
-		case "present": return "$linkText has arrived"
-		case "not present": return "$linkText has left"
-		default: return value
-	}
-}
-
-private getState(String value) {
-	switch(value) {
-		case "present": return "arrived"
-		case "not present": return "left"
-		default: return value
-	}
 }
