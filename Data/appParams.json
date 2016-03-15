@@ -15,15 +15,15 @@
     },
     "thermostat": {
       "type": "beta",
-      "ver": "0.5.1"
+      "ver": "0.5.2"
     },
     "protect": {
       "type": "beta",
-      "ver": "0.3.6"
+      "ver": "0.3.7"
     },
     "presence": {
       "type": "beta",
-      "ver": "0.1.2"
+      "ver": "0.1.3"
     }
   }
 }
