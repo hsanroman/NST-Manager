@@ -10,19 +10,19 @@
   },
   "versions": {
     "app": {
-      "type": "beta",
+      "type": "rel",
       "ver": "0.7.3"
     },
     "thermostat": {
-      "type": "beta",
+      "type": "rel",
       "ver": "0.5.2"
     },
     "protect": {
-      "type": "beta",
+      "type": "rel",
       "ver": "0.3.7"
     },
     "presence": {
-      "type": "beta",
+      "type": "rel",
       "ver": "0.1.3"
     }
   }
