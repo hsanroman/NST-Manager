@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.1.2" }
+def devVer() { return "0.1.3" }
 
 // for the UI
 metadata {
@@ -64,9 +64,9 @@ metadata {
 			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-			state "present",	action: "setPresMode",	icon: "https://dl.dropboxusercontent.com/s/7ct5leup1tfsp1b/home_pres_Icon.png"
-            state "away", 		action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/7sm7utrefb8ucnr/away_pres_Icon.png"
-            state "auto-away", 	action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/ja7x30x7n3x5utj/autoaway_pres_Icon.png"
+			state "present",	action: "setPresMode",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+            state "away", 		action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
+            state "auto-away", 	action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown", action: "setPresMode", 	icon: "st.unknown.unknown.unknown"
 		}
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
