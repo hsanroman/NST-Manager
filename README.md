@@ -66,10 +66,10 @@ __I do not have the ability to see any of your data or who is even using the tok
  
 ## Installation
 
-###Install Method 1: _The Semi-Automated Way_
-_This is the by far the easiest way to install and get the latest updates for Nest Connect App, Protect and Thermostat devices the best way is to enable the GitHub Integration in your IDE._
+### Method 1: (Recommended)
+_Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices._
 
-####__The Connect App__
+#### The Manager App
  
  * Go to "**My SmartApps**" in the IDE
  * Click on "**Settings**"
@@ -79,9 +79,9 @@ _This is the by far the easiest way to install and get the latest updates for Ne
  * Check the box next to ***nest-manager*** and click "**Execute Update**"
  * Click on the ***Nest Manager*** app link and select "**Publish**" and "**For me**" 
  
-	#### ___You will also need to Enable OAuth under the app preferences in the IDE___
+	#### You will also need to Enable OAuth under the app preferences in the IDE
 
-####__The Devices__
+#### The Presence, Protect, and Thermostat Device Handlers
  
  * Go to My Device Types in the IDE (Not necessary if you added repository for the app)
  * Click on "**Settings**"
@@ -95,8 +95,10 @@ That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Ma
 
 When updates are available to the source code you will see the color change from black in the IDE.
 
+------
+
 ### Method 2: The Manual Way
-####__Adding the Nest Manager SmartApp__
+#### The Manager App
  
  * Log into your SmartThings account at [https://graph.api.smartthings.com/](https://graph.api.smartthings.com/)
  * Go to "**My SmartApps**"
@@ -107,7 +109,7 @@ When updates are available to the source code you will see the color change from
  * Go into SmartApp **Nest Manager** Settings
  * Click on "**App Settings**" and ***enable OAuth*** and click "**Update**"
  
-####__Adding the Presence, Protect, and Thermostat Device Handlers__
+#### The Presence, Protect, and Thermostat Device Handlers
  * Go to "**My Device Handlers**"
  * Create "**New Device Handler**"
  * Choose "**From Code**"
@@ -116,7 +118,7 @@ When updates are available to the source code you will see the color change from
  * Repeat for ***nest-thermostat.src***
  * Remember to open each device and click "**Publish**" and "**For me**"
 
-####__Setting up Nest Manager App__
+#### Setting up Nest Manager App
  * In the SmartThings Mobile App
  * Go to "**Marketplace**" and select "**SmartApps**"
  * At the bottom of the list, select "**My Apps**"
@@ -141,15 +143,20 @@ This feature will help you to view and export the logs (*also see the tip below*
 
 **Tip:** If you enable diagnostic logs in the app you can share the logs from with in the app you can store the direct link to log JSON file on you computer and browse directly to the log everytime you need to review the errors.
 
+_______
+
 ### Troubleshooting
 **Tip:** *The most common issue is forgetting to enable oAuth for the app under SmartThings*
 
 Check the Wiki before posting question in the forums 
 **[Wiki Home Page](https://github.com/tonesto7/nest-manager/wiki/Home)**
 
+_______
 ### Feature Requests
  * We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.
+ * There is a Google Form that will allow you to vote for the newest features. ***[Voting Form](https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform)***
 
+_______
 ### Nest API Documentation
  [Nest Developer Documents](https://developer.nest.com/documentation/cloud/get-started)
 
