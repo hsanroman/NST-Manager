@@ -298,7 +298,7 @@ def initialize() {
 	unsubscribe()
     addRemoveDevices()
     subscriber()
-    runIn(90, "pollFollow",[overwrite: true])
+    schedFollowPoll()
     setPollingState()
 	//getEndpointUrl() //This can stay for now
 }
@@ -347,7 +347,7 @@ def pollWatcher(evt) {
 
 def poll(force = false, type = null) {
 	setStateVar()
-    runIn(90, "pollFollow",[overwrite: true])
+    schedFollowPoll()
    	if(isPollAllowed()) { 
    		def dev = false
         def str = false
@@ -359,9 +359,7 @@ def poll(force = false, type = null) {
                 scheduleNextPoll("dev")
             }
             if(ok2PollStruct()) {
-            	if(getLastStructPollSec() > state?.pollStrValue) {
-                	pollStr()
-                }
+            	if(getLastStructPollSec() > state?.pollStrValue) { pollStr() }
             }    
             else { 
     			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
@@ -394,14 +392,18 @@ def pollStr() {
 def schedDevPoll(val = null) {
 	def pollVal = !val ? state?.pollValue.toInteger() : val.toInteger()
     log.debug "scheduling Device Poll for (${pollVal}) seconds"
-	runIn(pollVal, "poll",[overwrite: true])
-    runIn(90, "pollFollow",[overwrite: true])
+    runIn(pollVal, "poll",[overwrite: true])
+    //schedFollowPoll()
 }
 
 def schedStrPoll(val = null) {
 	def pollStrVal = !val ? state?.pollStrValue.toInteger() : val.toInteger()
     log.debug "scheduling Structure Poll for (${pollStrVal}) seconds"
-	runIn(pollStrVal, "pollStr",[overwrite: true])
+    runIn(pollStrVal, "pollStr",[overwrite: true])
+}
+
+def schedFollowPoll() {
+    runIn(90, "pollFollow",[overwrite: true])
 }
 
 def scheduleNextPoll(type = null) {
@@ -620,8 +622,8 @@ def checkPresMode() {
 }    
 
 def isPollAllowed() { return (state?.pollingOn && (state?.thermostats || state?.protects)) ? true : false }
-def ok2PollDevice() { return (getLastDevicePollSec() > (!state.pollValue ? 60 : state?.pollValue.toInteger())) ? true : false }
-def ok2PollStruct() { return (getLastStructPollSec() > (!state.pollStrValue ? 60 : state?.pollStrValue.toInteger())) ? true : false }
+def ok2PollDevice() { return (getLastDevicePollSec()+2 > (!state.pollValue ? 60 : state?.pollValue.toInteger())) ? true : false }
+def ok2PollStruct() { return (getLastStructPollSec()+2 > (!state.pollStrValue ? 60 : state?.pollStrValue.toInteger())) ? true : false }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
