@@ -1884,7 +1884,7 @@ def resetDiagQueuePage() {
 def nestLoginPrefPage () {
     dynamicPage(name: "nestLoginPrefPage", install: false) {
         section("Nest Login Preferences:") {
-       	    href "nestTokenResetPage", title: "Reset your Nest Token", description: "Tap to Reset the Token...",
+       	    href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...",
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
        	}
     }
@@ -1893,9 +1893,9 @@ def nestLoginPrefPage () {
 def nestTokenResetPage() {
 	return dynamicPage(name: "nestTokenResetPage", install: false) {
     	section ("Resetting Nest Token..") {
-        	revokeNestToken()
-            state.authToken = null
-            paragraph "Token has been reset...\nPress Done to return to previous page..." 
+	        revokeNestToken()
+    	    state.authToken = null
+        	paragraph "Token has been reset...\nPress Done to return to Login page..." 
         }
     }
 }
