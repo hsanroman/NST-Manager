@@ -34,7 +34,7 @@ preferences {
     }
 }
 
-def devVer() { return "0.3.6" }
+def devVer() { return "0.3.7" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
@@ -85,23 +85,23 @@ metadata {
 			//state("ok", label:"Clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
             //state("warning", label:"WARN!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
 			//state("emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
-            state("ok", icon:"https://dl.dropboxusercontent.com/s/z0s56x7tt5izw8c/smoke_clear.png")
-            state("warning", icon:"https://dl.dropboxusercontent.com/s/5mjlpaqxzewt8bm/smoke_warn.png")
-			state("detected", icon:"https://dl.dropboxusercontent.com/s/sj3grhpizv2pkvd/smoke_emergency.png")
+            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_clear.png")
+            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
+			state("detected", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
 		}
 		standardTile("carbonMonoxide", "device.carbonMonoxide", width: 2, height: 2){
 			state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
 			//state("ok", label:"Clear", icon:"st.particulate.particulate.particulate", backgroundColor:"#44B621")
             //state("warning", label:"WARN!", icon:"st.particulate.particulate.particulate", backgroundColor:"#e8d813")
 			//state("emergency", label:"CO!", icon:"st.particulate.particulate.particulate", backgroundColor:"#e86d13")
-            state("ok", icon:"https://dl.dropboxusercontent.com/s/kseuho5odkasvtm/co_clear.png")
-            state("warning", icon:"https://dl.dropboxuser.com/s/f78xjn425hoypbw/co_warn.png")
-			state("detected", icon:"https://dl.dropboxusercontent.com/s/7p62ivwu209jrx7/co_emergency.png")
+            state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_clear.png")
+            state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
+			state("detected", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
 		}
  		standardTile("batteryState", "device.batteryState", width: 2, height: 2){
 			state("default", label:'unknown')
-			state("ok", icon: "https://dl.dropboxusercontent.com/s/da7pgw4i6l8tskc/battery_ok.png")
-			state("replace", icon: "https://dl.dropboxusercontent.com/s/br6gc8wpq6l54q5/battery_low.png")
+			state("ok", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok.png")
+			state("replace", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low.png")
         }
         valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Network Status:\n${currentValue}')

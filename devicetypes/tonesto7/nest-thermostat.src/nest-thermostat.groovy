@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.5.1" }
+def devVer() { return "0.5.2" }
 
 // for the UI
 metadata {
@@ -132,25 +132,25 @@ metadata {
 			//state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "st.thermostat.heat")
             //state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "st.thermostat.cool")
             //state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "st.thermostat.auto")
-            state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://dl.dropboxusercontent.com/s/lr4tf16hwd6k1qk/off_trans.png")
-			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://dl.dropboxusercontent.com/s/le16sv4s2idjngc/heat-trans.png")
-            state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://dl.dropboxusercontent.com/s/9dhheqghxg4i3no/cool_trans.png")
-            state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "https://dl.dropboxusercontent.com/s/9fqzbdusdj0yob8/auto_trans.png")
+            state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
+			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
+            state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
+            state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
             state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
        		//state "auto",action:"fanOn", icon: "st.thermostat.fan-auto"
             //state "on",action:"fanAuto", icon: "st.thermostat.fan-on"
-			state "auto",	action:"fanOn", 	icon: "https://dl.dropboxusercontent.com/s/r0h5r5lkrtky2rl/fan_auto_icon.png"
-            state "on",		action:"fanAuto", 	icon: "https://dl.dropboxusercontent.com/s/6gnx61oynm0572z/fan_on_icon.png"
+			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
+            state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
         	//state "present", 	label:'home', 		action: "setPresMode",	icon: "st.Home.home2"
 			//state "away", 		label:'away', 		action: "setPresMode", 	icon: "st.Transportation.transportation5"
             //state "auto-away", 	label:'auto\naway', action: "setPresMode", 	icon: "st.Transportation.transportation5"
-			state "present", 	action: "setPresMode",	icon: "https://dl.dropboxusercontent.com/s/7ct5leup1tfsp1b/home_pres_Icon.png"
-			state "away", 		action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/7sm7utrefb8ucnr/away_pres_Icon.png"
-            state "auto-away", 	action: "setPresMode", 	icon: "https://dl.dropboxusercontent.com/s/ja7x30x7n3x5utj/autoaway_pres_Icon.png"
+			state "present", 	action: "setPresMode",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "away", 		action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
+            state "auto-away", 	action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown",	action: "setPresMode", 	icon: "st.unknown.unknown.unknown"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
