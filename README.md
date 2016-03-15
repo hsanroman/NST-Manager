@@ -149,6 +149,7 @@ Check the Wiki before posting question in the forums
 
 ### Feature Requests
  * We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.
+ * There is a Google Form that will allow you to vote for the newest features. ***[Voting Form](https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform)***
 
 ### Nest API Documentation
  [Nest Developer Documents](https://developer.nest.com/documentation/cloud/get-started)
