@@ -157,7 +157,7 @@ metadata {
 			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
         
-        valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true) {
+        valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Firmware:\nv${currentValue}')
 		}
         
