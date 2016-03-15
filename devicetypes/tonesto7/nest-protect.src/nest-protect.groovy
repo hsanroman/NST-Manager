@@ -24,7 +24,6 @@ preferences {
    	input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
    	 title: "Testing Mode", displayDuringSetup: true, type: "paragraph", element: "paragraph")
               input("testMode", "enum", title: "Testing State", 
-              default: "normal",
               options: [
                 "testSmoke":"Smoke Alert",
                 "testCO": "CO Alert",
