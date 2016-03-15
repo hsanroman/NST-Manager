@@ -23,9 +23,9 @@ __Latest App Version:__
  
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v0.1.2*__
-* Nest Protect Device - __*v0.3.6*__
-* Nest Thermostat Device - __*v0.5.1*__
+* Nest Presence Device - __*v0.1.3*__
+* Nest Protect Device - __*v0.3.7*__
+* Nest Thermostat Device - __*v0.5.2*__
 
 ## What's New
 Everything! 
