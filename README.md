@@ -1,7 +1,7 @@
 # Nest Manager (Unofficial)
 
 ### Nest Manager App
-This is the **unofficial** SmartThings user community created SmartApp and Device handlers for Nest devices to be used with SmartThings.
+This is the "***unofficial***" SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
