@@ -47,7 +47,7 @@ __I do not have the ability to see any of your data or who is even using the tok
 ## Advantages
  * Able to add/remove multiples devices from a single SmartApp
  * No need to many enter device serial number and login info in preferences
- * Login Info is not stored by the application
+ * Nest Login info is not stored by the application
  * No need to use 3rd Party Polling apps for device updates
  * One single API call for all Nest devices
  * Since there is only a single poll for all devices, updates are more often
