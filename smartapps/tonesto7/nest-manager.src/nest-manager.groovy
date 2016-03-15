@@ -393,7 +393,6 @@ def schedDevPoll(val = null) {
 	def pollVal = !val ? state?.pollValue.toInteger() : val.toInteger()
     log.debug "scheduling Device Poll for (${pollVal}) seconds"
     runIn(pollVal, "poll",[overwrite: true])
-    //schedFollowPoll()
 }
 
 def schedStrPoll(val = null) {
