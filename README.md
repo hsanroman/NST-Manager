@@ -1,8 +1,8 @@
 # Nest Manager (Unofficial)
 
 ### Nest Manager App
-Nest Manager is the **unofficial** user created SmartThings SmartApp and device handler for Nest devices to be used with SmartThings.
-This SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
+This is the **unofficial** SmartThings user community created SmartApp and Device handlers for Nest devices to be used with SmartThings.
+The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 
@@ -73,11 +73,11 @@ _This is the by far the easiest way to install and get the latest updates for Ne
  
  * Go to "**My SmartApps**" in the IDE
  * Click on "**Settings**"
- * Click on **Add new repository**
+ * Click on "**Add New Repository**"
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
- * Under My SmartApps Click on **Update from Repo** and select the ***nest-manager***
- * Check the box next to ***nest-manager*** and click **Execute Update**
- * Click on the ***nest manager*** app link and select **publish** and **publish for me** 
+ * Under "**My SmartApps**" Click on "**Update from Repo**" and select the ***nest-manager***
+ * Check the box next to ***nest-manager*** and click "**Execute Update**"
+ * Click on the ***Nest Manager*** app link and select "**Publish**" and "**For me**" 
  
 	#### ___You will also need to Enable OAuth under the app preferences in the IDE___
 
@@ -85,27 +85,27 @@ _This is the by far the easiest way to install and get the latest updates for Ne
  
  * Go to My Device Types in the IDE (Not necessary if you added repository for the app)
  * Click on "**Settings**"
- * Click on Add new repository
+ * Click on **Add new repository**
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
  * Under My Device Types Click on ***Update from Repo*** and select the ***nest-manager***
  * Check the box next to ***nest-presence***, ***nest-protect*** and ***nest-thermostat*** then click **Execute Update**
- * Click on each device link and select **publish** and **publish for me**
+ * Click on each device link and select "**Publish** and **For Me**
  
-That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps***
+That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
 
 When updates are available to the source code you will see the color change from black in the IDE.
 
 ### Method 2: The Manual Way
 ####__Adding the Nest Manager SmartApp__
  
- * Log into your SmartThings account at https://graph.api.smartthings.com/
+ * Log into your SmartThings account at [https://graph.api.smartthings.com/](https://graph.api.smartthings.com/)
  * Go to "**My SmartApps**"
- * Click on **+** New SmartApp
+ * Click on "**+ New SmartApp**"
  * Choose "**From Code**"
  * Copy source code from ***nest-manager.src***
- * Click **Create**
+ * Click "**Create**"
  * Go into SmartApp **Nest Manager** Settings
- * Click on App Settings and ***enable OAuth*** and click **Update**
+ * Click on "**App Settings**" and ***enable OAuth*** and click "**Update**"
  
 ####__Adding the Presence, Protect, and Thermostat Device Handlers__
  * Go to "**My Device Handlers**"
@@ -114,19 +114,19 @@ When updates are available to the source code you will see the color change from
  * Copy Source code from *nest-protect.src*
  * Repeat for ***nest-presence.src***
  * Repeat for ***nest-thermostat.src***
- * Remember to open each device and click **Publish for Me**
+ * Remember to open each device and click "**Publish**" and "**For me**"
 
 ####__Setting up Nest Manager App__
  * In the SmartThings Mobile App
- * Go to "***Marketplace***" and select "***SmartApps***"
- * At the bottom of the list, select "***My Apps***"
- * Select "Nest Manager" from the list.
+ * Go to "**Marketplace**" and select "**SmartApps**"
+ * At the bottom of the list, select "**My Apps**"
+ * Select "**Nest Manager**" from the list.
  * Enter you Nest Login credentials when prompted.
  * Choose **Structure**
  * Choose **Thermostats**
  * Choose **Protects**
  * Choose *Use Nest as Presence Device* (Optional)
- * Tap on **Done**
+ * Tap on "**Done**"
 
 ## Issues and Troubleshooting
 
