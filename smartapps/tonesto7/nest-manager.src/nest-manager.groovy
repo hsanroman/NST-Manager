@@ -256,11 +256,13 @@ def prefsPage() {
         }
         
         section ("App Icons:") {
-            	input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true)
+            	input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
+                        image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/no_icon.png"))
             	state.disAppIcons = disAppIcons ? true : false
         }
         section("Nest Login:") {
-        	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure..."
+        	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...",
+                    image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/login_icon.png")
         }
 		section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false 
