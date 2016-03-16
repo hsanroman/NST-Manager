@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.1.3" }
+def devVer() { return "1.0.0" }
 
 // for the UI
 metadata {
@@ -144,7 +144,7 @@ def lastUpdatedEvent() {
 }
 
 def presenceEvent(presence) {
-	def val = device.currentState("presence")?.value
+	def val = getPresence()
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = (presence == "home") ? "present" : (presence == "auto-away") ? "auto-away" : "away" 
     if(!val.equals(pres)) {
@@ -164,12 +164,27 @@ def apiStatusEvent(issue) {
     } else { Logger("API Status is: (${val}) | Original State: (${appIs})") }
 }
 
+def getHvacMode() { 
+	try { return device.currentState("thermostatMode")?.value.toString() } 
+	catch (e) { return "unknown" }
+}
+
+def getNestPresence() { 
+	try { return device.currentValue("nestPresence").value.toString() } 
+	catch (e) { return "present" }
+}
+
+def getPresence() { 
+	try { return device.currentValue("presence").value.toString() } 
+	catch (e) { return "present" }
+}
+
 /************************************************************************************************
 |							Sends Commands to Manager Application								|
 *************************************************************************************************/
 def setPresMode() {
 	log.trace "setAway()"
-    def pres = device.currentState("nestPresence")?.value
+    def pres = getNestPresence()
     log.trace "${pres}"
     if(pres == "auto-away" || pres == "away") {
     	presenceEvent("home") 
