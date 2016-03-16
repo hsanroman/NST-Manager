@@ -30,7 +30,7 @@ preferences {
                 "testWarnCO": "CO Warning"])
 }
 
-def devVer() { return "1.0.0" }
+def devVer() { return "1.0.1" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
@@ -187,6 +187,7 @@ def generateEvent(Map results)
     Logger("Gen Event parsing data ${results}")
 	if(results)
 	{
+    	state.use24Time = !parent?.settings?.use24Time ? false : true
         deviceVerEvent()
     	lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
@@ -213,7 +214,8 @@ def deviceVerEvent() {
 }
 
 def lastCheckinEvent(checkin) {
-    def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+	def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
 	def lastChk = device.currentState("lastConnection")?.value
@@ -225,7 +227,8 @@ def lastCheckinEvent(checkin) {
 
 def lastTestedEvent(dt) {
     def lastTstVal = device.currentState("lastTested")?.value
-    def tf = new SimpleDateFormat("MMM d,yyyy - h:mm:ss a")
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
     def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
     if(!lastTstVal.equals(lastTest?.toString())) {
@@ -262,7 +265,8 @@ def apiStatusEvent(issue) {
 
 def lastUpdatedEvent() {
     def now = new Date()
-    def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value

@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.0" }
+def devVer() { return "1.0.1" }
 
 // for the UI
 metadata {
@@ -353,7 +353,8 @@ def debugOnEvent(debug) {
 
 def lastCheckinEvent(checkin) {
 	//log.trace "lastCheckinEvent()..."
-    def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
 	def lastChk = device.currentState("lastConnection")?.value
@@ -365,7 +366,8 @@ def lastCheckinEvent(checkin) {
 
 def lastUpdatedEvent() {
     def now = new Date()
-    def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value

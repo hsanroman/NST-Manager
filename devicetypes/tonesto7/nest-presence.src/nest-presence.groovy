@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.0" }
+def devVer() { return "1.0.1" }
 
 // for the UI
 metadata {
@@ -108,7 +108,6 @@ def refresh() {
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
-    log.debug "presence: ${parent?.locationPresence()}"
 	if(!results) {
     	apiStatusEvent(parent?.apiIssues())
     	debugOnEvent(parent.settings?.childDebug)
@@ -133,7 +132,8 @@ def debugOnEvent(debug) {
 
 def lastUpdatedEvent() {
     def now = new Date()
-    def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
