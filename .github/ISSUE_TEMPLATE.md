@@ -12,6 +12,7 @@
 ## About Your Setup:
 * How many Thermostats?:
 * How many Protects?
+* Are you Using the Nest Presence Device?
 * iOS or Android?:
 * Mobile App Version:
 
