@@ -32,7 +32,7 @@ preferences {
     }
 }
 
-def devVer() { return "0.3.7" }
+def devVer() { return "1.0.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
