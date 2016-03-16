@@ -109,6 +109,7 @@ def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
 	if(!results) {
+        state.use24Time = !parent?.settings?.use24Time ? false : true
     	apiStatusEvent(parent?.apiIssues())
     	debugOnEvent(parent.settings?.childDebug)
     	presenceEvent(parent?.locationPresence())

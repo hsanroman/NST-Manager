@@ -261,6 +261,7 @@ def generateEvent(Map results) {
 	if(results)
 	{
         //atomicState?.currentData = results
+        state.use24Time = !parent?.settings?.use24Time ? false : true
         deviceVerEvent()
         apiStatusEvent(parent?.apiIssues())
         debugOnEvent(parent.settings?.childDebug)
