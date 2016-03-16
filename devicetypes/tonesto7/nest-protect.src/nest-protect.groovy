@@ -20,16 +20,14 @@
 import java.text.SimpleDateFormat 
 
 preferences {
-    preferences {
    	input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
-   	 title: "Testing Mode", displayDuringSetup: true, type: "paragraph", element: "paragraph")
-              input("testMode", "enum", title: "Testing State", 
+   	 title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
+              input("testMode", "enum", title: "Testing State", required: false, 
               options: [
                 "testSmoke":"Smoke Alert",
                 "testCO": "CO Alert",
                 "testWarnSmoke": "Smoke Warning",
                 "testWarnCO": "CO Warning"])
-    }
 }
 
 def devVer() { return "1.0.0" }
@@ -154,26 +152,31 @@ def poll() {
 
 def refresh() {
 	log.debug "refreshing parent..."
-   	switch (testMode) {
-    	case "testSmoke" :
-        	alarmStateEvent("", "emergency")
-        break;
-        
-        case "testCO":
-        	alarmStateEvent("emergency", "")
-        break;
-        
-        case "testWarnSmoke" :
-        	alarmStateEvent("", "warning")
-        break;
-        
-        case "testWarnCO":
-        	alarmStateEvent("warning", "")
-        break;
-        default:
-			parent.refresh()
-            
-        log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
+    
+    if (testMode) {
+        switch (testMode) {
+            case "testSmoke" :
+                alarmStateEvent("", "emergency")
+            break;
+
+            case "testCO":
+                alarmStateEvent("emergency", "")
+            break;
+
+            case "testWarnSmoke" :
+                alarmStateEvent("", "warning")
+            break;
+
+            case "testWarnCO":
+                alarmStateEvent("warning", "")
+            break;
+            default:
+                parent.refresh()
+
+       		log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
+        }
+     } else {
+      	parent.refresh() 
     }
     
 }
