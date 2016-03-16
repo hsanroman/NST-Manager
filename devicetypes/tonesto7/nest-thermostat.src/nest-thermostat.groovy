@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "0.5.2" }
+def devVer() { return "0.5.3" }
 
 // for the UI
 metadata {
@@ -281,20 +281,15 @@ def generateEvent(Map results) {
         def heatingSetpoint = '--'
 		def coolingSetpoint = '--'
 		def hvacMode = results?.hvac_mode
-        
 		def tempUnit = device.latestValue('temperatureUnit')
 		switch (tempUnit) {
 			case "C":
 				def temp = Math.round(results?.ambient_temperature_c)
 				def targetTemp = Math.round(results?.target_temperature_c)
 
-				if (hvacMode == "cool") {
-					coolingSetpoint = targetTemp
-                    //clearHeatingSetpoint()
-				} else if (hvacMode == "heat") {
-					heatingSetpoint = targetTemp
-                    //clearCoolingSetpoint()
-				} else if (hvacMode == "auto") {
+				if (hvacMode == "cool") { coolingSetpoint = targetTemp } 
+                else if (hvacMode == "heat") { heatingSetpoint = targetTemp } 
+                else if (hvacMode == "heat-cool") {
 					coolingSetpoint = Math.round(results?.target_temperature_high_c)
 					heatingSetpoint = Math.round(results?.target_temperature_low_c)
 				}
@@ -308,15 +303,15 @@ def generateEvent(Map results) {
                 targetTempEvent(targetTemp)
 				coolingSetpointEvent(coolingSetpoint)
 				heatingSetpointEvent(heatingSetpoint)
-				break;
+				break
                 
 			default:
 				def temp = Math.round(results?.ambient_temperature_f)
 				def targetTemp = Math.round(results?.target_temperature_f)
-
+				log.debug "temp: $temp | targetTemp: $targetTemp"
 				if (hvacMode == "cool") { coolingSetpoint = targetTemp } 
                 else if (hvacMode == "heat") { heatingSetpoint = targetTemp } 
-                else if (hvacMode == "auto") {
+                else if (hvacMode == "heat-cool") {
 					coolingSetpoint = Math.round(results?.target_temperature_high_f)
 					heatingSetpoint = Math.round(results?.target_temperature_low_f)
 				}
@@ -329,7 +324,7 @@ def generateEvent(Map results) {
                 targetTempEvent(targetTemp)
 				coolingSetpointEvent(coolingSetpoint)
 				heatingSetpointEvent(heatingSetpoint)
-				break;
+				break
 			}
 	}
     lastUpdatedEvent()

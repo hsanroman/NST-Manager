@@ -23,10 +23,8 @@ preferences {
     preferences {
    	input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
    	 title: "Testing Mode", displayDuringSetup: true, type: "paragraph", element: "paragraph")
-              input("testMode", "enum", title: "Operational Mode", 
-              default: "normal",
+              input("testMode", "enum", title: "Testing State", 
               options: [
-                "normal":"Normal Mode",
                 "testSmoke":"Smoke Alert",
                 "testCO": "CO Alert",
                 "testWarnSmoke": "Smoke Warning",
@@ -332,11 +330,11 @@ def testingStateEvent(test) {
     	alarmState = "co-emergency"
    		sendEvent( name: 'carbonMonoxide', value: "detected", descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
    	} else if (smokeState == "warning" ) {
-    	alarmState = "co-warning"
- 
+    	alarmState = "smoke-warning"
+ 		sendEvent( name: 'smoke', value: "warning", descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: dispAct, isStateChange: true )    
 	} else if (coState == "warning" ) {
     	alarmState = "co-warning"
-        
+        sendEvent( name: 'carbonMonoxide', value: "warning", descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
     } else {
     	alarmState = "ok"
         dispAct = !parent?.showProtAlarmStateEvts ? true : false

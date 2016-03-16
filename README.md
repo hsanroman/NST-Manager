@@ -33,14 +33,14 @@ Everything!
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
 
-#### [https://community.smartthings.com/t/beta-full-nest-manager](https://community.smartthings.com/t/beta-full-nest-manager)
+#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager/)
 
 #### [GitHub Wiki Page](https://github.com/tonesto7/nest-manager/wiki/Home)
 
 ## Things to Know
  * __This is still technically in BETA so you may experience issues!!!__
- * This app __DOES NOT__ support Nest Cams and I don't have any to test__
- * At this moment the app will only support __One__ location and the Thermostats and Protects within__
+ * This app **DOES NOT** support Nest Cams and I don't have any to test
+ * At this moment the app will only support **One** location and the Thermostats and Protects within
  * _The token used with this application is using my 'Works for Nest' distribution *appId* and *secret*.  It's an older one which allows 1000 user before I will need to certify with Nest._
 __I do not have the ability to see any of your data or who is even using the token__
 
