@@ -27,8 +27,8 @@
     }
   },
   "updater": {
-      "ver": 1,
-      "msg": "Update Message Placeholder",
-      "type": "std"
+    "ver": 1,
+    "msg": "Update Message Placeholder",
+    "type": "std"
   }
 }
