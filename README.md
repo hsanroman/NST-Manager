@@ -33,7 +33,7 @@ Everything!
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
 
-#### [https://community.smartthings.com/t/release-nest-manager/](https://community.smartthings.com/t/release-nest-manager/)
+#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager/)
 
 #### [GitHub Wiki Page](https://github.com/tonesto7/nest-manager/wiki/Home)
 
