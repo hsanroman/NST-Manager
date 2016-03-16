@@ -899,7 +899,7 @@ def isAppUpdateAvail() {
 		if(	(ver2IntArray(appVersion()).maj.toInteger() < ver2IntArray(newAppVer).maj.toInteger()) || 
        		(ver2IntArray(appVersion()).min.toInteger() < ver2IntArray(newAppVer).min.toInteger()) || 
       		(ver2IntArray(appVersion()).rev.toInteger() < ver2IntArray(newAppVer).rev.toInteger())) { 
-       		return true 
+       		return true
     	} else { return false }
    	} catch (ex) { LogAction("isAppUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -908,10 +908,12 @@ def isPresUpdateAvail() {
 	try {
         def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
     	def newPVer = !state?.appData.versions.presence.ver ? "0.0.0" : state?.appData.versions.presence.ver.toString()
-		if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       		(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       		(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       		return true 
+		if(pVer) {
+        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
+       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
+       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
+       			return true 
+            }
     	} else { return false }
     } catch (ex) { LogAction("isPresUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -920,10 +922,12 @@ def isProtUpdateAvail() {
 	try {
         def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
     	def newPVer = !state?.appData.versions.protect.ver ? "0.0.0" : state?.appData.versions.protect.ver.toString()
-		if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       		(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       		(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       		return true 
+		if(pVer) {
+        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
+       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
+       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
+       			return true
+            }
     	} else { return false }
     } catch (ex) { LogAction("isProtUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -932,10 +936,12 @@ def isTstatUpdateAvail() {
     try {
     	def tVer = !state?.tDevVer ? null : state?.tDevVer.toString()
     	def newTstatVer = !state?.appData.versions.thermostat.ver ? "0.0.0" : state?.appData.versions.thermostat.ver.toString()
-		if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
-       		(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
-       		(ver2IntArray(tVer).rev.toInteger() < ver2IntArray(newTstatVer).rev.toInteger())) {
-    		return true 
+		if(tVer) {
+            if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
+       			(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
+       			(ver2IntArray(tVer).rev.toInteger() < ver2IntArray(newTstatVer).rev.toInteger())) {
+    			return true
+            }
     	} else { return false }
     } catch (ex) { LogAction("isTstatUpdateAvail Exception: ${ex}", "error", true, true) }
 }
