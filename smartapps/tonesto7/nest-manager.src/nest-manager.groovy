@@ -37,49 +37,13 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "0.7.3" }
-def appVerDate() { "3-15-2016" }
+def appVersion() { "1.0.0" }
+def appVerDate() { "3-16-2016" }
 def appVerInfo() {
 
-	"V0.7.3 (Mar 15th, 2016)\n" +
-    "Fixed: Structure scheduling.\n" +
-    "Fixed: Post Command data updates.\n" +
-    "Fixed: I broke new device selection in last update.\n\n" +
-    
-	"V0.7.2 (Mar 14th, 2016)\n" +
-    "Added: Added in polling preference that allows you to enable updating children only when there is new data.\n" +
-    "Added: Split up device and structure polling into to schedules and an additional 90 second follow up poll.\n" +
-    "Added: Preference option to turn off the icons in the App\n" +
-    "Added: Preference option to disable protect alarm state events from spamming device activity feed\n" +
-    "Added: Select Modes now that will trigger Nest Home/Away\n" +
-    "Added: Use Modes to as notification quiet times.\n\n" +
-    
-	"V0.6.5 (Mar 10th, 2016)\n" +
-    "Fixed: UI Polish and fixed a bug in notifications... \n" +
-    "Fixed: Updated to support sending push for users with out contact book\n\n" +
-    
-	"V0.6.3 (Mar 9th, 2016)\n" +
-    "Fixed: a bug fix release... \n" +
-    "Fixed: Modified the post command polling to help prevent over polls from Nest API.\n" +
-    "Added: Overhauled poll value and notification value selections\n" +
-    "Added: Moved over all images/files over to github to the projects\nfuture repo and off my dropbox \n" +
-	"Added: A message is displayed to users who do not have contact book enabled on there account\n\n" +
-    
-	"V0.5.6 (Mar 8th, 2016)\n" +
-    "Fixed: Fixed child debug requiring app debug being enabled\n" +
-    "Fixed: I keep forgetting little things with the notifications\n\n" +
-    
-	"V0.5.4 (Mar 8th, 2016)\n" +
-    "Fixed: Fixed Quiet time label\n\n" +
-    
-	"V0.5.3 (Mar 7th, 2016)\n" +
-    "Added: Added in quiet time options for Notifications\n\n" +
-    
-    "V0.5.2 (Mar 7th, 2016)\n" +
-    "Fixed: Push Notifications should be working see forum post for details...\n" +
-    "Fixed: Added more subscriptions to help assist with the polling.\n" +
-    "Added: Update Notification when new updates are available.\n\n" +
-    
+	"V1.0.0 (Mar 16th, 2016)\n" +
+    "Fixed: API Info page duplication Issue #9\n" +
+    "Added: Thermostat device preference to disable changing mode to Auto when location is Away.\n\n" +
     "------------------------------------------------"
 }
 
@@ -1753,13 +1717,17 @@ def devPrefPage() {
         		input "showProtAlarmStateEvts", "bool", title: "Disable Alarm State in Device Activity Feed?", required: false, defaultValue: false, submitOnChange: true, 
                 		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
         	}
-			section(" ") {
-            	
+        }
+        if(state?.presDevice) {
+        	section("Presence Device:") {
+        		paragraph "Nothing to see here yet!!!"
             }
         }
     	if(state?.thermostats) {
 			section("Thermostat Devices:") {
-        		paragraph "Nothing Here Yet:  More to come soon!!!"
+        		paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
+                input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: true, submitOnChange: true, 
+                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
             }        
         }
 	}
@@ -1958,8 +1926,8 @@ def tstatInfoPage () {
         section("") {
             paragraph "\nThermostats:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         }
-        def devs = []
         for(tstat in state.thermostats) { 
+        	def devs = []
         	section("Thermostat Name: ${tstat.value}") {
             	atomicState.deviceData.thermostats[tstat.key].each { dev ->
                 	switch (dev.key) {
@@ -1983,8 +1951,8 @@ def protInfoPage () {
         section("") {
             paragraph "\nProtects:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
         }
-        def devs = []
         state.protects.each { prot ->
+        	def devs = []
         	section("Protect Name: ${prot.value}") {
             	atomicState.deviceData.smoke_co_alarms[prot.key].each { dev ->
                 	log.debug "prot dev: $dev"
