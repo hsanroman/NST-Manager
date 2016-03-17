@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.1" }
+def devVer() { return "1.0.2" }
 
 // for the UI
 metadata {
@@ -148,7 +148,7 @@ def presenceEvent(presence) {
 	def val = getPresence()
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = (presence == "home") ? "present" : (presence == "auto-away") ? "auto-away" : "away" 
-    if(!val.equals(pres)) {
+    if(val != pres) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true, state: pres )
@@ -171,12 +171,12 @@ def getHvacMode() {
 }
 
 def getNestPresence() { 
-	try { return device.currentValue("nestPresence").value.toString() } 
+	try { return device.currentState("nestPresence").value.toString() } 
 	catch (e) { return "present" }
 }
 
 def getPresence() { 
-	try { return device.currentValue("presence").value.toString() } 
+	try { return device.currentState("presence").value.toString() } 
 	catch (e) { return "present" }
 }
 
@@ -184,16 +184,16 @@ def getPresence() {
 |							Sends Commands to Manager Application								|
 *************************************************************************************************/
 def setPresMode() {
-	log.trace "setAway()"
+	log.trace "setPresMode()"
     def pres = getNestPresence()
-    log.trace "${pres}"
+    log.trace "Current Mode:${pres}"
     if(pres == "auto-away" || pres == "away") {
     	presenceEvent("home") 
 		parent.setStructureAway(this, "false")
         presenceEvent("home") 
     }
     else if (pres == "present") {
-    	presenceEvent("away") 
+        presenceEvent("away") 
         parent.setStructureAway(this, "true")
         presenceEvent("away")
     }
