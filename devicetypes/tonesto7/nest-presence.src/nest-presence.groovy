@@ -148,7 +148,7 @@ def presenceEvent(presence) {
 	def val = getPresence()
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = (presence == "home") ? "present" : (presence == "auto-away") ? "auto-away" : "away" 
-    if(val != pres) {
+    if(!val.equals(pres) ) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true, state: pres )
