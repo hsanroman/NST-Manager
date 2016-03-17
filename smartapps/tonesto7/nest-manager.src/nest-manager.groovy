@@ -37,10 +37,13 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.0.0" }
+def appVersion() { "1.0.1" }
 def appVerDate() { "3-16-2016" }
 def appVerInfo() {
-
+	"V1.0.1 (Mar 16th, 2016)\n" +
+    "Fixed: Diagnostic Log Overflow\n" +
+    "Added: Option to enable 24 hour time display in devices #18.\n\n" +
+    
 	"V1.0.0 (Mar 16th, 2016)\n" +
     "Fixed: API Info page duplication Issue #9\n" +
     "Added: Thermostat device preference to disable changing mode to Auto when location is Away.\n\n" +
@@ -218,7 +221,11 @@ def prefsPage() {
                 if(!state?.diagLogs) { state.exLogs = [] }
             	state.diagLogs = diagLogs ? true : false
         }
-        
+        section ("Time Display:") {
+            	input "use24Time", "bool", title: "Use 24 Hour Time?",  defaultValue: false, submitOnChange: true, required: false,
+                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/time_24_icon.png")
+            	state.use24Time = use24Time ? true : false
+        }
         section ("App Icons:") {
             	input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
                         image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/no_icon.png"))
@@ -261,6 +268,7 @@ def uninstalled() {
 }
 
 def initialize() {
+	setStateVar()
 	unsubscribe()
     addRemoveDevices()
     subscriber()
@@ -312,7 +320,7 @@ def pollWatcher(evt) {
 }
 
 def poll(force = false, type = null) {
-	setStateVar()
+	//setStateVar()
     schedFollowPoll()
    	if(isPollAllowed()) { 
    		def dev = false
@@ -739,7 +747,7 @@ def setFanMode(child, fanOn) {
 }
 
 def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
-	LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
+	//LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
     if(childDebug && child) { child?.log("sendNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
 	def data
     try {
@@ -899,7 +907,7 @@ def isAppUpdateAvail() {
 		if(	(ver2IntArray(appVersion()).maj.toInteger() < ver2IntArray(newAppVer).maj.toInteger()) || 
        		(ver2IntArray(appVersion()).min.toInteger() < ver2IntArray(newAppVer).min.toInteger()) || 
       		(ver2IntArray(appVersion()).rev.toInteger() < ver2IntArray(newAppVer).rev.toInteger())) { 
-       		return true 
+       		return true
     	} else { return false }
    	} catch (ex) { LogAction("isAppUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -908,10 +916,12 @@ def isPresUpdateAvail() {
 	try {
         def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
     	def newPVer = !state?.appData.versions.presence.ver ? "0.0.0" : state?.appData.versions.presence.ver.toString()
-		if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       		(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       		(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       		return true 
+		if(pVer) {
+        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
+       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
+       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
+       			return true 
+            }
     	} else { return false }
     } catch (ex) { LogAction("isPresUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -920,10 +930,12 @@ def isProtUpdateAvail() {
 	try {
         def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
     	def newPVer = !state?.appData.versions.protect.ver ? "0.0.0" : state?.appData.versions.protect.ver.toString()
-		if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       		(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       		(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       		return true 
+		if(pVer) {
+        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
+       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
+       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
+       			return true
+            }
     	} else { return false }
     } catch (ex) { LogAction("isProtUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -932,10 +944,12 @@ def isTstatUpdateAvail() {
     try {
     	def tVer = !state?.tDevVer ? null : state?.tDevVer.toString()
     	def newTstatVer = !state?.appData.versions.thermostat.ver ? "0.0.0" : state?.appData.versions.thermostat.ver.toString()
-		if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
-       		(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
-       		(ver2IntArray(tVer).rev.toInteger() < ver2IntArray(newTstatVer).rev.toInteger())) {
-    		return true 
+		if(tVer) {
+            if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
+       			(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
+       			(ver2IntArray(tVer).rev.toInteger() < ver2IntArray(newTstatVer).rev.toInteger())) {
+    			return true
+            }
     	} else { return false }
     } catch (ex) { LogAction("isTstatUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -1326,34 +1340,41 @@ def clientSecret() {
 *************************************************************************************************/
 
 def LogTrace(msg) { if(state?.advAppDebug) { Logger(msg, "trace") } }
+
 def LogAction(msg, type = "debug", showAlways = false, diag = false) {
-	if(showAlways) { Logger(msg, type) }
+	try {
+    	if(showAlways) { Logger(msg, type) }
     
-    else if (state?.appDebug && !showAlways) { Logger(msg, type) }
+    	else if (state?.appDebug && !showAlways) { Logger(msg, type) }
     
-    if (state?.diagLogs && diag) { 
-    	//log.error "diag - diag: ${diag} | state.diagLogs: ${state.diagLogs}"
-    	def now = new Date()
-        def timeStmp = now.toTimestamp()
-        def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
-    	
-        if (state?.stateSize < 80000 ) {
-    		state?.exLogs << logEntry
-   		}
-        else if (!state?.exLogs) { 
-        	//log.debug "diag !exLogs"
-        	state?.exLogs = [] 
-        	state?.exLogs << logEntry
-        }
-        else { 
-        	//log.debug "diag..."
-           
-			while(state?.stateSize() > (logEntry.length().toInteger() + 10)) { 
-            	state?.exLogs.remove(0) // << Removes first item in the list to make room
-           	}
-    		state?.exLogs << logEntry
-        }	
-    }
+    	if (state?.diagLogs && diag) { 
+    		def now = new Date()
+        	def timeStmp = now.toTimestamp()
+        	def maxStateSize = 16300
+        	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
+        	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
+        	def curStateSize = state.toString().length()
+        	if (curStateSize < (maxStateSize - logMsgLngth)) {
+        		log.debug "State Size Before: ${state.toString().length()}"
+    			state?.exLogs << logEntry
+            	log.debug "State Size After: ${state.toString().length()}" 
+   			}
+        
+        	else if (!state?.exLogs) { 
+        		state?.exLogs = [] 
+        		state?.exLogs << logEntry
+       		}
+        
+        	else { 
+				if (curStateSize > (maxStateSize - logMsgLngth)) { 
+            		    
+            		state?.exLogs.remove(0) // << Removes first item in the list to make room
+                	log.debug "State Size After Cleanup: ${state.toString().length()}"   
+           		}
+    			state?.exLogs << logEntry
+        	}	
+    	}
+    } catch (ex) { log.error("LogAction Exception: ${ex}") }
 }
 
 def renderLogJson() {
