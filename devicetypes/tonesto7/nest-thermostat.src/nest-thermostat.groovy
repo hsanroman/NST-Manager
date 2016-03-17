@@ -543,8 +543,13 @@ def getHvacMode() {
 }
 
 def getNestPresence() { 
-	try { return device.currentValue("nestPresence").value.toString() } 
+	try { return device.currentState("nestPresence").value.toString() } 
 	catch (e) { return "present" }
+}
+
+def getPresence() { 
+	try { return device.currentState("presence").value.toString() }
+  	catch (e) { return "present" }
 }
 
 def getTargetTemp() { 
@@ -824,9 +829,9 @@ def setCoolingSetpoint(temp) {
 |							Sends Commands to Manager Application								|
 *************************************************************************************************/
 def setPresMode() {
-	log.trace "setAway()"
+	log.trace "setPresMode()"
     def pres = getNestPresence()
-    log.trace "${pres}"
+    log.trace "Current Pres: ${pres}"
     if(pres == "auto-away" || pres == "away") {
     	presenceEvent("home") 
 		parent.setStructureAway(this, "false")
