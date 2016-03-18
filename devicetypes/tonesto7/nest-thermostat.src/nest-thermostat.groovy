@@ -338,7 +338,7 @@ def getDataByName(String name) {
 def deviceVerEvent() {
 	if (devVer()) {
     	def cur = parent?.latestTstatVer().ver.toString()
-    	def ver = (cur != devVer().toString()) ? "Device Type:\nv${devVer()}\n(Latest: v${cur})" : "Device Type:\nv${devVer()}\n(Current)"
+    	def ver = (cur != devVer().toString()) ? "Device Type:\nv${devVer()}(Latest: v${cur})" : "Device Type:\nv${devVer()}(Current)"
     	sendEvent(name: 'devTypeVer', value: ver, displayed: false, isStateChange: true)
     }
 }
