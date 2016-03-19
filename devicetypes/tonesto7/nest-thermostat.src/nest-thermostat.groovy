@@ -459,8 +459,8 @@ def presenceEvent(presence) {
 def hvacModeEvent(mode) {
 	def pres = getNestPresence()
 	def hvacMode = getHvacMode()
-    def newMode = !parent?.showAwayAsAuto ? mode : (( mode == "heat-cool" || ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool"))) ? "auto" : mode)
-	if(!hvacMode.equals(newMode)) {
+    def newMode = !parent?.showAwayAsAuto ? ((mode=="heat-cool") ? "auto" : mode ) : (( mode == "heat-cool" || ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool"))) ? "auto" : mode)
+	 if(!hvacMode.equals(newMode)) {
 		log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
