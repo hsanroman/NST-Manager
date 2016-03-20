@@ -37,8 +37,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.0.1" }
-def appVerDate() { "3-16-2016" }
+def appVersion() { "1.0.2" }
+def appVerDate() { "3-19-2016" }
 def appVerInfo() {
 	"V1.0.1 (Mar 16th, 2016)\n" +
     "Fixed: Diagnostic Log Overflow\n" +
@@ -79,6 +79,8 @@ mappings {
 
 def authPage() {
     //log.trace "authPage()"
+    state.advAppDebug = true
+    state.appDebug = true
     getWebFileData()
     //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     if(!state.accessToken) { //this is an access token for the 3rd party to make a call to the connect app
@@ -121,7 +123,7 @@ def authPage() {
                 }
             }
 			def structs = getNestStructures()
-            def structDesc = structs?.size() ? "Found (${structs?.size()}) Locations..." : "No Locations Found" 
+            def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         	LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
 
             section("Select your Location:") {
