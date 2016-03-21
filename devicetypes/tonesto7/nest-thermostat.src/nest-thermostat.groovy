@@ -2,7 +2,7 @@
  *  Nest Thermostat
  *	Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)
- *
+ *	Contributor: Eric S. (@E_Sch)
  
  * Based off of the EcoBee thermostat under Templates in the IDE 
  * Copyright (C) 2016 Anthony S., Ben W.
