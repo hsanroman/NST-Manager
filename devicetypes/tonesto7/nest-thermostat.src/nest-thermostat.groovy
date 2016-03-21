@@ -68,7 +68,7 @@ metadata {
 
 		attribute "temperatureUnit", "string"
         attribute "targetTemp", "string"
-        //attribute "thermostatMode", "string"
+        attribute "thermostatMode", "string"
         attribute "softwareVer", "string"
         attribute "lastConnection", "string"
         attribute "apiStatus", "string"
@@ -459,8 +459,8 @@ def presenceEvent(presence) {
 def hvacModeEvent(mode) {
 	def pres = getNestPresence()
 	def hvacMode = getHvacMode()
-    def newMode = !parent?.showAwayAsAuto ? ((mode=="heat-cool") ? "auto" : mode ) : (( mode == "heat-cool" || ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool"))) ? "auto" : mode)
-	 if(!hvacMode.equals(newMode)) {
+    def newMode = !parent?.showAwayAsAuto ? mode : (( mode == "heat-cool" || ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool"))) ? "auto" : mode)
+	if(!hvacMode.equals(newMode)) {
 		log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
@@ -868,6 +868,29 @@ def setHome() {
 	presenceEvent("home") 
     parent.setStructureAway(this, "false")
     presenceEvent("home")
+}
+
+def setThermostatMode(mode) {
+	Logger("setThermostat Command Received")
+	mode = mode == 'emergency heat'? 'heat' : mode
+	switch(mode) {
+    	case "auto":
+        	hvacModeEvent("auto")
+        	auto()
+        	break
+    	case "heat":
+        	hvacModeEvent("heat")
+        	heat()
+        	break
+       	case "cool":
+        	hvacModeEvent("cool")
+        	cool()
+        	break
+        case "off":
+        	hvacModeEvent("off")
+        	off()
+        	break
+    }
 }
 
 def off() {
