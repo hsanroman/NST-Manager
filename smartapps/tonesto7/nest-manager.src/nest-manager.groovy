@@ -82,9 +82,8 @@ mappings {
 }
 
 def authPage() {
+	preReqVariableCheck()
     //log.trace "authPage()"
-    //state.advAppDebug = true
-    //state.appDebug = true
     getWebFileData()
     //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     if(!state.accessToken) { //this is an access token for the 3rd party to make a call to the connect app
@@ -245,6 +244,12 @@ def prefsPage() {
             label title:"Application Label (optional)", required:false 
     	}
 	}
+}
+
+def preReqVariableCheck() {
+	def tz = location?.timeZone
+    def zc = location?.zipCode
+    if(!tz || !zc) { LogAction("SmartThings Location is not returning (TimeZone: ${tz}) or (ZipCode: ${zc})", "warn", true) }
 }
 
 def installed() {
