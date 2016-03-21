@@ -11,11 +11,11 @@
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "1.0.1"
+      "ver": "1.0.3"
     },
     "thermostat": {
       "type": "rel",
-      "ver": "1.0.2"
+      "ver": "1.0.3"
     },
     "protect": {
       "type": "rel",
