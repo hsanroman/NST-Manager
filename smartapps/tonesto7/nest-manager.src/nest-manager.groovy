@@ -1,7 +1,7 @@
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
 |    Author: Anthony S. (@tonesto7), 														|
-|	 Contributors: Ben W. (@desertblade)                                  					|
+|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  					|
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |********************************************************************************************
@@ -37,10 +37,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.0.2" }
+def appVersion() { "1.0.3" }
 def appVerDate() { "3-19-2016" }
 def appVerInfo() {
-	"V1.0.1 (Mar 16th, 2016)\n" +
+	"V1.0.3 (Mar 19th, 2016)\n" +
+    "Fixed: Handles missing ST timezone\n" +
+    "Added: Fix for logging missing device handlers #19.\n\n" +
+    
+    "V1.0.1 (Mar 16th, 2016)\n" +
     "Fixed: Diagnostic Log Overflow\n" +
     "Added: Option to enable 24 hour time display in devices #18.\n\n" +
     
@@ -141,7 +145,7 @@ def authPage() {
     			LogAction("Protects: Found ${coSmokes.size()} (${coSmokes})", "info", false)
                 
                 section("Select your Devices:") {
-                    if (!stats.size() || !coSmokes.size()) { paragraph "No Devices were found..." }
+                    if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
                     if (stats?.size() > 0) { 
                     	input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
                         		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")) 
@@ -274,8 +278,8 @@ def initialize() {
 	unsubscribe()
     addRemoveDevices()
     subscriber()
-    schedFollowPoll()
     setPollingState()
+    schedFollowPoll()
 	//getEndpointUrl() //This can stay for now
 }
 
@@ -316,9 +320,7 @@ def onAppTouch(event) {
 def pollFollow() { if(isPollAllowed()) { poll() } }
 
 def pollWatcher(evt) {
-    if( isPollAllowed() && !ok2PollDevice()) { return }
-    else if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
-    else { return }
+    if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
 def poll(force = false, type = null) {
@@ -328,7 +330,7 @@ def poll(force = false, type = null) {
    		def dev = false
         def str = false
         if (force == true) { forcedPoll() }
-   		else if(!force && (ok2PollDevice())) {
+   		else if(!force) {
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
             	dev = getApiDeviceData()
@@ -342,7 +344,7 @@ def poll(force = false, type = null) {
     			scheduleNextPoll()
     		}
 		}
-        if(state.updChildOnNewOnly) {
+        if(state?.updChildOnNewOnly) {
         	if (force || dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
@@ -399,7 +401,7 @@ def scheduleNextPoll(type = null) {
 }
 
 def forcedPoll(type = "dev") {
-	log.warn "poll(force) received..."
+	log.warn "forcedPoll($type) received..."
 	def lastFrcdPoll = getLastForcedPollSec()
     def pollWaitVal = !state?.pollWaitValue ? 10 : state?.pollWaitValue.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
@@ -440,9 +442,9 @@ def getApiStructureData() {
         httpGet(params) { resp ->
             if(resp.status == 200) {
             	LogTrace("API Structure Resp.Data: ${resp?.data}")
-                if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
+                if(!resp?.data?.equals(state?.structData) || !state?.structData) { 
                 	LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
-                    atomicState?.structData = resp?.data
+                    state?.structData = resp?.data
 					state.apiIssues = false                  
                     return true
                 }
@@ -484,9 +486,9 @@ def getApiDeviceData() {
         	if(resp?.status == 200) {
             	LogTrace("API Device Resp.Data: ${resp?.data}")
                 
-                if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
+                if(!resp?.data.equals(state?.deviceData) || !state?.deviceData) { 
                     LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
-                	atomicState?.deviceData = resp?.data
+                	state?.deviceData = resp?.data
                     state.apiIssues = false  
                 	return true
                 }
@@ -522,16 +524,16 @@ def updateChildData() {
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
 			
-			if(state?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-            	def tData = atomicState?.deviceData?.thermostats[devId]
+			if(state?.thermostats && state?.deviceData?.thermostats[devId]) {
+            	def tData = state?.deviceData?.thermostats[devId]
 				LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
             	it.generateEvent(tData) //parse received message from parent
                 state?.tDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	}
         
-        	else if(state?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-            	def pData = atomicState?.deviceData?.smoke_co_alarms[devId]
+        	else if(state?.protects && state?.deviceData?.smoke_co_alarms[devId]) {
+            	def pData = state?.deviceData?.smoke_co_alarms[devId]
             	LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
             	it.generateEvent(pData) //parse received message from parent
                 state?.pDevVer = !it.devVer() ? "" : it.devVer()
@@ -545,7 +547,7 @@ def updateChildData() {
             	return true
         	} 
             
-        	else if(!atomicState?.deviceData?.thermostats[devId] && !atomicState?.deviceData?.smoke_co_alarms[devId]) {
+        	else if(!state?.deviceData?.thermostats[devId] && !state?.deviceData?.smoke_co_alarms[devId]) {
             	LogAction("Device connection removed? no data for ${devId}", "warn", true, true)
             	return null
         	}
@@ -597,8 +599,8 @@ def checkPresMode() {
 }    
 
 def isPollAllowed() { return (state?.pollingOn && (state?.thermostats || state?.protects)) ? true : false }
-def ok2PollDevice() { return (getLastDevicePollSec()+2 > (!state.pollValue ? 60 : state?.pollValue.toInteger())) ? true : false }
-def ok2PollStruct() { return (getLastStructPollSec()+2 > (!state.pollStrValue ? 60 : state?.pollStrValue.toInteger())) ? true : false }
+def ok2PollDevice() { return (!atomicState?.lastDevDataUpd || ((getLastDevicePollSec() + 2) > (!state.pollValue ? 60 : state?.pollValue.toInteger()))) ? true : false }
+def ok2PollStruct() { return (!atomicState?.lastStrucDataUpd|| ((getLastStructPollSec() + 2) > (!state.pollStrValue ? 60 : state?.pollStrValue.toInteger()))) ? true : false }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
@@ -863,6 +865,7 @@ def getLastUpdMsgSec() { return !state?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds
 def getLastMisPollMsgSec() { return !state?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastMisPollMsgDt).toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
+
 def getWebFileData() {
 	def now = new Date()
 	def params = [ 
@@ -875,7 +878,7 @@ def getWebFileData() {
 			if(resp.data) {
             	LogAction("Retrieving Latest appParams.json File from Web", "info", true)
 				state?.appData = resp?.data
-                atomicState?.lastWebUpdDt = formatDt(now).toString()
+                atomicState?.lastWebUpdDt = formatDt(now)?.toString()
             }
             //LogAction("getGitAppData Resp: ${resp?.data}", "debug", false)
         }	
@@ -967,23 +970,19 @@ def getNestStructures() {
     try {
     	if(ok2PollStruct()) { getApiStructureData() }
     	
-        if (atomicState?.structData) {
-            def structs = atomicState?.structData
+        if (state?.structData) {
+            def structs = state?.structData
             structs.eachWithIndex { struc, index ->
             	def strucId = struc?.key
             	def strucData = struc?.value
 
             	state?.structures = strucId
 
-            	def dni = [strucData.structure_id].join('.')
-            	struct[dni] = strucData.name.toString()
+            	def dni = [strucData?.structure_id].join('.')
+            	struct[dni] = strucData?.name.toString()
             }
-            if (ok2PollDevice()) {
-            	getApiDeviceData() 
-            }
-        } 
-        
-        else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
+            if (ok2PollDevice()) { getApiDeviceData() }
+        } else { LogAction("state.structData is: ${state?.structData}", "debug", true, true) }
         
     } catch (ex) { LogAction("getNestStructures Exception: ${ex}", "error", true, true) }
 
@@ -993,15 +992,15 @@ def getNestStructures() {
 def getNestThermostats() {
     LogTrace("Getting Thermostat list")
     def stats = [:]
-    def tstats = atomicState?.deviceData?.thermostats
+    def tstats = state?.deviceData?.thermostats
     //LogAction("Found ${tstats.size()} Thermostats...", "trace", false, false, true)
     //LogAction("settings.structures is: ${settings.structures}", "trace", false, false, true)
     tstats.each { stat ->
         def statId = stat?.key
         def statData = stat?.value
      
-        def adni = [statData.device_id].join('.')
-        if (statData.structure_id == settings.structures) {
+        def adni = [statData?.device_id].join('.')
+        if (statData?.structure_id == settings?.structures) {
             stats[adni] = getThermostatDisplayName(statData)
         }
     }
@@ -1011,14 +1010,14 @@ def getNestThermostats() {
 def getNestProtects() {
     LogTrace("Getting Nest Protect List...")
     def protects = [:]
-    def nProtects = atomicState?.deviceData?.smoke_co_alarms
+    def nProtects = state?.deviceData?.smoke_co_alarms
     //LogAction("Found ${nProtects.size()} Nest Protects...", "trace", false, false, true)
     nProtects.each { dev ->
        def devId = dev?.key
        def devData = dev?.value
                     
-       def bdni = [devData.device_id].join('.')
-        if (devData.structure_id == settings.structures) {
+       def bdni = [devData?.device_id].join('.')
+        if (devData?.structure_id == settings?.structures) {
             protects[bdni] = getProtectDisplayName(devData)
         }
     }
@@ -1139,7 +1138,11 @@ def addRemoveDevices() {
         	LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true) 
     		delete.each { deleteChildDevice(it.deviceNetworkId) }
         }
-    } catch (ex) { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
+    } catch (ex) { 
+    	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
+        	LogAction("addRemoveDevices Device Handlers are Missing or Not Published.  Please verify all device handlers are present before continuing: ${ex}", "warn", true, true)
+        } else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
+    }
 }
 
 //This code really does nothing at the moment but return the dynamic url of the app's endpoints
@@ -1462,7 +1465,7 @@ def setStateVar(frc = false) {
      		if (!state?.misPollNotifyWaitVal) { state.misPollNotifyWaitVal = 300 }
      		if (!state?.misPollNotifyMsgWaitVal) { state.misPollNotifyMsgWaitVal = 3600 }
      		if (!state?.updNotifyWaitVal) { state.updNotifyWaitVal = 7200 }
-            if (!state.updChildOnNewOnly) { state.updChildOnNewOnly = false }
+            if (!state?.updChildOnNewOnly) { state.updChildOnNewOnly = false }
         	state?.stateVarUpd = true
         	state?.stateVarVer = state?.appData.state.stateVarVer ? state?.appData.state.stateVarVer.toInteger() : 0
             stateCleanup()
@@ -1501,7 +1504,10 @@ def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDa
 
 def formatDt(dt) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-    	tf?.setTimeZone(location?.timeZone)
+    if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
+   	else {
+        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
+    }
     return tf.format(dt)
 }
 
@@ -1924,7 +1930,7 @@ def structInfoPage () {
         section("") {
             paragraph "\nLocation Info:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
         }
-       	for(str in atomicState.structData) {
+       	for(str in state?.structData) {
             if (str.key == state.structures) {
            		def strId = str.key
                 def strData = str.value
@@ -1952,7 +1958,7 @@ def tstatInfoPage () {
         for(tstat in state.thermostats) { 
         	def devs = []
         	section("Thermostat Name: ${tstat.value}") {
-            	atomicState.deviceData.thermostats[tstat.key].each { dev ->
+            	state.deviceData.thermostats[tstat.key].each { dev ->
                 	switch (dev.key) {
        					case [ "where_id" ]:  //<< Excludes certain keys from being shown
        						break
@@ -1977,7 +1983,7 @@ def protInfoPage () {
         state.protects.each { prot ->
         	def devs = []
         	section("Protect Name: ${prot.value}") {
-            	atomicState.deviceData.smoke_co_alarms[prot.key].each { dev ->
+            	state.deviceData.smoke_co_alarms[prot.key].each { dev ->
                 	log.debug "prot dev: $dev"
                 	switch (dev.key) {
        					case [ "where_id" ]:  //<< Excludes certain keys from being shown
