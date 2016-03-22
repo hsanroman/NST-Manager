@@ -37,11 +37,13 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.0.3" }
+def appVersion() { "1.0.4" }
 def appVerDate() { "3-19-2016" }
 def appVerInfo() {
-	"V1.0.3 (Mar 19th, 2016)\n" +
+	"V1.0.4 (Mar 19th, 2016)\n" +
     "Fixed: Handles missing ST timezone\n" +
+    "Added: Pre-Req check for missing ST timezone/zipcodes on first run\n" +
+    "Added: Device Handler Install Test On first run.\n" +
     "Added: Fix for logging missing device handlers #19.\n\n" +
     
     "V1.0.1 (Mar 16th, 2016)\n" +
@@ -82,13 +84,15 @@ mappings {
 }
 
 def authPage() {
-	preReqVariableCheck()
-    //log.trace "authPage()"
+	//log.trace "authPage()"
+	if(!state?.preReqTested) { preReqCheck() }
+    if(!state?.testedDhInst) { deviceHandlerTest() }
+    
     getWebFileData()
     //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
-    if(!state.accessToken) { //this is an access token for the 3rd party to make a call to the connect app
-        state.accessToken = createAccessToken()
-    }
+    
+    if(!state.accessToken) { state.accessToken = createAccessToken() }
+    
     def description
     def uninstallAllowed = false
     def oauthTokenProvided = false
@@ -98,9 +102,9 @@ def authPage() {
         uninstallAllowed = true
         oauthTokenProvided = true
        	setStateVar(true)
-        
     } else { description = "Click to enter Nest Credentials" }
-
+	
+    
     def redirectUrl = buildRedirectUrl
     //log.debug "RedirectUrl = ${redirectUrl}"
 
@@ -109,6 +113,9 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
+                if(!deviceHandlerTest()) {
+                	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
+                }
             }
             section(){
                 paragraph "Tap 'Nest Login' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
@@ -119,6 +126,9 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
+                if(!deviceHandlerTest()) {
+                	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
+                }
                 if(isAppUpdateAvail()) {
                 	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${state.appData.versions.app.ver}\nPlease visit the IDE to update.", 
                     	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
@@ -246,11 +256,7 @@ def prefsPage() {
 	}
 }
 
-def preReqVariableCheck() {
-	def tz = location?.timeZone
-    def zc = location?.zipCode
-    if(!tz || !zc) { LogAction("SmartThings Location is not returning (TimeZone: ${tz}) or (ZipCode: ${zc})", "warn", true) }
-}
+
 
 def installed() {
     log.debug "Installed with settings: ${settings}"
@@ -405,13 +411,18 @@ def scheduleNextPoll(type = null) {
     }
 }
 
-def forcedPoll(type = "dev") {
+def forcedPoll(type = null) {
 	log.warn "forcedPoll($type) received..."
 	def lastFrcdPoll = getLastForcedPollSec()
     def pollWaitVal = !state?.pollWaitValue ? 10 : state?.pollWaitValue.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
    		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
-    	if(type == "dev") { 
+    	if(!type) {
+           	log.debug "Forcing Device and Structure Data Poll..."
+           	getApiDeviceData()
+          	getApiStructureData()
+        }
+        else if (type == "dev") { 
            	log.debug "Forcing Device Data Poll..."
             getApiDeviceData() 
         }
@@ -419,20 +430,19 @@ def forcedPoll(type = "dev") {
            	log.debug "Forcing Structure Data Poll..."
             getApiStructureData() 
         }
-        else {
-           	log.debug "Forcing Device and Structure Data Poll..."
-           	getApiDeviceData()
-          	getApiStructureData()
-        }
-       	def now = new Date()
-       	atomicState?.lastForcePoll = formatDt(now).toString()
+       	
+       	atomicState?.lastForcePoll = dtNow.toString()
        	scheduleNextPoll()
         updateChildData()
    	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${state.pollWaitValue})...", "debug", true) }
 }
 
-def postStrCmd() { forcedPoll("str") }
-def postDevCmd() { forcedPoll("dev") }
+def postStrCmd() { 
+	log.trace "postStrCmd()"
+    forcedPoll("str") }
+def postDevCmd() { 
+	log.trace "postDevCmd()"
+    forcedPoll("dev") }
 
 def getApiStructureData() {
 	LogAction("getApiStructureData()", "info", false)
@@ -525,7 +535,7 @@ def updateChildData() {
 	LogAction("updateChildData()", "info", true)
 	try {
     	def now = new Date()
-    	atomicState?.lastChildUpdDt = formatDt(now).toString()
+    	atomicState?.lastChildUpdDt = dtNow().toString()
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
 			
@@ -776,6 +786,10 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
             	def newUrl = resp.headers.location.split("\\?")
                 LogTrace("NewUrl: ${newUrl[0]}")
                 sendNestApiCmd(newUrl[0], typeId, type, obj, objVal, child, true)
+                if(state?.diagLogs) {
+                	state?.lastCmdSent = "$type: (${obj}: ${objVal})"
+                	state?.lastCmdSentDt = dtNow()
+                }
             }
             else { 
             	if(childDebug && child) { child?.log("sendNestApiCmd Response: ${resp.status}") }
@@ -1109,7 +1123,7 @@ def addRemoveDevices() {
         		def dni = "NestPresenceDevice"
         		def d3 = getChildDevice(dni)
         		if(!d3) {
-            		d3 = addChildDevice(app.namespace, "Nest Presence", dni, null, [label: "Nest Presence Device"])
+            		d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "Nest Presence Device"])
             		d3.take()
                 	devsCrt = devsCrt + 1
             		LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
@@ -1150,6 +1164,46 @@ def addRemoveDevices() {
     }
 }
 
+def deviceHandlerTest() {
+	if (state.testedDhInst) { return true }
+    def dni = now().toString()
+    def d1
+    def d2
+    def d3
+    
+	try {    	
+		d1 = addChildDevice(app.namespace, getThermostatChildName(), "testTstat-${dni}", null, ["label":"Nest Thermostat:InstallTest", completedSetup:true])
+		d2 = addChildDevice(app.namespace, getPresenceChildName(), "testPres-${dni}", null, ["label":"Nest Presence:InstallTest", completedSetup:true])
+        d3 = addChildDevice(app.namespace, getProtectChildName(), "testProtect-${dni}", null, ["label":"Nest Protect:InstallTest", completedSetup:true])
+         
+    	if (d1) deleteChildDevice("testTstat-${dni}") 
+    	if (d2) deleteChildDevice("testPres-${dni}") 
+    	if (d3) deleteChildDevice("testProtect-${dni}") 
+        log.debug "device Handler Test completed..."
+        state?.testedDhInst = true
+        return true
+    } 
+    catch (ex) {
+    	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
+			LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true, true)
+       	} else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
+        state.testedDhInst = false
+        return false
+	}
+}
+
+def preReqCheck() {
+	if(state.preReqTested) { return true }
+    if(!location?.timeZone || !location?.zipCode) { 
+    	state.preReqTested = false
+        LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true) 
+    	return false
+    }
+    else { 
+    	state.preReqTested = true 
+    	return true
+    }
+}
 //This code really does nothing at the moment but return the dynamic url of the app's endpoints
 def getEndpointUrl() {
 	def params = [
@@ -1488,6 +1542,7 @@ def stateCleanup() {
 *******************************************************************************/
 def getThermostatChildName()  { "Nest Thermostat" }
 def getProtectChildName()     { "Nest Protect" }
+def getPresenceChildName() 	  { "Nest Presence" }
 def getServerUrl()            { "https://graph.api.smartthings.com" }
 def getShardUrl()             { return getApiServerUrl() }
 def getCallbackUrl()          { "https://graph.api.smartthings.com/oauth/callback" }
@@ -1582,6 +1637,11 @@ def time2Str(time) {
 		f.setTimeZone(location.timeZone ?: timeZone(time))
 		f.format(t)
     }
+}
+
+def dtNow() {
+	def now = new Date()
+    return formatDt(now)
 }
 
 def notifValEnum() {
@@ -1873,6 +1933,11 @@ def diagPage () {
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...",
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
        	}
+        section("Last Nest Command") {
+        	def cmdTxt = state.lastCmdSent ? state?.lastCmdSent : "Nothing found..."
+            def cmdDt = state.lastCmdSentDt ? state?.lastCmdSentDt : "Nothing found..."
+        	paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
+        }
     }
 }
 
@@ -2029,15 +2094,9 @@ private def textCopyright() { return "Copyright© 2016 - Anthony S." }
 private def textDesc()      { return "This this app adds, updates your Nest devices..." }
 private def textHelp()      { return "" }
 private def textLicense() { 
-    return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
-        "you may not use this file except in compliance with the License. "+
-        "You may obtain a copy of the License at"+
-        "\n\n"+
-        "    http://www.apache.org/licenses/LICENSE-2.0"+
-        "\n\n"+
-        "Unless required by applicable law or agreed to in writing, software "+
-        "distributed under the License is distributed on an 'AS IS' BASIS, "+
-        "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
-        "See the License for the specific language governing permissions and "+
-        "limitations under the License." 
+    return 	"This software if free for Private Use. You may use and modify the software without distributing it" +
+ 			"This software and derivatives may not be used for commercial purposes." +
+ 			"You may not modify, distribute or sublicense this software." +
+			"You may not grant a sublicense to modify and distribute this software to third parties not included in the license.\n" +
+			"Software is provided without warranty and the software author/license owner cannot be held liable for damages.\n"
 }
