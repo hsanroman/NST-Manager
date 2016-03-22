@@ -86,7 +86,7 @@ mappings {
 def authPage() {
 	//log.trace "authPage()"
 	if(!state?.preReqTested) { preReqCheck() }
-    if(!state?.testedDhInst) { deviceHandlerTest() }
+    //if(!state?.testedDhInst) { deviceHandlerTest() }
     
     getWebFileData()
     //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
@@ -113,9 +113,9 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
-                if(!deviceHandlerTest()) {
-                	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
-                }
+                //if(!deviceHandlerTest()) {
+                //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
+                //}
             }
             section(){
                 paragraph "Tap 'Nest Login' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
@@ -126,9 +126,9 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
-                if(!deviceHandlerTest()) {
-                	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
-                }
+                //if(!deviceHandlerTest()) {
+                //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
+                //}
                 if(isAppUpdateAvail()) {
                 	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${state.appData.versions.app.ver}\nPlease visit the IDE to update.", 
                     	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
