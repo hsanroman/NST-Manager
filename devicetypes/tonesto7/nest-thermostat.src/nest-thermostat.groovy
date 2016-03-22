@@ -28,7 +28,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.0.4" }
+def devVer() { return "1.0.3" }
 
 // for the UI
 metadata {
@@ -75,7 +75,6 @@ metadata {
         attribute "apiStatus", "string"
         attribute "hasLeaf", "string"
         attribute "debugOn", "string"
-        attribute "deviceVer", "string"
         attribute "onlineStatus", "string"
 	}
 
@@ -263,24 +262,23 @@ def generateEvent(Map results) {
 	if(results)
 	{
         //atomicState?.currentData = results
-        atomicState?.use24Time = !parent?.getUse24Time() ? false : true
-        
+        state.use24Time = !parent?.settings?.use24Time ? false : true
+        deviceVerEvent()
+        apiStatusEvent(parent?.apiIssues())
         debugOnEvent(parent.settings?.childDebug)
+        presenceEvent(parent?.locationPresence())
 		tempUnitEvent(results?.temperature_scale)
 		canHeatCool(results?.can_heat, results?.can_cool)
         hasFan(results?.has_fan.toString()) 
-        presenceEvent(parent?.locationPresence())
         hvacModeEvent(results?.hvac_mode.toString())
-        atomicState?.hvac_mode = results?.hvac_mode.toString()
+        state?.hvac_mode = results?.hvac_mode.toString()
+        lastCheckinEvent(results?.last_connection)
+        softwareVerEvent(results?.software_version.toString())
+        onlineStatusEvent(results?.is_online.toString())
         hasLeafEvent(results?.has_leaf)
         humidityEvent(results?.humidity.toString())
         operatingStateEvent(results?.hvac_state.toString())
  		fanModeEvent(results?.fan_timer_active.toString())
-        lastCheckinEvent(results?.last_connection)
-        softwareVerEvent(results?.software_version.toString())
-        onlineStatusEvent(results?.is_online.toString())
-        deviceVerEvent()
-        apiStatusEvent(parent?.apiIssues())
        
         def heatingSetpoint = '--'
 		def coolingSetpoint = '--'
@@ -297,7 +295,7 @@ def generateEvent(Map results) {
 					coolingSetpoint = Math.round(results?.target_temperature_high_c)
 					heatingSetpoint = Math.round(results?.target_temperature_low_c)
 				}
-				if (!atomicState?.present) {
+				if (!state?.present) {
 					if (results?.away_temperature_high_c) { coolingSetpoint = Math.round(results?.away_temperature_high_c) }
 					if (results?.away_temperature_low_c) { heatingSetpoint = Math.round(results?.away_temperature_low_c) }
 				}
@@ -318,7 +316,7 @@ def generateEvent(Map results) {
 					coolingSetpoint = Math.round(results?.target_temperature_high_f)
 					heatingSetpoint = Math.round(results?.target_temperature_low_f)
 				}
-				if (!atomicState?.present) {
+				if (!state?.present) {
 					if (results?.away_temperature_high_f) 	{ coolingSetpoint = Math.round(results?.away_temperature_high_f) }
 					if (results?.away_temperature_low_f)	{ heatingSetpoint = Math.round(results?.away_temperature_low_f) }
 				}
@@ -357,7 +355,7 @@ def debugOnEvent(debug) {
 
 def lastCheckinEvent(checkin) {
 	//log.trace "lastCheckinEvent()..."
-    def formatVal = atomicState?.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
@@ -394,7 +392,7 @@ def tempUnitEvent(unit) {
 	if(!tmpUnit.equals(unit)) {   
     	log.debug("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
         sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: false, isStateChange: true)
-        atomicState?.tempUnit = unit
+        state?.tempUnit = unit
     } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
@@ -452,13 +450,13 @@ def presenceEvent(presence) {
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
     def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
-    atomicState?.nestPresence = newNestPres
+    state?.nestPresence = newNestPres
     if(val.toString() != pres.toString() || nestPres != newNestPres ) {
-        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${atomicState?.present}")
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true, state: pres )
-   		atomicState?.present = (pres == "present") ? true : false
-    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${atomicState?.present}") }
+   		state?.present = (pres == "present") ? true : false
+    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
 def hvacModeEvent(mode) {
@@ -474,9 +472,11 @@ def hvacModeEvent(mode) {
 def fanModeEvent(fanActive) {
 	def val = (fanActive == "true") ? "on" : "auto"
 	def fanMode = getFanMode()
-	if(!fanMode.equals(val) && atomicState?.has_fan) {
+	if(!fanMode.equals(val)) {
 		log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
-        sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
+        if(state?.has_fan == "true") {
+            sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
+        }
     } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
 }
 
@@ -499,35 +499,35 @@ def onlineStatusEvent(online) {
 }
 
 def apiStatusEvent(issue) {
-	def appStat = device.currentState("apiStatus")?.value
+	def appIs = device.currentState("apiStatus")?.value
     def val = issue ? "issue" : "ok"
-	if(!appStat.equals(val)) { 
-        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
+	if(!appIs.equals(val)) { 
+        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appIs})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
-    } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
+    } else { Logger("API Status is: (${val}) | Original State: (${appIs})") }
 }
 
 def canHeatCool(canHeat, canCool) {
-    atomicState?.can_heat = canHeat ? true : false
-    atomicState?.can_cool = canCool ? true : false
+    if(canHeat) { state?.can_heat = canHeat }
+    if(canCool) { state?.can_cool = canCool }
 }
 
 def hasFan(hasFan) {
-	atomicState?.has_fan = hasFan ? true : false
+	if(hasFan) { state?.has_fan = hasFan }
 }	
 
 def isEmergencyHeat(val) {
-	atomicState?.is_using_emergency_heat = val ? true : false
+	if(val) { state?.is_using_emergency_heat = val }
 }
 
 def clearHeatingSetpoint() {
     sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: false, isStateChange: true)
-	atomicState?.heating_setpoint = ""
+	state?.heating_setpoint = ""
 }
 
 def clearCoolingSetpoint() {
     sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: false, isStateChange: true)
-    atomicState?.cooling_setpoint = ""
+    state?.cooling_setpoint = ""
 }
 
 def getCoolTemp() { 
@@ -551,7 +551,7 @@ def getHvacMode() {
 }
 
 def getNestPresenceState() { 
-	try { return atomicState.nestPresence ? atomicState?.nestPresence.toString() : "present" } 
+	try { return state.nestPresence ? state?.nestPresence.toString() : "present" } 
 	catch (e) { return "present" }
 }
 
@@ -727,11 +727,11 @@ def setHeatingSetpoint(temp) {
 	log.trace "setHeatingSetpoint()..."
 	def hvacMode = getHvacMode()
     def pres = getNestPresence()
-	def tempUnit = atomicState?.tempUnit
-    def canHeat = atomicState?.can_heat.toBoolean()
+	def tempUnit = state?.tempUnit
+    def canHeat = state?.can_heat.toBoolean()
 	def result = false
     
-    if (atomicState?.present && canHeat) {
+    if (state?.present && canHeat) {
 		switch (tempUnit) {
 			case "C":
 				if (temp) {
@@ -784,11 +784,11 @@ def setCoolingSetpoint(temp) {
 	log.trace "setCoolingSetpoint()..."
 	def hvacMode = getHvacMode()
     def pres = getNestPresence()
-	def tempUnit = atomicState?.tempUnit
-    def canCool = atomicState?.can_cool.toBoolean()
+	def tempUnit = state?.tempUnit
+    def canCool = state?.can_cool.toBoolean()
 	def result = false
 
-    if (atomicState?.present && canCool) {
+    if (state?.present && canCool) {
 		switch (tempUnit) {
 			case "C":
 				if (temp) {
@@ -964,7 +964,7 @@ def auto() {
 }
 
 def fanOn() {
-	if(atomicState?.has_fan.toBoolean()) {
+	if(state?.has_fan.toBoolean()) {
     	fanModeEvent("true")
     	parent.setFanMode(this, true)
         fanModeEvent("true")
@@ -972,7 +972,7 @@ def fanOn() {
 }
 
 def fanAuto() {
-	if(atomicState?.has_fan.toBoolean()) {
+	if(state?.has_fan.toBoolean()) {
     	fanModeEvent("false")
    		parent.setFanMode(this,false)
         fanModeEvent("false")
@@ -984,7 +984,7 @@ def setThermostatFanMode(str) {
 }
 
 def fanOff() {
-	if(atomicState?.has_fan.toBoolean()) {
+	if(state?.has_fan.toBoolean()) {
     	parent.setFanMode (this, "off")
     }
 }

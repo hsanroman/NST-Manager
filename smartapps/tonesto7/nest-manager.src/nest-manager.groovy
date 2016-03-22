@@ -85,19 +85,19 @@ mappings {
 
 def authPage() {
 	//log.trace "authPage()"
-	if(!atomicState?.preReqTested) { preReqCheck() }
-    if(!atomicState?.testedDhInst) { deviceHandlerTest() }
+	if(!state?.preReqTested) { preReqCheck() }
+    if(!state?.testedDhInst) { deviceHandlerTest() }
     
     getWebFileData()
-    //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
+    //state.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     
-    if(!atomicState.accessToken) { atomicState.accessToken = createAccessToken() }
+    if(!state.accessToken) { state.accessToken = createAccessToken() }
     
     def description
     def uninstallAllowed = false
     def oauthTokenProvided = false
 	
-    if(atomicState.authToken) {
+    if(state.authToken) {
     	description = "You are connected."
         uninstallAllowed = true
         oauthTokenProvided = true
@@ -108,7 +108,7 @@ def authPage() {
     def redirectUrl = buildRedirectUrl
     //log.debug "RedirectUrl = ${redirectUrl}"
 
-    if (!oauthTokenProvided && atomicState.accessToken) {
+    if (!oauthTokenProvided && state.accessToken) {
         LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
@@ -130,7 +130,7 @@ def authPage() {
                 	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
                 }
                 if(isAppUpdateAvail()) {
-                	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update.", 
+                	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${state.appData.versions.app.ver}\nPlease visit the IDE to update.", 
                     	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
                     href "infoPage", title:"Update Change Log...", description: "Tap to view..."
                 }
@@ -144,7 +144,7 @@ def authPage() {
                 input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs], 
                 			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")) }
 			if (structures) {
-               	atomicState?.structures = structures ? structures : null
+               	state?.structures = structures ? structures : null
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats" 
     			LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
@@ -158,22 +158,22 @@ def authPage() {
                     if (stats?.size() > 0) { 
                     	input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
                         		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")) 
-                        atomicState?.thermostats = thermostats ? statState(thermostats) : null }
+                        state?.thermostats = thermostats ? statState(thermostats) : null }
                     
                     if (coSmokes.size() > 0) { 
                     	input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes], 
                     			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")) 
                     }
-                    atomicState?.protects = protects ? coState(protects) : null
+                    state?.protects = protects ? coState(protects) : null
                     input(name: "presDevice", title:"Use Nest as Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
                     			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")) 
-                    atomicState?.presDevice = presDevice ? true : false
+                    state?.presDevice = presDevice ? true : false
                 }
                 
-               	if((atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) || diagLogs) {
+               	if((state?.isInstalled && state.structures && (state.thermostats || state.protects)) || diagLogs) {
                     def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
                     section(diagInfoDesc) {
-                   		if(atomicState.structures && (atomicState.thermostats || atomicState.protects) && atomicState?.isInstalled) {
+                   		if(state.structures && (state.thermostats || state.protects) && state?.isInstalled) {
                				href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...",
                    				image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/api_icon.png")
                 		}
@@ -203,7 +203,7 @@ def prefsPage() {
 	dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false) {
     	
         section("Polling:") {
-        	def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active"
+        	def pollStatus = !state?.pollingOn ? "Not Active" : "Active"
         	href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/timer_icon.png")
         }
@@ -231,20 +231,20 @@ def prefsPage() {
             	input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", required: false, defaultValue: false, submitOnChange: true,
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png"))
                 paragraph "This will store errors withing the app which you can view. You can share those logs with the developer to help resolve issues..."
-            	if (diagLogs && !atomicState?.diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
-            	else if (!diagLogs && atomicState?.diagLogs) { LogAction("Diagnostic Log Queuing is Disabled...", "info", false) }
-                if(!atomicState?.diagLogs) { atomicState.exLogs = [] }
-            	atomicState.diagLogs = diagLogs ? true : false
+            	if (diagLogs && !state?.diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
+            	else if (!diagLogs && state?.diagLogs) { LogAction("Diagnostic Log Queuing is Disabled...", "info", false) }
+                if(!state?.diagLogs) { state.exLogs = [] }
+            	state.diagLogs = diagLogs ? true : false
         }
         section ("Time Display:") {
             	input "use24Time", "bool", title: "Use 24 Hour Time?",  defaultValue: false, submitOnChange: true, required: false,
                 		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/time_24_icon.png")
-            	atomicState.use24Time = use24Time ? true : false
+            	state.use24Time = use24Time ? true : false
         }
         section ("App Icons:") {
             	input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
                         image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/no_icon.png"))
-            	atomicState.disAppIcons = disAppIcons ? true : false
+            	state.disAppIcons = disAppIcons ? true : false
         }
         section("Nest Login:") {
         	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...",
@@ -256,28 +256,30 @@ def prefsPage() {
 	}
 }
 
+
+
 def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    atomicState.isInstalled = true
+    state.isInstalled = true
 }
 
 def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has updated settings...")
-    if(!atomicState.isInstalled) { atomicState.isInstalled = true }
+    if(!state.isInstalled) { state.isInstalled = true }
 }
 
 def uninstalled() {
-    atomicState.thermostats = []
-    atomicState.protects = []
+    state.thermostats = []
+    state.protects = []
     addRemoveDevices()
     //Revokes Smartthings endpoint token...
 	revokeAccessToken()
 	//Revokes Nest Auth Token
-    if(atomicState?.authToken) { revokeNestToken() }
+    if(state?.authToken) { revokeNestToken() }
     //sends notification of uninstall
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -307,15 +309,15 @@ def subscriber() {
 }
 
 def setPollingState() {
-	if (!atomicState.thermostats && !atomicState.protects) { 
+	if (!state.thermostats && !state.protects) { 
     	LogAction("No Devices Selected...Polling is Off!!!", "info", true)
-        atomicState.pollingOn = false 
+        state.pollingOn = false 
     } else { 
-    	if(!atomicState.pollingOn) { 
+    	if(!state.pollingOn) { 
         	LogAction("Polling is Now ACTIVE!!!", "info", true)
             poll()
-            atomicState.pollingOn = true }
-    	if(!atomicState.isInstalled) { poll(true) }
+            state.pollingOn = true }
+    	if(!state.isInstalled) { poll(true) }
     }
 }
 
@@ -347,14 +349,14 @@ def poll(force = false) {
                 scheduleNextPoll("dev")
             }
             if(ok2PollStruct()) {
-            	if(getLastStructPollSec() > atomicState?.pollStrValue) { pollStr() }
+            	if(getLastStructPollSec() > state?.pollStrValue) { pollStr() }
             }    
             else { 
     			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", false) 
     			scheduleNextPoll()
     		}
 		}
-        if(atomicState?.updChildOnNewOnly) {
+        if(state?.updChildOnNewOnly) {
         	if (force || dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
@@ -378,13 +380,13 @@ def pollStr() {
 }
 
 def schedDevPoll(val = null) {
-	def pollVal = !val ? atomicState?.pollValue.toInteger() : val.toInteger()
+	def pollVal = !val ? state?.pollValue.toInteger() : val.toInteger()
     log.debug "scheduling Device Poll for (${pollVal}) seconds"
     runIn(pollVal, "poll",[overwrite: true])
 }
 
 def schedStrPoll(val = null) {
-	def pollStrVal = !val ? atomicState?.pollStrValue.toInteger() : val.toInteger()
+	def pollStrVal = !val ? state?.pollStrValue.toInteger() : val.toInteger()
     log.debug "scheduling Structure Poll for (${pollStrVal}) seconds"
     runIn(pollStrVal, "pollStr",[overwrite: true])
 }
@@ -395,14 +397,14 @@ def schedFollowPoll() {
 
 def scheduleNextPoll(type = null) {
     if(type == "dev" || !type) {
-    	def pollVal = atomicState?.pollValue ? atomicState?.pollValue.toInteger() : 60
+    	def pollVal = state?.pollValue ? state?.pollValue.toInteger() : 60
     	def lastDevPoll = getLastDevicePollSec().toInteger()
     	def newPollVal = ((pollVal - lastDevPoll) > 6) ? (int) (pollVal - lastDevPoll) : pollVal 
     	if	(newPollVal < pollVal) { schedDevPoll(newPollVal) }
     	else { schedDevPoll(pollVal) }
 	}
     if(type == "str" || !type) {
-    	def pollStrVal = atomicState?.pollStrValue ? atomicState?.pollStrValue.toInteger() : 180
+    	def pollStrVal = state?.pollStrValue ? state?.pollStrValue.toInteger() : 180
     	def lastStrPoll = getLastStructPollSec().toInteger()
     	def newStrPollVal = ((pollStrVal - lastStrPoll) > 6) ? (int) (pollStrVal - lastStrPoll) : pollStrVal
     	if	(newStrPollVal < pollStrVal) { schedStrPoll(newStrPollVal) }
@@ -413,7 +415,7 @@ def scheduleNextPoll(type = null) {
 def forcedPoll(type = null) {
 	log.warn "forcedPoll($type) received..."
 	def lastFrcdPoll = getLastForcedPollSec()
-    def pollWaitVal = !atomicState?.pollWaitValue ? 10 : atomicState?.pollWaitValue.toInteger()
+    def pollWaitVal = !state?.pollWaitValue ? 10 : state?.pollWaitValue.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
    		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
     	if(!type) {
@@ -432,7 +434,7 @@ def forcedPoll(type = null) {
        	atomicState?.lastForcePoll = getDtNow()
        	scheduleNextPoll()
         updateChildData()
-   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState.pollWaitValue})...", "debug", true) }
+   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${state.pollWaitValue})...", "debug", true) }
 }
 
 def postStrCmd() { 
@@ -444,20 +446,21 @@ def postDevCmd() {
 
 def getApiStructureData() {
 	LogAction("getApiStructureData()", "info", false)
-    atomicState?.lastStrucDataUpd = getDtNow()
+    def now = new Date()
+    atomicState?.lastStrucDataUpd = formatDt(now).toString()
     def params = [
     	uri: getNestApiUrl(),
     	path: "/structures",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
+    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${state?.authToken}"]
     ]
     try {
         httpGet(params) { resp ->
             if(resp.status == 200) {
             	LogTrace("API Structure Resp.Data: ${resp?.data}")
-                if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
+                if(!resp?.data?.equals(state?.structData) || !state?.structData) { 
                 	LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
-                    atomicState?.structData = resp?.data
-					atomicState?.apiIssues = false                  
+                    state?.structData = resp?.data
+					state.apiIssues = false                  
                     return true
                 }
                 else { return false 
@@ -474,7 +477,7 @@ def getApiStructureData() {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
-                atomicState?.apiIssues = true
+                state.apiIssues = true
                 return false
             }
         } else { 
@@ -486,21 +489,22 @@ def getApiStructureData() {
 
 def getApiDeviceData() {
 	LogAction("getApiDeviceData()", "info", false)
-    atomicState?.lastDevDataUpd = getDtNow()
+	def now = new Date()
+    atomicState?.lastDevDataUpd = formatDt(now).toString()
     def params = [
     	uri: getNestApiUrl(),
     	path: "/devices",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState.authToken}"]
+    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${state.authToken}"]
     ]
     try {
         httpGet(params) { resp ->
         	if(resp?.status == 200) {
             	LogTrace("API Device Resp.Data: ${resp?.data}")
                 
-                if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
+                if(!resp?.data.equals(state?.deviceData) || !state?.deviceData) { 
                     LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
-                	atomicState?.deviceData = resp?.data
-                    atomicState?.apiIssues = false  
+                	state?.deviceData = resp?.data
+                    state.apiIssues = false  
                 	return true
                 }
                 else { return false 
@@ -517,7 +521,7 @@ def getApiDeviceData() {
     	if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
-                atomicState?.apiIssues = true
+                state.apiIssues = true
                 return false
             }
         } else { 
@@ -534,30 +538,30 @@ def updateChildData() {
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
 			
-			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-            	def tData = atomicState?.deviceData?.thermostats[devId]
+			if(state?.thermostats && state?.deviceData?.thermostats[devId]) {
+            	def tData = state?.deviceData?.thermostats[devId]
 				LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
             	it.generateEvent(tData) //parse received message from parent
-                atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
+                state?.tDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	}
         
-        	else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-            	def pData = atomicState?.deviceData?.smoke_co_alarms[devId]
+        	else if(state?.protects && state?.deviceData?.smoke_co_alarms[devId]) {
+            	def pData = state?.deviceData?.smoke_co_alarms[devId]
             	LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
             	it.generateEvent(pData) //parse received message from parent
-                atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
+                state?.pDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	}
             
-            else if(atomicState?.presDevice && devId == "NestPresenceDevice") {
+            else if(state?.presDevice && devId == "NestPresenceDevice") {
             	LogTrace("UpdateChildData >> Presence id: ${devId}")
                 it.generateEvent(null)
-                atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
+                state?.presDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	} 
             
-        	else if(!atomicState?.deviceData?.thermostats[devId] && !atomicState?.deviceData?.smoke_co_alarms[devId]) {
+        	else if(!state?.deviceData?.thermostats[devId] && !state?.deviceData?.smoke_co_alarms[devId]) {
             	LogAction("Device connection removed? no data for ${devId}", "warn", true, true)
             	return null
         	}
@@ -573,8 +577,8 @@ def updateChildData() {
 }
 
 def locationPresence() {
-	if (atomicState?.structData[atomicState?.structures]) {
-		def data = atomicState?.structData[atomicState?.structures]
+	if (state?.structData[state?.structures]) {
+		def data = state?.structData[state?.structures]
         LogAction("Location Presence: ${data?.away}", "debug", false)
     	LogTrace("Location Presence: ${data?.away}")
 		return data?.away.toString()
@@ -583,8 +587,8 @@ def locationPresence() {
 }
 
 def apiIssues() {
-	return atomicState?.apiIssues ? true : false
-    LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
+	return state?.apiIssues ? true : false
+    LogAction("API Issues: ${state.apiIssues}", "debug", false) 
 }
 
 def modeWatcher(evt) { checkPresMode() }
@@ -608,9 +612,9 @@ def checkPresMode() {
     } 
 }    
 
-def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }
-def ok2PollDevice() { return (!atomicState?.lastDevDataUpd || ((getLastDevicePollSec() + 2) > (!atomicState.pollValue ? 60 : atomicState?.pollValue.toInteger()))) ? true : false }
-def ok2PollStruct() { return (!atomicState?.lastStrucDataUpd|| ((getLastStructPollSec() + 2) > (!atomicState.pollStrValue ? 60 : atomicState?.pollStrValue.toInteger()))) ? true : false }
+def isPollAllowed() { return (state?.pollingOn && (state?.thermostats || state?.protects)) ? true : false }
+def ok2PollDevice() { return (!atomicState?.lastDevDataUpd || ((getLastDevicePollSec() + 2) > (!state.pollValue ? 60 : state?.pollValue.toInteger()))) ? true : false }
+def ok2PollStruct() { return (!atomicState?.lastStrucDataUpd|| ((getLastStructPollSec() + 2) > (!state.pollStrValue ? 60 : state?.pollStrValue.toInteger()))) ? true : false }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
@@ -657,10 +661,10 @@ def setStructureAway(child, value) {
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${temp})${unit}") }
     try {
 		if(val) { 	
-        	if(sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { runIn(3, "postStrCmd") } 
+        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { runIn(3, "postStrCmd") } 
         }
     	else { 		
-        	if(sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "home", child)) { runIn(3, "postStrCmd") } 
+        	if(sendNestApiCmd(getNestApiUrl(), state?.structures, apiVar().types.struct, apiVar().objs.away, "home", child)) { runIn(3, "postStrCmd") } 
         }
     	return true
     }
@@ -771,7 +775,7 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
         	uri: uri,
         	path: urlPath,
         	contentType: "application/json",
-        	query: [ "auth": atomicState?.authToken ],
+        	query: [ "auth": state?.authToken ],
     		body: data.toString()
     	]
     	LogTrace("sendNestApiCmd params: ${params}")
@@ -781,9 +785,9 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
             	def newUrl = resp.headers.location.split("\\?")
                 LogTrace("NewUrl: ${newUrl[0]}")
                 sendNestApiCmd(newUrl[0], typeId, type, obj, objVal, child, true)
-                if(atomicState?.diagLogs) {
-                	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
-                	atomicState?.lastCmdSentDt = getDtNow()
+                if(state?.diagLogs) {
+                	state?.lastCmdSent = "$type: (${obj}: ${objVal})"
+                	state?.lastCmdSentDt = getDtNow()
                 }
             }
             else { 
@@ -795,7 +799,7 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 	catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
         if(childDebug && child) { child?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
-        //atomicState?.apiIssues = true
+        //state?.apiIssues = true
         return false
     }
 }
@@ -807,17 +811,18 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 
 def notificationCheck() {
 	if(recipients) {
-		if (atomicState?.missedPollNotif) { missedPollNotify() }
-		if (atomicState?.updNotif) { newUpdNotify() }
+		if (state?.missedPollNotif) { missedPollNotify() }
+		if (state?.updNotif) { newUpdNotify() }
     }
 }
 
 def missedPollNotify() {
 	try {
-        if(dayOk() && timeOk()  && quietModeOk() && getLastDevicePollSec() > (atomicState?.misPollNotifyWaitVal.toInteger())) {
-			if((getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger())) {
+		def now = new Date()
+        if(dayOk() && timeOk()  && quietModeOk() && getLastDevicePollSec() > (state?.misPollNotifyWaitVal.toInteger())) {
+			if((getLastMisPollMsgSec() > state?.misPollNotifyMsgWaitVal.toInteger())) {
     			sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually.")
-        		atomicState?.lastMisPollMsgDt = getDtNow()
+        		state?.lastMisPollMsgDt = formatDt(now)
             }
     	}
     } catch (ex) { LogAction("missedPollNotify Exception: ${ex}", "error", true, true) }
@@ -830,13 +835,14 @@ def newUpdNotify() {
         def prUpd = isPresUpdateAvail()
     	def tUpd = isTstatUpdateAvail()
 		if(dayOk() && timeOk() && quietModeOk() ) { 
-            if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > atomicState.updNotifyWaitVal.toInteger())) {
-    			def appl = !appUpd ? "" : "Manager App: v${atomicState?.appData.versions.app.ver.toString()}, "
-    			def prot = !pUpd ? "" : "Protect: v${atomicState?.appData.versions.protect.ver.toString()}, "
-                def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
-        		def tstat = !tUpd ? "" : "Thermostat: v${atomicState?.appData.versions.thermostat.ver.toString()}"
+            if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > state.updNotifyWaitVal.toInteger())) {
+    			def appl = !appUpd ? "" : "Manager App: v${state?.appData.versions.app.ver.toString()}, "
+    			def prot = !pUpd ? "" : "Protect: v${state?.appData.versions.protect.ver.toString()}, "
+                def pres = !prUpd ? "" : "Presence: v${state?.appData.versions.presence.ver.toString()}, "
+        		def tstat = !tUpd ? "" : "Thermostat: v${state?.appData.versions.thermostat.ver.toString()}"
+                def now = new Date()
         		sendMsg("Info", "Update(s) are available: ${appl}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
-        		atomicState?.lastUpdMsgDt = getDtNow()
+        		state?.lastUpdMsgDt = formatDt(now)
             }
         }
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
@@ -844,40 +850,42 @@ def newUpdNotify() {
 
 def sendMsg(String msg, String msgType) {
 	try {
+		def now = new Date()
     	def newMsg = "${msgType}: ${msg}"
 		if (location.contactBookEnabled) { 
         	if(recipients) {
         		sendNotificationToContacts(newMsg, recipients)
-            	atomicState?.lastMsg = newMsg
-        		atomicState?.lastMsgDt = getDtNow()
-            	log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"	
+            	state?.lastMsg = newMsg
+        		state?.lastMsgDt = formatDt(now)
+            	log.debug "Push Message Sent: ${state?.lastMsgDt}"	
             }
 		} else {
        		LogAction("contact book not enabled", "debug", true)
        		if (usePush) {
             	sendPush(newMsg)
-                atomicState?.lastMsg = newMsg
-        		atomicState?.lastMsgDt = getDtNow()
-            	log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                state?.lastMsg = newMsg
+        		state?.lastMsgDt = formatDt(now)
+            	log.debug "Push Message Sent: ${state?.lastMsgDt}"
             }
             else if (phone) {
            		sendSms(phone, newMsg)
-            	atomicState?.lastMsg = newMsg
-        		atomicState?.lastMsgDt = getDtNow()
-            	log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"	
+            	state?.lastMsg = newMsg
+        		state?.lastMsgDt = formatDt(now)
+            	log.debug "SMS Message Sent: ${state?.lastMsgDt}"	
        		}
     	}
     } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
 }
 
 def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Active" : "Active") : "Not Active" } //Keep this
-def getLastMsgSec() { return !atomicState?.lastMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastMsgDt).toInteger() }
-def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt).toInteger() }
-def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
+def getLastMsgSec() { return !state?.lastMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastMsgDt).toInteger() }
+def getLastUpdMsgSec() { return !state?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastUpdMsgDt).toInteger() }
+def getLastMisPollMsgSec() { return !state?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(state?.lastMisPollMsgDt).toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
 def getWebFileData() {
+	def now = new Date()
 	def params = [ 
         uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
        	contentType: 'application/json'
@@ -887,8 +895,8 @@ def getWebFileData() {
         httpGet(params) { resp ->
 			if(resp.data) {
             	LogAction("Retrieving Latest appParams.json File from Web", "info", true)
-				atomicState?.appData = resp?.data
-                atomicState?.lastWebUpdDt = getDtNow()
+				state?.appData = resp?.data
+                atomicState?.lastWebUpdDt = formatDt(now)?.toString()
             }
             //LogAction("getGitAppData Resp: ${resp?.data}", "debug", false)
         }	
@@ -914,11 +922,11 @@ def ver2IntArray(val) {
     return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
 
-def getChildWaitVal() { return atomicState.tempChgWaitVal ? atomicState?.tempChgWaitVal.toInteger() : 4 }
+def getChildWaitVal() { return state.tempChgWaitVal ? state?.tempChgWaitVal.toInteger() : 4 }
 
 def isAppUpdateAvail() {
 	try {
-    	def newAppVer = !atomicState?.appData.versions.app.ver ? "0.0.0" : atomicState?.appData.versions.app.ver.toString()
+    	def newAppVer = !state?.appData.versions.app.ver ? "0.0.0" : state?.appData.versions.app.ver.toString()
 		if(	(ver2IntArray(appVersion()).maj.toInteger() < ver2IntArray(newAppVer).maj.toInteger()) || 
        		(ver2IntArray(appVersion()).min.toInteger() < ver2IntArray(newAppVer).min.toInteger()) || 
       		(ver2IntArray(appVersion()).rev.toInteger() < ver2IntArray(newAppVer).rev.toInteger())) { 
@@ -929,8 +937,8 @@ def isAppUpdateAvail() {
 
 def isPresUpdateAvail() {
 	try {
-        def pVer = !atomicState?.pDevVer ? null : atomicState?.pDevVer.toString()
-    	def newPVer = !atomicState?.appData.versions.presence.ver ? "0.0.0" : atomicState?.appData.versions.presence.ver.toString()
+        def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
+    	def newPVer = !state?.appData.versions.presence.ver ? "0.0.0" : state?.appData.versions.presence.ver.toString()
 		if(pVer) {
         	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
        			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
@@ -943,8 +951,8 @@ def isPresUpdateAvail() {
 
 def isProtUpdateAvail() {
 	try {
-        def pVer = !atomicState?.pDevVer ? null : atomicState?.pDevVer.toString()
-    	def newPVer = !atomicState?.appData.versions.protect.ver ? "0.0.0" : atomicState?.appData.versions.protect.ver.toString()
+        def pVer = !state?.pDevVer ? null : state?.pDevVer.toString()
+    	def newPVer = !state?.appData.versions.protect.ver ? "0.0.0" : state?.appData.versions.protect.ver.toString()
 		if(pVer) {
         	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
        			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
@@ -957,8 +965,8 @@ def isProtUpdateAvail() {
 
 def isTstatUpdateAvail() {
     try {
-    	def tVer = !atomicState?.tDevVer ? null : atomicState?.tDevVer.toString()
-    	def newTstatVer = !atomicState?.appData.versions.thermostat.ver ? "0.0.0" : atomicState?.appData.versions.thermostat.ver.toString()
+    	def tVer = !state?.tDevVer ? null : state?.tDevVer.toString()
+    	def newTstatVer = !state?.appData.versions.thermostat.ver ? "0.0.0" : state?.appData.versions.thermostat.ver.toString()
 		if(tVer) {
             if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
        			(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
@@ -980,19 +988,19 @@ def getNestStructures() {
     try {
     	if(ok2PollStruct()) { getApiStructureData() }
     	
-        if (atomicState?.structData) {
-            def structs = atomicState?.structData
+        if (state?.structData) {
+            def structs = state?.structData
             structs.eachWithIndex { struc, index ->
             	def strucId = struc?.key
             	def strucData = struc?.value
 
-            	atomicState?.structures = strucId
+            	state?.structures = strucId
 
             	def dni = [strucData?.structure_id].join('.')
             	struct[dni] = strucData?.name.toString()
             }
             if (ok2PollDevice()) { getApiDeviceData() }
-        } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
+        } else { LogAction("state.structData is: ${state?.structData}", "debug", true, true) }
         
     } catch (ex) { LogAction("getNestStructures Exception: ${ex}", "error", true, true) }
 
@@ -1002,7 +1010,7 @@ def getNestStructures() {
 def getNestThermostats() {
     LogTrace("Getting Thermostat list")
     def stats = [:]
-    def tstats = atomicState?.deviceData?.thermostats
+    def tstats = state?.deviceData?.thermostats
     //LogAction("Found ${tstats.size()} Thermostats...", "trace", false, false, true)
     //LogAction("settings.structures is: ${settings.structures}", "trace", false, false, true)
     tstats.each { stat ->
@@ -1020,7 +1028,7 @@ def getNestThermostats() {
 def getNestProtects() {
     LogTrace("Getting Nest Protect List...")
     def protects = [:]
-    def nProtects = atomicState?.deviceData?.smoke_co_alarms
+    def nProtects = state?.deviceData?.smoke_co_alarms
     //LogAction("Found ${nProtects.size()} Nest Protects...", "trace", false, false, true)
     nProtects.each { dev ->
        def devId = dev?.key
@@ -1073,13 +1081,13 @@ def getProtectDisplayName(prot) {
 }
 
 def addRemoveDevices() {
-    LogAction("addRemoveDevices thermostats ${atomicState?.thermostats}", "debug", false)
+    LogAction("addRemoveDevices thermostats ${state?.thermostats}", "debug", false)
     try {
 		def tstats
     	def nProtects
     	def devsCrt = 0
-    	if (atomicState?.thermostats) {
-    		tstats = atomicState?.thermostats.collect { dni ->
+    	if (state?.thermostats) {
+    		tstats = state?.thermostats.collect { dni ->
         		def d = getChildDevice(dni.key.toString())
         		if(!d) {
             		d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "Nest Thermostat - ${dni.value}"])
@@ -1092,9 +1100,9 @@ def addRemoveDevices() {
         		return d
         	}
     	}
-    	LogAction("addRemoveDevices protects ${atomicState?.protects}", "debug", false)
-		if (atomicState?.protects) {
-    		nProtects = atomicState?.protects.collect { dni ->
+    	LogAction("addRemoveDevices protects ${state?.protects}", "debug", false)
+		if (state?.protects) {
+    		nProtects = state?.protects.collect { dni ->
         		def d2 = getChildDevice(dni.key.toString())
         		if(!d2) {
             		d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "Nest Protect - ${dni.value}"])
@@ -1109,7 +1117,7 @@ def addRemoveDevices() {
     	}    
     	if(devsCrt > 0) { LogAction("Created (${tstats?.size()}) Thermostat(s) and ${nProtects?.size()} Protect(s)", "debug", true) }
    		
-        if(atomicState?.presDevice) {
+        if(state?.presDevice) {
         	try {
         		def dni = "NestPresenceDevice"
         		def d3 = getChildDevice(dni)
@@ -1126,22 +1134,22 @@ def addRemoveDevices() {
         }
         
     	def delete  // Delete any that are no longer in settings
-    	if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice) {
+    	if(!state?.thermostats && !state?.protects && !state?.presDevice) {
         	//LogAction("Deleting All Nest Thermostats and Protects", "debug", true)
         	delete = getAllChildDevices() //inherits from SmartApp (data-management)
     	} else { //delete only thermostat
         	//LogAction("Deleteing individual Thermostat(s) and/or Protect(s)", "debug", )
-        	if (!atomicState?.protects) {
-            	delete = getChildDevices().findAll { !atomicState.thermostats?.toString().contains(it?.deviceNetworkId) }
+        	if (!state?.protects) {
+            	delete = getChildDevices().findAll { !state.thermostats?.toString().contains(it?.deviceNetworkId) }
         	}	 
-        	else if (!atomicState?.thermostats) { 
-        		delete = getChildDevices().findAll { !atomicState?.protects.toString().contains(it?.deviceNetworkId) }
+        	else if (!state?.thermostats) { 
+        		delete = getChildDevices().findAll { !state?.protects.toString().contains(it?.deviceNetworkId) }
         	}
-            else if (!atomicState?.presDevice) {
+            else if (!state?.presDevice) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == "Nest Presence Device" }
             }
         	else {
-            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) && !atomicState?.protects.toString().contains(it?.deviceNetworkId) }
+            	delete = getChildDevices().findAll { !state?.thermostats?.toString().contains(it?.deviceNetworkId) && !state?.protects.toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
@@ -1156,7 +1164,7 @@ def addRemoveDevices() {
 }
 
 def deviceHandlerTest() {
-	if (atomicState.testedDhInst) { return true }
+	if (state.testedDhInst) { return true }
     def dni = now().toString()
     def d1
     def d2
@@ -1171,27 +1179,27 @@ def deviceHandlerTest() {
     	if (d2) deleteChildDevice("testPres-${dni}") 
     	if (d3) deleteChildDevice("testProtect-${dni}") 
         log.debug "device Handler Test completed..."
-        atomicState?.testedDhInst = true
+        state?.testedDhInst = true
         return true
     } 
     catch (ex) {
     	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
 			LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true, true)
        	} else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
-        atomicState.testedDhInst = false
+        state.testedDhInst = false
         return false
 	}
 }
 
 def preReqCheck() {
-	if(atomicState.preReqTested) { return true }
+	if(state.preReqTested) { return true }
     if(!location?.timeZone || !location?.zipCode) { 
-    	atomicState.preReqTested = false
+    	state.preReqTested = false
         LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true) 
     	return false
     }
     else { 
-    	atomicState.preReqTested = true 
+    	state.preReqTested = true 
     	return true
     }
 }
@@ -1199,7 +1207,7 @@ def preReqCheck() {
 def getEndpointUrl() {
 	def params = [
         uri: "https://graph.api.smartthings.com/api/smartapps/endpoints",
-        query: ["access_token": atomicState.accessToken],
+        query: ["access_token": state.accessToken],
        	contentType: 'application/json'
     ]
     try {
@@ -1217,11 +1225,11 @@ def getEndpointUrl() {
 //These are the Nest OAUTH Methods to aquire the auth code and then Access Token.
 def oauthInitUrl() {
     //log.debug "oauthInitUrl with callback: ${callbackUrl}"
-    atomicState.oauthInitState = UUID.randomUUID().toString()
+    state.oauthInitState = UUID.randomUUID().toString()
     def oauthParams = [
             response_type: "code",
             client_id: clientId(),
-            state: atomicState.oauthInitState,
+            state: state.oauthInitState,
             redirect_uri: callbackUrl //"https://graph.api.smartthings.com/oauth/callback"
     ]
     redirect(location: "https://home.nest.com/login/oauth2?${toQueryString(oauthParams)}")
@@ -1235,7 +1243,7 @@ def callback() {
         def oauthState = params.state
         LogTrace("Callback State: ${oauthState}")
     
-        if (oauthState == atomicState.oauthInitState){
+        if (oauthState == state.oauthInitState){
             def tokenParams = [
                 code: code.toString(),
                 client_id: clientId(),
@@ -1244,11 +1252,11 @@ def callback() {
             ]
             def tokenUrl = "https://api.home.nest.com/oauth2/access_token?${toQueryString(tokenParams)}"
             httpPost(uri: tokenUrl) { resp ->
-                atomicState.tokenExpires = resp.data.expires_in
-                atomicState.authToken = resp.data.access_token
+                state.tokenExpires = resp.data.expires_in
+                state.authToken = resp.data.access_token
             }
                 
-            if (atomicState.authToken) {
+            if (state.authToken) {
                 success()
             } else {
                 fail()
@@ -1264,7 +1272,7 @@ def callback() {
 def revokeNestToken() {
 	def params = [
         uri: "https://api.home.nest.com",
-        path: "/oauth2/access_tokens/${atomicState.authToken}",
+        path: "/oauth2/access_tokens/${state.authToken}",
        	contentType: 'application/json'
     ]
     try {
@@ -1394,38 +1402,39 @@ def clientSecret() {
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
 
-def LogTrace(msg) { if(atomicState?.advAppDebug) { Logger(msg, "trace") } }
+def LogTrace(msg) { if(state?.advAppDebug) { Logger(msg, "trace") } }
 
 def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 	try {
     	if(showAlways) { Logger(msg, type) }
     
-    	else if (atomicState?.appDebug && !showAlways) { Logger(msg, type) }
+    	else if (state?.appDebug && !showAlways) { Logger(msg, type) }
     
-    	if (atomicState?.diagLogs && diag) { 
-        	def timeStmp = getDtNow().toTimestamp()
+    	if (state?.diagLogs && diag) { 
+    		def now = new Date()
+        	def timeStmp = now.toTimestamp()
         	def maxStateSize = 16300
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
         	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
         	def curStateSize = state.toString().length()
         	if (curStateSize < (maxStateSize - logMsgLngth)) {
-        		//log.debug "State Size Before: ${state.toString().length()}"
-    			atomicState?.exLogs << logEntry
-            	//log.debug "State Size After: ${state.toString().length()}" 
+        		log.debug "State Size Before: ${state.toString().length()}"
+    			state?.exLogs << logEntry
+            	log.debug "State Size After: ${state.toString().length()}" 
    			}
         
-        	else if (!atomicState?.exLogs) { 
-        		atomicState?.exLogs = [] 
-        		atomicState?.exLogs << logEntry
+        	else if (!state?.exLogs) { 
+        		state?.exLogs = [] 
+        		state?.exLogs << logEntry
        		}
         
         	else { 
 				if (curStateSize > (maxStateSize - logMsgLngth)) { 
             		    
-            		atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
-                	//log.debug "State Size After Cleanup: ${state.toString().length()}"   
+            		state?.exLogs.remove(0) // << Removes first item in the list to make room
+                	log.debug "State Size After Cleanup: ${state.toString().length()}"   
            		}
-    			atomicState?.exLogs << logEntry
+    			state?.exLogs << logEntry
         	}	
     	}
     } catch (ex) { log.error("LogAction Exception: ${ex}") }
@@ -1434,9 +1443,9 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 def renderLogJson() {
 	try {
   		def values = []
-  		if (!atomicState.exLogs) { values = [nothing: "found"] }
+  		if (!state.exLogs) { values = [nothing: "found"] }
   		else {
-    		def logJson = new groovy.json.JsonOutput().toJson(atomicState?.exLogs)
+    		def logJson = new groovy.json.JsonOutput().toJson(state?.exLogs)
   			def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
   			render contentType: "application/json", data: logString
   		}
@@ -1491,7 +1500,7 @@ def Logger(msg, type) {
 //Return size of Diagnostic Logs State
 def getExLogSize() { 
 	def cnt = 0
-    atomicState?.exLogs.each { cnt = cnt + 1 }
+    state?.exLogs.each { cnt = cnt + 1 }
     return (cnt > 0) ? cnt : 0 
 }
 
@@ -1500,23 +1509,23 @@ def setStateVar(frc = false) {
     	//If the developer changes the version in the web appParams JSON it will trigger 
         //the app to create any new state values that might not exist or reset those that do to prevent errors 
         def stateVer = 2
-		def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
-		if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) { 
-	 		if (!atomicState?.pollValue) { atomicState.pollValue = 60 }
-     		if (!atomicState?.pollStrValue) { atomicState.pollStrValue = 180 }
-     		if (!atomicState?.pollWaitVal) { atomicState.pollWaitVal = 10 }
-     		if (!atomicState?.tempChgWaitVal) { atomicState?.tempChgWaitVal = 4 }
-     		if (!atomicState?.appDebug) { atomicState.appDebug = false }
-     		if (!atomicState?.childDebug) { atomicState.childDebug = false }
-     		if (!atomicState?.exLogs) { atomicState.exLogs = [] }
-     		if (!atomicState?.missedPollNotif) { atomicState.missedPollNotif = true }
-     		if (!atomicState?.updNotif) { atomicState.updNotif = true }
-     		if (!atomicState?.misPollNotifyWaitVal) { atomicState.misPollNotifyWaitVal = 300 }
-     		if (!atomicState?.misPollNotifyMsgWaitVal) { atomicState.misPollNotifyMsgWaitVal = 3600 }
-     		if (!atomicState?.updNotifyWaitVal) { atomicState.updNotifyWaitVal = 7200 }
-            if (!atomicState?.updChildOnNewOnly) { atomicState.updChildOnNewOnly = false }
-        	atomicState?.stateVarUpd = true
-        	atomicState?.stateVarVer = atomicState?.appData.state.stateVarVer ? atomicState?.appData.state.stateVarVer.toInteger() : 0
+		def stateVar = !state?.stateVarVer ? 0 : state?.stateVarVer.toInteger()
+		if(!state?.stateVarUpd || frc || (stateVer < state?.appData.state.stateVarVer.toInteger())) { 
+	 		if (!state?.pollValue) { state.pollValue = 60 }
+     		if (!state?.pollStrValue) { state.pollStrValue = 180 }
+     		if (!state?.pollWaitVal) { state.pollWaitVal = 10 }
+     		if (!state?.tempChgWaitVal) { state?.tempChgWaitVal = 4 }
+     		if (!state?.appDebug) { state.appDebug = false }
+     		if (!state?.childDebug) { state.childDebug = false }
+     		if (!state?.exLogs) { state.exLogs = [] }
+     		if (!state?.missedPollNotif) { state.missedPollNotif = true }
+     		if (!state?.updNotif) { state.updNotif = true }
+     		if (!state?.misPollNotifyWaitVal) { state.misPollNotifyWaitVal = 300 }
+     		if (!state?.misPollNotifyMsgWaitVal) { state.misPollNotifyMsgWaitVal = 3600 }
+     		if (!state?.updNotifyWaitVal) { state.updNotifyWaitVal = 7200 }
+            if (!state?.updChildOnNewOnly) { state.updChildOnNewOnly = false }
+        	state?.stateVarUpd = true
+        	state?.stateVarVer = state?.appData.state.stateVarVer ? state?.appData.state.stateVarVer.toInteger() : 0
             stateCleanup()
         }
     } catch (ex) { LogAction("setStateVar Exception: ${ex}", "error", true, true) }
@@ -1536,18 +1545,16 @@ def getPresenceChildName() 	  { "Nest Presence" }
 def getServerUrl()            { "https://graph.api.smartthings.com" }
 def getShardUrl()             { return getApiServerUrl() }
 def getCallbackUrl()          { "https://graph.api.smartthings.com/oauth/callback" }
-def getBuildRedirectUrl()     { "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState.accessToken}&apiServerUrl=${shardUrl}" }
+def getBuildRedirectUrl()     { "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${state.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()           { return "https://developer-api.nest.com" }
 
-def latestTstatVer() { return atomicState.appData?.versions?.thermostat ?: "unknown" }
-def latestProtVer() { return atomicState.appData?.versions?.protect ?: "unknown" }
-def latestPresVer() { return atomicState.appData?.versions?.presence ?: "unknown" }
-def getUse24Time() { return atomicState.use24Time ? true : false }
+def latestTstatVer() { return state.appData?.versions?.thermostat ?: "unknown" }
+def latestProtVer() { return state.appData?.versions?.protect ?: "unknown" }
 
-private debugStatus() { return atomicState?.appDebug ? "On" : "Off" } //Keep this
-private childDebugStatus() { return atomicState?.childDebug ? "On" : "Off" } //Keep this
-private isAppDebug() { return atomicState?.appDebug ? true : false } //Keep This
-private isChildDebug() { return atomicState?.childDebug ? true : false } //Keep This
+private debugStatus() { return state?.appDebug ? "On" : "Off" } //Keep this
+private childDebugStatus() { return state?.childDebug ? "On" : "Off" } //Keep this
+private isAppDebug() { return state?.appDebug ? true : false } //Keep This
+private isChildDebug() { return state?.childDebug ? true : false } //Keep This
 def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset" || qStartInput == "sunrise") ? "Start: ${qstartInput.toString().capitalize()}" : null) }
 def getQTimeStopLbl() { return (qStopInput == "A specific time") ? (qStopTime ? "Stop: ${time2Str(qStopTime)}" : null) : ((qStopInput == "sunset" || qStopInput == "sunrise") ? "Stop : ${qStopInput.toString().capitalize()}" : null) }
 def getQModesLbl() { return quietModes ? "Quiet Mode(s): ${quietModes}" : null }
@@ -1661,7 +1668,7 @@ def waitValEnum() {
 }
 
 def appIcon(url) {
-	return !atomicState?.disAppIcons ? url.toString() : ""
+	return !state?.disAppIcons ? url.toString() : ""
 }
 
 /******************************************************************************  
@@ -1676,36 +1683,36 @@ def pollPrefPage() {
         	def pollValDesc = !pollValue ? "Default: 1 Minute" : pollValue
             input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (1 Minute)", required: false, defaultValue: null, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
             if(pollValue) {
-            	atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger()
+            	state?.pollValue = !pollValue ? 60 : pollValue.toInteger()
             	if (pollValue.toInteger() == 1000000) { 
             		input ("pollValueCust", "number", title: "Custom Device Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 60, submitOnChange: true) 
-            		if(pollValueCust) { atomicState?.pollValue = pollValueCust ? pollValueCust.toInteger() : 60 }
+            		if(pollValueCust) { state?.pollValue = pollValueCust ? pollValueCust.toInteger() : 60 }
             	} 
-            } else { atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger() }
+            } else { state?.pollValue = !pollValue ? 60 : pollValue.toInteger() }
         }
         section("Location Polling:") {   
         	def pollStrValDesc = !pollStrValue ? "Default: 3 Minutes" : pollStrValue
             input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: null, metadata: [values:pollValEnum()], description: pollStrValDesc, submitOnChange: true)
             if(pollStrValue) {
-            	atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger()
+            	state?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger()
             	if (pollStrValue.toInteger() == 1000000) { 
             		input ("pollStrValueCust", "number", title: "Custom Location Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 60, submitOnChange: true) 
-            		if(pollValueCust) { atomicState?.pollStrValue = pollStrValueCust ? pollStrValueCust.toInteger() : 180 }
+            		if(pollValueCust) { state?.pollStrValue = pollStrValueCust ? pollStrValueCust.toInteger() : 180 }
             	} 
-            } else { atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger() }
+            } else { state?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger() }
         }
         section("Wait Values:") {
         	def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
             input ("pollWaitVal", "enum", title: "Forced Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: null, metadata: [values:waitValEnum()], description: pollWaitValDesc,submitOnChange: true)
-            atomicState?.pollWaitVal = !pollWaitVal ? 10 : pollWaitVal.toInteger()
+            state?.pollWaitVal = !pollWaitVal ? 10 : pollWaitVal.toInteger()
 			
             def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
             input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: null, metadata: [values:waitValEnum()], description: tempChgWaitValDesc, submitOnChange: true)
-       		atomicState?.tempChgWaitVal = !tempChgWaitVal ? 4 : tempChgWaitVal.toInteger()
+       		state?.tempChgWaitVal = !tempChgWaitVal ? 4 : tempChgWaitVal.toInteger()
         }
         section("Other Options:") {
         	input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", required: false, defaultValue: false, submitOnChange: true
-            atomicState.updChildOnNewOnly = updChildOnNewOnly ? true : false
+            state.updChildOnNewOnly = updChildOnNewOnly ? true : false
         }
         section("Advanced Polling Options:") {
         	paragraph "If you are still experiencing Polling issues then you can select these devices to use there events to determine if a scheduled poll was missed\nPlease select as FEW devices as possible!\nMore devices will not make for a better polling."
@@ -1735,11 +1742,11 @@ def notifPrefPage() {
         	}
             
             if(recipients || phone || usePush) { 
-           		if((settings.recipients != recipients && recipients) || !atomicState.pushTested) {
+           		if((settings.recipients != recipients && recipients) || !state.pushTested) {
            			sendMsg("Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}", "info") 
-           			atomicState.pushTested = true
-               	} else { atomicState.pushTested = true }
-           	} else { atomicState.pushTested = false }
+           			state.pushTested = true
+               	} else { state.pushTested = true }
+           	} else { state.pushTested = false }
         }
         if (recipients || phone || usePush) {
         	section(title: "Time Restrictions") {
@@ -1750,43 +1757,43 @@ def notifPrefPage() {
         		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true,
                 	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/late_icon.png")
                 if(missedPollNotif) {
-                	atomicState.missedPollNotif = missedPollNotif ? true : false
+                	state.missedPollNotif = missedPollNotif ? true : false
                     def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
                     input ("misPollNotifyWaitVal", "enum", title: "Time Past the missed Poll?", required: false, defaultValue: null, metadata: [values:notifValEnum()], description: misPollNotifyWaitValDesc, submitOnChange: true)
             		if(misPollNotifyWaitVal) {
-                    	atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
+                    	state.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
                         if (misPollNotifyWaitVal.toInteger() == 1000000) { 
             				input ("misPollNotifyWaitValCust", "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 900, submitOnChange: true) 
-            				if(misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
+            				if(misPollNotifyWaitValCust) { state?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
             			} 
-                    }else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
+                    }else { state.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
                     
                     def misPollNotifyMsgWaitValDesc = !misPollNotifyMsgWaitVal ? "Default: 1 Hour" : misPollNotifyMsgWaitVal
                     input ("misPollNotifyMsgWaitVal", "enum", title: "Wait before sending another?", required: false, defaultValue: null, metadata: [values:notifValEnum()], description: misPollNotifyMsgWaitValDesc, submitOnChange: true)
             		if(misPollNotifyMsgWaitVal) {
-                    	atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
+                    	state.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
                     	if (misPollNotifyMsgWaitVal.toInteger() == 1000000) { 
             				input ("misPollNotifyMsgWaitValCust", "number", title: "Custom Msg Wait Value in Seconds", range: "30..86400", required: false, defaultValue: 3600, submitOnChange: true) 
-            				if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
+            				if(misPollNotifyMsgWaitValCust) { state.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
             			} 
-                    } else { atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
-                } else { atomicState.missedPollNotif = false }
+                    } else { state.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
+                } else { state.missedPollNotif = false }
             }
             section("App and Device Updates:") {
                 input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, 
                 		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
                	if(updNotif) {
-                	atomicState.updNotif = updNotif ? true : false
+                	state.updNotif = updNotif ? true : false
                     def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
                     input ("updNotifyWaitVal", "enum", title: "Send reminders every?", required: false, defaultValue: null, metadata: [values:notifValEnum()], description: updNotifyWaitValDesc, submitOnChange: true)
             		if(updNotifyWaitVal) {
-                    	atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+                    	state.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
                     	if (updNotifyWaitVal.toInteger() == 1000000) { 
             				input ("updNotifyWaitValCust", "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true) 
-            				if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
+            				if(updNotifyWaitValCust) { state.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
             			} 
-                    } else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
-            	} else { atomicState.updNotif = false }
+                    } else { state.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
+            	} else { state.updNotif = false }
             }
             
         }
@@ -1798,18 +1805,18 @@ def devPrefPage() {
     	section("") {
         	paragraph "\nDevice Preferences\n", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png")
         }
-		if(atomicState?.protects) {
+		if(state?.protects) {
         	section("Protect Devices:") {
         		input "showProtAlarmStateEvts", "bool", title: "Disable Alarm State in Device Activity Feed?", required: false, defaultValue: false, submitOnChange: true, 
                 		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
         	}
         }
-        if(atomicState?.presDevice) {
+        if(state?.presDevice) {
         	section("Presence Device:") {
         		paragraph "Nothing to see here yet!!!"
             }
         }
-    	if(atomicState?.thermostats) {
+    	if(state?.thermostats) {
 			section("Thermostat Devices:") {
         		paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
                 input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: true, submitOnChange: true, 
@@ -1823,13 +1830,13 @@ def quietTimePage() {
 	dynamicPage(name: "quietTimePage", title: "Quiet during certain times", uninstall: false) {
 		section() {
 			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null,submitOnChange: true, required: false
-            //atomicState?.qStartInput = qStartInput ? qStartInput : null
+            //state?.qStartInput = qStartInput ? qStartInput : null
 			if(qStartInput == "A specific time") { 
             	input "qStartTime", "time", title: "Start time", required: true } 
 		}
 		section() {
 			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false
-            //atomicState?.qStopInput = qStopInput ? qStopInput : null
+            //state?.qStopInput = qStopInput ? qStopInput : null
 			if(qStopInput == "A specific time") { 
             	input "qStopTime", "time", title: "Stop time", required: true } 
 		}
@@ -1839,7 +1846,7 @@ def quietTimePage() {
         }
         section() {
         	input "quietModes", "mode", title: "Quiet when these Modes are Active", multiple: true, submitOnChange: true, required: false
-			if(quietModes) { atomicState.quietModes = quietModes }
+			if(quietModes) { state.quietModes = quietModes }
         }
 	}
 }
@@ -1849,12 +1856,12 @@ def modePresPage() {
 		section() {
 			input "homeModes", "mode", title: "These modes set Nest to 'Home'", multiple: true, submitOnChange: true, required: false,
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_home_Icon.png")
-			if(homeModes) { atomicState.homeModes = homeModes }
+			if(homeModes) { state.homeModes = homeModes }
 		}
 		section() {
 			input "awayModes", "mode", title: "These modes set Nest to 'Away'", multiple: true, submitOnChange: true, required: false,
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_away_Icon.png")
-			if(awayModes) { atomicState.awayModes = awayModes }
+			if(awayModes) { state.awayModes = awayModes }
 		}
 	}
 }
@@ -1867,13 +1874,13 @@ def debugPrefPage() {
             if (appDebug) {
             	input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true,
                 	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png"))
-                atomicState.advAppDebug = advAppDebug ? true : false
+                state.advAppDebug = advAppDebug ? true : false
             }
-            if (appDebug && !atomicState?.appDebug) { LogAction("Debug Logs are Enabled...", "info", false) }
-            else if (!appDebug && atomicState?.appDebug) { 
+            if (appDebug && !state?.appDebug) { LogAction("Debug Logs are Enabled...", "info", false) }
+            else if (!appDebug && state?.appDebug) { 
                 LogAction("Debug Logs are Disabled...", "info", false)
             }
-            atomicState.appDebug = appDebug ? true : false
+            state.appDebug = appDebug ? true : false
         }
         
         section ("Child Device Logs") {
@@ -1881,9 +1888,9 @@ def debugPrefPage() {
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png"))
             if (childDebug) { //input (name: "advChildDebug", type: "bool", title: "Show verbose child device Debug Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true)
             }
-            if (childDebug && !atomicState?.childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
-            else if (!childDebug && atomicState?.childDebug) { LogAction("Device Debug Logs are Disabled...", "info", false) }
-            atomicState.childDebug = childDebug ? true : false
+            if (childDebug && !state?.childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
+            else if (!childDebug && state?.childDebug) { LogAction("Device Debug Logs are Disabled...", "info", false) }
+            state.childDebug = childDebug ? true : false
         }
     }
 }
@@ -1918,16 +1925,16 @@ def diagPage () {
         }
         section("Export or View the Logs") {
            	
-       		href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
+       		href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${state.accessToken}")}", style:"embedded", required:false, 
                		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png")
-            href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
+            href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${state.accessToken}")}", style:"embedded", required:false, 
                		title:"State Data", description:"Tap to view State Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...",
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
        	}
         section("Last Nest Command") {
-        	def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
-            def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
+        	def cmdTxt = state.lastCmdSent ? state?.lastCmdSent : "Nothing found..."
+            def cmdDt = state.lastCmdSentDt ? state?.lastCmdSentDt : "Nothing found..."
         	paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
         }
     }
@@ -1936,7 +1943,7 @@ def diagPage () {
 def resetDiagQueuePage() {
 	return dynamicPage(name: "resetDiagQueuePage", nextPage: diagPage, install: false) {
     	section ("Diagnostic Log Queue Reset..") {
-            atomicState.exLogs = []
+            state.exLogs = []
             paragraph "Diagnostic Logs have been reset...\nPress Done to return to previous page..." 
         }
     }
@@ -1955,7 +1962,7 @@ def nestTokenResetPage() {
 	return dynamicPage(name: "nestTokenResetPage", install: false) {
     	section ("Resetting Nest Token..") {
 	        revokeNestToken()
-    	    atomicState.authToken = null
+    	    state.authToken = null
         	paragraph "Token has been reset...\nPress Done to return to Login page..." 
         }
     }
@@ -1966,19 +1973,19 @@ def nestInfoPage () {
     	section("About this page:") {
         	paragraph "This Page will display the data returned from the API for each device that is selected..."
         }
-        if(atomicState.structures) {	
+        if(state.structures) {	
         	section("Locations") {
         		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
         	}
         }
-        if (atomicState.thermostats) {
+        if (state.thermostats) {
         	section("Thermostats") {
             	href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         	}
         }
-        if (atomicState.protects) {
+        if (state.protects) {
         	section("Protects") {
         		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
@@ -1992,8 +1999,8 @@ def structInfoPage () {
         section("") {
             paragraph "\nLocation Info:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
         }
-       	for(str in atomicState?.structData) {
-            if (str.key == atomicState.structures) {
+       	for(str in state?.structData) {
+            if (str.key == state.structures) {
            		def strId = str.key
                 def strData = str.value
         		section("Location Name: ${strData.name}") {
@@ -2017,10 +2024,10 @@ def tstatInfoPage () {
         section("") {
             paragraph "\nThermostats:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         }
-        for(tstat in atomicState.thermostats) { 
+        for(tstat in state.thermostats) { 
         	def devs = []
         	section("Thermostat Name: ${tstat.value}") {
-            	atomicState.deviceData.thermostats[tstat.key].each { dev ->
+            	state.deviceData.thermostats[tstat.key].each { dev ->
                 	switch (dev.key) {
        					case [ "where_id" ]:  //<< Excludes certain keys from being shown
        						break
@@ -2042,10 +2049,10 @@ def protInfoPage () {
         section("") {
             paragraph "\nProtects:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
         }
-        atomicState.protects.each { prot ->
+        state.protects.each { prot ->
         	def devs = []
         	section("Protect Name: ${prot.value}") {
-            	atomicState.deviceData.smoke_co_alarms[prot.key].each { dev ->
+            	state.deviceData.smoke_co_alarms[prot.key].each { dev ->
                 	log.debug "prot dev: $dev"
                 	switch (dev.key) {
        					case [ "where_id" ]:  //<< Excludes certain keys from being shown
@@ -2072,7 +2079,7 @@ private def appName() 		{ "Nest Manager" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
 private def appInfoDesc() 	{ 
-	def cur = atomicState?.appData?.versions?.app?.ver.toString()
+	def cur = state?.appData?.versions?.app?.ver.toString()
 	def ver = (textVersion() != cur) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
 	return "Name: ${textAppName()}\n${ver}\n${textModified()}" 
 }

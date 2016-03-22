@@ -30,7 +30,7 @@ preferences {
                 "testWarnCO": "CO Warning"])
 }
 
-def devVer() { return "1.0.2" }
+def devVer() { return "1.0.1" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
@@ -53,7 +53,6 @@ metadata {
         attribute "isTesting", "string"
         attribute "apiStatus", "string"
         attribute "debugOn", "string"
-        attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
     }
 	
@@ -184,12 +183,13 @@ def refresh() {
 
 def generateEvent(Map results)
 {	
-	atomicState?.testMode = testMode ? testMode : null
+	state.testMode = testMode ? testMode : null
     Logger("Gen Event parsing data ${results}")
 	if(results)
 	{
-    	atomicState?.use24Time = !parent?.getUse24Time() ? false : true
-        lastCheckinEvent(results?.last_connection)
+    	state.use24Time = !parent?.settings?.use24Time ? false : true
+        deviceVerEvent()
+    	lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
         apiStatusEvent(parent?.apiIssues())
         debugOnEvent(parent.settings?.childDebug)
@@ -197,11 +197,10 @@ def generateEvent(Map results)
         batteryStateEvent(results?.battery_health.toString())
         carbonStateEvent(results?.co_alarm_state.toString())
         smokeStateEvent(results?.smoke_alarm_state.toString())
-        if (!atomicState.testMode) { alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString()) }
+        if (!state.testMode) { alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString()) }
         uiColorEvent(results?.ui_color_state.toString())
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
-        deviceVerEvent()
     }
     lastUpdatedEvent()
 }
@@ -215,7 +214,7 @@ def deviceVerEvent() {
 }
 
 def lastCheckinEvent(checkin) {
-	def formatVal = atomicState.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
@@ -228,7 +227,7 @@ def lastCheckinEvent(checkin) {
 
 def lastTestedEvent(dt) {
     def lastTstVal = device.currentState("lastTested")?.value
-    def formatVal = atomicState.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
     def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
@@ -256,17 +255,17 @@ def debugOnEvent(debug) {
 }
 
 def apiStatusEvent(issue) {
-	def appStat = device.currentState("apiStatus")?.value
+	def appIs = device.currentState("apiStatus")?.value
     def val = issue ? "issue" : "ok"
-	if(!appStat.equals(val)) { 
-        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
+	if(!appIs.equals(val)) { 
+        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appIs})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
-    } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
+    } else { Logger("API Status is: (${val}) | Original State: (${appIs})") }
 }
 
 def lastUpdatedEvent() {
     def now = new Date()
-    def formatVal = atomicState.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
