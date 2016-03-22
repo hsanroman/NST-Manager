@@ -54,7 +54,7 @@ metadata {
         command "present"
 		command "setAway"
         command "setHome"
-        command "setPresMode"
+        command "setPresence"
         command "setFanMode"
         command "setThermostatMode"
         command "setTemperature"
@@ -71,6 +71,7 @@ metadata {
         attribute "thermostatMode", "string"
         attribute "softwareVer", "string"
         attribute "lastConnection", "string"
+        attribute "nestPresence", "string"
         attribute "apiStatus", "string"
         attribute "hasLeaf", "string"
         attribute "debugOn", "string"
@@ -129,9 +130,9 @@ metadata {
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
 			//state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "st.thermostat.heating-cooling-off")
-			//state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "st.thermostat.heat")
-            //state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "st.thermostat.cool")
-            //state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "st.thermostat.auto")
+			//state("heat", action:"thermostat.cool", 	nextState: "cool", 	icon: "st.thermostat.heat")
+            //state("cool", action:"thermostat.auto", 	nextState: "auto", 	icon: "st.thermostat.cool")
+            //state("auto", action:"thermostat.off", 	nextState: "off", 	icon: "st.thermostat.auto")
             state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
 			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
             state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
@@ -145,13 +146,13 @@ metadata {
             state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-        	//state "present", 	label:'home', 		action: "setPresMode",	icon: "st.Home.home2"
-			//state "away", 		label:'away', 		action: "setPresMode", 	icon: "st.Transportation.transportation5"
-            //state "auto-away", 	label:'auto\naway', action: "setPresMode", 	icon: "st.Transportation.transportation5"
-			state "present", 	action: "setPresMode",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
-			state "away", 		action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
-            state "auto-away", 	action: "setPresMode", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
-        	state "unknown",	action: "setPresMode", 	icon: "st.unknown.unknown.unknown"
+        	//state "present", 	label:'home', 		action: "setPresence",	icon: "st.Home.home2"
+			//state "away", 	label:'away', 		action: "setPresence", 	icon: "st.Transportation.transportation5"
+            //state "auto-away",label:'auto\naway', action: "setPresence", 	icon: "st.Transportation.transportation5"
+			state "present", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
+            state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
+        	state "unknown",	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -445,12 +446,14 @@ def humidityEvent(humidity) {
 }
 
 def presenceEvent(presence) {
-	def val = device.currentState("presence")?.value
+	def val = getPresence()
 	def pres = (presence == "home") ? "present" : "not present"
-    def nestPres = (presence == "home") ? "present" : (presence == "auto-away") ? "auto-away" : "away" 
-    if(!val.equals(pres)) {
+    def nestPres = getNestPresence()
+    def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
+    state?.nestPresence = newNestPres
+    if(val.toString() != pres.toString() || nestPres != newNestPres ) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
-   		sendEvent(name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
+   		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true, state: pres )
    		state?.present = (pres == "present") ? true : false
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
@@ -459,8 +462,8 @@ def presenceEvent(presence) {
 def hvacModeEvent(mode) {
 	def pres = getNestPresence()
 	def hvacMode = getHvacMode()
-    def newMode = !parent?.showAwayAsAuto ? mode : (( mode == "heat-cool" || ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool"))) ? "auto" : mode)
-	if(!hvacMode.equals(newMode)) {
+    def newMode = !parent?.showAwayAsAuto ? mode : ((pres == "away" || pres == "auto-away") ? "auto" : mode)
+    if(!hvacMode.equals(newMode)) {
 		log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
@@ -468,7 +471,7 @@ def hvacModeEvent(mode) {
 
 def fanModeEvent(fanActive) {
 	def val = (fanActive == "true") ? "on" : "auto"
-	def fanMode = device.currentState("thermostatFanMode")?.value
+	def fanMode = getFanMode()
 	if(!fanMode.equals(val)) {
 		log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
         if(state?.has_fan == "true") {
@@ -537,9 +540,19 @@ def getHeatTemp() {
 	catch (e) { return 0 }
 }
 
+def getFanMode() { 
+	try { return device.currentState("thermostatFanMode")?.value.toString() } 
+	catch (e) { return "unknown" }
+}
+
 def getHvacMode() { 
 	try { return device.currentState("thermostatMode")?.value.toString() } 
 	catch (e) { return "unknown" }
+}
+
+def getNestPresenceState() { 
+	try { return state.nestPresence ? state?.nestPresence.toString() : "present" } 
+	catch (e) { return "present" }
 }
 
 def getNestPresence() { 
@@ -824,14 +837,13 @@ def setCoolingSetpoint(temp) {
     return result
 }
 
-
 /************************************************************************************************
 |							Sends Commands to Manager Application								|
 *************************************************************************************************/
-def setPresMode() {
-	log.trace "setPresMode()"
+def setPresence() {
+	log.trace "setPresence()"
     def pres = getNestPresence()
-    log.trace "Current Pres: ${pres}"
+    log.trace "Current Nest Presence: ${pres}"
     if(pres == "auto-away" || pres == "away") {
     	presenceEvent("home") 
 		parent.setStructureAway(this, "false")
