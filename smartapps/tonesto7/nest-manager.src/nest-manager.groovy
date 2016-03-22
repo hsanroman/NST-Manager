@@ -315,13 +315,14 @@ def setPollingState() {
     } else { 
     	if(!state.pollingOn) { 
         	LogAction("Polling is Now ACTIVE!!!", "info", true)
+            poll()
             state.pollingOn = true }
     	if(!state.isInstalled) { poll(true) }
     }
 }
 
 def onAppTouch(event) {
-    poll(true, "dev")
+    poll(true)
 }
 
 /************************************************************************************************
@@ -334,7 +335,7 @@ def pollWatcher(evt) {
     if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
-def poll(force = false, type = null) {
+def poll(force = false) {
 	//setStateVar()
     schedFollowPoll()
    	if(isPollAllowed()) { 
@@ -430,8 +431,7 @@ def forcedPoll(type = null) {
            	log.debug "Forcing Structure Data Poll..."
             getApiStructureData() 
         }
-       	
-       	atomicState?.lastForcePoll = dtNow.toString()
+       	atomicState?.lastForcePoll = getDtNow()
        	scheduleNextPoll()
         updateChildData()
    	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${state.pollWaitValue})...", "debug", true) }
@@ -534,8 +534,7 @@ def getApiDeviceData() {
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
 	try {
-    	def now = new Date()
-    	atomicState?.lastChildUpdDt = dtNow().toString()
+    	atomicState?.lastChildUpdDt = getDtNow()
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
 			
@@ -788,7 +787,7 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
                 sendNestApiCmd(newUrl[0], typeId, type, obj, objVal, child, true)
                 if(state?.diagLogs) {
                 	state?.lastCmdSent = "$type: (${obj}: ${objVal})"
-                	state?.lastCmdSentDt = dtNow()
+                	state?.lastCmdSentDt = getDtNow()
                 }
             }
             else { 
@@ -1639,7 +1638,7 @@ def time2Str(time) {
     }
 }
 
-def dtNow() {
+def getDtNow() {
 	def now = new Date()
     return formatDt(now)
 }
