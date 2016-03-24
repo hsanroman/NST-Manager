@@ -1048,7 +1048,7 @@ def isTstatUpdateAvail() {
 def getNestStructures() {
 	LogTrace("Getting Nest Structures")
     def struct = [:]
-    def thisstruct = [:]
+    //def thisstruct = [:]
     try {
     	if(ok2PollStruct()) { getApiStructureData() }
     	
@@ -1060,15 +1060,15 @@ def getNestStructures() {
 
             	atomicState?.structures = strucId
 
-            	def dni = [strucData?.structure_id].join('.')
-            	struct[dni] = strucData?.name.toString()
+            	//def dni = [strucData?.structure_id].join('.')
+            	//struct[dni] = strucData?.name.toString()
                 
-                if (strucData?.structure_id == settings?.structures) {
-                    thisstruct[dni] = strucData?.name.toString()
-                }
-            }
-            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
-                struct = thisstruct
+                //if (strucData?.structure_id == settings?.structures) {
+                    //thisstruct[dni] = strucData?.name.toString()
+                //}
+            //}
+            //if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
+                //struct = thisstruct
             }
             if (ok2PollDevice()) { getApiDeviceData() }
         } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
