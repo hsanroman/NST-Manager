@@ -19,13 +19,13 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v1.0.3*__
+* Nest Manager - __*v1.1.0*__
  
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v1.0.2*__
-* Nest Protect Device - __*v1.0.1*__
-* Nest Thermostat Device - __*v1.0.3*__
+* Nest Presence Device - __*v1.1.0*__
+* Nest Protect Device - __*v1.1.0*__
+* Nest Thermostat Device - __*v1.1.0*__
 
 ## What's New
 Everything! 
