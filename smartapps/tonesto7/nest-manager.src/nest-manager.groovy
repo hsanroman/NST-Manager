@@ -279,7 +279,7 @@ def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has updated settings...")
-    if(!atomicState.isInstalled) { atomicState?.isInstalled = true }
+    if(!atomicState?.isInstalled) { atomicState?.isInstalled = true }
 }
 
 def uninstalled() {
@@ -458,7 +458,7 @@ def forcedPoll(type = null) {
 
 def postStrCmd() { 
 	log.trace "postStrCmd()"
-    forcedPoll("str") }
+    forcedPoll() }
     
 def postDevCmd() { 
 	log.trace "postDevCmd()"
