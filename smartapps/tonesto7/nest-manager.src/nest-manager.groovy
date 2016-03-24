@@ -1,7 +1,7 @@
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
-|    Author: Anthony S. (@tonesto7), 														|
-|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  					|
+|    Author: Anthony S. (@tonesto7), 							    |
+|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  		    |
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |********************************************************************************************
@@ -1237,18 +1237,18 @@ def addRemoveDevices() {
         	delete = getAllChildDevices()
     	} else {
         	if (!atomicState?.protects && !atomicState?.presDevice) {
-            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) }
+            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) }
         	}	 
         	else if (!atomicState?.thermostats && !atomicState?.presDevice) { 
-        		delete = getChildDevices().findAll { !atomicState?.protects.toString().contains(it?.deviceNetworkId) }
+        		delete = getChildDevices().findAll { !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) }
         	}
             else if (!atomicState?.presDevice) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
             }
         	else {
             	def presdni = getNestPresId()
-             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) &&
-             		!atomicState?.protects.toString().contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
+             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) &&
+             		!atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
