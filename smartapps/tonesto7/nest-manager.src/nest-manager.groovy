@@ -1,7 +1,7 @@
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
-|    Author: Anthony S. (@tonesto7), 														|
-|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  					|
+|    Author: Anthony S. (@tonesto7), 							    |
+|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  		    |
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |********************************************************************************************
@@ -36,10 +36,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.1.0" }
-def appVerDate() { "3-23-2016" }
+def appVersion() { "1.1.2" }
+def appVerDate() { "3-24-2016" }
 def appVerInfo() {
-
+    "V1.1.2 (Mar 24th, 2016)\n" +
+    "Fixed: Bugfixes and optimizing...\n\n" +
+    
     "V1.1.0 (Mar 23rd, 2016)\n" +
     "Fixed: Optimized polling and entire codebase (Thanks @E_sch for your suggestions)\n" +
     "Added: Created an Automation Section and moving new functions there.\n" +
@@ -86,8 +88,11 @@ preferences {
 mappings {
     path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
     path("/oauth/callback") 	{action: [GET: "callback"]}
-    path("/renderLogs")			{action: [GET: "renderLogJson"]}
-    path("/renderState")		{action: [GET: "renderStateJson"]}
+    if(diagLogs) {
+    	path("/renderLogs")		{action: [GET: "renderLogJson"]}
+    	path("/renderState")	{action: [GET: "renderStateJson"]}
+        path("/renderDebug")	{action: [GET: "renderDebugJson"]}
+   	}
 }
 
 def authPage() {
@@ -274,18 +279,19 @@ def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has updated settings...")
-    if(!atomicState.isInstalled) { atomicState?.isInstalled = true }
+    if(!atomicState?.isInstalled) { atomicState?.isInstalled = true }
 }
 
 def uninstalled() {
     atomicState.thermostats = []
     atomicState.protects = []
     atomicState.presDevice = false
-    addRemoveDevices()
-    //Revokes Smartthings endpoint token...
-	revokeAccessToken()
-	//Revokes Nest Auth Token
-    if(atomicState?.authToken) { revokeNestToken() }
+    if(addRemoveDevices()) {
+    	//Revokes Smartthings endpoint token...
+		revokeAccessToken()
+		//Revokes Nest Auth Token
+    	if(atomicState?.authToken) { revokeNestToken() }
+    }
     //sends notification of uninstall
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -453,7 +459,7 @@ def forcedPoll(type = null) {
 
 def postStrCmd() { 
 	log.trace "postStrCmd()"
-    forcedPoll("str") }
+    forcedPoll() }
     
 def postDevCmd() { 
 	log.trace "postDevCmd()"
@@ -1214,14 +1220,16 @@ def addRemoveDevices() {
             		LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
         		}
         		//return d3
-            } catch (ex) { LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) }
+            } catch (ex) { 
+            	LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
+            	retVal = false
+            }
         }
         
         def presCnt = 0
         if(atomicState?.presDevice) { presCnt = 1 }
      	if(devsCrt > 0) {
          	LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s) and ${presCnt} Presence Device", "debug", true)
-         	retVal = true
 		}
  
     	def delete 
@@ -1229,28 +1237,30 @@ def addRemoveDevices() {
         	delete = getAllChildDevices()
     	} else {
         	if (!atomicState?.protects && !atomicState?.presDevice) {
-            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) }
+            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) }
         	}	 
         	else if (!atomicState?.thermostats && !atomicState?.presDevice) { 
-        		delete = getChildDevices().findAll { !atomicState?.protects.toString().contains(it?.deviceNetworkId) }
+        		delete = getChildDevices().findAll { !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) }
         	}
             else if (!atomicState?.presDevice) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
             }
         	else {
             	def presdni = getNestPresId()
-             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) &&
-             		!atomicState?.protects.toString().contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
+             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) &&
+             		!atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
         	LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true) 
     		delete.each { deleteChildDevice(it.deviceNetworkId) }
         }
+       	retVal = true
     } catch (ex) { 
     	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
         	LogAction("addRemoveDevices Device Handlers are Missing or Not Published.  Please verify all device handlers are present before continuing: ${ex}", "warn", true, true)
         } else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
+        retVal = false
     }
     return retVal
 }
@@ -1371,6 +1381,7 @@ def revokeNestToken() {
     try {
         httpDelete(params) { resp ->
             if (resp.status == 204) {
+            	atomicState?.authToken = null
         		LogAction("Your Nest Token has been revoked successfully...", "warn", true)
                 return true
         	}	
@@ -1513,11 +1524,11 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
         	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
         	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
-        	def curStateSize = atomicState?.toString().length()
+        	def curStateSize = state?.toString().length()
         	if (curStateSize < (maxStateSize - logMsgLngth)) {
-        		//log.debug "State Size Before: ${atomicState.toString().length()}"
+        		//log.debug "State Size Before: ${state.toString().length()}"
     			atomicState?.exLogs << logEntry
-            	//log.debug "State Size After: ${atomicState.toString().length()}" 
+            	//log.debug "State Size After: ${state.toString().length()}" 
    			}
         
         	else if (!atomicState?.exLogs) { 
@@ -1529,7 +1540,7 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 				if (curStateSize > (maxStateSize - logMsgLngth)) { 
             		    
             		atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
-                	//log.debug "State Size After Cleanup: ${atomicState.toString().length()}"   
+                	//log.debug "State Size After Cleanup: ${state.toString().length()}"   
            		}
     			atomicState?.exLogs << logEntry
         	}	
@@ -1552,7 +1563,7 @@ def renderLogJson() {
 def renderStateJson() {
 	try {
   		def values = []
-  		state.each { item ->
+  		state?.each { item ->
     		switch (item.key) {
             	case ["accessToken", "authToken", "exLogs", "structData","deviceData"]:
                 	break
@@ -1566,6 +1577,31 @@ def renderStateJson() {
   		render contentType: "application/json", data: logString
   		
     } catch (ex) { LogAction("renderStateJson Exception: ${ex}", "error", true, true) }
+}
+
+def renderDebugJson() {
+	try {
+    	def dbgData = []
+    	def exLog = []
+        if (!atomicState.exLogs) { exLog = [nothing: "found"] }
+        else { exLog = atomicState?.exLog }
+        
+  		def stateVals = []
+  		state?.each { item ->
+    		switch (item.key) {
+            	case ["accessToken", "authToken",]:
+                	break
+                default:
+                    stateVals << item
+                 	break
+    		}
+        }
+        dbgData = ["LogData":exLog, "StateData":stateVals] 
+        def logJson = new groovy.json.JsonOutput().toJson(dbgData)
+  		def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
+  		render contentType: "application/json", data: logString
+  		
+    } catch (ex) { LogAction("renderDebugJson Exception: ${ex}", "error", true, true) }
 }
 
 def Logger(msg, type) {
@@ -2132,6 +2168,7 @@ def modePresPage() {
 	}
 }
 def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
+
 def debugPrefPage() {
     dynamicPage(name: "debugPrefPage", install: false) {
         section ("Application Logs") {
@@ -2194,6 +2231,8 @@ def diagPage () {
                		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                		title:"State Data", description:"Tap to view State Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
+            href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
+               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...",
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
        	}
