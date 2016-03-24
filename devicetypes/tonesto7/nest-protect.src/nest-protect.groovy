@@ -31,7 +31,7 @@ preferences {
                 "testWarnCO": "CO Warning"])
 }
 
-def devVer() { return "1.0.1" }
+def devVer() { return "1.1.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
