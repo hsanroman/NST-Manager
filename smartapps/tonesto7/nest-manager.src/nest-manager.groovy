@@ -36,10 +36,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.1.0" }
-def appVerDate() { "3-23-2016" }
+def appVersion() { "1.1.1" }
+def appVerDate() { "3-24-2016" }
 def appVerInfo() {
-
+    "V1.1.1 (Mar 24th, 2016)\n" +
+    "Fixed: Bugfixes and optimizing...\n\n" +
+    
     "V1.1.0 (Mar 23rd, 2016)\n" +
     "Fixed: Optimized polling and entire codebase (Thanks @E_sch for your suggestions)\n" +
     "Added: Created an Automation Section and moving new functions there.\n" +
