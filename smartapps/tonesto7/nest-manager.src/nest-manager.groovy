@@ -1060,8 +1060,8 @@ def getNestStructures() {
 
             	atomicState?.structures = strucId
 
-            	//def dni = [strucData?.structure_id].join('.')
-            	//struct[dni] = strucData?.name.toString()
+            	def dni = [strucData?.structure_id].join('.')
+            	struct[dni] = strucData?.name.toString()
                 
                 //if (strucData?.structure_id == settings?.structures) {
                     //thisstruct[dni] = strucData?.name.toString()
