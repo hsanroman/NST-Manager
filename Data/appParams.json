@@ -5,11 +5,11 @@
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "1.1.1"
+      "ver": "1.1.2"
     },
     "thermostat": {
       "type": "rel",
-      "ver": "1.1.0"
+      "ver": "1.1.1"
     },
     "protect": {
       "type": "rel",
