@@ -654,7 +654,7 @@ def levelDown() {
 }
 
 def levelUpDown(tempVal, chgType = null) {
-	log.trace "levelUpDown()...($tempVal | $chgType)"
+	//log.trace "levelUpDown()...($tempVal | $chgType)"
 	def hvacMode = getHvacMode()
     
     if (canChangeTemp()) {
@@ -686,7 +686,7 @@ def levelUpDown(tempVal, chgType = null) {
         targetVal = curThermSetpoint ?: 0.0
 
         if (upLevel) {
-            log.debug "Increasing by 1 increment"
+            //log.debug "Increasing by 1 increment"
             if (tempUnit == "C" ) {
                 targetVal = targetVal.toDouble() + 0.5
                 if (targetVal < 9.0) { targetVal = 9.0 }
@@ -697,7 +697,7 @@ def levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 89.0) { targetVal = 89.0 }
             }
         } else {
-            log.debug "Reducing by 1 increment"
+            //log.debug "Reducing by 1 increment"
             if (tempUnit == "C" ) {
                 targetVal = targetVal.toDouble() - 0.5
                 if (targetVal < 9.0) { targetVal = 9.0 }
@@ -759,7 +759,7 @@ def canChangeTemp() {
 }
 
 def changeSetpoint(val) {
-	log.trace "changeSetpoint()... ($val)"
+	//log.trace "changeSetpoint()... ($val)"
 	if ( canChangeTemp() ) {
 		def temp = val?.temp?.value.toDouble()
     	def md = !val?.mode?.value ? null : val?.mode?.value
@@ -853,7 +853,7 @@ def setCoolingSetpoint(temp) {
 }
 
 def setCoolingSetpoint(Double temp) {
-	log.trace "setCoolingSetpoint()..."
+	log.trace "setCoolingSetpoint()... ($temp)"
 	def hvacMode = getHvacMode()
 	def tempUnit = state?.tempUnit
     def canCool = state?.can_cool.toBoolean()
