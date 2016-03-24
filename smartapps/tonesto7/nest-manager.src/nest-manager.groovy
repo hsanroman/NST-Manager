@@ -903,7 +903,7 @@ def newUpdNotify() {
     	def pUpd = isProtUpdateAvail()
         def prUpd = isPresUpdateAvail()
     	def tUpd = isTstatUpdateAvail()
-        if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > atomicState.updNotifyWaitVal.toInteger())) {
+        if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
     		def appl = !appUpd ? "" : "Manager App: v${atomicState?.appData.versions.app.ver.toString()}, "
     		def prot = !pUpd ? "" : "Protect: v${atomicState?.appData.versions.protect.ver.toString()}, "
             def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
@@ -944,9 +944,9 @@ def sendMsg(String msg, String msgType) {
 }
 
 def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Active" : "Active") : "Not Active" } //Keep this
-def getLastMsgSec() { return !atomicState?.lastMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastMsgDt).toInteger() }
-def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt).toInteger() }
-def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
+def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt).toInteger() }
+def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt).toInteger() }
+def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
