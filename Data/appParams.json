@@ -2,28 +2,22 @@
   "state": {
     "stateVarVer": 1
   },
-  "timings": {
-    "devPollVal": 60,
-    "forcePollWait": 10,
-    "strPollVal": 180,
-    "tempWaitVal": 4
-  },
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "1.0.3"
+      "ver": "1.1.0"
     },
     "thermostat": {
       "type": "rel",
-      "ver": "1.0.3"
+      "ver": "1.1.0"
     },
     "protect": {
       "type": "rel",
-      "ver": "1.0.1"
+      "ver": "1.1.0"
     },
     "presence": {
       "type": "rel",
-      "ver": "1.0.2"
+      "ver": "1.1.0"
     }
   },
   "updater": {

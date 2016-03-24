@@ -17,6 +17,7 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+ 
 import java.text.SimpleDateFormat 
 
 preferences {
@@ -53,6 +54,7 @@ metadata {
         attribute "isTesting", "string"
         attribute "apiStatus", "string"
         attribute "debugOn", "string"
+        attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
     }
 	
@@ -123,7 +125,7 @@ metadata {
 			state("default", label: 'Data Last Received:\n${currentValue}')
 	    }
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
-			state("default", label: '${currentValue}')
+			state("default", label: 'Device Type:\nv${currentValue}')
 		}
         valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
         	state "ok", label: "API Status:\nOK"
@@ -152,44 +154,36 @@ def poll() {
 
 def refresh() {
 	log.debug "refreshing parent..."
-    
     if (testMode) {
         switch (testMode) {
             case "testSmoke" :
                 alarmStateEvent("", "emergency")
-            break;
-
+            	break
             case "testCO":
                 alarmStateEvent("emergency", "")
-            break;
-
+            	break
             case "testWarnSmoke" :
                 alarmStateEvent("", "warning")
-            break;
-
+            	break
             case "testWarnCO":
                 alarmStateEvent("warning", "")
-            break;
+           		break
             default:
                 parent.refresh()
-
-       		log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
+       			log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
+				break            
         }
-     } else {
-      	parent.refresh() 
-    }
-    
+    } else { parent.refresh() }
 }
 
-def generateEvent(Map results)
-{	
-	state.testMode = testMode ? testMode : null
-    Logger("Gen Event parsing data ${results}")
-	if(results)
-	{
-    	state.use24Time = !parent?.settings?.use24Time ? false : true
-        deviceVerEvent()
-    	lastCheckinEvent(results?.last_connection)
+def generateEvent(Map results) {	
+	state?.testMode = !testMode ? null : testMode
+    //Logger("Gen Event parsing data ${results}")
+    Logger("-------------------------------------------------------------------", "warn")
+    
+	if(results) {	
+    	state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
         apiStatusEvent(parent?.apiIssues())
         debugOnEvent(parent.settings?.childDebug)
@@ -201,20 +195,25 @@ def generateEvent(Map results)
         uiColorEvent(results?.ui_color_state.toString())
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
+        deviceVerEvent()
     }
     lastUpdatedEvent()
+    return null
 }
 
 def deviceVerEvent() {
-	if (devVer()) {
-    	def cur = parent?.latestProtVer().ver.toString()
-    	def ver = (cur != devVer().toString()) ? "Device Type:\nv${devVer()}(Latest: v${cur})" : "Device Type:\nv${devVer()}(Current)"
-    	sendEvent(name: 'devTypeVer', value: ver, displayed: false, isStateChange: true)
-    }
+    def curData = device.currentState("devTypeVer")?.value
+    def pubVer = parent?.latestProtVer().ver.toString()
+	def dVer = devVer() ? devVer() : null
+    def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    if(curData != newData) {
+        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+    	sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def lastCheckinEvent(checkin) {
-	def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
@@ -227,7 +226,7 @@ def lastCheckinEvent(checkin) {
 
 def lastTestedEvent(dt) {
     def lastTstVal = device.currentState("lastTested")?.value
-    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
     def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
@@ -241,7 +240,7 @@ def softwareVerEvent(ver) {
     def verVal = device.currentState("softwareVer")?.value
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
-        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: true, isStateChange: true)
+        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false)
     } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
@@ -250,22 +249,22 @@ def debugOnEvent(debug) {
     def stateVal = debug ? "On" : "Off"
 	if(!val.equals(stateVal)) {
     	log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-        sendEvent(name: 'debugOn', value: stateVal, displayed: false, isStateChange: true, state: stateVal)
+        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
    	} else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
-	def appIs = device.currentState("apiStatus")?.value
+	def appStat = device.currentState("apiStatus")?.value
     def val = issue ? "issue" : "ok"
-	if(!appIs.equals(val)) { 
-        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appIs})")
+	if(!appStat.equals(val)) { 
+        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
-    } else { Logger("API Status is: (${val}) | Original State: (${appIs})") }
+    } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
 }
 
 def lastUpdatedEvent() {
     def now = new Date()
-    def formatVal = state.use24Time ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
@@ -351,6 +350,9 @@ def testingStateEvent(test) {
  	sendEvent( name: 'alarmState', value: alarmState, descriptionText: "Alarm: ${alarmState} (Smoke/CO: ${smokeState}/${coState})", type: "physical", displayed: dispAct, isStateChange: true )
 }
  
+/************************************************************************************************
+|										LOGGING FUNCTIONS										|
+*************************************************************************************************/
 // Local Application Logging
 def Logger(msg, logType = "debug") {
  	if(parent.settings?.childDebug) { 
