@@ -685,19 +685,18 @@ def levelUpDown(tempVal, chgType = null) {
         def curCoolpoint = device.currentValue("coolingSetpoint")
         def curThermSetpoint = device.latestValue("thermostatSetpoint")
         targetVal = curThermSetpoint ?: 0.0
-if (hvacMode == "auto") {
-	if (chgType == "cool") { 
-		targetVal = curCoolpoint
-		curThermSetpoint = targetVal
-		
-	}
-	if (chgType == "heat") { 
-		targetVal = curHeatpoint
-		curThermSetpoint = targetVal
-		
-	}
-}
-        if (upLevel) {
+		if (hvacMode == "auto") {
+			if (chgType == "cool") { 
+				targetVal = curCoolpoint
+				curThermSetpoint = targetVal
+			}
+			if (chgType == "heat") { 
+				targetVal = curHeatpoint
+				curThermSetpoint = targetVal
+			}
+		}
+
+		if (upLevel) {
             //log.debug "Increasing by 1 increment"
             if (tempUnit == "C" ) {
                 targetVal = targetVal.toDouble() + 0.5
