@@ -97,7 +97,7 @@ def authPage() {
     if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
     //if(!atomicState?.testedDhInst) { deviceHandlerTest() }
 	if(getLastWebUpdSec() > 300) { getWebFileData() }
-    if(!atomicState.accessToken) { atomicState.accessToken = createAccessToken() }
+    if(!atomicState?.accessToken) { atomicState?.accessToken = createAccessToken() }
     
     def description
     def uninstallAllowed = false
@@ -144,12 +144,12 @@ def authPage() {
 			def structs = getNestStructures()
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         	LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
-
             section("Select your Location:") {
-                //paragraph "Select the Location from your Nest account."
                 input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs], 
-                			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")) }
-			if (structures) {
+                			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")) 
+            }
+			
+            if (structures) {
                	atomicState?.structures = structures ? structures : null
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats" 
@@ -171,7 +171,7 @@ def authPage() {
                     			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")) 
                     }
                     atomicState?.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Use Nest as Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
+                    input(name: "presDevice", title:"Add Nest Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
                     			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")) 
                     atomicState?.presDevice = presDevice ? true : false
                 }
@@ -274,7 +274,7 @@ def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has updated settings...")
-    if(!atomicState.isInstalled) { atomicState.isInstalled = true }
+    if(!atomicState.isInstalled) { atomicState?.isInstalled = true }
 }
 
 def uninstalled() {
@@ -355,10 +355,10 @@ def poll(force = false, type = null) {
    		def dev = false
         def str = false
         if (force == true) { forcedPoll(type) }
-        if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
-            LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", true)
+	    if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
+			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", true)
             scheduleNextPoll()
-        }
+ 		}
    		else if(!force) {
     			scheduleNextPoll()
    			if(ok2PollDevice()) { 
@@ -461,8 +461,7 @@ def postDevCmd() {
 
 def getApiStructureData() {
 	LogAction("getApiStructureData()", "info", false)
-    def now = new Date()
-    atomicState?.lastStrucDataUpd = formatDt(now).toString()
+    atomicState?.lastStrucDataUpd = getDtNow()
     def params = [
     	uri: getNestApiUrl(),
     	path: "/structures",
@@ -504,12 +503,11 @@ def getApiStructureData() {
 
 def getApiDeviceData() {
 	LogAction("getApiDeviceData()", "info", false)
-	def now = new Date()
-    atomicState?.lastDevDataUpd = formatDt(now).toString()
+    atomicState?.lastDevDataUpd = getDtNow()
     def params = [
     	uri: getNestApiUrl(),
     	path: "/devices",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState.authToken}"]
+    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
     ]
     try {
         httpGet(params) { resp ->
@@ -622,7 +620,7 @@ def checkNestToStMode() {
 	def nestPresent = locationPresence() == "home" ? true : false
     def sched = false
     if(nestPresent && stHomeMode) {
-    	def homeMd = stHomeMode.toString()
+    	def homeMd = stHomeMode?.toString()
     	if (curMode != homeMd) {
         	atomicState.nestToStModeDt = getDtNow()
         	if (location.modes?.find{it.name == homeMd}) {
@@ -638,7 +636,7 @@ def checkNestToStMode() {
         }
     }
     else if (!nestPresent && stAwayMode) {
-    	def awayMd = stAwayMode.toString()
+    	def awayMd = stAwayMode?.toString()
         if (curMode != awayMd) {
         	atomicState.nestToStModeDt = getDtNow()
         	if (location.modes?.find{it.name == awayMd}) {
@@ -1048,7 +1046,7 @@ def isTstatUpdateAvail() {
 def getNestStructures() {
 	LogTrace("Getting Nest Structures")
     def struct = [:]
-    //def thisstruct = [:]
+    def thisstruct = [:]
     try {
     	if(ok2PollStruct()) { getApiStructureData() }
     	
@@ -1063,12 +1061,12 @@ def getNestStructures() {
             	def dni = [strucData?.structure_id].join('.')
             	struct[dni] = strucData?.name.toString()
                 
-                //if (strucData?.structure_id == settings?.structures) {
-                    //thisstruct[dni] = strucData?.name.toString()
-                //}
-            //}
-            //if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
-                //struct = thisstruct
+                if (strucData?.structure_id == settings?.structures) {
+                    thisstruct[dni] = strucData?.name.toString()
+                }
+            }
+            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
+                struct = thisstruct
             }
             if (ok2PollDevice()) { getApiDeviceData() }
         } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
@@ -1082,7 +1080,7 @@ def getNestThermostats() {
     LogTrace("Getting Thermostat list")
     def stats = [:]
     def tstats = atomicState?.deviceData?.thermostats
-    LogTrace("Found ${tstats.size()} Thermostats...")
+    LogTrace("Found ${tstats?.size()} Thermostats...")
     tstats.each { stat ->
         def statId = stat?.key
         def statData = stat?.value
@@ -1099,7 +1097,7 @@ def getNestProtects() {
     LogTrace("Getting Nest Protect List...")
     def protects = [:]
     def nProtects = atomicState?.deviceData?.smoke_co_alarms
-    LogTrace("Found ${nProtects.size()} Nest Protects...")
+    LogTrace("Found ${nProtects?.size()} Nest Protects...")
     nProtects.each { dev ->
     	def devId = dev?.key
 		def devData = dev?.value
@@ -1231,7 +1229,7 @@ def addRemoveDevices() {
         	delete = getAllChildDevices()
     	} else {
         	if (!atomicState?.protects && !atomicState?.presDevice) {
-            	delete = getChildDevices().findAll { !atomicState.thermostats?.toString().contains(it?.deviceNetworkId) }
+            	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString().contains(it?.deviceNetworkId) }
         	}	 
         	else if (!atomicState?.thermostats && !atomicState?.presDevice) { 
         		delete = getChildDevices().findAll { !atomicState?.protects.toString().contains(it?.deviceNetworkId) }
@@ -1287,7 +1285,7 @@ def deviceHandlerTest() {
 }
 
 def preReqCheck() {
-	if(atomicState.preReqTested) { return true }
+	if(atomicState?.preReqTested) { return true }
     if(!location?.timeZone || !location?.zipCode) { 
     	atomicState.preReqTested = false
         LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true) 
@@ -1302,7 +1300,7 @@ def preReqCheck() {
 def getEndpointUrl() {
 	def params = [
         uri: "https://graph.api.smartthings.com/api/smartapps/endpoints",
-        query: ["access_token": atomicState.accessToken],
+        query: ["access_token": atomicState?.accessToken],
        	contentType: 'application/json'
     ]
     try {
@@ -1320,11 +1318,11 @@ def getEndpointUrl() {
 //These are the Nest OAUTH Methods to aquire the auth code and then Access Token.
 def oauthInitUrl() {
     //log.debug "oauthInitUrl with callback: ${callbackUrl}"
-    atomicState.oauthInitState = UUID.randomUUID().toString()
+    atomicState.oauthInitState = UUID?.randomUUID().toString()
     def oauthParams = [
             response_type: "code",
             client_id: clientId(),
-            state: atomicState.oauthInitState,
+            state: atomicState?.oauthInitState,
             redirect_uri: callbackUrl //"https://graph.api.smartthings.com/oauth/callback"
     ]
     redirect(location: "https://home.nest.com/login/oauth2?${toQueryString(oauthParams)}")
@@ -1338,7 +1336,7 @@ def callback() {
         def oauthState = params.state
         LogTrace("Callback State: ${oauthState}")
     
-        if (oauthState == atomicState.oauthInitState){
+        if (oauthState == atomicState?.oauthInitState){
             def tokenParams = [
                 code: code.toString(),
                 client_id: clientId(),
@@ -1347,11 +1345,11 @@ def callback() {
             ]
             def tokenUrl = "https://api.home.nest.com/oauth2/access_token?${toQueryString(tokenParams)}"
             httpPost(uri: tokenUrl) { resp ->
-                atomicState.tokenExpires = resp.data.expires_in
-                atomicState.authToken = resp.data.access_token
+                atomicState.tokenExpires = resp?.data.expires_in
+                atomicState.authToken = resp?.data.access_token
             }
                 
-            if (atomicState.authToken) {
+            if (atomicState?.authToken) {
                 success()
             } else {
                 fail()
@@ -1367,17 +1365,21 @@ def callback() {
 def revokeNestToken() {
 	def params = [
         uri: "https://api.home.nest.com",
-        path: "/oauth2/access_tokens/${atomicState.authToken}",
+        path: "/oauth2/access_tokens/${atomicState?.authToken}",
        	contentType: 'application/json'
     ]
     try {
         httpDelete(params) { resp ->
             if (resp.status == 204) {
         		LogAction("Your Nest Token has been revoked successfully...", "warn", true)
+                return true
         	}	
         }
     }
-	catch (ex) { LogAction("revokeNestToken Exception: ${ex}", "error", true, true) }
+	catch (ex) { 
+    	LogAction("revokeNestToken Exception: ${ex}", "error", true, true)
+    	return false
+    }
 }
 
 //HTML Connections Pages
@@ -1511,7 +1513,7 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
         	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
         	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
-        	def curStateSize = atomicState.toString().length()
+        	def curStateSize = atomicState?.toString().length()
         	if (curStateSize < (maxStateSize - logMsgLngth)) {
         		//log.debug "State Size Before: ${atomicState.toString().length()}"
     			atomicState?.exLogs << logEntry
@@ -1643,7 +1645,7 @@ def getPresenceChildName() 	  { "Nest Presence" }
 def getServerUrl()            { "https://graph.api.smartthings.com" }
 def getShardUrl()             { return getApiServerUrl() }
 def getCallbackUrl()          { "https://graph.api.smartthings.com/oauth/callback" }
-def getBuildRedirectUrl()     { "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState.accessToken}&apiServerUrl=${shardUrl}" }
+def getBuildRedirectUrl()     { "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()           { return "https://developer-api.nest.com" }
 
 def latestTstatVer() { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
@@ -1721,7 +1723,7 @@ def quietTimeOk() {
 def modesOk(modeEntry) {
 	if (modeEntry) {
     	modeEntry?.each { m ->
-        	if(m.toString() == location.mode.toString()) { return false }
+        	if(m.toString() == location?.mode.toString()) { return false }
      	}  
         return true
     }
@@ -1980,9 +1982,10 @@ def contactWatchPage() {
         	paragraph "Description Placeholder"
         }
         section("When These Contacts are open, Turn Off this Thermostat") {
-			input name: "watchContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: true,
+        	def req = (watchContacts || watchContactTstats) ? true : false
+			input name: "watchContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/open_closed.png")
-            input name: "watchContactTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: true,
+            input name: "watchContactTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
 		}
         section("When These Contacts are open, Turn Off Thermostat") {
@@ -2235,19 +2238,19 @@ def nestInfoPage () {
     	section("About this page:") {
         	paragraph "This Page will display the data returned from the API for each device that is selected..."
         }
-        if(atomicState.structures) {	
+        if(atomicState?.structures) {	
         	section("Locations") {
         		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
         	}
         }
-        if (atomicState.thermostats) {
+        if (atomicState?.thermostats) {
         	section("Thermostats") {
             	href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         	}
         }
-        if (atomicState.protects) {
+        if (atomicState?.protects) {
         	section("Protects") {
         		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", 
             			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
@@ -2262,7 +2265,7 @@ def structInfoPage () {
             paragraph "\nLocation Info:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
         }
        	for(str in atomicState?.structData) {
-            if (str.key == atomicState.structures) {
+            if (str.key == atomicState?.structures) {
            		def strId = str.key
                 def strData = str.value
         		section("Location Name: ${strData.name}") {
@@ -2286,7 +2289,7 @@ def tstatInfoPage () {
         section("") {
             paragraph "\nThermostats:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         }
-        for(tstat in atomicState.thermostats) { 
+        for(tstat in atomicState?.thermostats) { 
         	def devs = []
         	section("Thermostat Name: ${tstat.value}") {
             	atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
@@ -2311,7 +2314,7 @@ def protInfoPage () {
         section("") {
             paragraph "\nProtects:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
         }
-        atomicState.protects.each { prot ->
+        atomicState?.protects.each { prot ->
         	def devs = []
         	section("Protect Name: ${prot.value}") {
             	atomicState?.deviceData?.smoke_co_alarms[prot.key].each { dev ->
