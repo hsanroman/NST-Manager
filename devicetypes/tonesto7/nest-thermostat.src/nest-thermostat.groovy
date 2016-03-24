@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.0" }
+def devVer() { return "1.1.1"}
 
 // for the UI
 metadata {
@@ -53,6 +53,7 @@ metadata {
         //command "setHome"
         command "setPresence"
         command "setFanMode"
+        command "setTemperature"
         command "setThermostatMode"
         command "levelUpDown"
  	    command "levelUp"
@@ -420,7 +421,7 @@ def thermostatSetpointEvent(Double targetTemp) {
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
 	    log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
+	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
 	} else { Logger("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
 }
 
@@ -429,7 +430,7 @@ def temperatureEvent(Double tempVal) {
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
     if(!temp.equals(rTempVal.toString())) {
         log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-    	sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+    	sendEvent(name:'temperature', value: rTempVal, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
     } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -441,7 +442,7 @@ def heatingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-    	sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
+    	sendEvent(name:'heatingSetpoint', value: rTempVal, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
     } else { Logger("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -453,7 +454,7 @@ def coolingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-    	sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
+    	sendEvent(name:'coolingSetpoint', value: rTempVal, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
     } else { Logger("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -726,9 +727,26 @@ def levelUpDown(tempVal, chgType = null) {
                 	runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
             		break
         		case "auto":
-          			log.warn "auto mode temp change is not supported yet."
+          			if (chgType) {
+						switch (chgType) {
+							case "cool":
+								Logger("Sending changeSetpoint(Temp: ${targetVal})")
+								coolingSetpointEvent(targetVal)
+								runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+								break
+							case "heat":
+								Logger("Sending changeSetpoint(Temp: ${targetVal})")
+								heatingSetpointEvent(targetVal)
+								runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+								break
+							default:
+                            	log.warn "Can not change temp while in this mode ($chgType}!!!"
+								break
+						}
+					} else { log.warn "Temp Change without a chgType is not supported!!!" }
         			break
         		default:
+                	log.warn "Unsupported Mode Received: ($hvacMode}!!!"
         			break
         	}
      	}
