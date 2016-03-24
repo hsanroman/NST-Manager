@@ -88,8 +88,11 @@ preferences {
 mappings {
     path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
     path("/oauth/callback") 	{action: [GET: "callback"]}
-    path("/renderLogs")			{action: [GET: "renderLogJson"]}
-    path("/renderState")		{action: [GET: "renderStateJson"]}
+    if(diagLogs) {
+    	path("/renderLogs")		{action: [GET: "renderLogJson"]}
+    	path("/renderState")	{action: [GET: "renderStateJson"]}
+        path("/renderDebug")	{action: [GET: "renderDebugJson"]}
+   	}
 }
 
 def authPage() {
@@ -1515,11 +1518,11 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
         	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
         	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
-        	def curStateSize = atomicState?.toString().length()
+        	def curStateSize = state?.toString().length()
         	if (curStateSize < (maxStateSize - logMsgLngth)) {
-        		//log.debug "State Size Before: ${atomicState.toString().length()}"
+        		//log.debug "State Size Before: ${state.toString().length()}"
     			atomicState?.exLogs << logEntry
-            	//log.debug "State Size After: ${atomicState.toString().length()}" 
+            	//log.debug "State Size After: ${state.toString().length()}" 
    			}
         
         	else if (!atomicState?.exLogs) { 
@@ -1531,7 +1534,7 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 				if (curStateSize > (maxStateSize - logMsgLngth)) { 
             		    
             		atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
-                	//log.debug "State Size After Cleanup: ${atomicState.toString().length()}"   
+                	//log.debug "State Size After Cleanup: ${state.toString().length()}"   
            		}
     			atomicState?.exLogs << logEntry
         	}	
@@ -1554,7 +1557,7 @@ def renderLogJson() {
 def renderStateJson() {
 	try {
   		def values = []
-  		state.each { item ->
+  		state?.each { item ->
     		switch (item.key) {
             	case ["accessToken", "authToken", "exLogs", "structData","deviceData"]:
                 	break
@@ -1568,6 +1571,31 @@ def renderStateJson() {
   		render contentType: "application/json", data: logString
   		
     } catch (ex) { LogAction("renderStateJson Exception: ${ex}", "error", true, true) }
+}
+
+def renderDebugJson() {
+	try {
+    	def dbgData = []
+    	def exLog = []
+        if (!atomicState.exLogs) { exLog = [nothing: "found"] }
+        else { exLog = atomicState?.exLog }
+        
+  		def stateVals = []
+  		state?.each { item ->
+    		switch (item.key) {
+            	case ["accessToken", "authToken",]:
+                	break
+                default:
+                    stateVals << item
+                 	break
+    		}
+        }
+        dbgData = ["LogData":exLog, "StateData":stateVals] 
+        def logJson = new groovy.json.JsonOutput().toJson(dbgData)
+  		def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
+  		render contentType: "application/json", data: logString
+  		
+    } catch (ex) { LogAction("renderDebugJson Exception: ${ex}", "error", true, true) }
 }
 
 def Logger(msg, type) {
@@ -2134,6 +2162,7 @@ def modePresPage() {
 	}
 }
 def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
+
 def debugPrefPage() {
     dynamicPage(name: "debugPrefPage", install: false) {
         section ("Application Logs") {
@@ -2196,6 +2225,8 @@ def diagPage () {
                		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                		title:"State Data", description:"Tap to view State Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
+            href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
+               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...",
             		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
        	}
