@@ -286,11 +286,12 @@ def uninstalled() {
     atomicState.thermostats = []
     atomicState.protects = []
     atomicState.presDevice = false
-    addRemoveDevices()
-    //Revokes Smartthings endpoint token...
-	revokeAccessToken()
-	//Revokes Nest Auth Token
-    if(atomicState?.authToken) { revokeNestToken() }
+    if(addRemoveDevices()) {
+    	//Revokes Smartthings endpoint token...
+		revokeAccessToken()
+		//Revokes Nest Auth Token
+    	if(atomicState?.authToken) { revokeNestToken() }
+    }
     //sends notification of uninstall
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -1219,14 +1220,16 @@ def addRemoveDevices() {
             		LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
         		}
         		//return d3
-            } catch (ex) { LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) }
+            } catch (ex) { 
+            	LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
+            	retVal = false
+            }
         }
         
         def presCnt = 0
         if(atomicState?.presDevice) { presCnt = 1 }
      	if(devsCrt > 0) {
          	LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s) and ${presCnt} Presence Device", "debug", true)
-         	retVal = true
 		}
  
     	def delete 
@@ -1252,10 +1255,12 @@ def addRemoveDevices() {
         	LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true) 
     		delete.each { deleteChildDevice(it.deviceNetworkId) }
         }
+       	retVal = true
     } catch (ex) { 
     	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
         	LogAction("addRemoveDevices Device Handlers are Missing or Not Published.  Please verify all device handlers are present before continuing: ${ex}", "warn", true, true)
         } else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
+        retVal = false
     }
     return retVal
 }
@@ -1376,6 +1381,7 @@ def revokeNestToken() {
     try {
         httpDelete(params) { resp ->
             if (resp.status == 204) {
+            	atomicState?.authToken = null
         		LogAction("Your Nest Token has been revoked successfully...", "warn", true)
                 return true
         	}	
