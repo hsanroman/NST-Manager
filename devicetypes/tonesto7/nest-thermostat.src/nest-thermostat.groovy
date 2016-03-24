@@ -645,12 +645,12 @@ def coolingSetpointDown() {
 }
 
 def levelUp() {
-	log.trace "levelUp()..."
+	//log.trace "levelUp()..."
 	levelUpDown(1)
 }
 
 def levelDown() {
-    log.trace "levelDown()..."
+    //log.trace "levelDown()..."
     levelUpDown(-1)
 }
 
@@ -758,7 +758,7 @@ if (hvacMode == "auto") {
 
 // Nest does not allow temp changes in away modes
 def canChangeTemp() {
-    log.trace "canChangeTemp()..."
+    //log.trace "canChangeTemp()..."
     def curPres = getNestPresence()
     if (curPres != "away" || curPres != "auto-away") {
 		def hvacMode = getHvacMode()
