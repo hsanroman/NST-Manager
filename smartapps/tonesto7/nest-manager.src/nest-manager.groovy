@@ -1,7 +1,7 @@
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
-|    Author: Anthony S. (@tonesto7), 							    |
-|	 Contributors: Ben W. (@desertblade) Eric S. (@E_sch)                  		    |
+|    Author: Anthony S. (@tonesto7), 														|
+|	 Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                  				|
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |********************************************************************************************
@@ -123,7 +123,7 @@ def authPage() {
         LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
-                paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
+                paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
                 //if(!deviceHandlerTest()) {
                 //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
                 //}
@@ -136,13 +136,13 @@ def authPage() {
     } else {
         return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
-                paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
+                paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
                 //if(!deviceHandlerTest()) {
                 //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
                 //}
                 if(isAppUpdateAvail()) {
                 	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update.", 
-                    	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
+                    	image: getAppImg("update_icon3.png")
                     href "infoPage", title:"Update Change Log...", description: "Tap to view..."
                 }
             }
@@ -151,7 +151,7 @@ def authPage() {
         	LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
             section("Select your Location:") {
                 input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs], 
-                			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")) 
+                			image: getAppImg("nest_structure_icon.png")) 
             }
 			
             if (structures) {
@@ -168,23 +168,23 @@ def authPage() {
                     if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
                     if (stats?.size() > 0) { 
                     	input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
-                        		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")) 
+                        		image: getAppImg("nest_like.png")) 
                         atomicState?.thermostats = thermostats ? statState(thermostats) : null }
                     
                     if (coSmokes.size() > 0) { 
                     	input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes], 
-                    			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")) 
+                    			image: getAppImg("protect_icon.png")) 
                     }
                     atomicState?.protects = protects ? coState(protects) : null
                     input(name: "presDevice", title:"Add Nest Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
-                    			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")) 
+                    			image: getAppImg("nest_dev_pres_icon.png")) 
                     atomicState?.presDevice = presDevice ? true : false
                 }
                 
                 if(atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) {
                 	section("Automations:") {
                     	href "automationsPage", title: "Automations...", description: "Tap to configure...", 
-            			image: appIcon("https://github.com/tonesto7/nest-manager/raw/master/Images/App/automation_icon.png")
+            			image: getAppImg("automation_icon.png")
                     }
                 }
                	
@@ -193,24 +193,24 @@ def authPage() {
                     section(diagInfoDesc) {
                    		if(atomicState.structures && (atomicState.thermostats ||atomicState.protects) && atomicState?.isInstalled) {
                				href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...",
-                   				image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/api_icon.png")
+                   				image: getAppImg("api_icon.png")
                 		}
                         if(diagLogs) {
                    			href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", 
-                       			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png")
+                       			image: getAppImg("diag_icon.png")
                    		}
                 	}
                 }
                 
                 section("Preferences:") { 
         			href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nApp Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/settings_icon.png")
+            			image: getAppImg("settings_icon.png")
                 }
                 
             }
             section(" ") { 
                 href "infoPage", title:"App Info and Licensing", description: "Tap to view...", 
-                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/info.png")
+                		image: getAppImg("info.png")
             }
         }
     }
@@ -223,23 +223,23 @@ def prefsPage() {
         section("Polling:") {
         	def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active"
         	href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/timer_icon.png")
+            			image: getAppImg("timer_icon.png")
         }
         section("Devices:") {
         	href "devPrefPage", title: "Device Customization", description: "Tap to configure...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png")
+            			image: getAppImg("device_pref_icon.png")
         }
         section("Notifications:") {
         	href "notifPrefPage", title: "Notifications", description: "Notifications: (${pushStatus()})\n${getQTimeLabel()}\nTap to configure...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png")
+            			image: getAppImg("notification_icon.png")
         }
         section("Logging:") {
         	href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png")
+            			image: getAppImg("log.png")
         }
         section ("Diagnostics:") {
             input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", required: false, defaultValue: false, submitOnChange: true,
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png"))
+            			image: getAppImg("diag_icon.png"))
             paragraph "This will store errors withing the app which you can view. You can share those logs with the developer to help resolve issues..."
             if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
             if (!diagLogs) { 
@@ -250,17 +250,17 @@ def prefsPage() {
         }
         section ("Time Display:") {
             input "useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?",  defaultValue: false, submitOnChange: true, required: false,
-            	   		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/military_time_icon.png")
+            	   		image: getAppImg("military_time_icon.png")
             //atomicState.useMilitaryTime = useMilitaryTime ? true : false
         }
         section ("App Icons:") {
             input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
-                        image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/no_icon.png"))
+                        image: getAppImg("no_icon.png"))
             //atomicState.disAppIcons = disAppIcons ? true : false
         }
         section("Nest Login:") {
         	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...",
-                    image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/login_icon.png")
+                    image: getAppImg("login_icon.png")
         }
 		section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false 
@@ -1675,15 +1675,16 @@ def stateCleanup() {
 /******************************************************************************  
 *                			Keep These Methods				                  *
 *******************************************************************************/
-def getThermostatChildName()  { "Nest Thermostat" }
-def getProtectChildName()     { "Nest Protect" }
-def getPresenceChildName() 	  { "Nest Presence" }
-def getServerUrl()            { "https://graph.api.smartthings.com" }
-def getShardUrl()             { return getApiServerUrl() }
-def getCallbackUrl()          { "https://graph.api.smartthings.com/oauth/callback" }
-def getBuildRedirectUrl()     { "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
-def getNestApiUrl()           { return "https://developer-api.nest.com" }
-
+def getThermostatChildName(){ return "Nest Thermostat" }
+def getProtectChildName()   { return "Nest Protect" }
+def getPresenceChildName() 	{ return "Nest Presence" }
+def getServerUrl()          { return "https://graph.api.smartthings.com" }
+def getShardUrl()           { return getApiServerUrl() }
+def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback" }
+def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
+def getNestApiUrl()			{ return "https://developer-api.nest.com" }
+def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/$imgName" : "" }
+							
 def latestTstatVer() { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
 def latestProtVer() { return atomicState?.appData?.versions?.protect ?: "unknown" }
 def latestPresVer() { return atomicState?.appData?.versions?.presence ?: "unknown" }
@@ -1817,7 +1818,7 @@ def getShowProtAlarmEvts() { return showProtAlarmStateEvts ? true : false }
 def pollPrefPage() {
     dynamicPage(name: "pollPrefPage", install: false) {
         section("") {
-        	paragraph "\nPolling Preferences\n", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/timer_icon.png")
+        	paragraph "\nPolling Preferences\n", image: getAppImg("timer_icon.png")
         }
         section("Device Polling:") {
         	def pollValDesc = !pollValue ? "Default: 1 Minute" : pollValue
@@ -1856,9 +1857,9 @@ def pollPrefPage() {
         }
         section("Advanced Polling Options:") {
         	paragraph "If you are still experiencing Polling issues then you can select these devices to use there events to determine if a scheduled poll was missed\nPlease select as FEW devices as possible!\nMore devices will not make for a better polling."
-            input "temperatures", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", multiple: true, required: false, image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/temperature.png")
-            input "energies", "capability.energyMeter",	title: "Which Energy Meters?", multiple: true, required: false, image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/lightning.png")
-            input "powers",	"capability.powerMeter", title: "Which Power Meters?", multiple: true, required: false, image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/power_meter.png")
+            input "temperatures", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", multiple: true, required: false, image: getAppImg("temperature.png")
+            input "energies", "capability.energyMeter",	title: "Which Energy Meters?", multiple: true, required: false, image: getAppImg("lightning.png")
+            input "powers",	"capability.powerMeter", title: "Which Power Meters?", multiple: true, required: false, image: getAppImg("power_meter.png")
         }
     }
 }
@@ -1870,13 +1871,13 @@ def notifPrefPage() {
         	def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select people or devices to send Notifications too..."
         	paragraph "${notifDesc}"
            	//paragraph "To take advantage of advanced notification options please Configure the contact book under the SmartThings Mobile App Menu",
-            //	image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/alert_icon.png"
+            //	image: getAppImg("alert_icon.png")
 			if(!location.contactBookEnabled) {
             	input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, 
-                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png")
+                		image: getAppImg("notification_icon.png")
             }
             input("recipients", "contact", title: "Send notifications to", required: false, submitOnChange: true, 
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png")) {
+            		image: getAppImg("notification_icon.png")) {
            		input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true)
         	}
             
@@ -1890,11 +1891,11 @@ def notifPrefPage() {
         if (recipients || phone || usePush) {
         	section(title: "Time Restrictions") {
             	href "quietTimePage", title: "Quiet Time...", description: "${getQTimeLabel()}",
-                	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/quiet_time.png")
+                	image: getAppImg("quiet_time.png")
 			}
         	section("Missed Poll Notification:") {
         		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true,
-                	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/late_icon.png")
+                	image: getAppImg("late_icon.png")
                 if(missedPollNotif) {
                 	atomicState.missedPollNotif = missedPollNotif ? true : false
                     def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
@@ -1920,7 +1921,7 @@ def notifPrefPage() {
             }
             section("App and Device Updates:") {
                 input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, 
-                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/update_icon3.png")
+                		image: getAppImg("update_icon3.png")
                	if(updNotif) {
                 	atomicState.updNotif = updNotif ? true : false
                     def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
@@ -1942,12 +1943,12 @@ def notifPrefPage() {
 def devPrefPage() {
 	dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
     	section("") {
-        	paragraph "\nDevice Preferences\n", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png")
+        	paragraph "\nDevice Preferences\n", image: getAppImg("device_pref_icon.png")
         }
 		if(atomicState?.protects) {
         	section("Protect Devices:") {
         		input "showProtAlarmStateEvts", "bool", title: "Disable Alarm State in Device Activity Feed?", required: false, defaultValue: false, submitOnChange: true, 
-                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
+                		image: getAppImg("list_icon.png")
         	}
         }
         if(atomicState?.presDevice) {
@@ -1959,7 +1960,7 @@ def devPrefPage() {
 			section("Thermostat Devices:") {
         		paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
                 input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: true, submitOnChange: true, 
-                		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png")
+                		image: getAppImg("list_icon.png")
             }        
         }
 	}
@@ -1982,11 +1983,11 @@ def quietTimePage() {
         section() {
         	input "quietDays", "enum", title: "Only on certain days of the week", multiple: true, required: false,
 					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/day_calendar_icon.png")
+            		image: getAppImg("day_calendar_icon.png")
         }
         section() {
         	input "quietModes", "mode", title: "Quiet when these Modes are Active", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_icon.png")
+            		image: getAppImg("mode_icon.png")
 			//if(quietModes) { atomicState?.quietModes = quietModes }
         }
 	}
@@ -1997,12 +1998,12 @@ def automationsPage() {
     	section("Change Nest Presence and/or ST Modes:") {
         	def presDesc = (awayModes && homeModes) ? "Modes are Selected\n\nTap to configure..." : "Tap to configure..."
         	href "modePresPage", title: "Mode Automations", description: presDesc,
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
+            			image: getAppImg("nest_dev_pres_icon.png")
        	}
 		/*section("Turn a Thermostat Off when\na Window or Door is Open:") {
         	def desc = "(${watchContacts ? watchContacts.size() : 0}) are Selected\n\nTap to configure..."
         	href "contactWatchPage", title: "Doors/Windows to Watch...", description: desc,
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/open_contact.png")
+            			image: getAppImg("open_contact.png")
        	}*/
     }
 }
@@ -2020,29 +2021,29 @@ def contactWatchPage() {
         section("When These Contacts are open, Turn Off this Thermostat") {
         	def req = (watchContacts || watchContactTstats) ? true : false
 			input name: "watchContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/open_closed.png")
+            		image: getAppImg("open_closed.png")
             input name: "watchContactTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
+            		image: getAppImg("nest_like.png")
 		}
         section("When These Contacts are open, Turn Off Thermostat") {
 			def timeReq = (watchContactStartTime || watchContactStopTime) ? true : false
             input "watchContactStartTime", "time", title: "Start time", submitOnChange: true, required: timeReq, 
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/start_time_icon.png")
+            		image: getAppImg("start_time_icon.png")
             input "watchContactStopTime", "time", title: "Stop time", submitOnChange: true, required: timeReq,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/stop_time_icon.png")
+            		image: getAppImg("stop_time_icon.png")
             
             input "watchContactsModes", "mode", title: "Only with These Modes...", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_icon.png")
+            		image: getAppImg("mode_icon.png")
             input "watchContactDays", "enum", title: "Only on certain days of the week", multiple: true, required: false,
 					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/day_calendar_icon.png")
+                    image: getAppImg("day_calendar_icon.png")
         }
         section("Wait this long before turning the thermostat off (defaults to 1 minute)") {
 			input name: "watchContactsOffDelay", type: "decimal", title: "Number of minutes", defaultValue: 1, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/delay_time_icon.png")
+            		image: getAppImg("delay_time_icon.png")
                     
             input "restModeOnClose", "bool", title: "Restore Thermostat to Previous mode after Closed?", required: false, defaultValue: true, submitOnChange: true,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/restore_icon.png")
+            		image: getAppImg("restore_icon.png")
 		}
 	}
 }
@@ -2151,19 +2152,19 @@ def modePresPage() {
 	dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
 		section("Change Nest Presence w/Modes:") {
 			input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_home_Icon.png")
+            		image: getAppImg("app_pres_home_Icon.png")
 			//if(homeModes) { atomicState.homeModes = homeModes }
 			input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_away_Icon.png")
+            		image: getAppImg("app_pres_away_Icon.png")
 			//if(awayModes) { atomicState.awayModes = awayModes }
 		}
         /*section("Nest Presence Set's SmartThings Mode:") {
 			input "homeStMode", "mode", title: "Set this Mode When Nest 'Home'...", multiple: false, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_home_Icon.png")
+            		image: getAppImg("app_pres_home_Icon.png")
 			input "awayStMode", "mode", title: "Set this Mode When Nest 'Away'...", multiple: false, submitOnChange: true, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/app_pres_away_Icon.png")
+            		image: getAppImg("app_pres_away_Icon.png")
             input name: "nestToStModeDelay", type: "decimal", title: "Delay this Number of minutes?", defaultValue: 1, required: false,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/delay_time_icon.png")
+            		image: getAppImg("delay_time_icon.png")
 		}*/
 	}
 }
@@ -2173,10 +2174,10 @@ def debugPrefPage() {
     dynamicPage(name: "debugPrefPage", install: false) {
         section ("Application Logs") {
             input (name: "appDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true,
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png"))
+            		image: getAppImg("log.png"))
             if (appDebug) {
             	input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true,
-                	image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/list_icon.png"))
+                	image: getAppImg("list_icon.png"))
                 atomicState.advAppDebug = advAppDebug ? true : false
             }
             if (appDebug && !atomicState?.appDebug) { LogAction("Debug Logs are Enabled...", "info", false) }
@@ -2188,7 +2189,7 @@ def debugPrefPage() {
         
         section ("Child Device Logs") {
             input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true,
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png"))
+            			image: getAppImg("log.png"))
             if (childDebug) { //input (name: "advChildDebug", type: "bool", title: "Show verbose child device Debug Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true)
             }
             if (childDebug && !atomicState?.childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
@@ -2201,7 +2202,7 @@ def debugPrefPage() {
 def infoPage () {
     dynamicPage(name: "infoPage", title: "App & License Info", install: false) {
         section("About this App:") {
-            paragraph appInfoDesc(), image: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/thermostat_blue%401x.png"
+            paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
         }
         section("Created by:") {
         	paragraph "Anthony S. (@tonesto7)\nBen W. (@desertblade)"
@@ -2223,18 +2224,18 @@ def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
        	section("") {
         	paragraph "This page will allow you to view/export diagnostic logs and state data to assist the developer in troubleshooting...",
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png")
+            		image: getAppImg("diag_icon.png")
         }
         section("Export or View the Logs") {
            	
        		href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
-               		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/log.png")
+               		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
-               		title:"State Data", description:"Tap to view State Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
+               		title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
-               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/state_data_icon.png")
+               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("state_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...",
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
+            		image: getAppImg("reset_icon.png")
        	}
         section("Last Nest Command") {
         	def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
@@ -2257,7 +2258,7 @@ def nestLoginPrefPage () {
     dynamicPage(name: "nestLoginPrefPage", install: false) {
         section("Nest Login Preferences:") {
        	    href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...",
-            		image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/reset_icon.png")
+            		image: getAppImg("reset_icon.png")
        	}
     }
 }
@@ -2280,19 +2281,19 @@ def nestInfoPage () {
         if(atomicState?.structures) {	
         	section("Locations") {
         		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
+            			image: getAppImg("nest_structure_icon.png")
         	}
         }
         if (atomicState?.thermostats) {
         	section("Thermostats") {
             	href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
+            			image: getAppImg("nest_like.png")
         	}
         }
         if (atomicState?.protects) {
         	section("Protects") {
         		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", 
-            			image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
+            			image: getAppImg("protect_icon.png")
         	}
         }
     }
@@ -2301,7 +2302,7 @@ def nestInfoPage () {
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nLocation Info:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_structure_icon.png")
+            paragraph "\nLocation Info:", image: getAppImg("nest_structure_icon.png")
         }
        	for(str in atomicState?.structData) {
             if (str.key == atomicState?.structures) {
@@ -2326,7 +2327,7 @@ def structInfoPage () {
 def tstatInfoPage () {
     dynamicPage(name: "tstatInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nThermostats:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
+            paragraph "\nThermostats:", image: getAppImg("nest_like.png")
         }
         for(tstat in atomicState?.thermostats) { 
         	def devs = []
@@ -2351,7 +2352,7 @@ def tstatInfoPage () {
 def protInfoPage () {
     dynamicPage(name: "protInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nProtects:", image: appIcon("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/protect_icon.png")
+            paragraph "\nProtects:", image: getAppImg("protect_icon.png")
         }
         atomicState?.protects.each { prot ->
         	def devs = []
