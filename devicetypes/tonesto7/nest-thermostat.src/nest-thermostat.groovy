@@ -612,7 +612,7 @@ def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 /************************************************************************************************
 |							Temperature Setpoint Functions for Buttons							|
 *************************************************************************************************/
-def heatingSetpointUp() {
+void heatingSetpointUp() {
 	log.trace "heatingSetpointUp()..."
 	def operMode = getHvacMode()
 	if ( operMode == "heat" || operMode == "auto" ) {
@@ -620,7 +620,7 @@ def heatingSetpointUp() {
 	}
 }
 
-def heatingSetpointDown() {
+void heatingSetpointDown() {
 	log.trace "heatingSetpointDown()..."
 	def operMode = getHvacMode()
 	if ( operMode == "heat" || operMode == "auto" ) {
@@ -628,7 +628,7 @@ def heatingSetpointDown() {
 	}
 }
 
-def coolingSetpointUp() {
+void coolingSetpointUp() {
 	log.trace "coolingSetpointUp()..."
 	def operMode = getHvacMode()
 	if ( operMode == "cool" || operMode == "auto" ) {
@@ -636,7 +636,7 @@ def coolingSetpointUp() {
 	}
 }
 
-def coolingSetpointDown() {
+void coolingSetpointDown() {
 	log.trace "coolingSetpointDown()..."
 	def operMode = getHvacMode()
 	if ( operMode == "cool" || operMode == "auto" ) {
@@ -644,17 +644,17 @@ def coolingSetpointDown() {
 	}
 }
 
-def levelUp() {
+void levelUp() {
 	//log.trace "levelUp()..."
 	levelUpDown(1)
 }
 
-def levelDown() {
+void levelDown() {
     //log.trace "levelDown()..."
     levelUpDown(-1)
 }
 
-def levelUpDown(tempVal, chgType = null) {
+void levelUpDown(tempVal, chgType = null) {
 	//log.trace "levelUpDown()...($tempVal | $chgType)"
 	def hvacMode = getHvacMode()
     
@@ -786,7 +786,7 @@ def canChangeTemp() {
     } else { return false }
 }
 
-def changeSetpoint(val) {
+void changeSetpoint(val) {
 	//log.trace "changeSetpoint()... ($val)"
 	if ( canChangeTemp() ) {
 		def temp = val?.temp?.value.toDouble()
@@ -819,11 +819,11 @@ def changeSetpoint(val) {
     }
 }
 
-def setHeatingSetpoint(temp) {
+void setHeatingSetpoint(temp) {
     setHeatingSetpoint(temp.toDouble())
 }
 
-def setHeatingSetpoint(Double temp) {
+void setHeatingSetpoint(Double temp) {
 	log.trace "setHeatingSetpoint()... ($temp)"
 	def hvacMode = getHvacMode()
 	def tempUnit = state?.tempUnit
@@ -873,14 +873,14 @@ def setHeatingSetpoint(Double temp) {
     	log.debug "Skipping heat change" 
     	result = false
     }
-    return result
+    //return result
 }
 
-def setCoolingSetpoint(temp) {
+void setCoolingSetpoint(temp) {
     setCoolingSetpoint( temp.toDouble() )
 }
 
-def setCoolingSetpoint(Double temp) {
+void setCoolingSetpoint(Double temp) {
 	log.trace "setCoolingSetpoint()... ($temp)"
 	def hvacMode = getHvacMode()
 	def tempUnit = state?.tempUnit
@@ -931,7 +931,7 @@ def setCoolingSetpoint(Double temp) {
 		log.debug "Skipping cool change"
         result = false
 	}
-    return result
+    //return result
 }
 
 /************************************************************************************************
