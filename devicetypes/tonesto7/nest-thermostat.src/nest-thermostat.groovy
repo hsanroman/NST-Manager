@@ -119,7 +119,7 @@ metadata {
     			attributeState("default", label:'${currentValue}')
   			}
         }
-        standardTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
+        valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
         	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
