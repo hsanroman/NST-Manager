@@ -2205,7 +2205,10 @@ def infoPage () {
             paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
         }
         section("Created by:") {
-        	paragraph "Anthony S. (@tonesto7)\nBen W. (@desertblade)"
+        	paragraph "Anthony S. (@tonesto7)"
+        }
+        section("Collaborators:") {
+        	paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)"
         }
         section("App Revision History:") {
             paragraph appVerInfo()
