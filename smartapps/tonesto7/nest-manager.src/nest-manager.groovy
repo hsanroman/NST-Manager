@@ -808,7 +808,7 @@ def setTargetTempHigh(child, unit, temp) {
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
     try {
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().targetHighC, temp, child)) { runIn(3, "postDevCmd") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighC, temp, child)) { runIn(3, "postDevCmd") }
         }
 		else { 
         	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, child)) { runIn(3, "postDevCmd") }
