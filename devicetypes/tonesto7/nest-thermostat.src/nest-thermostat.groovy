@@ -704,8 +704,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() + 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         } else {
             //log.debug "Reducing by 1 increment"
@@ -715,8 +715,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() - 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         }
 
@@ -858,8 +858,8 @@ void setHeatingSetpoint(Double reqtemp) {
 				break
 			case "F":
 				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
+                    if (temp < 50.0) { temp = 50 }
+                    if (temp > 90.0) { temp = 90 }
                     if (hvacMode == 'auto') {
                         parent.setTargetTempLow(this, tempUnit, temp) 
                         heatingSetpointEvent(temp)
@@ -924,8 +924,8 @@ void setCoolingSetpoint(Double reqtemp) {
                 
 			default:
 				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
+                    if (temp < 50.0) { temp = 50 }
+                    if (temp > 90.0) { temp = 90 }
                     
                     if (hvacMode == 'auto') {
                         parent.setTargetTempHigh(this, tempUnit, temp) 
