@@ -7,6 +7,10 @@
       "type": "rel",
       "ver": "1.1.2"
     },
+    "autoapp": {
+      "type": "rel",
+      "ver": "1.0.0"
+    },
     "thermostat": {
       "type": "rel",
       "ver": "1.1.3"
