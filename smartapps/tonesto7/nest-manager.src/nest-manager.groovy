@@ -36,30 +36,15 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.1.2" }
-def appVerDate() { "3-24-2016" }
+def appVersion() { "1.2.0" }
+def appVerDate() { "3-29-2016" }
 def appVerInfo() {
-    "V1.1.2 (Mar 24th, 2016)\n" +
-    "Fixed: Bugfixes and optimizing...\n\n" +
     
-    "V1.1.0 (Mar 23rd, 2016)\n" +
-    "Fixed: Optimized polling and entire codebase (Thanks @E_sch for your suggestions)\n" +
-    "Added: Created an Automation Section and moving new functions there.\n" +
-    "Added: Placeholder.\n\n" +
+    "V1.2.0 (Mar 29th, 2016)\n" +
+    "Fixed: By moving alot of code to automation app I was able to remove alot from Manager App\n" +
+    "Added: Pre-Install Checks are working and enabled by default.\n" +
+    "Added: Moved Automations into Child App named 'Nest Automations'\n\n" +
     
-	"V1.0.4 (Mar 19th, 2016)\n" +
-    "Fixed: Handles missing ST timezone\n" +
-    "Added: Pre-Req check for missing ST timezone/zipcodes on first run\n" +
-    "Added: Device Handler Install Test On first run.\n" +
-    "Added: Fix for logging missing device handlers #19.\n\n" +
-    
-    "V1.0.1 (Mar 16th, 2016)\n" +
-    "Fixed: Diagnostic Log Overflow\n" +
-    "Added: Option to enable 24 hour time display in devices #18.\n\n" +
-    
-	"V1.0.0 (Mar 16th, 2016)\n" +
-    "Fixed: API Info page duplication Issue #9\n" +
-    "Added: Thermostat device preference to disable changing mode to Auto when location is Away.\n\n" +
     "------------------------------------------------"
 }
 
@@ -67,6 +52,7 @@ preferences {
     page(name: "authPage", title: "Nest", nextPage:"", content:"authPage", uninstall: true, install:true)
     page(name: "prefsPage")
     page(name: "infoPage")
+    page(name: "uninstallPage")
     page(name: "nestInfoPage")
     page(name: "structInfoPage")
     page(name: "tstatInfoPage")
@@ -77,9 +63,6 @@ preferences {
     page(name: "diagPage")
     page(name: "resetDiagQueuePage")
     page(name: "quietTimePage")
-    page(name: "automationsPage")
-    page(name: "contactWatchPage")
-    page(name: "modePresPage")
     page(name: "devPrefPage")
     page(name: "nestLoginPrefPage")
     page(name: "nestTokenResetPage")
@@ -95,14 +78,38 @@ mappings {
    	}
 }
 
+def childAutoAppName() { return "Nest Automations" }
+
 def authPage() {
 	//log.trace "authPage()"
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
-	
+	if(!atomicState.accessToken) { getAccessToken() } 
     if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
-    //if(!atomicState?.testedDhInst) { deviceHandlerTest() }
-	if(getLastWebUpdSec() > 300) { getWebFileData() }
-    if(!atomicState?.accessToken) { atomicState?.accessToken = createAccessToken() }
+    if(!atomicState?.testedDhInst) { deviceHandlerTest() }
+	    
+	if (!atomicState.accessToken || !atomicState?.preReqTested || !atomicState?.testedDhInst) {
+        return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:true) {
+            section ("Status Page:") {
+        		def desc
+           		if(!atomicState?.accessToken) {
+                	desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again..."
+               	}
+                else if (!atomicState?.preReqTested) {
+                   	desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
+            	} 
+                else if (!!atomicState?.testedDhInst) {
+                	desc = "Device Handlers are likely Missing or Not Published.  Please read the installation instructions and verify all device handlers are present before continuing."
+                }
+                else {
+                   	desc = "Application Status has not received any messages to display"
+               	}
+                LogAction("Status Message: $desc", "warn", true)
+           		paragraph "$desc"
+        	}
+        }
+    }
+    
+    if(getLastWebUpdSec() > 300) { getWebFileData() }
     
     def description
     def uninstallAllowed = false
@@ -115,7 +122,6 @@ def authPage() {
        	setStateVar(true)
     } else { description = "Click to enter Nest Credentials" }
 	
-    
     def redirectUrl = buildRedirectUrl
     //log.debug "RedirectUrl = ${redirectUrl}"
 
@@ -124,9 +130,6 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
-                //if(!deviceHandlerTest()) {
-                //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
-                //}
             }
             section(){
                 paragraph "Tap 'Nest Login' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
@@ -137,9 +140,6 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
-                //if(!deviceHandlerTest()) {
-                //	paragraph "Error: Device Handlers are missing.  Please visit the IDE and verify that the required Devices have been installed and Published..."
-                //}
                 if(isAppUpdateAvail()) {
                 	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update.", 
                     	image: getAppImg("update_icon3.png")
@@ -182,9 +182,11 @@ def authPage() {
                 }
                 
                 if(atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) {
-                	section("Automations:") {
-                    	href "automationsPage", title: "Automations...", description: "Tap to configure...", 
-            			image: getAppImg("automation_icon.png")
+                	if (!atomicState.autoAppInstalled) { atomicState.autoAppInstalled = false } 
+                    def autoApp = findChildAppByName( childAutoAppName() )
+                    section("Automations:") {
+                    	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}... (${getChildAppVer(autoApp)})", 
+            				description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
                     }
                 }
                	
@@ -246,17 +248,14 @@ def prefsPage() {
             	LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
             	atomicState.exLogs = [] 
             }
-            //atomicState.diagLogs = diagLogs ? true : false
         }
         section ("Time Display:") {
             input "useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?",  defaultValue: false, submitOnChange: true, required: false,
-            	   		image: getAppImg("military_time_icon.png")
-            //atomicState.useMilitaryTime = useMilitaryTime ? true : false
+            	   	image: getAppImg("military_time_icon.png")
         }
         section ("App Icons:") {
             input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
-                        image: getAppImg("no_icon.png"))
-            //atomicState.disAppIcons = disAppIcons ? true : false
+                    image: getAppImg("no_icon.png"))
         }
         section("Nest Login:") {
         	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...",
@@ -283,10 +282,7 @@ def updated() {
 }
 
 def uninstalled() {
-    atomicState.thermostats = []
-    atomicState.protects = []
-    atomicState.presDevice = false
-    if(addRemoveDevices()) {
+    if(addRemoveDevices(true)) {
     	//Revokes Smartthings endpoint token...
 		revokeAccessToken()
 		//Revokes Nest Auth Token
@@ -312,19 +308,26 @@ def initialize() {
 	//getEndpointUrl() //This can stay for now
 }
 
+def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
+def appBtnDesc(val) { return val ? (atomicState?.automationsActive ? "Automations are Active...\nTap to Modify..." : "Tap to Modify...") : "Tap to Install..." }
+def automationsActive(val) { atomicState?.automationsActive = val.toBoolean() ? true : false }
+def autoAppInst(Boolean val) { 
+	log.debug "${childAutoAppName()} is Installed?: ${val}"
+	atomicState.autoAppInstalled = val 
+}
+
 def subscriber() {
 	subscribe(location, null, pollWatcher, [filterEvents:false])
     subscribe(app, onAppTouch)
 	subscribe(location, "sunrise", pollWatcher, [filterEvents: false])
 	subscribe(location, "sunset", pollWatcher, [filterEvents: false])
-	subscribe(location, "mode", modeWatcher, [filterEvents: false])
+	subscribe(location, "mode", pollWatcher, [filterEvents: false])
 	subscribe(location, "sunriseTime", pollWatcher, [filterEvents: false])
 	subscribe(location, "sunsetTime", pollWatcher, [filterEvents: false])
     subscribe(location, "routineExecuted", pollWatcher, [filterEvents: false])
     if(temperatures) { subscribe(temperatures, "temperature", pollWatcher, [filterEvents: false]) }
     if(energies) { subscribe(energies, "energy", pollWatcher, [filterEvents: false]) }
     if(powers) { subscribe(powers, "power", pollWatcher, [filterEvents: false]) }
-    if(watchContacts){ subscribe(watchContacts, "contact", watchContactEvt) }
 }
 
 def setPollingState() {
@@ -369,22 +372,23 @@ def poll(force = false, type = null) {
     			scheduleNextPoll()
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
-            	dev = getApiDeviceData()
+            	dev = getApiData("dev")
             }
             if(ok2PollStruct()) {
             	LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
-                str = getApiStructureData()
+                str = getApiData("str")
             }    
 		}
-        if(atomicState?.updChildOnNewOnly) {
+        if(updChildOnNewOnly) {
         	if (dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
-        if(getLastWebUpdSec() > 1800) {
-        	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
-        }
-        notificationCheck() //Checks if a notification needs to be sent for a specific event
+        
 	}
+    if(getLastWebUpdSec() > 1800) {
+       	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+    }
+    notificationCheck() //Checks if a notification needs to be sent for a specific event
 }
 
 def pollStr() {
@@ -446,11 +450,11 @@ def forcedPoll(type = null) {
    		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
            	LogAction("Forcing Device Data Poll...", "info", true)
-           	getApiDeviceData()
+           	getApiData("dev")
         }
        	if (type == "str" || !type) { 
            	LogAction("Forcing Structure Data Poll...", "info", true)
-            getApiStructureData() 
+            getApiData("str") 
         }
    	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState.pollWaitValue})...", "debug", true) }
     scheduleNextPoll(type)
@@ -463,37 +467,65 @@ def postStrCmd() {
     
 def postDevCmd() { 
 	log.trace "postDevCmd()"
-    forcedPoll("dev") }
+    forcedPoll("dev") 
+}
 
-def getApiStructureData() {
-	LogAction("getApiStructureData()", "info", false)
-    atomicState?.lastStrucDataUpd = getDtNow()
-    def params = [
-    	uri: getNestApiUrl(),
-    	path: "/structures",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
-    ]
-    try {
-        httpGet(params) { resp ->
-            if(resp.status == 200) {
-            	LogTrace("API Structure Resp.Data: ${resp?.data}")
-                if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
-                	LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
-                    atomicState?.structData = resp?.data
-					atomicState.apiIssues = false                  
-                    return true
-                }
-                else { return false 
-                	LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
-                }
+def getApiData(type = null) {
+	LogAction("getApiData($type)", "info", false)
+    if(!type) { return null } 
+    
+    def tPath = (type == "str") ? "/structures" : "/devices" 
+	try {
+    	def params = [
+            uri: getNestApiUrl(),
+            path: "$tPath",
+            headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
+    	]
+    	if(type == "str") { 
+        	atomicState?.lastStrucDataUpd = getDtNow()
+        	httpGet(params) { resp ->
+                if(resp.status == 200) {
+                    LogTrace("API Structure Resp.Data: ${resp?.data}")
+                    if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
+                        LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
+                        atomicState?.structData = resp?.data
+                        atomicState.apiIssues = false      
+                        return true
+                    }
+                    else { return false 
+                        LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
+                    }
 
-			} else { 
-            	LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
-            	return false
+                } else { 
+                    LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
+                    return false
+                }
             }
         }
-    } 
-    catch(ex) {
+  		else if(type == "dev") {
+        	atomicState?.lastDevDataUpd = getDtNow()
+        	httpGet(params) { resp ->
+                if(resp?.status == 200) {
+                    LogTrace("API Device Resp.Data: ${resp?.data}")
+
+                    if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
+                        LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
+                        atomicState?.deviceData = resp?.data
+                        atomicState.apiIssues = false  
+                        return true
+                    }
+                    else { return false 
+                        LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
+                    }
+
+                } else { 
+                    LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
+                    return false
+                }
+        	}
+        }
+    }
+	catch(ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
@@ -501,54 +533,12 @@ def getApiStructureData() {
                 return false
             }
         } else { 
-        	LogAction("getApiStructureData Exception: ${ex}", "error", true, true) 
+        	LogAction("getApiData (type: $type) Exception: ${ex}", "error", true, true) 
         	return false
         }
     }
 }
 
-def getApiDeviceData() {
-	LogAction("getApiDeviceData()", "info", false)
-    atomicState?.lastDevDataUpd = getDtNow()
-    def params = [
-    	uri: getNestApiUrl(),
-    	path: "/devices",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
-    ]
-    try {
-        httpGet(params) { resp ->
-        	if(resp?.status == 200) {
-            	LogTrace("API Device Resp.Data: ${resp?.data}")
-                
-                if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
-                    LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
-                	atomicState?.deviceData = resp?.data
-                    atomicState.apiIssues = false  
-                	return true
-                }
-                else { return false 
-                	LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
-                }
-                
-            } else { 
-            	LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
-               	return false
-            }
-        }
-    } 
-    catch(ex) {
-    	if(ex instanceof groovyx.net.http.HttpResponseException) {
-        	if (ex.message.contains("Too Many Requests")) {
-            	log.warn "Received '${ex.message}' response code..."
-                atomicState.apiIssues = true
-                return false
-            }
-        } else { 
-        	LogAction("getApiDeviceData Exception: ${ex}", "error", true, true) 
-        	return false
-        }
-    }
-}
 
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
@@ -612,78 +602,6 @@ def apiIssues() {
 	return atomicState?.apiIssues ? true : false
     LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
 }
-
-def modeWatcher(evt) { 
-	log.debug "modeWatcher: $evt.value"
-    poll()
-    checkNestPresMode() 
-	//if(stHomeMode || stAwayMode) { checkNestToStMode() }
-}
-
-def getNestToStModeDtSec() { return !atomicState?.nestToStModeDt ? 100000 : GetTimeDiffSeconds(atomicState?.nestToStModeDt).toInteger() }
-
-def checkNestToStMode() {
-	def nestPresent = locationPresence() == "home" ? true : false
-    def sched = false
-    if(nestPresent && stHomeMode) {
-    	def homeMd = stHomeMode?.toString()
-    	if (curMode != homeMd) {
-        	atomicState.nestToStModeDt = getDtNow()
-        	if (location.modes?.find{it.name == homeMd}) {
-            	if( getNestToStModeDtSec() > getNestToStModeDelay()) {
-                	setLocationMode(homeMd)
-                	sched = false
-                } else {
-                	sched = true
-                }
-        	} else {
-            	log.warn "Tried to change to undefined mode '${homeMd}'"
-        	}
-        }
-    }
-    else if (!nestPresent && stAwayMode) {
-    	def awayMd = stAwayMode?.toString()
-        if (curMode != awayMd) {
-        	atomicState.nestToStModeDt = getDtNow()
-        	if (location.modes?.find{it.name == awayMd}) {
-            	if( getNestToStModeDtSec() > getNestToStModeDelay()) {
-            		setLocationMode(awayMd)
-                	sched = false
-                } else {
-                	sched = true
-                }
-        	} else {
-            	log.warn "Tried to change to undefined mode '${awayMd}'"
-        	}
-        }
-    }
-    
-    if(sched) {
-    	if(!canSchedule()) { log.warn "Too Many Schedules Will Try Again later" }
-    	else { runIn( getNestToStModeDelay(), "checkNestToStMode", [overwrite: true]) }
-    }
-    else if (!sched) { unschedule("checkNestToStMode") }
-}
-
-def checkNestPresMode() { 
-    def curMode = location.mode.toString()
-	if (homeModes) {
-    	homeModes?.each { m ->
-        	if(m.toString() == curMode) { 
-            	LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
-        		setStructureAway(null, false) 
-        	}
-     	}  
-    } 
-   	if (awayModes) {
-    	awayModes?.each { m ->
-        	if(m.toString() == curMode) { 
-	           	LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
-                setStructureAway(null, true) 
-            }
-        }
-    }
-}    
 
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }
 def ok2PollDevice() { return (!atomicState?.lastDevDataUpd || ((getLastDevicePollSec() + 2) > (!atomicState.pollValue ? 60 : atomicState?.pollValue.toInteger()))) ? true : false }
@@ -808,7 +726,7 @@ def setTargetTempHigh(child, unit, temp) {
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
     try {
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().targetHighC, temp, child)) { runIn(3, "postDevCmd") }
+        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighC, temp, child)) { runIn(3, "postDevCmd") }
         }
 		else { 
         	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, child)) { runIn(3, "postDevCmd") }
@@ -885,7 +803,7 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 def notificationCheck() {
 	if((recipients || usePush) && (daysOk(quietDays) && quietTimeOk() && modesOk(quietModes))) {
 		if (atomicState?.missedPollNotif) { missedPollNotify() }
-		if (atomicState?.updNotif) { newUpdNotify() }
+		if (atomicState?.updNotif && !appDevType()) { newUpdNotify() }
     }
 }
 
@@ -907,13 +825,15 @@ def newUpdNotify() {
     	def pUpd = isProtUpdateAvail()
         def prUpd = isPresUpdateAvail()
     	def tUpd = isTstatUpdateAvail()
-        if((appUpd || pUpd || prUpd || tUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
+        if(atomicState?.autoAppInstalled) { def autoUpd = isAutoAppUpdateAvail() }
+        if((appUpd || pUpd || prUpd || tUpd || autoUpd ) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
     		def appl = !appUpd ? "" : "Manager App: v${atomicState?.appData.versions.app.ver.toString()}, "
     		def prot = !pUpd ? "" : "Protect: v${atomicState?.appData.versions.protect.ver.toString()}, "
             def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
         	def tstat = !tUpd ? "" : "Thermostat: v${atomicState?.appData.versions.thermostat.ver.toString()}"
+            def autoApp = !autoUpd ? "" : "Automation App: v${atomicState?.appData.versions.autoapp.ver.toString()}"
             def now = new Date()
-        	sendMsg("Info", "Update(s) are available: ${appl}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
+        	sendMsg("Info", "Update(s) are available: ${appl}${autoApp}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
         	atomicState?.lastUpdMsgDt = getDtNow()
         }
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
@@ -992,58 +912,49 @@ def ver2IntArray(val) {
 
 def getChildWaitVal() { return atomicState.tempChgWaitVal ? atomicState?.tempChgWaitVal.toInteger() : 4 }
 
-def isAppUpdateAvail() {
-	try {
-    	def newAppVer = !atomicState?.appData.versions.app.ver ? "0.0.0" : atomicState?.appData.versions.app.ver.toString()
-		if(	(ver2IntArray(appVersion()).maj.toInteger() < ver2IntArray(newAppVer).maj.toInteger()) || 
-       		(ver2IntArray(appVersion()).min.toInteger() < ver2IntArray(newAppVer).min.toInteger()) || 
-      		(ver2IntArray(appVersion()).rev.toInteger() < ver2IntArray(newAppVer).rev.toInteger())) { 
-       		return true
-    	} else { return false }
-   	} catch (ex) { LogAction("isAppUpdateAvail Exception: ${ex}", "error", true, true) }
-}
-
-def isPresUpdateAvail() {
-	try {
-        def pVer = !atomicState?.pDevVer ? null : atomicState?.pDevVer.toString()
-    	def newPVer = !atomicState?.appData.versions.presence.ver ? "0.0.0" : atomicState?.appData.versions.presence.ver.toString()
-		if(pVer) {
-        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       			return true 
-            }
-    	} else { return false }
-    } catch (ex) { LogAction("isPresUpdateAvail Exception: ${ex}", "error", true, true) }
-}
-
-def isProtUpdateAvail() {
-	try {
-        def pVer = !atomicState?.pDevVer ? null : atomicState?.pDevVer.toString()
-    	def newPVer = !atomicState?.appData.versions.protect.ver ? "0.0.0" : atomicState?.appData.versions.protect.ver.toString()
-		if(pVer) {
-        	if(	(ver2IntArray(pVer).maj.toInteger() < ver2IntArray(newPVer).maj.toInteger()) || 
-       			(ver2IntArray(pVer).min.toInteger() < ver2IntArray(newPVer).min.toInteger()) || 
-       			(ver2IntArray(pVer).rev.toInteger() < ver2IntArray(newPVer).rev.toInteger())) { 
-       			return true
-            }
-    	} else { return false }
-    } catch (ex) { LogAction("isProtUpdateAvail Exception: ${ex}", "error", true, true) }
-}
-
-def isTstatUpdateAvail() {
+def isUpdateAvail(newVer, curVer) {
     try {
-    	def tVer = !atomicState?.tDevVer ? null : atomicState?.tDevVer.toString()
-    	def newTstatVer = !atomicState?.appData.versions.thermostat.ver ? "0.0.0" : atomicState?.appData.versions.thermostat.ver.toString()
-		if(tVer) {
-            if ((ver2IntArray(tVer).maj.toInteger() < ver2IntArray(newTstatVer).maj.toInteger()) || 
-       			(ver2IntArray(tVer).min.toInteger() < ver2IntArray(newTstatVer).min.toInteger()) || 
-       			(ver2IntArray(tVer).rev.toInteger() < ver2IntArray(newTstatVer).rev.toInteger())) {
+    	def cVer = !curVer ? null : curVer?.toString()
+    	def nVer = !newVer ? "0.0.0" : newVer?.toString()
+		if(cVer) {
+            if ((ver2IntArray(curVer).maj.toInteger() < ver2IntArray(newVer).maj.toInteger()) || 
+       			(ver2IntArray(curVer).min.toInteger() < ver2IntArray(newVer).min.toInteger()) || 
+       			(ver2IntArray(curVer).rev.toInteger() < ver2IntArray(newVer).rev.toInteger())) {
     			return true
             }
     	} else { return false }
-    } catch (ex) { LogAction("isTstatUpdateAvail Exception: ${ex}", "error", true, true) }
+    } catch (ex) { LogAction("isUpdateAvail Exception: ${ex}", "error", true, true) }
 }
+
+def isAppUpdateAvail() {
+    if(isUpdateAvail(atomicState?.appData.versions.app.ver, appVersion())) {
+   		return true
+   	} else { return false }
+}
+def isPresUpdateAvail() {
+	if(isUpdateAvail(atomicState?.appData.versions.presence.ver, atomicState?.presDevVer)) {
+   		return true
+   	} else { return false }
+}
+
+def isProtUpdateAvail() {
+	if(isUpdateAvail(atomicState?.appData.versions.protect.ver, atomicState?.pDevVer)) {
+   		return true
+   	} else { return false }
+}
+
+def isTstatUpdateAvail() {
+	if(isUpdateAvail(atomicState?.appData.versions.thermostat.ver, atomicState?.tDevVer)) {
+   		return true
+   	} else { return false }
+}
+
+def isAutoAppUpdateAvail() {
+    if(isUpdateAvail(atomicState?.appData.versions.autoapp.ver, atomicState?.autoAppVer)) {
+   		return true
+   	} else { return false }
+}
+
 /************************************************************************************************
 |			This Section Discovers all structures and devices on your Nest Account.				|
 |			It also Adds/Removes Devices from ST												|
@@ -1054,7 +965,7 @@ def getNestStructures() {
     def struct = [:]
     def thisstruct = [:]
     try {
-    	if(ok2PollStruct()) { getApiStructureData() }
+    	if(ok2PollStruct()) { getApiData("str") }
     	
         if (atomicState?.structData) {
             def structs = atomicState?.structData
@@ -1074,7 +985,7 @@ def getNestStructures() {
             if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
                 struct = thisstruct
             }
-            if (ok2PollDevice()) { getApiDeviceData() }
+            if (ok2PollDevice()) { getApiData("dev") }
         } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
         
     } catch (ex) { LogAction("getNestStructures Exception: ${ex}", "error", true, true) }
@@ -1154,85 +1065,83 @@ def getProtectDisplayName(prot) {
     if(prot?.name) { return prot.name.toString() }
 }
 
-def getNestPresId() {
-	return "Nest Presence Device"
-    /*if(settings?.structures) {
-        return "NestPres${settings.structures}"
-    } else if(atomicState?.structures) {
-        return "NestPres${atomicState.structures}"
-    } else { 
-    	LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
-    	return ""
-    }*/
-}
+def getNestPresId() { return "Nest Presence Device" }
 
-def addRemoveDevices() {
-    LogAction("addRemoveDevices thermostats ${atomicState?.thermostats}", "debug", false)
+def addRemoveDevices(uninst = null) {
     def retVal = false
     try {
 		def tstats
     	def nProtects
     	def devsCrt = 0
-    	if (atomicState?.thermostats) {
-    		tstats = atomicState?.thermostats.collect { dni ->
-        		def d = getChildDevice(dni.key.toString())
-        		if(!d) {
-                	d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "Nest Thermostat - ${dni.value}"])
-             		//d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
-                    d.take()
-                	devsCrt = devsCrt + 1
-           			LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
-        		} else {
-            		LogAction("Found ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+        if(!uninst) {
+            //LogAction("addRemoveDevices() Nest Thermostats ${atomicState?.thermostats}", "debug", false)
+    		if (atomicState?.thermostats) {
+    			tstats = atomicState?.thermostats.collect { dni ->
+        			def d = getChildDevice(dni.key.toString())
+        			if(!d) {
+                		d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "Nest Thermostat - ${dni.value}"])
+             			//d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
+                    	d.take()
+                		devsCrt = devsCrt + 1
+           				LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
+        			} else {
+            			LogAction("Found ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+        			}
+        			return d
         		}
-        		return d
-        	}
-    	}
-    	LogAction("addRemoveDevices protects ${atomicState?.protects}", "debug", false)
-		if (atomicState?.protects) {
-    		nProtects = atomicState?.protects.collect { dni ->
-        		def d2 = getChildDevice(dni.key.toString())
-        		if(!d2) {
-            		d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "Nest Protect - ${dni.value}"])
-                    //d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
-            		d2.take()
-                	devsCrt = devsCrt + 1
-            		LogAction("Created: ${d2.displayName} with (Id: ${dni.key})", "debug", true)
-        		} else {
-            		LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
-        		}
-        		return d2
     		}
-    	}    
-    	//if(devsCrt > 0) { LogAction("Created (${tstats?.size()}) Thermostat(s) and ${nProtects?.size()} Protect(s)", "debug", true) }
-   		
-        if(atomicState?.presDevice) {
-        	try {
-        		def dni = getNestPresId()
-        		def d3 = getChildDevice(dni)
-        		if(!d3) {
-            		d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: getNestPresId()])
-                    //d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${location.name} - Nest Presence Device"])
-            		d3.take()
-                	devsCrt = devsCrt + 1
-            		LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
-        		} else {
-            		LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
-        		}
-        		//return d3
-            } catch (ex) { 
-            	LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
-            	retVal = false
+            //LogAction("addRemoveDevices Nest Protects ${atomicState?.protects}", "debug", false)
+            if (atomicState?.protects) {
+                nProtects = atomicState?.protects.collect { dni ->
+                    def d2 = getChildDevice(dni.key.toString())
+                    if(!d2) {
+                        d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "Nest Protect - ${dni.value}"])
+                        //d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
+                        d2.take()
+                        devsCrt = devsCrt + 1
+                        LogAction("Created: ${d2.displayName} with (Id: ${dni.key})", "debug", true)
+                    } else {
+                        LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+                    }
+                    return d2
+                }
+            }    
+            //if(devsCrt > 0) { LogAction("Created (${tstats?.size()}) Thermostat(s) and ${nProtects?.size()} Protect(s)", "debug", true) }
+
+            if(atomicState?.presDevice) {
+                try {
+                    def dni = getNestPresId()
+                    def d3 = getChildDevice(dni)
+                    if(!d3) {
+                        d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: getNestPresId()])
+                        //d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${location.name} - Nest Presence Device"])
+                        d3.take()
+                        devsCrt = devsCrt + 1
+                        LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
+                    } else {
+                        LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
+                    }
+                    //return d3
+                } catch (ex) { 
+                    LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
+                    retVal = false
+                }
             }
-        }
         
-        def presCnt = 0
-        if(atomicState?.presDevice) { presCnt = 1 }
-     	if(devsCrt > 0) {
-         	LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s) and ${presCnt} Presence Device", "debug", true)
-		}
- 
-    	def delete 
+            def presCnt = 0
+            if(atomicState?.presDevice) { presCnt = 1 }
+            if(devsCrt > 0) {
+                LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s) and ${presCnt} Presence Device", "debug", true)
+            }
+ 		}
+        
+        if(uninst) {
+        	atomicState.thermostats = []
+    		atomicState.protects = []
+    		atomicState.presDevice = false
+        }
+    	
+        def delete 
     	if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice) {
         	delete = getAllChildDevices()
     	} else {
@@ -1257,9 +1166,17 @@ def addRemoveDevices() {
         }
        	retVal = true
     } catch (ex) { 
-    	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
-        	LogAction("addRemoveDevices Device Handlers are Missing or Not Published.  Please verify all device handlers are present before continuing: ${ex}", "warn", true, true)
-        } else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
+    	if(ex instanceof physicalgraph.exception.ConflictException) {
+        	def msg = "Error: Can't Delete App because Devices are still in use in other Apps, Routines, or Rules.  Please double check before trying again."
+            sendPush(msg)
+            LogAction("addRemoveDevices Exception | $msg", "warn", true)
+        }
+    	else if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
+        	def msg = "Error: Device Handlers are likely Missing or Not Published.  Please verify all device handlers are present before continuing."
+            sendPush(msg)
+            LogAction("addRemoveDevices Exception | $msg", "warn", true, true)
+        } 
+        else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
         retVal = false
     }
     return retVal
@@ -1319,6 +1236,19 @@ def getEndpointUrl() {
         	return resp?.data?.uri
         	}	
     } catch (ex) { LogAction("getEndpointUrl Exception: ${ex}", "error", true, true) }
+}
+
+def getAccessToken() {
+	try {
+    	if(!atomicState?.accessToken) { atomicState?.accessToken = createAccessToken() }
+        return true
+    }
+    catch (ex) { 
+    	def msg = "Error: OAuth is not Enabled for the Nest Manager application!!!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE..."
+            sendPush(msg)
+            LogAction("getAccessToken Exception | $msg", "warn", true)
+        return false 
+    }
 }
 
 /************************************************************************************************
@@ -1688,6 +1618,7 @@ def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.
 def latestTstatVer() { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
 def latestProtVer() { return atomicState?.appData?.versions?.protect ?: "unknown" }
 def latestPresVer() { return atomicState?.appData?.versions?.presence ?: "unknown" }
+def latestAutoAppVer() { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
 def getUse24Time() { return useMilitaryTime ? true : false }
 
 private debugStatus() { return atomicState?.appDebug ? "On" : "Off" } //Keep this
@@ -1866,12 +1797,9 @@ def pollPrefPage() {
 
 def notifPrefPage() {
     dynamicPage(name: "notifPrefPage", install: false) {
-		
         section("Send Notifications") {
         	def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select people or devices to send Notifications too..."
         	paragraph "${notifDesc}"
-           	//paragraph "To take advantage of advanced notification options please Configure the contact book under the SmartThings Mobile App Menu",
-            //	image: getAppImg("alert_icon.png")
 			if(!location.contactBookEnabled) {
             	input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, 
                 		image: getAppImg("notification_icon.png")
@@ -1993,182 +1921,10 @@ def quietTimePage() {
 	}
 }
 
-def automationsPage() {
-	dynamicPage(name: "automationsPage", title: "Automation Page...", uninstall: false) {
-    	section("Change Nest Presence and/or ST Modes:") {
-        	def presDesc = (awayModes && homeModes) ? "Modes are Selected\n\nTap to configure..." : "Tap to configure..."
-        	href "modePresPage", title: "Mode Automations", description: presDesc,
-            			image: getAppImg("nest_dev_pres_icon.png")
-       	}
-		/*section("Turn a Thermostat Off when\na Window or Door is Open:") {
-        	def desc = "(${watchContacts ? watchContacts.size() : 0}) are Selected\n\nTap to configure..."
-        	href "contactWatchPage", title: "Doors/Windows to Watch...", description: desc,
-            			image: getAppImg("open_contact.png")
-       	}*/
-    }
-}
-
-
-/******************************************************************************  
-|                			WATCH CONTACTS AUTOMATION CODE	                  |
-*******************************************************************************/
-
-def contactWatchPage() {
-	dynamicPage(name: "contactWatchPage", title: "Thermostat/Contact Automation", uninstall: false) {
-		section(""){
-        	paragraph "Description Placeholder"
-        }
-        section("When These Contacts are open, Turn Off this Thermostat") {
-        	def req = (watchContacts || watchContactTstats) ? true : false
-			input name: "watchContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
-            		image: getAppImg("open_closed.png")
-            input name: "watchContactTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-            		image: getAppImg("nest_like.png")
-		}
-        section("When These Contacts are open, Turn Off Thermostat") {
-			def timeReq = (watchContactStartTime || watchContactStopTime) ? true : false
-            input "watchContactStartTime", "time", title: "Start time", submitOnChange: true, required: timeReq, 
-            		image: getAppImg("start_time_icon.png")
-            input "watchContactStopTime", "time", title: "Stop time", submitOnChange: true, required: timeReq,
-            		image: getAppImg("stop_time_icon.png")
-            
-            input "watchContactsModes", "mode", title: "Only with These Modes...", multiple: true, submitOnChange: true, required: false,
-            		image: getAppImg("mode_icon.png")
-            input "watchContactDays", "enum", title: "Only on certain days of the week", multiple: true, required: false,
-					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    image: getAppImg("day_calendar_icon.png")
-        }
-        section("Wait this long before turning the thermostat off (defaults to 1 minute)") {
-			input name: "watchContactsOffDelay", type: "decimal", title: "Number of minutes", defaultValue: 1, required: false,
-            		image: getAppImg("delay_time_icon.png")
-                    
-            input "restModeOnClose", "bool", title: "Restore Thermostat to Previous mode after Closed?", required: false, defaultValue: true, submitOnChange: true,
-            		image: getAppImg("restore_icon.png")
-		}
-	}
-}
-
-def watchContactTimeOk() {
-	try {
-    	def strtTime = null
-    	def stopTime = null
-        def now = new Date()
-    	if(watchContactStartTime && watchContactStopTime) { 
-    		if(watchContactStartTime) { strtTime = watchContactStartTime }
-        	if(watchContactStopTime) { stopTime = watchContactStopTime }
-		} else { return true }  
-        if (strtTime && stopTime) {
-    		return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
-    	} else { return true }
-    } catch (ex) { LogAction("watchContactTimeOk Exception: ${ex}", "error", true, true) }
-}
-
-def getWatchContactsOk() {
-	def result = !watchContacts || !watchContacts.latestValue("contact").contains("open")
-	log.trace "getWatchContactsOk = $result"
-	return result
-}
-def watchContactOk() { return (!watchContacts && !watchContactTstats) ? false : true }
-def getWatchContactOpenDtSec() { return !atomicState?.watchContactOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.watchContactOpenDt).toInteger() }
-def getWatchContactCloseDtSec() { return !atomicState?.watchContactCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.watchContactCloseDt).toInteger() }
-def getWatchContactDelay() { return (watchContactsDelay ? watchContactsDelay.toInteger() * 60 : 60) }
-
-def watchContactCheck() {
-	def curMode = watchContactTstats.currentState("thermostatMode").value.toString()
-	if (!getWatchContactsOk() && curMode != "off"){
-    	log.debug "curMode: $curMode | open seconds ago: ${getWatchContactOpenDtSec()} || delay: ${getWatchContactDelay()}"
-        if(getWatchContactOpenDtSec() >= getWatchContactDelay() ) {
-        	if(restModeOnClose) { 
-            	atomicState.watchContactRestoreMode = curMode
-                log.debug "restoreMode Set: $atomicState.watchContactRestoreMode"
-            }
-			log.debug("Selected Contacts are Open turning off ${watchContactTstats}")
-            watchContactTstats?.off()
-        	sendMsg("Alert", "${watchContactTstats.label} has been turned off because a selected Contact has Been Opened")
-        }
-	}
-    else if(getWatchContactsOk() && curMode == "off") {
-        log.debug "curMode: $curMode | close seconds ago: ${getWatchContactCloseDtSec()} || delay: ${getWatchContactDelay()}"
-        
-        if(getWatchContactCloseDtSec() >= getWatchContactDelay()) {
-        
-        	if(restModeOnClose && (!atomicState?.watchContactRestoreMode == curMode)) {
-               	def lastMode = atomicState?.watchContactRestoreMode ?: null
-                log.debug "lastMode: $lastMode | restore: $restModeOnClose"
-               	if(lastMode) {
-           			switch(lastMode) {
-               			case "auto":
-                   			watchContactTstats?.auto()
-               				break
-                   		case "heat":
-                   			watchContactTstats?.heat()
-                       		break
-                   		case "cool":
-                   			watchContactTstats?.cool()
-                       		break
-               			default:
-                   			log.debug "WatchContactCheck Invalid LastMode received: ${lastMode}"
-                   			break
-                	}
-                }
-            }
-        }
-    }
-}
-
-def watchContactEvt(evt) {
-	log.debug "watchContactEvt: ${evt.value}"
-	def sched = false
-    if(modesOk(watchContactsModes) && daysOk(watchContactDays) && watchContactTimeOk()) {
-       	if (!getWatchContactsOk()) {
-           	atomicState.watchContactOpenDt = getDtNow()
-            //atomicState.watchContactCloseDt = null
-            sched = true
-        }
-        else {
-        	//atomicState.watchContactOpenDt = null
-            atomicState.watchContactCloseDt = getDtNow()
-            sched = true
-        }
-        watchContactCheck()
-	}
-    if(sched) {
-       	if(!canSchedule()) { 
-        	unschedule("watchContactCheck")
-            unschedule("poll")
-            if(!canSchedule()) { log.warn "Too Many Schedules Will Try Again later" }
-        }
-        else { 
-        	log.debug "watchContactEvt Scheduling:..."
-            runIn( getWatchContactDelay(), "watchContactCheck", [overwrite: true]) 
-        }
-    }
-}
 
 /********************************************************************************  
 |                			MODE AUTOMATION CODE	     						|
 *********************************************************************************/
-def modePresPage() {
-	dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
-		section("Change Nest Presence w/Modes:") {
-			input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
-            		image: getAppImg("app_pres_home_Icon.png")
-			//if(homeModes) { atomicState.homeModes = homeModes }
-			input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
-            		image: getAppImg("app_pres_away_Icon.png")
-			//if(awayModes) { atomicState.awayModes = awayModes }
-		}
-        /*section("Nest Presence Set's SmartThings Mode:") {
-			input "homeStMode", "mode", title: "Set this Mode When Nest 'Home'...", multiple: false, submitOnChange: true, required: false,
-            		image: getAppImg("app_pres_home_Icon.png")
-			input "awayStMode", "mode", title: "Set this Mode When Nest 'Away'...", multiple: false, submitOnChange: true, required: false,
-            		image: getAppImg("app_pres_away_Icon.png")
-            input name: "nestToStModeDelay", type: "decimal", title: "Delay this Number of minutes?", defaultValue: 1, required: false,
-            		image: getAppImg("delay_time_icon.png")
-		}*/
-	}
-}
-def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
 
 def debugPrefPage() {
     dynamicPage(name: "debugPrefPage", install: false) {
@@ -2205,7 +1961,10 @@ def infoPage () {
             paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
         }
         section("Created by:") {
-        	paragraph "Anthony S. (@tonesto7)\nBen W. (@desertblade)"
+        	paragraph "Anthony S. (@tonesto7)"
+        }
+        section("Collaborators:") {
+        	paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)"
         }
         section("App Revision History:") {
             paragraph appVerInfo()
@@ -2227,7 +1986,6 @@ def diagPage () {
             		image: getAppImg("diag_icon.png")
         }
         section("Export or View the Logs") {
-           	
        		href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
@@ -2383,6 +2141,7 @@ def protInfoPage () {
 private def appName() 		{ "Nest Manager" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
+private def appDevType()    { true }
 private def appInfoDesc() 	{ 
 	def cur = atomicState?.appData?.versions?.app?.ver.toString()
 	def ver = (textVersion() != cur) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
@@ -2410,3 +2169,5 @@ private def textLicense() {
         "See the License for the specific language governing permissions and "+
         "limitations under the License." 
 }
+
+// Allow selection of other thermostats to mirror the automation functions of the primary thermostat.

@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.2"}
+def devVer() { return "1.1.3"}
 
 // for the UI
 metadata {
@@ -119,8 +119,25 @@ metadata {
     			attributeState("default", label:'${currentValue}')
   			}
         }
-        standardTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
+        valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
+        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", backgroundColors: [
+						// Celsius Color Range
+						[value: 0, color: "#153591"],
+						[value: 7, color: "#1e9cbb"],
+						[value: 15, color: "#90d2a7"],
+						[value: 23, color: "#44b621"],
+						[value: 29, color: "#f1d801"],
+						[value: 33, color: "#d04e00"],
+						[value: 36, color: "#bc2323"],
+						// Fahrenheit Color Range
+						[value: 40, color: "#153591"],
+						[value: 44, color: "#1e9cbb"],
+						[value: 59, color: "#90d2a7"],
+						[value: 74, color: "#44b621"],
+						[value: 84, color: "#f1d801"],
+						[value: 92, color: "#d04e00"],
+						[value: 96, color: "#bc2323"]
+        	])
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
 	        state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_off_icon.png")
@@ -149,7 +166,7 @@ metadata {
         	//state "present", 	label:'home', 		action: "setPresence",	icon: "st.Home.home2"
 			//state "away", 	label:'away', 		action: "setPresence", 	icon: "st.Transportation.transportation5"
             //state "auto-away",label:'auto\naway', action: "setPresence", 	icon: "st.Transportation.transportation5"
-			state "present", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "home", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
 			state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown",	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
@@ -346,7 +363,7 @@ def getDataByName(String name) {
 
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestProtVer().ver.toString()
+    def pubVer = parent?.latestTstatVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     if(curData != newData) {
@@ -479,7 +496,7 @@ def presenceEvent(presence) {
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
-    def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
@@ -581,7 +598,7 @@ def getHvacMode() {
 
 def getNestPresence() { 
 	try { return device.currentState("nestPresence").value.toString() } 
-	catch (e) { return "present" }
+	catch (e) { return "home" }
 }
 
 def getPresence() { 
@@ -704,8 +721,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() + 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         } else {
             //log.debug "Reducing by 1 increment"
@@ -715,8 +732,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() - 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         }
 
@@ -767,7 +784,7 @@ void levelUpDown(tempVal, chgType = null) {
 def canChangeTemp() {
     //log.trace "canChangeTemp()..."
     def curPres = getNestPresence()
-    if (curPres != "away" || curPres != "auto-away") {
+    if (curPres == "home") {
 		def hvacMode = getHvacMode()
 		switch (hvacMode) {
     		case "heat":
@@ -819,13 +836,20 @@ void changeSetpoint(val) {
     }
 }
 
+// Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
 void setHeatingSetpoint(temp) {
     setHeatingSetpoint(temp.toDouble())
 }
 
-void setHeatingSetpoint(Double temp) {
-	log.trace "setHeatingSetpoint()... ($temp)"
+void setHeatingSetpoint(Double reqtemp) {
+	log.trace "setHeatingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+	def temp = 0.0
+	if (wantMetric()) {
+		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+	} else {
+		temp = reqtemp.round(0).toInteger()
+	}
 	def tempUnit = state?.tempUnit
 	def canHeat = state?.can_heat.toBoolean()
 	def result = false
@@ -851,8 +875,8 @@ void setHeatingSetpoint(Double temp) {
 				break
 			case "F":
 				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
+                    if (temp < 50.0) { temp = 50 }
+                    if (temp > 90.0) { temp = 90 }
                     if (hvacMode == 'auto') {
                         parent.setTargetTempLow(this, tempUnit, temp) 
                         heatingSetpointEvent(temp)
@@ -880,11 +904,17 @@ void setCoolingSetpoint(temp) {
     setCoolingSetpoint( temp.toDouble() )
 }
 
-void setCoolingSetpoint(Double temp) {
-	log.trace "setCoolingSetpoint()... ($temp)"
+void setCoolingSetpoint(Double reqtemp) {
+	log.trace "setCoolingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+	def temp = 0.0
+	if (wantMetric()) {
+		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+	} else {
+		temp = reqtemp.round(0).toInteger()
+	}
 	def tempUnit = state?.tempUnit
-    def canCool = state?.can_cool.toBoolean()
+	def canCool = state?.can_cool.toBoolean()
 	def result = false
 
     log.debug "Cool Temp Received: ${temp} (${tempUnit})"
@@ -911,8 +941,8 @@ void setCoolingSetpoint(Double temp) {
                 
 			default:
 				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
+                    if (temp < 50.0) { temp = 50 }
+                    if (temp > 90.0) { temp = 90 }
                     
                     if (hvacMode == 'auto') {
                         parent.setTargetTempHigh(this, tempUnit, temp) 
@@ -945,7 +975,7 @@ def setPresence() {
 		parent.setStructureAway(this, "false")
         presenceEvent("home") 
     }
-    else if (pres == "present") {
+    else if (pres == "home") {
         parent.setStructureAway(this, "true")
         presenceEvent("away")
     }
@@ -979,65 +1009,65 @@ def setHome() {
 |										HVAC MODE FUNCTIONS										|
 *************************************************************************************************/
 
-def off() {
+void off() {
 	log.trace "off()..."
     def currentMode = getHvacMode()
     if (parent.setHvacMode(this, "off")) {
         hvacModeEvent("off")
     } else {
-       	log.error "Error setting new mode." 
+       	log.error "Error setting off mode." 
         hvacModeEvent(currentMode) // reset the tile back
     }
 }
 
-def heat() {
+void heat() {
 	log.trace "heat()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat")) { 
         	hvacModeEvent("heat") 
         } else {
-			log.error "Error setting new mode." 
+			log.error "Error setting heat mode." 
 			hvacModeEvent(currentMode) // reset the tile back
     	}
     }
 }
 
-def emergencyHeat() {
+void emergencyHeat() {
     log.trace "emergencyHeat()..."
     log.warn "Emergency Heat setting not allowed"
 }
 
-def cool() {
+void cool() {
 	log.trace "cool()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "cool")) { 
         	hvacModeEvent("cool") 
         } else {
-       		log.error "Error setting new mode." 
+       		log.error "Error setting cool mode." 
         	hvacModeEvent(currentMode) // reset the tile back
     	}
     }
 }
 
-def auto() {
+void auto() {
 	log.trace "auto()..."
     def curPres = getNestPresence()
     def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat-cool")) { 
         	hvacModeEvent("auto") 
         } else {
-       		log.error "Error setting new mode." 
+       		log.error "Error setting auto mode." 
         	hvacModeEvent(currentMode) // reset the tile back
     	}
     }
 }
 
-def setThermostatMode(modeStr) {
+void setThermostatMode(modeStr) {
 	log.trace "setThermostatMode()..."
 	switch(modeStr) {
     	case "auto":
@@ -1065,14 +1095,14 @@ def setThermostatMode(modeStr) {
 /************************************************************************************************
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
-def fanOn() {
+void fanOn() {
 	if(state?.has_fan.toBoolean()) {
     	parent.setFanMode(this, true)
         fanModeEvent("true")
     }
 }
 
-def fanOff() {
+void fanOff() {
 	log.trace "fanOff()..."
 	if(state?.has_fan.toBoolean()) {
     	parent.setFanMode (this, "off")
@@ -1080,12 +1110,12 @@ def fanOff() {
     }
 }
 
-def fanCirculate() {
+void fanCirculate() {
 	log.trace "fanCirculate()..."
 	log.warn "fanCirculate setting not supported by Nest API"
 }
 
-def fanAuto() {
+void fanAuto() {
 	log.trace "fanAuto()..."
 	if(state?.has_fan.toBoolean()) {
    		parent.setFanMode(this,false)
@@ -1093,8 +1123,25 @@ def fanAuto() {
     }
 }
 
-def setThermostatFanMode(fanModeStr) {
+void setThermostatFanMode(fanModeStr) {
     log.trace "setThermostatFanMode()... ($fanModeStr)"
+	switch(fanModeStr) {
+    	case "auto":
+        	fanAuto()
+        	break
+    	case "on":
+        	fanOn()
+        	break
+       	case "circulate":
+        	fanCirculate()
+        	break
+        case "off":   // non standard by Nest Capabilities Thermostat
+        	fanOff()
+        	break
+        default:
+        	log.warn "setThermostatFanMode Received an Invalid Request: ${fanModeStr}"
+            break
+    }
 }
 
 

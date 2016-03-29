@@ -7,17 +7,21 @@
       "type": "rel",
       "ver": "1.1.2"
     },
+    "autoapp": {
+      "type": "rel",
+      "ver": "1.0.0"
+    },
     "thermostat": {
       "type": "rel",
-      "ver": "1.1.2"
+      "ver": "1.1.3"
     },
     "protect": {
       "type": "rel",
-      "ver": "1.1.0"
+      "ver": "1.1.1"
     },
     "presence": {
       "type": "rel",
-      "ver": "1.1.0"
+      "ver": "1.1.1"
     }
   },
   "updater": {
