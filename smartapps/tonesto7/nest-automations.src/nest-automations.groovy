@@ -648,7 +648,7 @@ def getDtNow() {
 //Change This to rename the Default App Name
 private def appName() 		{ "Nest Automations" }
 private def appAuthor() 	{ "Anthony S." }
-private def appParent() 	{ "tonesto7:Nest Manager - test" }
+private def appParent() 	{ "tonesto7:Nest Manager" }
 private def appNamespace() 	{ "tonesto7" }
 private def appInfoDesc() 	{ 
 	//def cur = state?.appData?.versions?.app?.ver.toString()
