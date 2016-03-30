@@ -163,7 +163,6 @@ def authPage() {
 				def coSmokes = getNestProtects()
                 def coDesc = coSmokes.size() ? "Found (${coSmokes.size()}) Protects..." : "No Protects"
     			LogAction("Protects: Found ${coSmokes.size()} (${coSmokes})", "info", false)
-                
                 section("Select your Devices:") {
                     if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
                     if (stats?.size() > 0) { 
@@ -185,7 +184,7 @@ def authPage() {
                 	if (!atomicState.autoAppInstalled) { atomicState.autoAppInstalled = false } 
                     def autoApp = findChildAppByName( childAutoAppName() )
                     section("Automations Child App:") {
-                    	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}... (${getChildAppVer(autoApp)})", 
+                    	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}...${getChildAppVer(autoApp)}", 
             				description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
                     }
                 }
@@ -308,7 +307,7 @@ def initialize() {
 	//getEndpointUrl() //This can stay for now
 }
 
-def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
+def getChildAppVer(appName) { return appName?.appVersion() ? "(v${appName?.appVersion()})" : "" }
 def appBtnDesc(val) { return val ? (atomicState?.automationsActive ? "Automations are Active...\nTap to Modify..." : "Tap to Modify...") : "Tap to Install..." }
 def automationsActive(val) { atomicState?.automationsActive = val.toBoolean() ? true : false }
 def autoAppInst(Boolean val) { 
@@ -345,8 +344,7 @@ def setPollingState() {
 }
 
 def onAppTouch(event) {
-    //poll(true)
-    sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)
+    poll(true)
 }
 
 /************************************************************************************************
@@ -457,7 +455,7 @@ def forcedPoll(type = null) {
            	LogAction("Forcing Structure Data Poll...", "info", true)
             getApiData("str") 
         }
-   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState.pollWaitValue})...", "debug", true) }
+   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
     scheduleNextPoll(type)
     updateChildData()
 }
@@ -647,16 +645,16 @@ def apiVar() {
 }
 
 def setStructureAway(child, value) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	def val = value?.toBoolean()
-	LogAction("setStructureAway: ${devId} (${val})", "debug", false, true)
+	LogAction("setStructureAway: ${devId} (${val})", "debug", true, true)
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${val})") }
     try {
 		if(val) { 	
-        	if(sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { runIn(3, "postStrCmd") } 
+        	sendNestApiCmd(atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", devId)
         }
     	else { 		
-        	if(sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "home", child)) { runIn(3, "postStrCmd") } 
+        	sendNestApiCmd(atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "home", devId)
         }
     	return true
     }
@@ -667,11 +665,27 @@ def setStructureAway(child, value) {
     }
 }
 
+def setFanMode(child, fanOn) {
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	def val = fanOn.toBoolean()
+	LogAction("setFanMode: ${devId} (${val})", "debug", true, true)
+    if(childDebug && child) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val})") }
+    try {	
+		sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.fanActive, val.toString(), devId)
+        return true
+     }
+    catch (ex) { 
+    	LogAction("setFanMode Exception: ${ex}", "error", true, true) 
+    	if(childDebug) { child?.log("setFanMode Exception: ${ex}", "error") }
+        return false
+    }
+}
+
 def setHvacMode(child, mode) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
-	LogAction("setHvacMode: ${devId} (${mode})", "debug", false, true)
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	LogAction("setHvacMode: ${devId} (${mode})", "debug", true, true)
     try {
-    	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.hvacMode, mode.toString(), child)) { runIn(3, "postDevCmd") }
+    	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.hvacMode, mode.toString(), devId)
     	return true
     }
     catch (ex) { 
@@ -682,15 +696,15 @@ def setHvacMode(child, mode) {
 }
 
 def setTargetTemp(child, unit, temp) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	LogAction("setTargetTemp: ${devId} | (${temp})${unit}", "debug", true, true)
     if(childDebug && child) { child?.log("setTargetTemp: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetC, temp, child)) { runIn(3, "postDevCmd") }
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetC, temp, devId)
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetF, temp, child)) { runIn(3, "postDevCmd") }
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetF, temp, devId)
         }
     	return true
     }
@@ -702,15 +716,15 @@ def setTargetTemp(child, unit, temp) {
 }
 
 def setTargetTempLow(child, unit, temp) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	LogAction("setTargetTempLow: ${devId} | (${temp})${unit}", "debug", true, true)
     if(childDebug && child) { child?.log("setTargetTempLow: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowC, temp, child)) { runIn(3, "postDevCmd") }
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetLowC, temp, devId)
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetLowF, temp, child)) { runIn(3, "postDevCmd") } 
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetLowF, temp, devId)
         }
     	return true
     }
@@ -722,15 +736,15 @@ def setTargetTempLow(child, unit, temp) {
 }
 
 def setTargetTempHigh(child, unit, temp) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	LogAction("setTargetTempHigh: ${devId} | (${temp})${unit}", "debug", true, true)
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
     try {
 		if(unit == "C") { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighC, temp, child)) { runIn(3, "postDevCmd") }
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetHighC, temp, devId)
         }
 		else { 
-        	if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, child)) { runIn(3, "postDevCmd") }
+        	sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetHighF, temp, devId)
         }
     	return true
     }
@@ -741,21 +755,6 @@ def setTargetTempHigh(child, unit, temp) {
     }
 }
 
-def setFanMode(child, fanOn) {
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
-	def val = fanOn.toBoolean()
-	LogAction("setFanMode: ${devId} (${val})", "debug", false, true)
-    if(childDebug) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val}, timeVal: ${timeVal}") }
-    try {	
-		if(sendNestApiCmd(getNestApiUrl(), devId, apiVar().types.tstat, apiVar().objs.fanActive, val, child)) { runIn(3, "postDevCmd") }
-        return true
-     }
-    catch (ex) { 
-    	LogAction("setFanMode Exception: ${ex}", "error", true, true) 
-    	if(childDebug) { child?.log("setFanMode Exception: ${ex}", "error") }
-        return false
-    }
-}
 
 /*def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 	//LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
@@ -797,85 +796,59 @@ def setFanMode(child, fanOn) {
     }
 }*/
 
-def sendNestApiCmd(cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child) {
-	log.trace "sendNestApiCmd..."
+private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
+	log.trace "sendNestApiCmd... $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId"
     try {
-        if(!atomicState?.cmdQueue) { atomicState?.cmdQueue = [] }
-
-        def cmdData = [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
+    	//state?.cmdQueue = []
+    	def childDev = getChildDevice(childId)
+        //if(!atomicState?.cmdQ) { atomicState?.cmdQ = [] }
+		def cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
+         if(childDebug && childDev) { childDev?.log("cmdQueue: (${cmdQueue.size()}) | $cmdQueue") }
+        def cmdData = [cmdTypeId.toString(), cmdType.toString(), cmdObj.toString(), cmdObjVal.toString(), childId.toString()]
+        
+        if(childDebug && childDev) { childDev?.log("cmdData: $cmdData") }
+        
         log.debug "cmdData: $cmdData"
-        if (atomicState?.cmdQueue.contains(cmdData)) { // || atomicState?.lastQcmd == cmdData) {    
+        if (cmdQueue?.contains(cmdData)) { // || atomicState?.lastQcmd == cmdData) {    
             LogAction("Command Exists in queue... Skipping...", "warn", true)
+            if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
             return false
         }
         else {
-            LogAction("Adding Command to Queue: $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $cmdChild", "info", true)
-            atomicState?.cmdQueue << [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
-            atomicState?.lastQcmd = [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
-            log.debug "cmdQueue Size: ${atomicState?.cmdQueue.size()}"
-            checkQueue()
+            LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
+            if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
+            cmdQueue << cmdData
+           	atomicState?.cmdQ = cmdQueue
+            
+            atomicState?.lastQcmd = cmdData
+            log.debug "cmdQueue Size: ${cmdQueue?.size()}"
+            if(childDebug && childDev) { childDev?.log("cmdQueue: ${cmdQueue} | cmdQueue Size: ${cmdQueue?.size()}") }
             return true
         }
+        checkQueue()
     }
     catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
-        if(childDebug && child) { child?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
+        if(childDebug && childDev) { childDev?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
         return false
     }
 }
 
-def procNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
-	//LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
-    if(childDebug && child) { child?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
-	def data
-    try {
-    	def urlPath = redir ? "" : "/${type}/${typeId}"
-    	data = new JsonBuilder("${obj}":objVal)
-    	def params = [
-        	uri: uri,
-        	path: urlPath,
-        	contentType: "application/json",
-        	query: [ "auth": atomicState?.authToken ],
-    		body: data.toString()
-    	]
-    	LogTrace("procNestApiCmd params: ${params}")
-        if(childDebug && child) { child.log("procNestApiCmd params: ${params}", "debug") }
-        httpPutJson(params) { resp ->
-        	if (resp.status == 307) {
-            	def newUrl = resp.headers.location.split("\\?")
-                LogTrace("NewUrl: ${newUrl[0]}")
-                sendNestApiCmd(newUrl[0], typeId, type, obj, objVal, child, true)
-                if(atomicState?.diagLogs) {
-                	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
-                	atomicState?.lastCmdSentDt = getDtNow()
-                }
-            }
-            else { 
-            	if(childDebug && child) { child?.log("procNestApiCmd Response: ${resp.status}") }
-            }
-       	}
-        return true
-    }   
-	catch (ex) {
-    	LogAction("procNestApiCmd Exception: ${ex}", "error", true, true)
-        if(childDebug && child) { child?.log("procNestApiCmd Response Exception: ${ex}", "error") }
-        //atomicState?.apiIssues = true
-        return false
-    }
-}
-
-private checkQueue() {
+void checkQueue() {
 	log.trace "checkQueue..."
     try {
-        atomicState?.cmdQcnt = atomicState?.cmdQueue?.size()
-		if(atomicState?.cmdQcnt > 0) {
+    	def cmdQueue = atomicState?.cmdQ
+        def cmdQcnt = cmdQueue?.size()
+		if(cmdQcnt > 0) {
     		processQueue()
 		}
         else {
-    		if(atomicState?.cmdQcnt > 10) {
-    			sendMsg("There is now ${atomicState?.cmdQcnt} events in the Command Queue. Something must be wrong...", "info")
+    		if(cmdQcnt > 10) {
+    			sendMsg("There is now ${cmdQcnt} events in the Command Queue. Something must be wrong...", "info")
+                processQueue()
         	}
     	}
+        
 	}
 	catch (ex) {
        	 LogAction("checkQueue Exception Error: ${ex}", "error", true, true)
@@ -891,26 +864,29 @@ private processQueue() {
 	log.trace "processQueue..."
     cmdProcState(false)
 	try {
-		if(atomicState?.cmdQueue != [] && atomicState?.cmdQcnt > 0) {
-            def cmd = atomicState?.cmdQueue?.first()
+		def cmdQueue = atomicState?.cmdQ
+        if(cmdQueue && cmdQueue.size() > 0) {
+            def cmd = cmdQueue?.first()
+            def childDev = getChildDevice(cmd[4].toString())
+            if(childDebug && childDev) { childDev?.log("cmd: $cmd ") } //${cmd[0]}, ${cmd[1]}, ${cmd[2]}, ${cmd[3]}, ${cmd[4]}...", "warn") }
             cmdProcState(true)
             
-			if(procNestApiCmd(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5])) {
-            	atomicState?.cmdQueue.remove(0)
-                if(atomicState?.cmdQueue?.size() == 0) {
-                	 if(cmd[2] == apiVar().types.struct) {
-                     	runIn(3, "postStrCmd")
-                     } else {
-                     	runIn(3, "postDevCmd")
-                     }
-                } else {
-                	runIn(cmdQdelay().toInteger(), "checkQueue", [overwrite: true])
-                }
-               
-                
+			if(procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4])) {
+            	cmdQueue?.remove(0)
             }
             else { 
             	atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
+            }
+            if(cmdQueue?.size() == 0) {
+               	atomicState?.cmdQ = []
+               	if(cmd[1] == apiVar().types.struct.toString()) {
+                   	runIn(3, "postStrCmd")
+                } else {
+                   	runIn(3, "postDevCmd")
+               	}
+            } else {
+               	atomicState?.cmdQ = cmdQueue
+               	runIn(cmdQueueDelay(), "checkQueue", [overwrite: true])
             }
       	}
        	cmdProcState(false)
@@ -925,6 +901,47 @@ private processQueue() {
     }
 }
 
+def procNestApiCmd(uri, typeId, type, obj, objVal, childId, redir = false) {
+	//LogAction("procNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
+    def childDev = getChildDevice(childId)
+    if(childDebug && childDev) { childDev?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
+	def data
+    try {
+    	def urlPath = redir ? "" : "/${type}/${typeId}"
+    	data = new JsonBuilder("${obj}":objVal)
+    	def params = [
+        	uri: uri,
+        	path: urlPath,
+        	contentType: "application/json",
+        	query: [ "auth": atomicState?.authToken ],
+    		body: data.toString()
+    	]
+    	LogTrace("procNestApiCmd params: ${params}")
+        if(childDebug && childDev) { childDev?.log("procNestApiCmd params: ${params}", "debug") }
+        httpPutJson(params) { resp ->
+        	if (resp.status == 307) {
+            	def newUrl = resp.headers.location.split("\\?")
+                LogTrace("NewUrl: ${newUrl[0]}")
+                procNestApiCmd(newUrl[0], typeId, type, obj, objVal, childDev, true)
+                if(atomicState?.diagLogs) {
+                	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
+                	atomicState?.lastCmdSentDt = getDtNow()
+                }
+            }
+            else { 
+            	if(childDebug && childDev) { childDev?.log("procNestApiCmd Response: ${resp.status}") }
+            }
+       	}
+        return true
+        checkQueue()
+    }   
+	catch (ex) {
+    	LogAction("procNestApiCmd Exception: ${ex}", "error", true, true)
+        if(childDebug && childDev) { childDev?.log("procNestApiCmd Response Exception: ${ex}", "error") }
+        //atomicState?.apiIssues = true
+        return false
+    }
+}
 
 /************************************************************************************************
 |								Push Notification Functions										|
@@ -1284,9 +1301,8 @@ def addRemoveDevices(uninst = null) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
             }
         	else {
-            	def presdni = getNestPresId()
-             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) &&
-             		!atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) && !presdni.toString().contains(it?.deviceNetworkId) }
+             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) && !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) && 
+                		!getNestPresId().toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
