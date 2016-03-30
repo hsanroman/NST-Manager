@@ -140,7 +140,7 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
-                if(isAppUpdateAvail()) {
+                if(!appDevType() && isAppUpdateAvail()) {
                 	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update.", 
                     	image: getAppImg("update_icon3.png")
                     href "infoPage", title:"Update Change Log...", description: "Tap to view..."
