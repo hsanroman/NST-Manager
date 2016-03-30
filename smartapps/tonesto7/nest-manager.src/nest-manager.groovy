@@ -184,7 +184,7 @@ def authPage() {
                 if(atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) {
                 	if (!atomicState.autoAppInstalled) { atomicState.autoAppInstalled = false } 
                     def autoApp = findChildAppByName( childAutoAppName() )
-                    section("Automations:") {
+                    section("Automations Child App:") {
                     	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}... (${getChildAppVer(autoApp)})", 
             				description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
                     }
