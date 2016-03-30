@@ -162,6 +162,7 @@ def poll() {
 def refresh() {
 	log.debug "refreshing parent..."
     if (state?.testMode) {
+    	log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
         switch (state?.testMode) {
             case "testSmoke" :
                 alarmStateEvent("", "emergency")
@@ -178,11 +179,11 @@ def refresh() {
             default:
                 state.testMode = false
        			log.warn "Test mode is inactive"
-				break            
-        }
-        parent.refresh()
-  	log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
-    } else { parent.refresh() }
+				break   
+        }	
+    } 
+    
+       parent.refresh()
 }
 
 def generateEvent(Map results) {	
@@ -360,10 +361,10 @@ def smokeStateEvent(smoke) {
 		break
     }
     if(!smokeVal.equals(smoke)) {
-	log.debug("Nest Smoke State is: ${smoke} | Original State: (${smokeVal})")
-	sendEvent(name:'Nestsmoke', value: smoke,  descriptionText: "Nest Smoke State is: ${smoke}", displayed: true, isStateChange: true)
+	log.debug("Nest Smoke State is: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
+	sendEvent(name:'Nestsmoke', value: smoke,  descriptionText: "Nest Smoke State is: ${smoke.toString().toUpperCase()}", displayed: true, isStateChange: true)
 	sendEvent(name:'smoke', value: stsmokestatus,  descriptionText: "Smoke State is: ${stsmokestatus}", displayed: true, isStateChange: true)
-    } else { Logger("Smoke State: (${smoke}) | Original State: (${smokeVal})") }
+    } else { Logger("Smoke State: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
 }
 
 def testingStateEvent(test) {
