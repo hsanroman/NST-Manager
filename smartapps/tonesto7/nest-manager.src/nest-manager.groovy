@@ -2138,10 +2138,11 @@ def protInfoPage () {
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
 //Change This to rename the Default App Name
-private def appName() 		{ "Nest Manager" }
+private def appName() 		{ "Nest Manager${appDevName()}" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
 private def appDevType()    { true }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ 
 	def cur = atomicState?.appData?.versions?.app?.ver.toString()
 	def ver = (textVersion() != cur) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
