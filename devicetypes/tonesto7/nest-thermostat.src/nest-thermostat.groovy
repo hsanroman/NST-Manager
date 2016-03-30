@@ -75,6 +75,7 @@ metadata {
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
         attribute "nestPresence", "string"
+        attribute "weatherCond", "string"
 	}
 
 	simulator {
@@ -87,9 +88,6 @@ metadata {
     			attributeState("default", label:'${currentValue}°')
   			}
   			tileAttribute("device.temperature", key: "VALUE_CONTROL") {
-    			//attributeState("default", action: "setTemperature")
-                //attributeState("VALUE_UP", action: "temperatureUp")
- 				//attributeState("VALUE_DOWN", action: "temperatureDown")
             	attributeState("default", action: "levelUpDown")
  				attributeState("VALUE_UP", action: "levelUp")
   				attributeState("VALUE_DOWN", action: "levelDown")
@@ -120,7 +118,8 @@ metadata {
   			}
         }
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", backgroundColors: [
+        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
+            		backgroundColors: [
 						// Celsius Color Range
 						[value: 0, color: "#153591"],
 						[value: 7, color: "#1e9cbb"],
@@ -146,10 +145,6 @@ metadata {
             state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-			//state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "st.thermostat.heating-cooling-off")
-			//state("heat", action:"thermostat.cool", 	nextState: "cool", 	icon: "st.thermostat.heat")
-            //state("cool", action:"thermostat.auto", 	nextState: "auto", 	icon: "st.thermostat.cool")
-            //state("auto", action:"thermostat.off", 	nextState: "off", 	icon: "st.thermostat.auto")
             state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
 			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
             state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
@@ -157,15 +152,10 @@ metadata {
             state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
-       		//state "auto",action:"fanOn", icon: "st.thermostat.fan-auto"
-            //state "on",action:"fanAuto", icon: "st.thermostat.fan-on"
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
             state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-        	//state "present", 	label:'home', 		action: "setPresence",	icon: "st.Home.home2"
-			//state "away", 	label:'away', 		action: "setPresence", 	icon: "st.Transportation.transportation5"
-            //state "auto-away",label:'auto\naway', action: "setPresence", 	icon: "st.Transportation.transportation5"
 			state "home", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
 			state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
@@ -226,6 +216,10 @@ metadata {
         	state "ok", label: "API Status:\nOK"
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
+        valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
+			state "default", label:'${currentValue}'
+		}
+       
 		main( tileMain() )
 		details( tileSelect() )
 	}
@@ -245,8 +239,8 @@ def tileSelect() {
     else if(getHvacMode() == "auto" || getHvacMode() == "unknown") { 
     	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
     	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "apiStatus", "hasLeaf", "lastConnection", "refresh", 
-                "lastUpdatedDt", "softwareVer", "debugOn", "devTypeVer"]
+        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
+                "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
     }
 }
 
@@ -354,6 +348,7 @@ def generateEvent(Map results) {
         }
 	}
     lastUpdatedEvent()
+    getWeatherConditions()
     return null
 }
 
@@ -424,7 +419,7 @@ def tempUnitEvent(unit) {
     } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
-def targetTempEvent(targetTemp) {
+def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
@@ -625,6 +620,24 @@ def tempWaitVal() { return parent?.getChildWaitVal() ? parent?.getChildWaitVal()
 
 def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 
+/************************************************************************************************
+|									Weather Info for Tiles										|
+*************************************************************************************************/
+
+def getWeatherConditions() {
+    def cur = getWeatherFeature("conditions")
+    def curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+    def curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
+    def curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
+    def curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
+    def curWeatherCond = cur?.current_observation?.weather.toString()
+    def curTemp = (state?.tempUnit == "C") ? "$curWeatherTemp_c°C": "$curWeatherTemp_f°F"
+    def curCondVal = "Current Weather:\nT: ${curTemp} (${curWeatherHum}%)\n$curWeatherCond" 
+
+	sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
+
+	log.debug "${curWeatherLoc} Weather | humidity: ${curWeatherHum} | temp_f: ${curWeatherTemp_f} | temp_c: ${curWeatherTemp_c} | Current Conditions: ${curWeatherCond}"
+}
 
 /************************************************************************************************
 |							Temperature Setpoint Functions for Buttons							|
@@ -844,23 +857,20 @@ void setHeatingSetpoint(temp) {
 void setHeatingSetpoint(Double reqtemp) {
 	log.trace "setHeatingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+    def tempUnit = state?.tempUnit
 	def temp = 0.0
-	if (wantMetric()) {
-		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
-	} else {
-		temp = reqtemp.round(0).toInteger()
-	}
-	def tempUnit = state?.tempUnit
-	def canHeat = state?.can_heat.toBoolean()
+    def canHeat = state?.can_heat.toBoolean()
 	def result = false
-    
-    log.debug "Heat Temp Received: ${temp} (${tempUnit})"
+                
+    log.debug "Heat Temp Received: ${reqtemp} (${tempUnit})"
     if (state?.present && canHeat) {
 		switch (tempUnit) {
 			case "C":
+            	temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if (temp) {
                     if (temp < 9.0) { temp = 9.0 }
                     if (temp > 32.0 ) { temp = 32.0 }
+                  	log.debug "Sending Heat Temp ($temp)"
 					if (hvacMode == 'auto') {
 					    parent.setTargetTempLow(this, tempUnit, temp)
                         heatingSetpointEvent(temp)
@@ -874,9 +884,11 @@ void setHeatingSetpoint(Double reqtemp) {
             	result = true
 				break
 			case "F":
-				if (temp) {
-                    if (temp < 50.0) { temp = 50 }
-                    if (temp > 90.0) { temp = 90 }
+				temp = reqtemp.round(0).toInteger()
+                if (temp) {
+                    if (temp < 50) { temp = 50 }
+                    if (temp > 90) { temp = 90 }
+                    log.debug "Sending Heat Temp ($temp)"
                     if (hvacMode == 'auto') {
                         parent.setTargetTempLow(this, tempUnit, temp) 
                         heatingSetpointEvent(temp)
@@ -908,28 +920,23 @@ void setCoolingSetpoint(Double reqtemp) {
 	log.trace "setCoolingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
 	def temp = 0.0
-	if (wantMetric()) {
-		temp = Math.round(reqtemp.round(1) * 2) / 2.0f
-	} else {
-		temp = reqtemp.round(0).toInteger()
-	}
 	def tempUnit = state?.tempUnit
 	def canCool = state?.can_cool.toBoolean()
 	def result = false
-
-    log.debug "Cool Temp Received: ${temp} (${tempUnit})"
+    
+    log.debug "Cool Temp Received: ${reqtemp} (${tempUnit})"
     if (state?.present && canCool) {
 		switch (tempUnit) {
 			case "C":
+            	temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if (temp) {
                     if (temp < 9.0) { temp = 9.0 }
                     if (temp > 32.0) { temp = 32.0 }
-					
+					log.debug "Sending Cool Temp ($temp)"
                     if (hvacMode == 'auto') {
 					    parent.setTargetTempHigh(this, tempUnit, temp) 
                         coolingSetpointEvent(temp)
 					} 
-                
                     if (hvacMode == 'cool') {
                         parent.setTargetTemp(this, tempUnit, temp) 
                         thermostatSetpointEvent(temp)
@@ -939,11 +946,12 @@ void setCoolingSetpoint(Double reqtemp) {
             	result = true
 				break
                 
-			default:
+            case "F":
+				temp = reqtemp.round(0).toInteger()
 				if (temp) {
-                    if (temp < 50.0) { temp = 50 }
-                    if (temp > 90.0) { temp = 90 }
-                    
+                    if (temp < 50) { temp = 50 }
+                    if (temp > 90) { temp = 90 }
+                    log.debug "Sending Cool Temp ($temp)"        
                     if (hvacMode == 'auto') {
                         parent.setTargetTempHigh(this, tempUnit, temp) 
                         coolingSetpointEvent(temp)
@@ -956,6 +964,9 @@ void setCoolingSetpoint(Double reqtemp) {
 				}
             	result = true
             	break
+        	default:
+ 	           	Logger("no Temperature data $tempUnit")
+               	break
 		}
 	} else {
 		log.debug "Skipping cool change"
