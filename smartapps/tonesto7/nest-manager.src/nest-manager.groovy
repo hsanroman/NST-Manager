@@ -248,17 +248,14 @@ def prefsPage() {
             	LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
             	atomicState.exLogs = [] 
             }
-            //atomicState.diagLogs = diagLogs ? true : false
         }
         section ("Time Display:") {
             input "useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?",  defaultValue: false, submitOnChange: true, required: false,
-            	   		image: getAppImg("military_time_icon.png")
-            //atomicState.useMilitaryTime = useMilitaryTime ? true : false
+            	   	image: getAppImg("military_time_icon.png")
         }
         section ("App Icons:") {
             input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, 
-                        image: getAppImg("no_icon.png"))
-            //atomicState.disAppIcons = disAppIcons ? true : false
+                    image: getAppImg("no_icon.png"))
         }
         section("Nest Login:") {
         	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...",
@@ -348,7 +345,8 @@ def setPollingState() {
 }
 
 def onAppTouch(event) {
-    poll(true)
+    //poll(true)
+    sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)
 }
 
 /************************************************************************************************
@@ -375,14 +373,14 @@ def poll(force = false, type = null) {
     			scheduleNextPoll()
    			if(ok2PollDevice()) { 
             	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
-            	dev = getApiDeviceData()
+            	dev = getApiData("dev")
             }
             if(ok2PollStruct()) {
             	LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
-                str = getApiStructureData()
+                str = getApiData("str")
             }    
 		}
-        if(atomicState?.updChildOnNewOnly) {
+        if(updChildOnNewOnly) {
         	if (dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
         }
         else { updateChildData() }
@@ -453,12 +451,11 @@ def forcedPoll(type = null) {
    		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
            	LogAction("Forcing Device Data Poll...", "info", true)
-           	getApiDeviceData()
+           	getApiData("dev")
         }
        	if (type == "str" || !type) { 
            	LogAction("Forcing Structure Data Poll...", "info", true)
-            getApiStructureData() 
-            //updChildLocation(childAutoAppName())  
+            getApiData("str") 
         }
    	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState.pollWaitValue})...", "debug", true) }
     scheduleNextPoll(type)
@@ -471,37 +468,65 @@ def postStrCmd() {
     
 def postDevCmd() { 
 	log.trace "postDevCmd()"
-    forcedPoll("dev") }
+    forcedPoll("dev") 
+}
 
-def getApiStructureData() {
-	LogAction("getApiStructureData()", "info", false)
-    atomicState?.lastStrucDataUpd = getDtNow()
-    def params = [
-    	uri: getNestApiUrl(),
-    	path: "/structures",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
-    ]
-    try {
-        httpGet(params) { resp ->
-            if(resp.status == 200) {
-            	LogTrace("API Structure Resp.Data: ${resp?.data}")
-                if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
-                	LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
-                    atomicState?.structData = resp?.data
-					atomicState.apiIssues = false      
-                    return true
-                }
-                else { return false 
-                	LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
-                }
+def getApiData(type = null) {
+	LogAction("getApiData($type)", "info", false)
+    if(!type) { return null } 
+    
+    def tPath = (type == "str") ? "/structures" : "/devices" 
+	try {
+    	def params = [
+            uri: getNestApiUrl(),
+            path: "$tPath",
+            headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
+    	]
+    	if(type == "str") { 
+        	atomicState?.lastStrucDataUpd = getDtNow()
+        	httpGet(params) { resp ->
+                if(resp.status == 200) {
+                    LogTrace("API Structure Resp.Data: ${resp?.data}")
+                    if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
+                        LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
+                        atomicState?.structData = resp?.data
+                        atomicState.apiIssues = false      
+                        return true
+                    }
+                    else { return false 
+                        LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
+                    }
 
-			} else { 
-            	LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
-            	return false
+                } else { 
+                    LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
+                    return false
+                }
             }
         }
-    } 
-    catch(ex) {
+  		else if(type == "dev") {
+        	atomicState?.lastDevDataUpd = getDtNow()
+        	httpGet(params) { resp ->
+                if(resp?.status == 200) {
+                    LogTrace("API Device Resp.Data: ${resp?.data}")
+
+                    if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
+                        LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
+                        atomicState?.deviceData = resp?.data
+                        atomicState.apiIssues = false  
+                        return true
+                    }
+                    else { return false 
+                        LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
+                    }
+
+                } else { 
+                    LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
+                    return false
+                }
+        	}
+        }
+    }
+	catch(ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
@@ -509,54 +534,12 @@ def getApiStructureData() {
                 return false
             }
         } else { 
-        	LogAction("getApiStructureData Exception: ${ex}", "error", true, true) 
+        	LogAction("getApiData (type: $type) Exception: ${ex}", "error", true, true) 
         	return false
         }
     }
 }
 
-def getApiDeviceData() {
-	LogAction("getApiDeviceData()", "info", false)
-    atomicState?.lastDevDataUpd = getDtNow()
-    def params = [
-    	uri: getNestApiUrl(),
-    	path: "/devices",
-    	headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
-    ]
-    try {
-        httpGet(params) { resp ->
-        	if(resp?.status == 200) {
-            	LogTrace("API Device Resp.Data: ${resp?.data}")
-                
-                if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
-                    LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
-                	atomicState?.deviceData = resp?.data
-                    atomicState.apiIssues = false  
-                	return true
-                }
-                else { return false 
-                	LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
-                }
-                
-            } else { 
-            	LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
-               	return false
-            }
-        }
-    } 
-    catch(ex) {
-    	if(ex instanceof groovyx.net.http.HttpResponseException) {
-        	if (ex.message.contains("Too Many Requests")) {
-            	log.warn "Received '${ex.message}' response code..."
-                atomicState.apiIssues = true
-                return false
-            }
-        } else { 
-        	LogAction("getApiDeviceData Exception: ${ex}", "error", true, true) 
-        	return false
-        }
-    }
-}
 
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
@@ -667,7 +650,7 @@ def setStructureAway(child, value) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId
 	def val = value?.toBoolean()
 	LogAction("setStructureAway: ${devId} (${val})", "debug", false, true)
-    if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${temp})${unit}") }
+    if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${val})") }
     try {
 		if(val) { 	
         	if(sendNestApiCmd(getNestApiUrl(), atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", child)) { runIn(3, "postStrCmd") } 
@@ -774,7 +757,7 @@ def setFanMode(child, fanOn) {
     }
 }
 
-def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
+/*def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
 	//LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
     if(childDebug && child) { child?.log("sendNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
 	def data
@@ -811,6 +794,134 @@ def sendNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
         if(childDebug && child) { child?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
         //atomicState?.apiIssues = true
         return false
+    }
+}*/
+
+def sendNestApiCmd(cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child) {
+	log.trace "sendNestApiCmd..."
+    try {
+        if(!atomicState?.cmdQueue) { atomicState?.cmdQueue = [] }
+
+        def cmdData = [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
+        log.debug "cmdData: $cmdData"
+        if (atomicState?.cmdQueue.contains(cmdData)) { // || atomicState?.lastQcmd == cmdData) {    
+            LogAction("Command Exists in queue... Skipping...", "warn", true)
+            return false
+        }
+        else {
+            LogAction("Adding Command to Queue: $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $cmdChild", "info", true)
+            atomicState?.cmdQueue << [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
+            atomicState?.lastQcmd = [cmdUri, cmdTypeId, cmdType, cmdObj, cmdObjVal, child]
+            log.debug "cmdQueue Size: ${atomicState?.cmdQueue.size()}"
+            checkQueue()
+            return true
+        }
+    }
+    catch (ex) {
+    	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
+        if(childDebug && child) { child?.log("sendNestApiCmd Response Exception: ${ex}", "error") }
+        return false
+    }
+}
+
+def procNestApiCmd(uri, typeId, type, obj, objVal, child, redir = false) {
+	//LogAction("SendNestApiCmd: ${typeId}, ${type}, ${obj}, ${objVal}, ${redir}", "debug", false, true)
+    if(childDebug && child) { child?.log("procNestApiCmd(uri: ${uri}, typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, redir: ${redir}", "debug") }
+	def data
+    try {
+    	def urlPath = redir ? "" : "/${type}/${typeId}"
+    	data = new JsonBuilder("${obj}":objVal)
+    	def params = [
+        	uri: uri,
+        	path: urlPath,
+        	contentType: "application/json",
+        	query: [ "auth": atomicState?.authToken ],
+    		body: data.toString()
+    	]
+    	LogTrace("procNestApiCmd params: ${params}")
+        if(childDebug && child) { child.log("procNestApiCmd params: ${params}", "debug") }
+        httpPutJson(params) { resp ->
+        	if (resp.status == 307) {
+            	def newUrl = resp.headers.location.split("\\?")
+                LogTrace("NewUrl: ${newUrl[0]}")
+                sendNestApiCmd(newUrl[0], typeId, type, obj, objVal, child, true)
+                if(atomicState?.diagLogs) {
+                	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
+                	atomicState?.lastCmdSentDt = getDtNow()
+                }
+            }
+            else { 
+            	if(childDebug && child) { child?.log("procNestApiCmd Response: ${resp.status}") }
+            }
+       	}
+        return true
+    }   
+	catch (ex) {
+    	LogAction("procNestApiCmd Exception: ${ex}", "error", true, true)
+        if(childDebug && child) { child?.log("procNestApiCmd Response Exception: ${ex}", "error") }
+        //atomicState?.apiIssues = true
+        return false
+    }
+}
+
+private checkQueue() {
+	log.trace "checkQueue..."
+    try {
+        atomicState?.cmdQcnt = atomicState?.cmdQueue?.size()
+		if(atomicState?.cmdQcnt > 0) {
+    		processQueue()
+		}
+        else {
+    		if(atomicState?.cmdQcnt > 10) {
+    			sendMsg("There is now ${atomicState?.cmdQcnt} events in the Command Queue. Something must be wrong...", "info")
+        	}
+    	}
+	}
+	catch (ex) {
+       	 LogAction("checkQueue Exception Error: ${ex}", "error", true, true)
+    }
+}
+
+private cmdProcState(Boolean value) { atomicState?.cmdIsProc = value }
+private cmdIsProc() { return atomicState?.cmdIsProc ? true : false }
+private cmdQueueDelay() { return !atomicState.cmdDelayVal ? 4 : atomicState?.cmdDelayVal.toInteger() }
+private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSeconds(atomicState?.cmdLastProcDt) : 0 }
+
+private processQueue() {
+	log.trace "processQueue..."
+    cmdProcState(false)
+	try {
+		if(atomicState?.cmdQueue != [] && atomicState?.cmdQcnt > 0) {
+            def cmd = atomicState?.cmdQueue?.first()
+            cmdProcState(true)
+            
+			if(procNestApiCmd(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5])) {
+            	atomicState?.cmdQueue.remove(0)
+                if(atomicState?.cmdQueue?.size() == 0) {
+                	 if(cmd[2] == apiVar().types.struct) {
+                     	runIn(3, "postStrCmd")
+                     } else {
+                     	runIn(3, "postDevCmd")
+                     }
+                } else {
+                	runIn(cmdQdelay().toInteger(), "checkQueue", [overwrite: true])
+                }
+               
+                
+            }
+            else { 
+            	atomicState?.failedItemsCnt = atomicState?.failedItemsCnt + 1
+            }
+      	}
+       	cmdProcState(false)
+        atomicState?.cmdLastProcDt = getDtNow()
+       	return
+    }
+        
+    catch(ex) { 
+    	LogAction("processQueue Error: ${ex}", "error", true, true)
+        cmdProcState(false)
+    	return
     }
 }
 
@@ -983,7 +1094,7 @@ def getNestStructures() {
     def struct = [:]
     def thisstruct = [:]
     try {
-    	if(ok2PollStruct()) { getApiStructureData() }
+    	if(ok2PollStruct()) { getApiData("str") }
     	
         if (atomicState?.structData) {
             def structs = atomicState?.structData
@@ -1003,7 +1114,7 @@ def getNestStructures() {
             if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
                 struct = thisstruct
             }
-            if (ok2PollDevice()) { getApiDeviceData() }
+            if (ok2PollDevice()) { getApiData("dev") }
         } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true, true) }
         
     } catch (ex) { LogAction("getNestStructures Exception: ${ex}", "error", true, true) }
@@ -1852,7 +1963,7 @@ def notifPrefPage() {
             				input ("misPollNotifyWaitValCust", "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 900, submitOnChange: true) 
             				if(misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
             			} 
-                    }else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
+                    } else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
                     
                     def misPollNotifyMsgWaitValDesc = !misPollNotifyMsgWaitVal ? "Default: 1 Hour" : misPollNotifyMsgWaitVal
                     input ("misPollNotifyMsgWaitVal", "enum", title: "Wait before sending another?", required: false, defaultValue: 3600, metadata: [values:notifValEnum()], description: misPollNotifyMsgWaitValDesc, submitOnChange: true)
