@@ -1525,7 +1525,7 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
     	if (diagLogs && diag) { 
     		def now = new Date()
         	def timeStmp = now.toTimestamp()
-        	def maxStateSize = 50000
+        	def maxStateSize = 9000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
             //log.debug "logEntry: $logEntry"
             //log.debug "exLogs(state): ${atomicState?.exLogs}"
