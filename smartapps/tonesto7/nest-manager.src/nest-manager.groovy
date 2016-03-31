@@ -109,13 +109,13 @@ def authPage() {
         }
     }
     
-    if(getLastWebUpdSec() > 300) { getWebFileData() }
+    if(getLastWebUpdSec() > 1800) { getWebFileData() }
     
     def description
     def uninstallAllowed = false
     def oauthTokenProvided = false
 	
-    if(atomicState.authToken) {
+    if(atomicState?.authToken) {
     	description = "You are connected."
         uninstallAllowed = true
         oauthTokenProvided = true
@@ -125,7 +125,7 @@ def authPage() {
     def redirectUrl = buildRedirectUrl
     //log.debug "RedirectUrl = ${redirectUrl}"
 
-    if (!oauthTokenProvided && atomicState.accessToken) {
+    if (!oauthTokenProvided && atomicState?.accessToken) {
         LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
             section("") {
@@ -184,11 +184,7 @@ def authPage() {
                 	if (!atomicState.autoAppInstalled) { atomicState.autoAppInstalled = false } 
                     def autoApp = findChildAppByName( childAutoAppName() )
                     section("Automations Child App:") {
-<<<<<<< HEAD
-                    	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}... (${getChildAppVer(autoApp)})", 
-=======
                     	app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}...${getChildAppVer(autoApp)}", 
->>>>>>> queue
             				description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
                     }
                 }
@@ -224,7 +220,6 @@ def authPage() {
 //Defines the Preference Page
 def prefsPage() {
 	dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false) {
-    	
         section("Polling:") {
         	def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active"
         	href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", 
@@ -247,7 +242,7 @@ def prefsPage() {
             			image: getAppImg("diag_icon.png"))
             paragraph "This will store errors withing the app which you can view. You can share those logs with the developer to help resolve issues..."
             if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
-            if (!diagLogs) { 
+            else { 
             	LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
             	atomicState.exLogs = [] 
             }
@@ -362,7 +357,7 @@ def pollWatcher(evt) {
 }
 
 def poll(force = false, type = null) {
-    schedFollowPoll()
+	schedFollowPoll()
    	if(isPollAllowed()) { 
    		def dev = false
         def str = false
@@ -420,6 +415,7 @@ def scheduleNextPoll(type = null) {
     def nextfollow = pollVal
     def lastDevPoll = getLastDevicePollSec().toInteger()
     def newPollVal = ((pollVal - lastDevPoll) > 6) ? (int) (pollVal - lastDevPoll) : pollVal 
+    
     if(newPollVal < pollVal) {
     	nextfollow = newPollVal
     } else { nextfollow = pollVal }
@@ -542,14 +538,12 @@ def getApiData(type = null) {
     }
 }
 
-
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
 	try {
     	atomicState?.lastChildUpdDt = getDtNow()
 		getAllChildDevices().each {
     		def devId = it.deviceNetworkId
-			
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
             	def tData = atomicState?.deviceData?.thermostats[devId]
 				LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
@@ -854,7 +848,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
             }
             else if( resp.status == 200) {
             	LogAction("procNestApiCmd Processed ($type | ($obj:$objVal)) Successfully!!!", "info", true)
-            	if(atomicState?.diagLogs) {
+            	if(diagLogs) {
                 	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
                 	atomicState?.lastCmdSentDt = getDtNow()
                     atomicState?.apiIssues = false
@@ -864,7 +858,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
             	LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
             }
             else { 
-    			LogAction("procNestApiCmd Response: ${resp.status}", "warn", true)
+    			LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
             }
        	}
     }   
@@ -881,8 +875,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
 *************************************************************************************************/
 def notificationCheck() {
 	if((recipients || usePush) && (daysOk(quietDays) && quietTimeOk() && modesOk(quietModes))) {
-		if (atomicState?.missedPollNotif) { missedPollNotify() }
-		if (atomicState?.updNotif && !appDevType()) { newUpdNotify() }
+		if (missedPollNotif) { missedPollNotify() }
+		if (updNotif && !appDevType()) { newUpdNotify() }
     }
 }
 
@@ -1518,38 +1512,36 @@ def clientSecret() {
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
 
-def LogTrace(msg) { if(atomicState?.advAppDebug) { Logger(msg, "trace") } }
+def LogTrace(msg) { 
+	if(advAppDebug) { Logger(msg, "trace") } 
+}
 
 def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 	try {
     	if(showAlways) { Logger(msg, type) }
     
-    	else if (atomicState?.appDebug && !showAlways) { Logger(msg, type) }
+    	else if (appDebug && !showAlways) { Logger(msg, type) }
     
-    	if (atomicState?.diagLogs && diag) { 
+    	if (diagLogs && diag) { 
     		def now = new Date()
         	def timeStmp = now.toTimestamp()
         	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
+            //log.debug "logEntry: $logEntry"
+            //log.debug "exLogs(state): ${atomicState?.exLogs}"
         	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
         	def curStateSize = state?.toString().length()
         	if (curStateSize < (maxStateSize - logMsgLngth)) {
-        		//log.debug "State Size Before: ${state.toString().length()}"
     			atomicState?.exLogs << logEntry
-            	//log.debug "State Size After: ${state.toString().length()}" 
    			}
         
-        	else if (!atomicState?.exLogs) { 
+        	else if (!state?.exLogs) { 
         		atomicState?.exLogs = [] 
         		atomicState?.exLogs << logEntry
        		}
-        
-        	else { 
-				if (curStateSize > (maxStateSize - logMsgLngth)) { 
-            		    
-            		atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
-                	//log.debug "State Size After Cleanup: ${state.toString().length()}"   
-           		}
+            
+            else if (curStateSize > (maxStateSize - logMsgLngth)) { 
+            	atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
     			atomicState?.exLogs << logEntry
         	}	
     	}
@@ -1559,9 +1551,10 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 def renderLogJson() {
 	try {
   		def values = []
-  		if (!atomicState.exLogs) { values = [nothing: "found"] }
+        def exLogs = atomicState?.exLogs
+  		if (!exLogs) { values = [nothing: "found"] }
   		else {
-    		def logJson = new groovy.json.JsonOutput().toJson(atomicState?.exLogs)
+    		def logJson = new groovy.json.JsonOutput().toJson(exLogs)
   			def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
   			render contentType: "application/json", data: logString
   		}
@@ -1591,7 +1584,7 @@ def renderDebugJson() {
 	try {
     	def dbgData = []
     	def exLog = []
-        if (!atomicState.exLogs) { exLog = [nothing: "found"] }
+        if (!atomicState?.exLogs) { exLog = [nothing: "found"] }
         else { exLog = atomicState?.exLog }
         
   		def stateVals = []
@@ -1641,7 +1634,8 @@ def Logger(msg, type) {
 //Return size of Diagnostic Logs State
 def getExLogSize() { 
 	def cnt = 0
-    atomicState?.exLogs.each { cnt = cnt + 1 }
+    def exLogs = atomicState?.exLogs
+    exLogs.each { cnt = cnt + 1 }
     return (cnt > 0) ? cnt : 0 
 }
 
@@ -1649,25 +1643,17 @@ def setStateVar(frc = false) {
 	try {
     	//If the developer changes the version in the web appParams JSON it will trigger 
         //the app to create any new state values that might not exist or reset those that do to prevent errors 
-        def stateVer = 2
+        def stateVer = 3
 		def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
 		if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) { 
 	 		if (!atomicState?.pollValue) { atomicState.pollValue = 60 }
      		if (!atomicState?.pollStrValue) { atomicState.pollStrValue = 180 }
      		if (!atomicState?.pollWaitVal) { atomicState.pollWaitVal = 10 }
      		if (!atomicState?.tempChgWaitVal) { atomicState?.tempChgWaitVal = 4 }
-     		if (!atomicState?.appDebug) { atomicState.appDebug = false }
-     		if (!atomicState?.childDebug) { atomicState.childDebug = false }
      		if (!atomicState?.exLogs) { atomicState.exLogs = [] }
-     		if (!atomicState?.missedPollNotif) { atomicState.missedPollNotif = true }
-     		if (!atomicState?.updNotif) { atomicState.updNotif = true }
      		if (!atomicState?.misPollNotifyWaitVal) { atomicState.misPollNotifyWaitVal = 900 }
      		if (!atomicState?.misPollNotifyMsgWaitVal) { atomicState.misPollNotifyMsgWaitVal = 3600 }
      		if (!atomicState?.updNotifyWaitVal) { atomicState.updNotifyWaitVal = 7200 }
-            if (!atomicState?.updChildOnNewOnly) { atomicState.updChildOnNewOnly = true }
-            //if (!atomicState?.disAppIcons) { atomicState.disAppIcons = false }
-            if (!atomicState?.showProtAlarmStateEvts) { atomicState.showProtAlarmStateEvts = false } 
-            if (!atomicState?.showAwayAsAuto) { atomicState.showAwayAsAuto = true }
         	atomicState?.stateVarUpd = true
         	atomicState?.stateVarVer = atomicState?.appData.state.stateVarVer ? atomicState?.appData.state.stateVarVer.toInteger() : 0
             stateCleanup()
@@ -1677,6 +1663,12 @@ def setStateVar(frc = false) {
 
 def stateCleanup() {
     //Things that I need to clear up on updates go here
+    if (atomicState?.missedPollNotif) { atomicState.missedPollNotif = null }
+    if (atomicState?.updNotif) { atomicState.updNotif = null }
+    if (atomicState?.updChildOnNewOnly) { atomicState.updChildOnNewOnly = null }
+    if (atomicState?.disAppIcons) { atomicState.disAppIcons = null }
+    if (atomicState?.showProtAlarmStateEvts) { atomicState.showProtAlarmStateEvts = null } 
+    if (atomicState?.showAwayAsAuto) { atomicState.showAwayAsAuto = null }
 }
 
 
@@ -1699,10 +1691,10 @@ def latestPresVer() { return atomicState?.appData?.versions?.presence ?: "unknow
 def latestAutoAppVer() { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
 def getUse24Time() { return useMilitaryTime ? true : false }
 
-private debugStatus() { return atomicState?.appDebug ? "On" : "Off" } //Keep this
-private childDebugStatus() { return atomicState?.childDebug ? "On" : "Off" } //Keep this
-private isAppDebug() { return atomicState?.appDebug ? true : false } //Keep This
-private isChildDebug() { return atomicState?.childDebug ? true : false } //Keep This
+private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
+private childDebugStatus() { return childDebug ? "Off" : "On" } //Keep this
+private isAppDebug() { return !appDebug ? false : true } //Keep This
+private isChildDebug() { return !childDebug ? false : true } //Keep This
 def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset" || qStartInput == "sunrise") ? "Start: ${qstartInput.toString().capitalize()}" : null) }
 def getQTimeStopLbl() { return (qStopInput == "A specific time") ? (qStopTime ? "Stop: ${time2Str(qStopTime)}" : null) : ((qStopInput == "sunset" || qStopInput == "sunrise") ? "Stop : ${qStopInput.toString().capitalize()}" : null) }
 def getQModesLbl() { return quietModes ? "Quiet Mode(s): ${quietModes}" : null }
@@ -1862,7 +1854,6 @@ def pollPrefPage() {
         }
         section("Other Options:") {
         	input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", required: false, defaultValue: true, submitOnChange: true
-            atomicState.updChildOnNewOnly = updChildOnNewOnly ? true : false
         }
         section("Advanced Polling Options:") {
         	paragraph "If you are still experiencing Polling issues then you can select these devices to use there events to determine if a scheduled poll was missed\nPlease select as FEW devices as possible!\nMore devices will not make for a better polling."
@@ -1903,7 +1894,6 @@ def notifPrefPage() {
         		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true,
                 	image: getAppImg("late_icon.png")
                 if(missedPollNotif) {
-                	atomicState.missedPollNotif = missedPollNotif ? true : false
                     def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
                     input ("misPollNotifyWaitVal", "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], description: misPollNotifyWaitValDesc, submitOnChange: true)
             		if(misPollNotifyWaitVal) {
@@ -1923,13 +1913,12 @@ def notifPrefPage() {
             				if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
             			} 
                     } else { atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
-                } else { atomicState.missedPollNotif = false }
+                } 
             }
             section("App and Device Updates:") {
                 input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, 
                 		image: getAppImg("update_icon3.png")
                	if(updNotif) {
-                	atomicState.updNotif = updNotif ? true : false
                     def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
                     input ("updNotifyWaitVal", "enum", title: "Send reminders every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], description: updNotifyWaitValDesc, submitOnChange: true)
             		if(updNotifyWaitVal) {
@@ -1939,9 +1928,8 @@ def notifPrefPage() {
             				if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
             			} 
                     } else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
-            	} else { atomicState.updNotif = false }
+            	}
             }
-            
         }
 	}   
 }
@@ -1976,13 +1964,11 @@ def quietTimePage() {
 	dynamicPage(name: "quietTimePage", title: "Quiet during certain times", uninstall: false) {
 		section() {
 			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null,submitOnChange: true, required: false
-            //atomicState?.qStartInput = qStartInput ? qStartInput : null
 			if(qStartInput == "A specific time") { 
             	input "qStartTime", "time", title: "Start time", required: true } 
 		}
 		section() {
 			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false
-            //atomicState?.qStopInput = qStopInput ? qStopInput : null
 			if(qStopInput == "A specific time") { 
             	input "qStopTime", "time", title: "Stop time", required: true } 
 		}
@@ -1994,7 +1980,6 @@ def quietTimePage() {
         section() {
         	input "quietModes", "mode", title: "Quiet when these Modes are Active", multiple: true, submitOnChange: true, required: false,
             		image: getAppImg("mode_icon.png")
-			//if(quietModes) { atomicState?.quietModes = quietModes }
         }
 	}
 }
@@ -2008,27 +1993,20 @@ def debugPrefPage() {
     dynamicPage(name: "debugPrefPage", install: false) {
         section ("Application Logs") {
             input (name: "appDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true,
-            		image: getAppImg("log.png"))
+            			image: getAppImg("log.png"))
             if (appDebug) {
             	input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true,
-                	image: getAppImg("list_icon.png"))
-                atomicState.advAppDebug = advAppDebug ? true : false
+                		image: getAppImg("list_icon.png"))
+                LogAction("Debug Logs are Enabled...", "info", false)
             }
-            if (appDebug && !atomicState?.appDebug) { LogAction("Debug Logs are Enabled...", "info", false) }
-            else if (!appDebug && atomicState?.appDebug) { 
-                LogAction("Debug Logs are Disabled...", "info", false)
-            }
-            atomicState.appDebug = appDebug ? true : false
+            else { LogAction("Debug Logs are Disabled...", "info", false) }
         }
         
         section ("Child Device Logs") {
             input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true,
             			image: getAppImg("log.png"))
-            if (childDebug) { //input (name: "advChildDebug", type: "bool", title: "Show verbose child device Debug Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true)
-            }
-            if (childDebug && !atomicState?.childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
-            else if (!childDebug && atomicState?.childDebug) { LogAction("Device Debug Logs are Disabled...", "info", false) }
-            atomicState.childDebug = childDebug ? true : false
+            if (childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
+            else { LogAction("Device Debug Logs are Disabled...", "info", false) }
         }
     }
 }
