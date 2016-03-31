@@ -760,12 +760,13 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
+		    cmdQueue = atomicState?.cmdQ
             cmdQueue << cmdData
            	atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
         }
-          if(canSchedule()) { runIn(1, "workQueue", [overwrite: true]) }
+          if(canSchedule()) { runIn(3, "workQueue", [overwrite: true]) }
     }
     catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
@@ -777,36 +778,38 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 
 void workQueue() {
 	//log.trace "workQueue..."
+    def cmdDelay = !atomicState.cmdDelayVal ? 4 : atomicState?.cmdDelayVal.toInteger()
     def cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
     try {
-    	def cmdDelay = !atomicState.cmdDelayVal ? 4 : atomicState?.cmdDelayVal.toInteger()
-		if(cmdQueue?.size() > 0) { 
-        	cmdProcState(false)
             if(cmdQueue.size() > 0) {
-            	def cmd = cmdQueue?.first()
+                cmdQueue = atomicState?.cmdQ
+            	def cmd = cmdQueue?.remove(0)
+        		atomicState?.cmdQ = cmdQueue
+
             	cmdProcState(true)
 				procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
-       			cmdQueue?.remove(0)
+                cmdProcState(false)
+               	if(cmd[1] == apiVar().types.struct.toString()) { atomicState.needStructpoll = true }
+                else { atomicState.needStructpoll = false }
+
         		atomicState?.cmdQ = cmdQueue
             	if(cmdQueue?.size() == 0) {
-               		atomicState?.cmdQ = []
-               		if(cmd[1] == apiVar().types.struct.toString()) { runIn(3, "postStrCmd", [overwrite: true]) } 
-                    else { runIn(3, "postDevCmd", [overwrite: true]) }
-            	} 
+               		if(atomicState?.needStructpoll ) { 
+                        postStrCmd() 
+                        atomicState.needStructpoll = false 
+                    }
+                    else { postDevCmd() }
+            	}
                 else { 
                 	if(canSchedule()) { runIn(cmdDelay, "workQueue", [overwrite: true]) } 
                 }
-      		}
-            cmdProcState(false)
-        	atomicState?.cmdLastProcDt = getDtNow()
-       		return
-        }
-        else {
+        	    atomicState?.cmdLastProcDt = getDtNow()
+       		    return
+            }
     		if(cmdQueue?.size() > 10) {
     			sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "Warning")
                 LogAction("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "warn", true)
         	}
-    	}
 	}
 	catch (ex) {
     	LogAction("checkQueue Exception Error: ${ex}", "error", true, true)
