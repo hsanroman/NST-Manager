@@ -1521,7 +1521,7 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
     	if (diagLogs && diag) { 
     		def now = new Date()
         	def timeStmp = now.toTimestamp()
-        	def maxStateSize = 9000
+        	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
             def tmpExLogs = atomicState?.exLogs
         	def logMsgLngth = logEntry ? (logEntry.toString().length() * 2) : 50
