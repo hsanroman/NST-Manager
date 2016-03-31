@@ -193,7 +193,8 @@ def authPage() {
                     def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
                     section(diagInfoDesc) {
                    		if(atomicState.structures && (atomicState.thermostats ||atomicState.protects) && atomicState?.isInstalled) {
-               				href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
+               				href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...",
+                   				image: getAppImg("api_icon.png")
                 		}
                         if(diagLogs) {
                    			href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", 
@@ -209,7 +210,8 @@ def authPage() {
                 
             }
             section(" ") { 
-                href "infoPage", title:"App Info and Licensing", description: "Tap to view...", image: getAppImg("info.png")
+                href "infoPage", title:"App Info and Licensing", description: "Tap to view...", 
+                		image: getAppImg("info.png")
             }
         }
     }
@@ -220,10 +222,12 @@ def prefsPage() {
 	dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false) {
         section("Polling:") {
         	def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active"
-        	href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", image: getAppImg("timer_icon.png")
+        	href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", 
+            			image: getAppImg("timer_icon.png")
         }
         section("Devices:") {
-        	href "devPrefPage", title: "Device Customization", description: "Tap to configure...", image: getAppImg("device_pref_icon.png")
+        	href "devPrefPage", title: "Device Customization", description: "Tap to configure...", 
+            			image: getAppImg("device_pref_icon.png")
         }
         section("Notifications:") {
         	href "notifPrefPage", title: "Notifications", description: "Notifications: (${pushStatus()})\n${getQTimeLabel()}\nTap to configure...", 
@@ -1523,22 +1527,23 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
         	def timeStmp = now.toTimestamp()
         	def maxStateSize = 50000
         	def logEntry = [logType: type, logTime: timeStmp, logMsg: msg]
-            def tmpExLogs = atomicState?.exLogs
-        	def logMsgLngth = logEntry ? (logEntry.toString().length() * 2) : 50
+            //log.debug "logEntry: $logEntry"
+            //log.debug "exLogs(state): ${atomicState?.exLogs}"
+        	def logMsgLngth = logEntry ? logEntry.toString().length() - 100 : 100
         	def curStateSize = state?.toString().length()
-        	if(!tmpExLogs) { 
-        		tmpExLogs = [] 
-        		tmpExLogs << logEntry
-       		}
-            else if (curStateSize < (maxStateSize - logMsgLngth)) {
-    			tmpExLogs << logEntry
+        	if (curStateSize < (maxStateSize - logMsgLngth)) {
+    			atomicState?.exLogs << logEntry
    			}
+        
+        	else if (!state?.exLogs) { 
+        		atomicState?.exLogs = [] 
+        		atomicState?.exLogs << logEntry
+       		}
+            
             else if (curStateSize > (maxStateSize - logMsgLngth)) { 
-            	tmpExLogs.remove(0) // << Removes first item in the list to make room
-    			tmpExLogs << logEntry
-        	}
-        	else { log.debug "An error occurred saving to the diag log queue." }
-            atomicState?.exLogs = tmpExLogs
+            	atomicState?.exLogs.remove(0) // << Removes first item in the list to make room
+    			atomicState?.exLogs << logEntry
+        	}	
     	}
     } catch (ex) { log.error("LogAction Exception: ${ex}") }
 }
@@ -1865,9 +1870,11 @@ def notifPrefPage() {
         	def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select people or devices to send Notifications too..."
         	paragraph "${notifDesc}"
 			if(!location.contactBookEnabled) {
-            	input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+            	input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, 
+                		image: getAppImg("notification_icon.png")
             }
-            input("recipients", "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png")) {
+            input("recipients", "contact", title: "Send notifications to", required: false, submitOnChange: true, 
+            		image: getAppImg("notification_icon.png")) {
            		input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true)
         	}
             
@@ -1880,10 +1887,12 @@ def notifPrefPage() {
         }
         if (recipients || phone || usePush) {
         	section(title: "Time Restrictions") {
-            	href "quietTimePage", title: "Quiet Time...", description: "${getQTimeLabel()}", image: getAppImg("quiet_time.png")
+            	href "quietTimePage", title: "Quiet Time...", description: "${getQTimeLabel()}",
+                	image: getAppImg("quiet_time.png")
 			}
         	section("Missed Poll Notification:") {
-        		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png")
+        		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true,
+                	image: getAppImg("late_icon.png")
                 if(missedPollNotif) {
                     def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
                     input ("misPollNotifyWaitVal", "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], description: misPollNotifyWaitValDesc, submitOnChange: true)
@@ -1907,7 +1916,8 @@ def notifPrefPage() {
                 } 
             }
             section("App and Device Updates:") {
-                input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("update_icon3.png")
+                input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, 
+                		image: getAppImg("update_icon3.png")
                	if(updNotif) {
                     def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
                     input ("updNotifyWaitVal", "enum", title: "Send reminders every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], description: updNotifyWaitValDesc, submitOnChange: true)
@@ -1963,11 +1973,13 @@ def quietTimePage() {
             	input "qStopTime", "time", title: "Stop time", required: true } 
 		}
         section() {
-        	input "quietDays", "enum", title: "Only on certain days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"), 
+        	input "quietDays", "enum", title: "Only on certain days of the week", multiple: true, required: false,
 					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            		image: getAppImg("day_calendar_icon.png")
         }
         section() {
-        	input "quietModes", "mode", title: "Quiet when these Modes are Active", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
+        	input "quietModes", "mode", title: "Quiet when these Modes are Active", multiple: true, submitOnChange: true, required: false,
+            		image: getAppImg("mode_icon.png")
         }
 	}
 }
@@ -2059,7 +2071,8 @@ def resetDiagQueuePage() {
 def nestLoginPrefPage () {
     dynamicPage(name: "nestLoginPrefPage", install: false) {
         section("Nest Login Preferences:") {
-       	    href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
+       	    href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...",
+            		image: getAppImg("reset_icon.png")
        	}
     }
 }
@@ -2081,17 +2094,20 @@ def nestInfoPage () {
         }
         if(atomicState?.structures) {	
         	section("Locations") {
-        		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", image: getAppImg("nest_structure_icon.png")
+        		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", 
+            			image: getAppImg("nest_structure_icon.png")
         	}
         }
         if (atomicState?.thermostats) {
         	section("Thermostats") {
-            	href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", image: getAppImg("nest_like.png")
+            	href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", 
+            			image: getAppImg("nest_like.png")
         	}
         }
         if (atomicState?.protects) {
         	section("Protects") {
-        		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", image: getAppImg("protect_icon.png")
+        		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", 
+            			image: getAppImg("protect_icon.png")
         	}
         }
     }
