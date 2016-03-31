@@ -1926,7 +1926,7 @@ def devPrefPage() {
         }
 		if(atomicState?.protects) {
         	section("Protect Devices:") {
-        		input "showProtAlarmStateEvts", "bool", title: "Disable Alarm State in Device Activity Feed?", required: false, defaultValue: false, submitOnChange: true, 
+        		input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", required: false, defaultValue: true, submitOnChange: true, 
                 		image: getAppImg("list_icon.png")
         	}
         }

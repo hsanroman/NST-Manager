@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.3"}
+def devVer() { return "1.2.0"}
 
 // for the UI
 metadata {
@@ -636,7 +636,7 @@ def getWeatherConditions() {
 
 	sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
 
-	log.debug "${curWeatherLoc} Weather | humidity: ${curWeatherHum} | temp_f: ${curWeatherTemp_f} | temp_c: ${curWeatherTemp_c} | Current Conditions: ${curWeatherCond}"
+	Logger("${curWeatherLoc} Weather | humidity: ${curWeatherHum} | temp_f: ${curWeatherTemp_f} | temp_c: ${curWeatherTemp_c} | Current Conditions: ${curWeatherCond}")
 }
 
 /************************************************************************************************

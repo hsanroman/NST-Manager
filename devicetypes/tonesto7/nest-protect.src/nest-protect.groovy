@@ -87,18 +87,12 @@ metadata {
         }
 		standardTile("smoke", "device.Nestsmoke", width: 2, height: 2) {
 			state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-			//state("ok", label:"Clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
-			//state("warning", label:"WARN!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
-			//state("emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
             state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_clear.png")
             state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
 			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
 		}
 		standardTile("carbonMonoxide", "device.NestcarbonMonoxide", width: 2, height: 2){
 			state("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-			//state("ok", label:"Clear", icon:"st.particulate.particulate.particulate", backgroundColor:"#44B621")
-			//state("warning", label:"WARN!", icon:"st.particulate.particulate.particulate", backgroundColor:"#e8d813")
-			//state("emergency", label:"CO!", icon:"st.particulate.particulate.particulate", backgroundColor:"#e86d13")
 			state("ok", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_clear.png")
 			state("warning", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
 			state("emergency", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
@@ -182,8 +176,7 @@ def refresh() {
 				break   
         }	
     } 
-    
-       parent.refresh()
+    parent.refresh()
 }
 
 def generateEvent(Map results) {	
@@ -193,6 +186,7 @@ def generateEvent(Map results) {
     
 	if(results) {	
     	state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
+        state?.showProtActEvts = !parent?.settings?.showProtActEvts ? true : false
         lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
         apiStatusEvent(parent?.apiIssues())
@@ -230,7 +224,7 @@ def lastCheckinEvent(checkin) {
 	def lastChk = device.currentState("lastConnection")?.value
     if(!lastChk.equals(lastConn?.toString())) {
         Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-    	sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: true, isStateChange: true)
+    	sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
     } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
@@ -325,7 +319,7 @@ def onlineStatusEvent(online) {
     def val = online ? "Online" : "Offline"
 	if(!isOn.equals(val)) { 
         log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
-   		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
+   		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
     } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -379,34 +373,32 @@ def testingStateEvent(test) {
  def alarmStateEvent(coState, smokeState) {
 	def testVal = device.currentState("isTesting")?.value
  	def alarmState = ""
-    def dispAct = true
 
     def stvalStr = "detected"
     if (state?.testMode || testVal) { stvalStr = "tested"  }
  
 	if ( smokeState == "emergency" ) {
     	alarmState = "smoke-emergency"
-        sendEvent( name: 'Nestsmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: dispAct, isStateChange: true )      
-        sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: dispAct, isStateChange: true )      
+        sendEvent( name: 'Nestsmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
+        sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
     } else if (coState == "emergency" ) {
     	alarmState = "co-emergency"
-   		sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
-   		sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
+   		sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+   		sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
    	} else if (smokeState == "warning" ) {
     	alarmState = "smoke-warning"
-        sendEvent( name: 'Nestsmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: dispAct, isStateChange: true )      
- 		sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: dispAct, isStateChange: true )    
+        sendEvent( name: 'Nestsmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
+ 		sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )    
 	} else if (coState == "warning" ) {
     	alarmState = "co-warning"
-   	    sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
-        sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: dispAct, isStateChange: true ) 
+   	    sendEvent( name: 'NestcarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+        sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
     } else {
     	alarmState = "ok"
-        dispAct = !parent?.showProtAlarmStateEvts ? true : false
     } 
     
  	log.info "alarmState: ${alarmState} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
- 	sendEvent( name: 'alarmState', value: alarmState, descriptionText: "Alarm: ${alarmState} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: dispAct, isStateChange: true )
+ 	sendEvent( name: 'alarmState', value: alarmState, descriptionText: "Alarm: ${alarmState} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: state?.showProtActEvts, isStateChange: true )
 }
  
 /************************************************************************************************
