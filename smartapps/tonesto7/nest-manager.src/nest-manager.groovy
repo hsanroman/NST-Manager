@@ -352,17 +352,17 @@ def poll(force = false, type = null) {
         def str = false
         if (force == true) { forcedPoll(type) }
 	    if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
-			LogAction("Too Soon to poll Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", true)
+			LogAction("Too Soon to Refresh Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", true)
             scheduleNextPoll()
  		}
    		else if(!force) {
     			scheduleNextPoll()
    			if(ok2PollDevice()) { 
-            	LogAction("Polling Devices...(Last Updated (${getLastDevicePollSec()}) seconds ago)", "info", true)
+            	LogAction("Updating Device Data...(Last Updated: (${getLastDevicePollSec()}) seconds ago)", "info", true)
             	dev = getApiData("dev")
             }
             if(ok2PollStruct()) {
-            	LogAction("Polling Structures...(Last Updated (${getLastStructPollSec()}) seconds ago)", "info", true)
+            	LogAction("Updating Structure Data...(Last Updated: (${getLastStructPollSec()}) seconds ago)", "info", true)
                 str = getApiData("str")
             }    
 		}
@@ -384,13 +384,13 @@ def pollStr() {
 
 def schedDevPoll(val = null) {
 	def pollVal = !val ? atomicState?.pollValue.toInteger() : val.toInteger()
-    LogAction("scheduling Device Poll for (${pollVal}) seconds", "info", true)
+    LogAction("Device Update Scheduled for (${pollVal}) seconds", "info", true)
     runIn(pollVal, "poll", [overwrite: true])
 }
 
 def schedStrPoll(val = null) {
 	def pollStrVal = !val ? atomicState?.pollStrValue.toInteger() : val.toInteger()
-    LogAction("scheduling Structure Poll for (${pollStrVal}) seconds", "info", true)
+    LogAction("Structure Update Scheduled for (${pollStrVal}) seconds", "info", true)
     runIn(pollStrVal, "pollStr", [overwrite: true])
 }
 
@@ -435,16 +435,16 @@ def forcedPoll(type = null) {
        	atomicState?.lastForcePoll = getDtNow()
     def pollWaitVal = !atomicState?.pollWaitValue ? 10 : atomicState?.pollWaitValue.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
-   		LogAction("Forcing data poll... Last forced Poll was ${lastFrcdPoll} seconds ago.", "info", true)
+   		LogAction("Forcing Data Update... Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
-           	LogAction("Forcing Device Data Poll...", "info", true)
+           	LogAction("Forcing Update of Device Data...", "info", true)
            	getApiData("dev")
         }
        	if (type == "str" || !type) { 
-           	LogAction("Forcing Structure Data Poll...", "info", true)
+           	LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str") 
         }
-   	} else { LogAction("Too Soon to Force data poll.  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
+   	} else { LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
     scheduleNextPoll(type)
     updateChildData()
 }
