@@ -1634,14 +1634,14 @@ def setStateVar(frc = false) {
         def stateVer = 3
 		def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
 		if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) { 
-	 		if (!atomicState?.pollValue) { atomicState.pollValue = 60 }
-     		if (!atomicState?.pollStrValue) { atomicState.pollStrValue = 180 }
-     		if (!atomicState?.pollWaitVal) { atomicState.pollWaitVal = 10 }
-     		if (!atomicState?.tempChgWaitVal) { atomicState?.tempChgWaitVal = 4 }
-     		if (!atomicState?.exLogs) { atomicState.exLogs = [] }
-     		if (!atomicState?.misPollNotifyWaitVal) { atomicState.misPollNotifyWaitVal = 900 }
-     		if (!atomicState?.misPollNotifyMsgWaitVal) { atomicState.misPollNotifyMsgWaitVal = 3600 }
-     		if (!atomicState?.updNotifyWaitVal) { atomicState.updNotifyWaitVal = 7200 }
+	 		if(!atomicState?.pollValue) 				{ atomicState.pollValue = 60 }
+     		if(!atomicState?.pollStrValue) 				{ atomicState.pollStrValue = 180 }
+     		if(!atomicState?.pollWaitVal) 				{ atomicState.pollWaitVal = 10 }
+     		if(!atomicState?.tempChgWaitVal) 			{ atomicState?.tempChgWaitVal = 4 }
+     		if(!atomicState?.exLogs) 					{ atomicState.exLogs = [] }
+     		if(!atomicState?.misPollNotifyWaitVal) 		{ atomicState.misPollNotifyWaitVal = 900 }
+     		if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
+     		if(!atomicState?.updNotifyWaitVal) 			{ atomicState.updNotifyWaitVal = 7200 }
         	atomicState?.stateVarUpd = true
         	atomicState?.stateVarVer = atomicState?.appData.state.stateVarVer ? atomicState?.appData.state.stateVarVer.toInteger() : 0
             stateCleanup()
@@ -1680,7 +1680,7 @@ def latestAutoAppVer() { return atomicState?.appData?.versions?.autoapp ?: "unkn
 def getUse24Time() { return useMilitaryTime ? true : false }
 
 private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
-private childDebugStatus() { return childDebug ? "Off" : "On" } //Keep this
+private childDebugStatus() { return !childDebug ? "Off" : "On" } //Keep this
 private isAppDebug() { return !appDebug ? false : true } //Keep This
 private isChildDebug() { return !childDebug ? false : true } //Keep This
 def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset" || qStartInput == "sunrise") ? "Start: ${qstartInput.toString().capitalize()}" : null) }
