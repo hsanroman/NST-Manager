@@ -22,17 +22,18 @@ import java.text.SimpleDateFormat
 
 preferences {
    	input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
-   	 title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
-              input("testMode", "enum", title: "Testing State", required: false, 
-              options: [
+   	    title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
+    input("testMode", "enum", title: "Testing State", required: false, 
+            options: [
                 "off":"off",
                 "testSmoke":"Smoke Alert",
                 "testCO": "CO Alert",
                 "testWarnSmoke": "Smoke Warning",
-                "testWarnCO": "CO Warning"])
+                "testWarnCO": "CO Warning"
+            ])
 }
 
-def devVer() { return "1.1.1" }
+def devVer() { return "1.2.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
