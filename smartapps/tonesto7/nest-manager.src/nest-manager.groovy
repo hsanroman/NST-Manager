@@ -352,25 +352,23 @@ def poll(force = false, type = null) {
         def str = false
         if (force == true) { forcedPoll(type) }
 	    if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
-			LogAction("Too Soon to Refresh Data!!! - Devices Last Updated (${getLastDevicePollSec()}) seconds ago... | Structures Last Updated (${getLastStructPollSec()}) seconds ago...", "info", true)
+			LogAction("It's Too Soon to Refresh Data!!! - Devices Last Updated: ${getLastDevicePollSec()} seconds ago... | Structures Last Updated ${getLastStructPollSec()} seconds ago...", "info", true)
             scheduleNextPoll()
  		}
    		else if(!force) {
-    			scheduleNextPoll()
+    		scheduleNextPoll()
    			if(ok2PollDevice()) { 
-            	LogAction("Updating Device Data...(Last Updated: (${getLastDevicePollSec()}) seconds ago)", "info", true)
+            	LogAction("Updating Device Data...(Last Updated: ${getLastDevicePollSec()} seconds ago)", "info", true)
             	dev = getApiData("dev")
             }
             if(ok2PollStruct()) {
-            	LogAction("Updating Structure Data...(Last Updated: (${getLastStructPollSec()}) seconds ago)", "info", true)
+            	LogAction("Updating Structure Data...(Last Updated: ${getLastStructPollSec()} seconds ago)", "info", true)
                 str = getApiData("str")
             }    
 		}
         if(updChildOnNewOnly) {
         	if (dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
-        }
-        else { updateChildData() }
-        
+        } else { updateChildData() }
 	}
     if(getLastWebUpdSec() > 1800) {
        	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
@@ -1888,7 +1886,7 @@ def notifPrefPage() {
         }
         if (recipients || phone || usePush) {
         	section(title: "Time Restrictions") {
-            	href "quietTimePage", title: "Quiet Time...", description: "${getQTimeLabel()}", image: getAppImg("quiet_time.png")
+            	href "quietTimePage", title: "Quiet Time...", description: "${getQTimeLabel()}", image: getAppImg("quiet_time_icon.png")
 			}
         	section("Missed Poll Notification:") {
         		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png")
@@ -1961,12 +1959,14 @@ def devPrefPage() {
 def quietTimePage() {
 	dynamicPage(name: "quietTimePage", title: "Quiet during certain times", uninstall: false) {
 		section() {
-			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null,submitOnChange: true, required: false
+			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false,
+            	image: getAppImg("start_time_icon.png")
 			if(qStartInput == "A specific time") { 
             	input "qStartTime", "time", title: "Start time", required: true } 
 		}
 		section() {
-			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false
+			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false,
+            	image: getAppImg("stop_time_icon.png")
 			if(qStopInput == "A specific time") { 
             	input "qStopTime", "time", title: "Stop time", required: true } 
 		}
@@ -2035,11 +2035,11 @@ def diagPage () {
         }
         section("Export or View the Logs") {
        		href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
-               		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log.png")
+               		title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                		title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
-               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("state_data_icon.png")
+               		title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("debug_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", image: getAppImg("reset_icon.png")
        	}
         section("Last Nest Command") {

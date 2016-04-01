@@ -57,12 +57,12 @@ def mainPage() {
         	def qOpt = (exModes || exDays || (exStartTime && exStopTime)) ? "Schedule Options Selected...\n" : ""
         	def desc = (!exUseWeather && exTemp && exTstat) ? ("${exTstat?.label}\nwith External Temp Sensor\n${qOpt}\nTap to Modify...") : (exUseWeather ? "${exTstat?.label}\nwith External Weather\n${qOpt}\nTap to Modify..." : "Tap to Configure...")
         	href "extTempsPage", title: "Turn off based on External Temps...", description: desc,
-            			image: imgIcon("weather_icon.png")
+            			image: imgIcon("external_temp_icon.png")
        	}
         section("Set Nest Presence Based on ST Modes:") {
         	def presDesc = (awayModes && homeModes) ? "Home/Away Modes are Selected\n\nTap to Modify..." : "Tap to Configure..."
         	href "modePresPage", title: "Mode Automations", description: presDesc,
-            			image: imgIcon("nest_dev_pres_icon.png")
+            			image: imgIcon("mode_automation_icon.png")
        	}
     }
 }
@@ -132,7 +132,7 @@ def wcPage() {
         section("When These Contacts are open, Turn Off this Thermostat") {
         	def req = (wcContacts || wcTstat) ? true : false
 			input name: "wcContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
-            		image: imgIcon("open_closed.png")
+            		image: imgIcon("contact_icon.png")
             input name: "wcTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
             		image: imgIcon("nest_like.png")
 		}
@@ -264,9 +264,9 @@ def modePresPage() {
 	dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
 		section("Change Nest Presence with ST Modes:") {
 			input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
-            		image: imgIcon("app_pres_home_Icon.png")
+            		image: imgIcon("mode_home_icon.png")
 			input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
-            		image: imgIcon("app_pres_away_Icon.png")
+            		image: imgIcon("mode_away_icon.png")
 		}
         /*section("Nest Presence Set's SmartThings Mode:") {
 			input "homeStMode", "mode", title: "Set this Mode When Nest 'Home'...", multiple: false, submitOnChange: true, required: false,
@@ -332,16 +332,16 @@ def extTempsPage() {
             			image: imgIcon("temperature.png")
                 if(exTemp) {
                 	def tmpVal = "${exTemp?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
-                	paragraph "Current Sensor Temp: ${tmpVal}", image: ""
+                	paragraph "Current Sensor Temp: ${tmpVal}", image: " "
                 }
             }
             input name: "exTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
             		image: imgIcon("nest_like.png")
             if(exTstat) {
             	def tmpVal = "${exTstat?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
-                	paragraph "Current Thermostat Temp: ${tmpVal}", image: ""
+                	paragraph "Current Thermostat Temp: ${tmpVal}", image: " "
             	input name: "exTempDiffVal", type: "number", title: "When Inside Temp is within this many Degrees of External Temp?", range: "-30..30", default: 0, submitOnChange: true, required: false,
-                	    image: imgIcon("refresh_icon.png")
+                	    image: imgIcon("temp_icon.png")
             }
         }
         if((exUseWeather || exTemp) && exTstat) {
@@ -362,7 +362,7 @@ def extTempsPage() {
                 input name: "exOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
                                 image: imgIcon("delay_time_icon.png")
 
-                input "exRestoreMode", "bool", title: "Restore Previous mode temperature goes above setpoint?", required: false, defaultValue: false, submitOnChange: true,
+                input "exRestoreMode", "bool", title: "Restore Previous Mode when Temp goes below Threshold?", required: false, defaultValue: false, submitOnChange: true,
                                 image: imgIcon("restore_icon.png")
                 if(exRestoreMode) {
                     input name: "exOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
