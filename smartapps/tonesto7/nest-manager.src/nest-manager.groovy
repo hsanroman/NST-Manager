@@ -2171,7 +2171,7 @@ def protInfoPage () {
 private def appName() 		{ "Nest Manager${appDevName()}" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
-private def appDevType()    { true }
+private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ 
 	def cur = atomicState?.appData?.versions?.app?.ver.toString()
