@@ -794,15 +794,19 @@ void workQueue() {
                 cmdQueue = atomicState?.cmdQ
                 if(cmdQueue?.size() == 0) {
                     if(atomicState?.needStructPoll ) {
-                        schedDevPoll(20)
-                        unschedule(pollFollow)
-                        unschedule(pollStr)
+                        if(!canSchedule()) {
+                        	schedDevPoll(20)
+                        	unschedule(pollFollow)
+                        	unschedule(pollStr)
+                        }
                         runIn(2, "postStrCmd", [overwrite: true])
                         atomicState.needStructPoll = false
                     }
                     else {
-                        schedDevPoll(20)
-                        unschedule(pollFollow)
+                    	if(!canSchedule()) {
+                        	schedDevPoll(20)
+                        	unschedule(pollFollow)
+                        }
                         runIn(2, "postDevCmd", [overwrite: true])
                     }
             	}
