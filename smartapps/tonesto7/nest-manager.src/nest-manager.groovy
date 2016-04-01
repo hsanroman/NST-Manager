@@ -662,7 +662,7 @@ def setFanMode(child, fanOn) {
 	LogAction("setFanMode: ${devId} (${val})", "debug", true, true)
     if(childDebug && child) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val})") }
     try {	
-		sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.fanActive, val.toString(), devId)
+		sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.fanActive, val, devId)
         return true
      }
     catch (ex) { 
