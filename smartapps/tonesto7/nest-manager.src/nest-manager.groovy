@@ -762,9 +762,10 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             cmdQueue = atomicState?.cmdQ
             cmdQueue << cmdData
            	atomicState?.cmdQ = cmdQueue
+            
             atomicState?.lastQcmd = cmdData
         }
-        if(canSchedule()) { runIn(1, "workQueue", [overwrite: true]) }
+        if(canSchedule()) { runIn(2, "workQueue", [overwrite: true]) }
     }
     catch (ex) {
     	LogAction("sendNestApiCmd Exception: ${ex}", "error", true, true)
@@ -780,35 +781,42 @@ void workQueue() {
     def cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
     try {
             if(cmdQueue.size() > 0) {
-                cmdQueue = atomicState?.cmdQ
+        		cmdQueue = atomicState?.cmdQ
             	def cmd = cmdQueue?.remove(0)
         		atomicState?.cmdQ = cmdQueue
 
             	cmdProcState(true)
 				procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
-                cmdProcState(false)
-               	if(cmd[1] == apiVar().types.struct.toString()) { atomicState.needStructPoll = true }
+            	cmdProcState(false)
+                if(cmd[1] == apiVar().types.struct.toString()) { atomicState.needStructPoll = true }
                 else { atomicState.needStructPoll = false }
 
-        		atomicState?.cmdQ = cmdQueue
-            	if(cmdQueue?.size() == 0) {
-               		if(atomicState?.needStructPoll ) { 
-                        postStrCmd() 
-                        atomicState.needStructPoll = false 
+                cmdQueue = atomicState?.cmdQ
+                if(cmdQueue?.size() == 0) {
+                    if(atomicState?.needStructPoll ) {
+                        schedDevPoll(20)
+                        unschedule(pollFollow)
+                        unschedule(pollStr)
+                        runIn(2, "postStrCmd", [overwrite: true])
+                        atomicState.needStructPoll = false
                     }
-                    else { postDevCmd() }
+                    else {
+                        schedDevPoll(20)
+                        unschedule(pollFollow)
+                        runIn(2, "postDevCmd", [overwrite: true])
+                    }
             	}
                 else { 
                 	if(canSchedule()) { runIn(cmdDelay, "workQueue", [overwrite: true]) } 
                 }
-        	    atomicState?.cmdLastProcDt = getDtNow()
-       		    return
+        	atomicState?.cmdLastProcDt = getDtNow()
+       		return
             }
     		if(cmdQueue?.size() > 10) {
     			sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "Warning")
                 LogAction("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "warn", true)
         	}
-	}
+    	}
 	catch (ex) {
     	LogAction("workQueue Exception Error: ${ex}", "error", true, true)
         cmdProcState(false)
