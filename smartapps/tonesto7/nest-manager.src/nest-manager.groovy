@@ -281,7 +281,9 @@ def uninstalled() {
 
 def initialize() {
 	setStateVar()
+	unschedule()
 	unsubscribe()
+    atomicState.pollingOn = false
     
     if (addRemoveDevices()) {
     	atomicState.lastChildUpdDt = null // force child update on next poll
@@ -291,7 +293,6 @@ def initialize() {
     
     subscriber()
     setPollingState()
-    schedFollowPoll()
 	//getEndpointUrl() //This can stay for now
 }
 
@@ -309,8 +310,8 @@ def subscriber() {
 	subscribe(location, "sunrise", pollWatcher, [filterEvents: false])
 	subscribe(location, "sunset", pollWatcher, [filterEvents: false])
 	subscribe(location, "mode", pollWatcher, [filterEvents: false])
-	subscribe(location, "sunriseTime", pollWatcher, [filterEvents: false])
-	subscribe(location, "sunsetTime", pollWatcher, [filterEvents: false])
+	//subscribe(location, "sunriseTime", pollWatcher, [filterEvents: false])
+	//subscribe(location, "sunsetTime", pollWatcher, [filterEvents: false])
     subscribe(location, "routineExecuted", pollWatcher, [filterEvents: false])
     if(temperatures) { subscribe(temperatures, "temperature", pollWatcher, [filterEvents: false]) }
     if(energies) { subscribe(energies, "energy", pollWatcher, [filterEvents: false]) }
@@ -320,11 +321,13 @@ def subscriber() {
 def setPollingState() {
 	if (!atomicState.thermostats && !atomicState.protects) { 
     	LogAction("No Devices Selected...Polling is Off!!!", "info", true)
+	    unschedule()
         atomicState.pollingOn = false 
     } else { 
     	if(!atomicState.pollingOn) { 
-        	LogAction("Polling is Now ACTIVE!!!", "info", true)
+            LogAction("Polling is Now ACTIVE!!!", "info", true)
             atomicState.pollingOn = true
+            schedule("0 0/1 * 1/1 * ? *", poll)  // this runs every minute
             poll(true)
         }
     	if(!atomicState.isInstalled) { poll(true) }
@@ -346,85 +349,31 @@ def pollWatcher(evt) {
 }
 
 def poll(force = false, type = null) {
-	schedFollowPoll()
-   	if(isPollAllowed()) { 
-   		def dev = false
-        def str = false
-        if (force == true) { forcedPoll(type) }
+	if(isPollAllowed()) { 
+	    def dev = false
+	    def str = false
+	    if (force == true) { forcedPoll(type) }
 	    if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
-			LogAction("It's Too Soon to Refresh Data!!! - Devices Last Updated: ${getLastDevicePollSec()} seconds ago... | Structures Last Updated ${getLastStructPollSec()} seconds ago...", "info", true)
-            scheduleNextPoll()
- 		}
-   		else if(!force) {
-    		scheduleNextPoll()
-   			if(ok2PollDevice()) { 
-            	LogAction("Updating Device Data...(Last Updated: ${getLastDevicePollSec()} seconds ago)", "info", true)
-            	dev = getApiData("dev")
-            }
-            if(ok2PollStruct()) {
-            	LogAction("Updating Structure Data...(Last Updated: ${getLastStructPollSec()} seconds ago)", "info", true)
-                str = getApiData("str")
-            }    
-		}
-        if(updChildOnNewOnly) {
-        	if (dev || str || (getLastChildUpdSec() > 1800)) { updateChildData() }
-        } else { updateChildData() }
+		    LogAction("Nothing to do - Devices Last Updated: ${getLastDevicePollSec()} seconds ago... | Structures Last Updated ${getLastStructPollSec()} seconds ago...", "info", true)
+	    }
+	    else if(!force) {
+    		if(ok2PollStruct()) {
+		        LogAction("Updating Structure Data...(Last Updated: ${getLastStructPollSec()} seconds ago)", "info", true)
+		        str = getApiData("str")
+    		}    
+   		    if(ok2PollDevice()) { 
+		        LogAction("Updating Device Data...(Last Updated: ${getLastDevicePollSec()} seconds ago)", "info", true)
+		        dev = getApiData("dev")
+    	    }
+	    }
+	    if(updChildOnNewOnly) {
+        	if (dev || str || atomicState?.NeedChildUpd || (getLastChildUpdSec() > 1800)) { updateChildData() }
+	    } else { updateChildData() }
 	}
     if(getLastWebUpdSec() > 1800) {
-       	getWebFileData() //This reads a JSON file from a web server with timing values and version numbers
+        if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
     }
     notificationCheck() //Checks if a notification needs to be sent for a specific event
-}
-
-def pollStr() {
-   	poll()
-}
-
-def schedDevPoll(val = null) {
-	def pollVal = !val ? atomicState?.pollValue.toInteger() : val.toInteger()
-    LogAction("Device Update Scheduled for (${pollVal}) seconds", "info", true)
-    runIn(pollVal, "poll", [overwrite: true])
-}
-
-def schedStrPoll(val = null) {
-	def pollStrVal = !val ? atomicState?.pollStrValue.toInteger() : val.toInteger()
-    LogAction("Structure Update Scheduled for (${pollStrVal}) seconds", "info", true)
-    runIn(pollStrVal, "pollStr", [overwrite: true])
-}
-
-def schedFollowPoll(val = 90) {
-    //log.trace "scheduling Follow Poll for (${val}) seconds"
-    runIn(val, "pollFollow", [overwrite: true])
-}
-
-def scheduleNextPoll(type = null) {
-    def pollVal = atomicState?.pollValue ? atomicState?.pollValue.toInteger() : 60
-    def nextfollow = pollVal
-    def lastDevPoll = getLastDevicePollSec().toInteger()
-    def newPollVal = ((pollVal - lastDevPoll) > 6) ? (int) (pollVal - lastDevPoll) : pollVal 
-    
-    if(newPollVal < pollVal) {
-    	nextfollow = newPollVal
-    } else { nextfollow = pollVal }
-
-    if(type == "dev" || !type) {
-    	schedDevPoll(nextfollow)
-    }
-
-    def pollStrVal = atomicState?.pollStrValue ? atomicState?.pollStrValue.toInteger() : 180
-    def nextfollowstr = pollStrVal
-    def lastStrPoll = getLastStructPollSec().toInteger()
-    def newStrPollVal = ((pollStrVal - lastStrPoll) > 6) ? (int) (pollStrVal - lastStrPoll) : pollStrVal
-    if(newStrPollVal < pollStrVal) {
-       	if (Math.abs(newStrPollVal - nextfollow) < 6) { newStrPollVal = newStrPollVal + 20 }
-    	nextfollowstr = newStrPollVal
-    } else {
-        if (Math.abs(pollStrVal - nextfollow) < 6) { pollStrVal = pollStrVal + 20 }
-        	nextfollowstr = pollStrVal
-    }
-    schedStrPoll(nextfollowstr) 
-    if ( nextfollow < nextfollowstr ) { schedFollowPoll(nextfollow + 90) }
-    else { schedFollowPoll(nextfollowstr + 90) }
 }
 
 def forcedPoll(type = null) {
@@ -433,6 +382,7 @@ def forcedPoll(type = null) {
        	atomicState?.lastForcePoll = getDtNow()
     def pollWaitVal = !atomicState?.pollWaitValue ? 10 : atomicState?.pollWaitValue.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
+        atomicState?.pollBlocked = false
    		LogAction("Forcing Data Update... Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
            	LogAction("Forcing Update of Device Data...", "info", true)
@@ -443,19 +393,14 @@ def forcedPoll(type = null) {
             getApiData("str") 
         }
    	} else { LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
-    scheduleNextPoll(type)
     updateChildData()
 }
 
-def postStrCmd() { 
-	log.trace "postStrCmd()"
-    forcedPoll() }
-    
-def postDevCmd() { 
-	log.trace "postDevCmd()"
-    forcedPoll("dev") 
+def postCmd() { 
+    //log.trace "postCmd()"
+    poll()
 }
-
+    
 def getApiData(type = null) {
 	LogAction("getApiData($type)", "info", false)
     if(!type) { return null } 
@@ -469,6 +414,7 @@ def getApiData(type = null) {
     	]
     	if(type == "str") { 
         	atomicState?.lastStrucDataUpd = getDtNow()
+            atomicState.NeedStrPoll = false
         	httpGet(params) { resp ->
                 if(resp.status == 200) {
                     LogTrace("API Structure Resp.Data: ${resp?.data}")
@@ -490,6 +436,7 @@ def getApiData(type = null) {
         }
   		else if(type == "dev") {
         	atomicState?.lastDevDataUpd = getDtNow()
+            atomicState?.NeedDevPoll = false
         	httpGet(params) { resp ->
                 if(resp?.status == 200) {
                     LogTrace("API Device Resp.Data: ${resp?.data}")
@@ -527,6 +474,7 @@ def getApiData(type = null) {
 
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
+	atomicState.NeedChildUpd = false
 	try {
     	atomicState?.lastChildUpdDt = getDtNow()
 		getAllChildDevices().each {
@@ -587,9 +535,21 @@ def apiIssues() {
     LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
 }
 
+def ok2PollDevice() {
+    if (atomicState?.pollBlocked) { return false }
+    if (atomicState?.NeedDevPoll) { return true }
+    def pollTime = !atomicState.pollValue ? 60 : atomicState.pollValue.toInteger()
+    return ( ((getLastDevicePollSec() + 7) > pollTime) ? true : false )
+}
+
+def ok2PollStruct() {
+    if (atomicState?.pollBlocked) { return false }
+    if (atomicState?.NeedStrPoll) { return true }
+    def pollStrTime = !atomicState.pollStrValue ? 180 : atomicState.pollStrValue.toInteger()
+    return ( ((getLastStructPollSec() + 7) > pollStrTime) ? true : false )
+}
+
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }
-def ok2PollDevice() { return (!atomicState?.lastDevDataUpd || ((getLastDevicePollSec() + 2) > (!atomicState.pollValue ? 60 : atomicState?.pollValue.toInteger()))) ? true : false }
-def ok2PollStruct() { return (!atomicState?.lastStrucDataUpd|| ((getLastStructPollSec() + 2) > (!atomicState.pollStrValue ? 180 : atomicState?.pollStrValue.toInteger()))) ? true : false }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
@@ -759,7 +719,7 @@ private sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
             cmdQueue = atomicState?.cmdQ
             cmdQueue << cmdData
-           	atomicState?.cmdQ = cmdQueue
+            atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
         }
@@ -779,55 +739,59 @@ void workQueue() {
     def cmdQueue = !atomicState?.cmdQ ? [] : atomicState?.cmdQ
     try {
             if(cmdQueue.size() > 0) {
-        		cmdQueue = atomicState?.cmdQ
-            	def cmd = cmdQueue?.remove(0)
-        		atomicState?.cmdQ = cmdQueue
+                atomicState?.pollBlocked = true
+
+                cmdQueue = atomicState?.cmdQ
+                def cmd = cmdQueue?.remove(0)
+                atomicState?.cmdQ = cmdQueue
 
             	cmdProcState(true)
-				procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
+            	def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
+            	if ( !cmdres ) {
+                    atomicState.NeedChildUpd = true
+                    atomicState.pollBlocked = false
+                    if(canSchedule()) { runIn((cmdDelay+4), "postCmd", [overwrite: true]) }
+            	}
             	cmdProcState(false)
-                if(cmd[1] == apiVar().types.struct.toString()) { atomicState.needStructPoll = true }
-                else { atomicState.needStructPoll = false }
+
+                atomicState?.NeedDevPoll = true
+                if(cmd[1] == apiVar().types.struct.toString()) {
+                    atomicState.NeedStrPoll = true 
+                }
 
                 cmdQueue = atomicState?.cmdQ
                 if(cmdQueue?.size() == 0) {
-                    if(atomicState?.needStructPoll ) {
-                        if(!canSchedule()) {
-                        	schedDevPoll(20)
-                        	unschedule(pollFollow)
-                        	unschedule(pollStr)
-                        }
-                        runIn(2, "postStrCmd", [overwrite: true])
-                        atomicState.needStructPoll = false
-                    }
-                    else {
-                    	if(!canSchedule()) {
-                        	schedDevPoll(20)
-                        	unschedule(pollFollow)
-                        }
-                        runIn(2, "postDevCmd", [overwrite: true])
-                    }
+                    atomicState.pollBlocked = false
+                    if(canSchedule()) { runIn(2, "postCmd", [overwrite: true]) }
             	}
                 else { 
-                	if(canSchedule()) { runIn(cmdDelay, "workQueue", [overwrite: true]) } 
+                    if(canSchedule()) { runIn(cmdDelay, "workQueue", [overwrite: true]) } 
                 }
-        	atomicState?.cmdLastProcDt = getDtNow()
-       		return
+                atomicState?.cmdLastProcDt = getDtNow()
+                return
             }
-    		if(cmdQueue?.size() > 10) {
-    			sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "Warning")
+            if(cmdQueue?.size() > 10) {
+                sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue...", "Warning")
                 LogAction("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "warn", true)
-        	}
-    	}
+            }
+    }
 	catch (ex) {
     	LogAction("workQueue Exception Error: ${ex}", "error", true, true)
         cmdProcState(false)
+        atomicState.NeedDevPoll = true
+        atomicState.NeedStrPoll = true 
+        atomicState.NeedChildUpd = true
+        atomicState?.pollBlocked = false
+        if(canSchedule()) { runIn((cmdDelay+4), "postCmd", [overwrite: true]) }
+        if(canSchedule()) { runIn(cmdDelay, "workQueue", [overwrite: true]) } 
     	return
     }
 }
 
 def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
 	LogTrace("procNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, isRedirUri: ${redir}")
+
+    def retcval = false
     try {
     	def urlPath = redir ? "" : "/${type}/${typeId}"
     	def data = new JsonBuilder("${obj}":objVal)
@@ -841,33 +805,39 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, redir = false) {
     	LogTrace("procNestApiCmd Url: $uri | params: ${params}")
         log.trace "procNestApiCmd Url: $uri | params: ${params}"
         httpPutJson(params) { resp ->
-        	if (resp.status == 307) {
+            if (resp.status == 307) {
             	def newUrl = resp.headers.location.split("\\?")
                 LogTrace("NewUrl: ${newUrl[0]}")
-                procNestApiCmd(newUrl[0], typeId, type, obj, objVal, true)
+                if ( procNestApiCmd(newUrl[0], typeId, type, obj, objVal, true) ) {
+            	    retcval = true
+                }
             }
             else if( resp.status == 200) {
             	LogAction("procNestApiCmd Processed ($type | ($obj:$objVal)) Successfully!!!", "info", true)
-            	if(diagLogs) {
-                	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
-                	atomicState?.lastCmdSentDt = getDtNow()
-                    atomicState?.apiIssues = false
-                }
+            	atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
+            	atomicState?.lastCmdSentDt = getDtNow()
+            	atomicState?.apiIssues = false
+            	retcval = true
             }
             else if(resp.status == 400) {
             	LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            	return
             }
-            else { 
-    			LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
+            else {
+            	LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
+            	return
             }
        	}
-    }   
-	catch (ex) {
-    	LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
-        atomicState?.apiIssues = true
-        return false
     }
-    return true
+	catch (ex) {
+        if(ex instanceof groovyx.net.http.HttpResponseException) {
+        }
+        	if (ex.message.contains("Bad Request")) {
+        	}
+    	LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
+        atomicState.apiIssues = true
+    }
+    return retcval
 }
 
 /************************************************************************************************
@@ -1791,7 +1761,7 @@ def notifValEnum() {
 
 def pollValEnum() {
 	def vals = [
-    	30:"30 Seconds", 45:"45 Seconds", 60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes",
+    	60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes",
         300:"5 Minutes", 600:"10 Minutes", 1800:"30 Minutes", 3600:"60 Minutes", 1000000:"Custom"
     ]
     return vals
@@ -1826,7 +1796,7 @@ def pollPrefPage() {
             if(pollValue) {
             	atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger()
             	if (pollValue.toInteger() == 1000000) { 
-            		input ("pollValueCust", "number", title: "Custom Device Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 60, submitOnChange: true) 
+            		input ("pollValueCust", "number", title: "Custom Device Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 60, submitOnChange: true) 
             		if(pollValueCust) { atomicState?.pollValue = pollValueCust ? pollValueCust.toInteger() : 60 }
             	} 
             } else { atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger() }
@@ -1837,7 +1807,7 @@ def pollPrefPage() {
             if(pollStrValue) {
             	atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger()
             	if (pollStrValue.toInteger() == 1000000) { 
-            		input ("pollStrValueCust", "number", title: "Custom Location Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 180, submitOnChange: true) 
+            		input ("pollStrValueCust", "number", title: "Custom Location Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 180, submitOnChange: true) 
             		if(pollValueCust) { atomicState?.pollStrValue = pollStrValueCust ? pollStrValueCust.toInteger() : 180 }
             	} 
             } else { atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger() }
@@ -1896,7 +1866,7 @@ def notifPrefPage() {
             		if(misPollNotifyWaitVal) {
                     	atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
                         if (misPollNotifyWaitVal.toInteger() == 1000000) { 
-            				input ("misPollNotifyWaitValCust", "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 900, submitOnChange: true) 
+            				input ("misPollNotifyWaitValCust", "number", title: "Custom Missed Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 900, submitOnChange: true) 
             				if(misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
             			} 
                     } else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
@@ -1906,7 +1876,7 @@ def notifPrefPage() {
             		if(misPollNotifyMsgWaitVal) {
                     	atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
                     	if (misPollNotifyMsgWaitVal.toInteger() == 1000000) { 
-            				input ("misPollNotifyMsgWaitValCust", "number", title: "Custom Msg Wait Value in Seconds", range: "30..86400", required: false, defaultValue: 3600, submitOnChange: true) 
+            				input ("misPollNotifyMsgWaitValCust", "number", title: "Custom Msg Wait Value in Seconds", range: "60..86400", required: false, defaultValue: 3600, submitOnChange: true) 
             				if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
             			} 
                     } else { atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
