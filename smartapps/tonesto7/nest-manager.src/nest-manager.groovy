@@ -310,8 +310,6 @@ def subscriber() {
 	subscribe(location, "sunrise", pollWatcher, [filterEvents: false])
 	subscribe(location, "sunset", pollWatcher, [filterEvents: false])
 	subscribe(location, "mode", pollWatcher, [filterEvents: false])
-	//subscribe(location, "sunriseTime", pollWatcher, [filterEvents: false])
-	//subscribe(location, "sunsetTime", pollWatcher, [filterEvents: false])
     subscribe(location, "routineExecuted", pollWatcher, [filterEvents: false])
     if(temperatures) { subscribe(temperatures, "temperature", pollWatcher, [filterEvents: false]) }
     if(energies) { subscribe(energies, "energy", pollWatcher, [filterEvents: false]) }
@@ -538,14 +536,14 @@ def apiIssues() {
 def ok2PollDevice() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.NeedDevPoll) { return true }
-    def pollTime = !atomicState.pollValue ? 60 : atomicState.pollValue.toInteger()
+    def pollTime = !atomicState.pollValue ? 60 : atomicState?.pollValue.toInteger()
     return ( ((getLastDevicePollSec() + 7) > pollTime) ? true : false )
 }
 
 def ok2PollStruct() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.NeedStrPoll) { return true }
-    def pollStrTime = !atomicState.pollStrValue ? 180 : atomicState.pollStrValue.toInteger()
+    def pollStrTime = !atomicState.pollStrValue ? 180 : atomicState?.pollStrValue.toInteger()
     return ( ((getLastStructPollSec() + 7) > pollStrTime) ? true : false )
 }
 
@@ -1753,16 +1751,18 @@ def getDtNow() {
 
 def notifValEnum() {
 	def vals = [
-    	300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours",
-        14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
+    	300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 
+        1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 
+        43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
     ]
     return vals
 }
 
 def pollValEnum() {
 	def vals = [
-    	60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes",
-        300:"5 Minutes", 600:"10 Minutes", 1800:"30 Minutes", 3600:"60 Minutes", 1000000:"Custom"
+    	60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 
+        600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 
+        1800:"30 Minutes", 2700:"45 Minutes", 3600:"60 Minutes"
     ]
     return vals
 }
@@ -1795,10 +1795,6 @@ def pollPrefPage() {
             input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (1 Minute)", required: false, defaultValue: 60, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
             if(pollValue) {
             	atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger()
-            	if (pollValue.toInteger() == 1000000) { 
-            		input ("pollValueCust", "number", title: "Custom Device Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 60, submitOnChange: true) 
-            		if(pollValueCust) { atomicState?.pollValue = pollValueCust ? pollValueCust.toInteger() : 60 }
-            	} 
             } else { atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger() }
         }
         section("Location Polling:") {   
@@ -1806,10 +1802,6 @@ def pollPrefPage() {
             input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], description: pollStrValDesc, submitOnChange: true)
             if(pollStrValue) {
             	atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger()
-            	if (pollStrValue.toInteger() == 1000000) { 
-            		input ("pollStrValueCust", "number", title: "Custom Location Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 180, submitOnChange: true) 
-            		if(pollValueCust) { atomicState?.pollStrValue = pollStrValueCust ? pollStrValueCust.toInteger() : 180 }
-            	} 
             } else { atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger() }
         }
         section("Wait Values:") {
