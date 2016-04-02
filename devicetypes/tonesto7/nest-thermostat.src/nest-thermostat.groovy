@@ -182,28 +182,28 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
-        standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false,  decoration: "flat") {
-			state "heatingSetpointUp", label:'  ', action:"heatingSetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#bc2323"
+        standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "heatingSetpointUp", label:'  ', action:"heatingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
 		}
         
         valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false) {
-			state "default", label:'${currentValue}', unit:"Heat", backgroundColor:"#bc2323"
+			state "default", label:'${currentValue}', unit:"Heat", backgroundColor:"#FF3300"
 		}
         
         valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false) {
-			state "default", label:'${currentValue}', unit:"Cool", backgroundColor:"#1e9cbb"
+			state "default", label:'${currentValue}', unit:"Cool", backgroundColor:"#0099FF"
 		}
 
 		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
-			state "heatingSetpointDown", label:'  ', action:"heatingSetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#bc2323"
+			state "heatingSetpointDown", label:'  ', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
 		}
         
         standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
-			state "coolingSetpointUp", label:'  ', action:"coolingSetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#1e9cbb"
+			state "coolingSetpointUp", label:'  ', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
 		}
 
 		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
-			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#1e9cbb"
+			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
 		}
         
         valueTile("lastConnection", "device.lastConnection", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -219,7 +219,8 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-       
+       	htmlTile(name:"htmlTest", action: "getHtml", width: 4, height: 3)
+        
 		main( tileMain() )
 		details( tileSelect() )
 	}
@@ -240,8 +241,11 @@ def tileSelect() {
     	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
     	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
         		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
-                "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
+                "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn", "htmlTest"]
     }
+}
+mappings {
+	path("/getHtml") {action: [GET: "getHtml"]}
 }
 
 def initialize() {
@@ -259,6 +263,26 @@ def poll() {
 
 def refresh() {
 	parent.refresh()
+}
+def getHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+            	#header { font-size: 1.5em; font-weight: bold }
+                #weather { font-size: 1em }
+            </style>
+           	"""
+        }
+        body {
+        	"""<div id="header">Current Weather Conditions</div>
+               <div id="weather">
+               		Temp: ${state?.curWeatherTemp} </br> 
+                    Humidity: ${state?.curWeatherHum} </br>
+            		<img src="${state?.curWeather?.current_observation?.icon_url}"
+            </div>"""
+        }
+    }
 }
 
 def generateEvent(Map results) {
@@ -626,17 +650,20 @@ def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 
 def getWeatherConditions() {
     def cur = getWeatherFeature("conditions")
-    def curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-    def curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
-    def curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
-    def curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-    def curWeatherCond = cur?.current_observation?.weather.toString()
-    def curTemp = (state?.tempUnit == "C") ? "$curWeatherTemp_c°C": "$curWeatherTemp_f°F"
-    def curCondVal = "Current Weather:\nT: ${curTemp} (${curWeatherHum}%)\n$curWeatherCond" 
+    state.curWeather = cur
+    //log.debug "cur: $cur"
+    state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+   	state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
+ 	state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
+    state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
+    state.curWeatherCond = cur?.current_observation?.weather.toString()
+    
+    state.curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
+    state.curCondVal = "Current Weather:\nT: ${state?.curWeatherTemp} (${state?.curWeatherHum}%)\n${state?.curWeatherCond}" 
 
 	sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
 
-	Logger("${curWeatherLoc} Weather | humidity: ${curWeatherHum} | temp_f: ${curWeatherTemp_f} | temp_c: ${curWeatherTemp_c} | Current Conditions: ${curWeatherCond}")
+	Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
 }
 
 /************************************************************************************************
