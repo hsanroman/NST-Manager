@@ -457,7 +457,7 @@ def thermostatSetpointEvent(Double targetTemp) {
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
 	    log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
+	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
 	} else { Logger("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
 }
 
@@ -466,7 +466,7 @@ def temperatureEvent(Double tempVal) {
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
     if(!temp.equals(rTempVal.toString())) {
         log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-    	sendEvent(name:'temperature', value: rTempVal, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+    	sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
     } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -478,7 +478,7 @@ def heatingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-    	sendEvent(name:'heatingSetpoint', value: rTempVal, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
+    	sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
     } else { Logger("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -490,7 +490,7 @@ def coolingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-    	sendEvent(name:'coolingSetpoint', value: rTempVal, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
+    	sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
     } else { Logger("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -539,7 +539,7 @@ def hvacModeEvent(mode) {
 def fanModeEvent(fanActive) {
 	def val = (fanActive == "true") ? "on" : "auto"
 	def fanMode = device.currentState("thermostatFanMode")?.value
-	if(!fanMode.equals(val) && state?.has_fan == true) {
+	if(!fanMode.equals(val)) {
 		log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
         sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
     } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
@@ -578,7 +578,8 @@ def canHeatCool(canHeat, canCool) {
 }
 
 def hasFan(hasFan) {
-	state?.has_fan = !hasFan ? false : true
+	def val = (hasFan == "true") ? true : false
+	state?.has_fan = val
 }	
 
 def isEmergencyHeat(val) {
@@ -1010,12 +1011,10 @@ def setPresence() {
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
     if(pres == "auto-away" || pres == "away") {
-		parent.setStructureAway(this, "false")
-        presenceEvent("home") 
+		if (parent.setStructureAway(this, "false")) { presenceEvent("home") }
     }
     else if (pres == "home") {
-        parent.setStructureAway(this, "true")
-        presenceEvent("away")
+        if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
     }
 }
 
@@ -1033,14 +1032,12 @@ def present() {
 
 def setAway() {
 	log.trace "setAway()..."
-    parent.setStructureAway(this, "true")
-    presenceEvent("away")
+    if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
 }
 
 def setHome() {
 	log.trace "setHome()..."
-    parent.setStructureAway(this, "false")
-    presenceEvent("home")
+    if (parent.setStructureAway(this, "false") ) { presenceEvent("home") }
 }
 
 /************************************************************************************************
@@ -1049,25 +1046,21 @@ def setHome() {
 
 void off() {
 	log.trace "off()..."
-    def currentMode = getHvacMode()
     if (parent.setHvacMode(this, "off")) {
         hvacModeEvent("off")
     } else {
        	log.error "Error setting off mode." 
-        hvacModeEvent(currentMode) // reset the tile back
     }
 }
 
 void heat() {
 	log.trace "heat()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
 	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat")) { 
         	hvacModeEvent("heat") 
         } else {
-			log.error "Error setting heat mode." 
-			hvacModeEvent(currentMode) // reset the tile back
+		log.error "Error setting heat mode." 
     	}
     }
 }
@@ -1080,13 +1073,11 @@ void emergencyHeat() {
 void cool() {
 	log.trace "cool()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
 	if (curPres == "home") {
     	if (parent.setHvacMode(this, "cool")) { 
         	hvacModeEvent("cool") 
         } else {
        		log.error "Error setting cool mode." 
-        	hvacModeEvent(currentMode) // reset the tile back
     	}
     }
 }
@@ -1094,13 +1085,11 @@ void cool() {
 void auto() {
 	log.trace "auto()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
 	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat-cool")) { 
         	hvacModeEvent("auto") 
         } else {
        		log.error "Error setting auto mode." 
-        	hvacModeEvent(currentMode) // reset the tile back
     	}
     }
 }
@@ -1134,18 +1123,23 @@ void setThermostatMode(modeStr) {
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
 void fanOn() {
-	if(state?.has_fan.toBoolean()) {
-    	parent.setFanMode(this, true)
-        fanModeEvent("true")
+    log.trace "fanOn()..."
+    def curPres = getNestPresence()
+    if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	        if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
+    } else {
+       		log.error "Error setting fanOn" 
     }
 }
 
 void fanOff() {
 	log.trace "fanOff()..."
-	if(state?.has_fan.toBoolean()) {
-    	parent.setFanMode (this, "off")
-        fanModeEvent("false")
-    }
+    def curPres = getNestPresence()
+	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	    if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
+    } else {
+       		log.error "Error setting fanOff" 
+	}
 }
 
 void fanCirculate() {
@@ -1155,9 +1149,11 @@ void fanCirculate() {
 
 void fanAuto() {
 	log.trace "fanAuto()..."
-	if(state?.has_fan.toBoolean()) {
-   		parent.setFanMode(this,false)
-        fanModeEvent("false")
+    def curPres = getNestPresence()
+	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+   		if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
+    } else {
+       		log.error "Error setting fanAuto" 
     }
 }
 
