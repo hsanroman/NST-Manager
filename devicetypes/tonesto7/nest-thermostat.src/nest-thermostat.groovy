@@ -219,7 +219,8 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-       	htmlTile(name:"htmlTest", action: "getHtml", width: 4, height: 3)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
+       	htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 3)
         
 		main( tileMain() )
 		details( tileSelect() )
@@ -240,12 +241,13 @@ def tileSelect() {
     else if(getHvacMode() == "auto" || getHvacMode() == "unknown") { 
     	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
     	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
-                "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn", "htmlTest"]
+        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "weatherHtml", "refresh"]
     }
 }
+
 mappings {
-	path("/getHtml") {action: [GET: "getHtml"]}
+	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
+	path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
 }
 
 def initialize() {
@@ -264,26 +266,8 @@ def poll() {
 def refresh() {
 	parent.refresh()
 }
-def getHtml() { 
-	renderHTML {
-    	head {
-        	"""
-            <style type="text/css">
-            	#header { font-size: 1.5em; font-weight: bold }
-                #weather { font-size: 1em }
-            </style>
-           	"""
-        }
-        body {
-        	"""<div id="header">Current Weather Conditions</div>
-               <div id="weather">
-               		Temp: ${state?.curWeatherTemp} </br> 
-                    Humidity: ${state?.curWeatherHum} </br>
-            		<img src="${state?.curWeather?.current_observation?.icon_url}"
-            </div>"""
-        }
-    }
-}
+
+
 
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
@@ -385,6 +369,7 @@ def deviceVerEvent() {
     def pubVer = parent?.latestTstatVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    state?.devTypeVer = newData
     if(curData != newData) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
     	sendEvent(name: 'devTypeVer', value: newData, displayed: false)
@@ -393,11 +378,12 @@ def deviceVerEvent() {
 
 def debugOnEvent(debug) {
 	def val = device.currentState("debugOn")?.value
-    def stateVal = debug ? "On" : "Off"
-	if(!val.equals(stateVal)) {
-    	log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-   	} else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+	if(!val.equals(dVal)) {
+    	log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+   	} else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def lastCheckinEvent(checkin) {
@@ -407,6 +393,7 @@ def lastCheckinEvent(checkin) {
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
 	def lastChk = device.currentState("lastConnection")?.value
+    state?.lastConnection = lastConn?.toString()
     if(!lastChk.equals(lastConn?.toString())) {
         log.debug("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
         sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false, isStateChange: true)
@@ -420,6 +407,7 @@ def lastUpdatedEvent() {
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
         Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
     	sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
@@ -428,6 +416,7 @@ def lastUpdatedEvent() {
 
 def softwareVerEvent(ver) {
     def verVal = device.currentState("softwareVer")?.value
+    state?.softwareVer = ver
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
         sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false, isStateChange: true)
@@ -497,6 +486,7 @@ def coolingSetpointEvent(Double tempVal) {
 def hasLeafEvent(Boolean hasLeaf) {
 	def leaf = device.currentState("hasLeaf")?.value
     def lf = hasLeaf ? "On" : "Off"
+    state?.hasLeaf = lf
 	if(!leaf.equals(lf)) {
         log.debug("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
 		sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
@@ -534,6 +524,7 @@ def hvacModeEvent(mode) {
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
         state?.hvac_mode = newMode
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
+    
 } 
 
 def fanModeEvent(fanActive) {
@@ -557,6 +548,7 @@ def operatingStateEvent(operatingState) {
 def onlineStatusEvent(online) {
 	def isOn = device.currentState("onlineStatus")?.value
     def val = online ? "Online" : "Offline"
+    state?.onlineStatus = val
 	if(!isOn.equals(val)) { 
         log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
    		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -566,6 +558,7 @@ def onlineStatusEvent(online) {
 def apiStatusEvent(issue) {
 	def appStat = device.currentState("apiStatus")?.value
     def val = issue ? "issue" : "ok"
+    state?.apiStatus = val
 	if(!appStat.equals(val)) { 
         log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -650,21 +643,23 @@ def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 *************************************************************************************************/
 
 def getWeatherConditions() {
-    def cur = getWeatherFeature("conditions")
-    state.curWeather = cur
-    //log.debug "cur: $cur"
-    state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-   	state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
- 	state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
-    state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-    state.curWeatherCond = cur?.current_observation?.weather.toString()
-    
-    state.curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
-    state.curCondVal = "Current Weather:\nT: ${state?.curWeatherTemp} (${state?.curWeatherHum}%)\n${state?.curWeatherCond}" 
+    def cur = parent?.getWData()
+    if(cur) {
+        state.curWeather = cur
+        //log.debug "cur: $cur"
+        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
+        state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
+        state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
+        state.curWeatherCond = cur?.current_observation?.weather.toString()
 
-	sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
+        def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
+        def curCondVal = "Current Weather:\nT: ${state?.curWeatherTemp} (${state?.curWeatherHum}%)\n${state?.curWeatherCond}" 
+		state.curWeathVal = "Temp: ${curWeatherTemp} (${state?.curWeatherHum}%)"
+        sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
 
-	Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
+        Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
+    }
 }
 
 /************************************************************************************************
@@ -1225,4 +1220,196 @@ def log(message, level = "trace") {
             break
     }            
     return null // always child interface call with a return value
+}
+
+
+def getInfoHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+                .outer {
+                  width: 100%;
+                  height: 100%;
+                  line-height: 1px;
+                  //display:inline-block;
+                  border-right:1px solid #D6D6D6;
+                  border-bottom:1px solid #D6D6D6;
+                  //border-left:1px solid #D6D6D6;
+                  //border-top:1px solid #D6D6D6;
+                }
+                
+                div.outer {
+                  background: #D6D6D6;
+                  margin: -1px 0 0 -1px;
+                  padding: 1px 0 0 1px;
+                  overflow: hidden;
+                  position: relative;
+                }
+
+                div.box33 {
+                  background: #FFF;
+                  float: left;
+                  margin: 0 1px 1px 0;
+                  width: 33.2%;
+                  width: -webkit-calc(33.33% - 1px);
+                  width: calc(33.33% - 1px);
+                }
+                
+                div.box50 {
+                  background: #FFF;
+                  float: left;
+                  margin: 0 1px 1px 0;
+                  width: 49.9%;
+                  width: -webkit-calc(50% - 1px);
+                  width: calc(50% - 1px);
+                }
+                
+                div.box:last-child {
+                  position: relative;
+                }
+
+                div.box:last-child:before,
+                div.box:last-child:after {
+                  background: inherit;
+                  content: '';
+                  display: block;
+                  height: 100%;
+                  left: 100%;
+                  margin: 0 1px;
+                  position: absolute;
+                  width: 100%;
+                }
+
+                div.box:last-child:after {
+                  left: 200%;
+                  margin: 0 2px;
+                }        
+                
+                body {
+                  //padding: 0px 0px 0px;
+                  //background-size: 300px 300px;
+                }
+                
+                h1 {
+                  color: black;
+                  em {
+                    color: #666;
+                    font-size: 16px;
+                  }
+                }
+                
+                h3 {
+                  color: black;
+                  font-size: 14px;
+                  text-align: center;
+                  vertical-align: top;
+                  padding: 1px 0px 3px 0px
+                }
+                
+                p {
+                  color: black;
+                  font-size: 14px;
+                  text-align: center;
+                  //vertical-align: top;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+              <div class="outer">
+               	<div class="box33">
+                  <div>
+                    <h3>Network Status:</h3>
+                      <p>${state?.onlineStatus.toString()}</p>	
+                  </div>
+                </div>
+                <div class="box33">
+                  <div>
+                    <h3>Leaf:</h3>
+                      <p>${getLeafHtml()}</p>
+                  </div>
+                </div>
+                <div class="box33">
+                  <div>
+                    <h3>API Status:</h3>
+                      <p>${state?.apiStatus}</p>
+                  </div>
+                </div>
+			  </div>                  
+              
+              <div class="outer">
+               	<div class="box33">
+                  <div>
+                    <h3>Firmware Version:</h3>
+                      <p>${state?.softwareVer.toString()}</p>	
+                  </div>
+                </div>
+                <div class="box33">
+                  <div>
+                    <h3>Debug:</h3>
+                      <p>${state?.debugStatus}</p>
+                  </div>
+                </div>
+                <div class="box33">
+                  <div>
+                    <h3>Device Type:</h3>
+                      <p>${state?.devTypeVer.toString()}</p>	
+                  </div>
+                </div>
+			  </div>
+              
+              <div class="outer">
+                <div class="box50">
+                  <div>
+                    <h3>Nest Last Checked-In:</h3>
+                      <p>${state?.lastConnection.toString()}</p>
+                  </div>
+                </div>
+                <div class="box50">
+                  <div>
+                    <h3>Data Last Received:</h3>
+                    <p>${state?.lastUpdatedDt.toString()}</p>
+                  </div>
+                </div>
+              </div>
+            """
+        }
+    }
+}
+
+def getLeafHtml() {
+    return state?.hasLeaf ? "<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : "<p>${state?.hasLeaf}</p>"
+}
+
+def getWeatherHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+            	#header { 
+                  font-size: 1.5em; font-weight: bold;
+                  text-align: center;
+                }
+                #weather { 
+                  font-size: 1em; 
+                  text-align: center;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+            	<div class="container">
+                  <div id="header">Current Weather Conditions</div>
+                  <div id="weather">
+               	    Temp: ${state?.curWeatherTemp} </br> 
+                    Humidity: ${state?.curWeatherHum}% </br>
+            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
+               	  </div>
+            	</div>
+            """
+        }
+    }
 }
