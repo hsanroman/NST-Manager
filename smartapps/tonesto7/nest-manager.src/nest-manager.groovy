@@ -37,7 +37,7 @@ definition(
 }
 
 def appVersion() { "1.2.0" }
-def appVerDate() { "3-29-2016" }
+def appVerDate() { "4-5-2016" }
 def appVerInfo() {
     
     "V1.2.0 (Mar 29th, 2016)\n" +
@@ -109,7 +109,7 @@ def authPage() {
         }
     }
     
-    updateWebStuff()
+    updateWebStuff(true)
     
     def description
     def uninstallAllowed = false
@@ -389,7 +389,7 @@ def forcedPoll(type = null) {
            	LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str") 
         }
-        updateWebStuff()
+        updateWebStuff(true)
    	} else { LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
     updateChildData()
 }
@@ -917,11 +917,11 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
-def updateWebStuff() {
-	if(getLastWebUpdSec() > 1800) {
-		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+def updateWebStuff(force = false) {
+	if(force || getLastWebUpdSec() > 1800) {
+		if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
 	}
-    if(getLastWeatherUpdSec() > 900) {
+    if(force || getLastWeatherUpdSec() > 900) {
         if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
     }
 }
@@ -1038,7 +1038,7 @@ def isAutoAppUpdateAvail() {
    	} else { return false }
 }
 
-def isWeathAppUpdateAvail() {
+def isWeathUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
    		return true
    	} else { return false }
