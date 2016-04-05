@@ -95,6 +95,11 @@ metadata {
 	}
 }
 
+mappings {
+	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
+	path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
+}
+
 def initialize() {
 	log.debug "initialize"
 }
@@ -284,4 +289,35 @@ def log(message, level = "trace") {
             break;
     }            
     return null // always child interface call with a return value
+}
+
+def getWeatherHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+            	#header { 
+                  font-size: 1.5em; font-weight: bold;
+                  text-align: center;
+                }
+                #weather { 
+                  font-size: 1em; 
+                  text-align: center;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+            	<div class="container">
+                  <div id="header">Current Weather Conditions</div>
+                  <div id="weather">
+               	    Temp: ${state?.curWeatherTemp} </br> 
+                    Humidity: ${state?.curWeatherHum}% </br>
+            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
+               	  </div>
+            	</div>
+            """
+        }
+    }
 }
