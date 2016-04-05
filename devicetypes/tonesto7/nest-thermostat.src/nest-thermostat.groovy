@@ -75,7 +75,6 @@ metadata {
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
         attribute "nestPresence", "string"
-        attribute "weatherCond", "string"
 	}
 
 	simulator {
@@ -220,7 +219,6 @@ metadata {
 			state "default", label:'${currentValue}'
 		}
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
-       	htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 3)
         
 		main( tileMain() )
 		details( tileSelect() )
@@ -241,13 +239,12 @@ def tileSelect() {
     else if(getHvacMode() == "auto" || getHvacMode() == "unknown") { 
     	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
     	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "weatherHtml", "refresh"]
+        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
     }
 }
 
 mappings {
 	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
-	path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
 }
 
 def initialize() {
@@ -638,29 +635,6 @@ def tempWaitVal() { return parent?.getChildWaitVal() ? parent?.getChildWaitVal()
 
 def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 
-/************************************************************************************************
-|									Weather Info for Tiles										|
-*************************************************************************************************/
-
-def getWeatherConditions() {
-    def cur = parent?.getWData()
-    if(cur) {
-        state.curWeather = cur
-        //log.debug "cur: $cur"
-        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
-        state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
-        state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-        state.curWeatherCond = cur?.current_observation?.weather.toString()
-
-        def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
-        def curCondVal = "Current Weather:\nT: ${state?.curWeatherTemp} (${state?.curWeatherHum}%)\n${state?.curWeatherCond}" 
-		state.curWeathVal = "Temp: ${curWeatherTemp} (${state?.curWeatherHum}%)"
-        sendEvent(name: "weatherCond", value: curCondVal, displayed: false, isStateChange: true)
-
-        Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
-    }
-}
 
 /************************************************************************************************
 |							Temperature Setpoint Functions for Buttons							|
@@ -1381,35 +1355,4 @@ def getInfoHtml() {
 
 def getLeafHtml() {
     return state?.hasLeaf ? "<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : "<p>${state?.hasLeaf}</p>"
-}
-
-def getWeatherHtml() { 
-	renderHTML {
-    	head {
-        	"""
-            <style type="text/css">
-            	#header { 
-                  font-size: 1.5em; font-weight: bold;
-                  text-align: center;
-                }
-                #weather { 
-                  font-size: 1em; 
-                  text-align: center;
-                }
-            </style>
-           	"""
-        }
-        body {
-        	"""
-            	<div class="container">
-                  <div id="header">Current Weather Conditions</div>
-                  <div id="weather">
-               	    Temp: ${state?.curWeatherTemp} </br> 
-                    Humidity: ${state?.curWeatherHum}% </br>
-            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
-               	  </div>
-            	</div>
-            """
-        }
-    }
 }
