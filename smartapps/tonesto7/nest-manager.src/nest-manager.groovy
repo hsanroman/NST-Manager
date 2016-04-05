@@ -178,6 +178,9 @@ def authPage() {
                     input(name: "presDevice", title:"Add Nest Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
                     			image: getAppImg("nest_dev_pres_icon.png")) 
                     atomicState?.presDevice = presDevice ? true : false
+                    input(name: "weatherDevice", title:"Add Weather Device?", type: "bool", default: false, required: false, submitOnChange: true, 
+                    			image: getAppImg("weather_icon.png")) 
+                    atomicState?.weatherDevice = weatherDevice ? true : false
                 }
                 
                 if(atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) {
@@ -479,7 +482,6 @@ def updateChildData() {
                 atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	}
-        
         	else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
             	def pData = atomicState?.deviceData?.smoke_co_alarms[devId]
             	LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
@@ -487,14 +489,22 @@ def updateChildData() {
                 atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	}
-            
             else if(atomicState?.presDevice && devId == getNestPresId()) {
             	LogTrace("UpdateChildData >> Presence id: ${devId}")
                 it.generateEvent(null)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
             	return true
         	} 
+            else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
+            	LogTrace("UpdateChildData >> Weather id: ${devId}")
+                it.generateEvent(null)
+                atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
+            	return true
+        	} 
             else if(devId == getNestPresId()) {
+                return true
+            }
+            else if(devId == getNestWeatherId()) {
                 return true
             }
         	else if(!atomicState?.deviceData?.thermostats[devId] && !atomicState?.deviceData?.smoke_co_alarms[devId]) {
@@ -856,15 +866,17 @@ def newUpdNotify() {
     	def pUpd = isProtUpdateAvail()
         def prUpd = isPresUpdateAvail()
     	def tUpd = isTstatUpdateAvail()
+        if(atomicState?.weatherDevice) { def wUpd = isWeathUpdateAvail() }
         if(atomicState?.autoAppInstalled) { def autoUpd = isAutoAppUpdateAvail() }
-        if((appUpd || pUpd || prUpd || tUpd || autoUpd ) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
+        if((appUpd || pUpd || prUpd || tUpd || autoUpd || wUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
     		def appl = !appUpd ? "" : "Manager App: v${atomicState?.appData.versions.app.ver.toString()}, "
     		def prot = !pUpd ? "" : "Protect: v${atomicState?.appData.versions.protect.ver.toString()}, "
             def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
         	def tstat = !tUpd ? "" : "Thermostat: v${atomicState?.appData.versions.thermostat.ver.toString()}"
             def autoApp = !autoUpd ? "" : "Automation App: v${atomicState?.appData.versions.autoapp.ver.toString()}"
+            def weat = !wUpd ? "" : "Automation App: v${atomicState?.appData.versions.weather.ver.toString()}"
             def now = new Date()
-        	sendMsg("Info", "Update(s) are available: ${appl}${autoApp}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
+        	sendMsg("Info", "Update(s) are available: ${appl}${autoApp}${weat}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
         	atomicState?.lastUpdMsgDt = getDtNow()
         }
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
@@ -1026,6 +1038,12 @@ def isAutoAppUpdateAvail() {
    	} else { return false }
 }
 
+def isWeathAppUpdateAvail() {
+    if(isUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
+   		return true
+   	} else { return false }
+}
+
 /************************************************************************************************
 |			This Section Discovers all structures and devices on your Nest Account.				|
 |			It also Adds/Removes Devices from ST												|
@@ -1147,6 +1165,17 @@ def getNestPresId() {
         return ""
     }*/
 }
+def getNestWeatherId() {
+	return "Nest Weather Device - location?.zipCode"
+    /*if(settings?.structures) {
+        return "NestWeather${settings.structures}"
+    } else if(atomicState?.structures) {
+        return "NestWeather${atomicState.structures}"
+    } else {
+        LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
+        return ""
+    }*/
+}
 
 def addRemoveDevices(uninst = null) {
     def retVal = false
@@ -1208,11 +1237,31 @@ def addRemoveDevices(uninst = null) {
                     retVal = false
                 }
             }
-        
+            
+            if(atomicState?.weatherDevice) {
+                try {
+                    def dni = getNestWeatherId()
+                    def d4 = getChildDevice(dni)
+                    if(!d4) {
+                        d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: getNestWeatherId()])
+                        d4.take()
+                        devsCrt = devsCrt + 1
+                        LogAction("Created: ${d4.displayName} with (Id: ${dni})", "debug", true)
+                    } else {
+                        LogAction("Found: ${d4.displayName} with (Id: ${dni}) already exists", "debug", true)
+                    }
+                    //return d4
+                } catch (ex) { 
+                    LogAction("Nest Weather Device Type is Likely not installed/published", "warn", true) 
+                    retVal = false
+                }
+            }
             def presCnt = 0
+            def weathCnt = 0
             if(atomicState?.presDevice) { presCnt = 1 }
+            if(atomicState?.weatherDevice) { weathCnt = 1 }
             if(devsCrt > 0) {
-                LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s) and ${presCnt} Presence Device", "debug", true)
+                LogAction("Created Devices;  Current Devices: (${tstats?.size()}) Thermostat(s), ${nProtects?.size()} Protect(s), ${presCnt} Presence Device and ${weathCnt} Weather Device", "debug", true)
             }
  		}
         
@@ -1220,24 +1269,28 @@ def addRemoveDevices(uninst = null) {
         	atomicState.thermostats = []
     		atomicState.protects = []
     		atomicState.presDevice = false
+            atomicState.weatherDevice = false
         }
     	
         def delete 
-    	if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice) {
+    	if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState.weatherDevice) {
         	delete = getAllChildDevices()
     	} else {
-        	if (!atomicState?.protects && !atomicState?.presDevice) {
+        	if (!atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) {
             	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) }
         	}	 
-        	else if (!atomicState?.thermostats && !atomicState?.presDevice) { 
+        	else if (!atomicState?.thermostats && !atomicState?.presDevice && !atomicState?.weatherDevice) { 
         		delete = getChildDevices().findAll { !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) }
         	}
             else if (!atomicState?.presDevice) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
             }
+            else if (!atomicState?.weatherDevice) {
+            	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
+            }            
         	else {
              	delete = getChildDevices().findAll { !atomicState?.thermostats?.toString()?.contains(it?.deviceNetworkId) && !atomicState?.protects?.toString()?.contains(it?.deviceNetworkId) && 
-                		!getNestPresId().toString().contains(it?.deviceNetworkId) }
+                		!getNestPresId().toString().contains(it?.deviceNetworkId) && !getNestWeatherId().toString().contains(it?.deviceNetworkId) }
         	}
     	}
     	if(delete.size() > 0) { 
@@ -1264,20 +1317,36 @@ def addRemoveDevices(uninst = null) {
 
 def deviceHandlerTest() {
 	if (atomicState.devHandlersTested) { return true }
-
+    def tDevInst = false
+    def pDevInst = false
+    def presDevInst = false
+    def wDevInst = false
 	try {  
         def d1 = addChildDevice(app.namespace, getThermostatChildName(), "testNestThermostat-Install123", null, [label:"Nest Thermostat:InstallTest"])
 		def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
         def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
+        def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
         
         def chldCnt = getAllChildDevices()
         log.debug "d1: ${d1} | d2: ${d2} | d3: ${d3} | devCnt: ${chldCnt.size()}"
 
-		if (d1) deleteChildDevice("testNestThermostat-Install123") 
-    	if (d2) deleteChildDevice("testNestPresence-Install123") 
-    	if (d3) deleteChildDevice("testNestProtect-Install123") 
-        
-        log.debug "device Handler Test completed..."
+		if (d1) {
+            tDevInst = true 
+            deleteChildDevice("testNestThermostat-Install123") 
+        } 
+    	if (d2) { 
+            presDevInst = true
+            deleteChildDevice("testNestPresence-Install123") 
+        } 
+    	if (d3) { 
+            pDevInst = true
+            deleteChildDevice("testNestProtect-Install123") 
+        } 
+        if (d4) { 
+            wDevInst = true
+            deleteChildDevice("testNestWeather-Install123") 
+        }
+        log.debug "Device Handler Install Test Completed..."
         
         atomicState?.devHandlersTested = true
         return true
@@ -1303,6 +1372,7 @@ def preReqCheck() {
     	return true
     }
 }
+
 //This code really does nothing at the moment but return the dynamic url of the app's endpoints
 def getEndpointUrl() {
 	def params = [
@@ -1686,6 +1756,7 @@ def stateCleanup() {
 def getThermostatChildName(){ return "Nest Thermostat" }
 def getProtectChildName()   { return "Nest Protect" }
 def getPresenceChildName() 	{ return "Nest Presence" }
+def getWeatherChildName()   { return "Nest Weather" }
 def getServerUrl()          { return "https://graph.api.smartthings.com" }
 def getShardUrl()           { return getApiServerUrl() }
 def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback" }
@@ -1697,6 +1768,7 @@ def latestTstatVer() { return atomicState?.appData?.versions?.thermostat ?: "unk
 def latestProtVer() { return atomicState?.appData?.versions?.protect ?: "unknown" }
 def latestPresVer() { return atomicState?.appData?.versions?.presence ?: "unknown" }
 def latestAutoAppVer() { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
+def latestWeathVer() { return atomicState?.appData?.versions?.weather ?: "unknown" }
 def getUse24Time() { return useMilitaryTime ? true : false }
 
 private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
