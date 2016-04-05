@@ -486,7 +486,7 @@ def coolingSetpointEvent(Double tempVal) {
 def hasLeafEvent(Boolean hasLeaf) {
 	def leaf = device.currentState("hasLeaf")?.value
     def lf = hasLeaf ? "On" : "Off"
-    state?.hasLeaf = lf
+    state?.hasLeaf = hasLeaf
 	if(!leaf.equals(lf)) {
         log.debug("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
 		sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
