@@ -417,10 +417,10 @@ def getApiData(type = null) {
         	httpGet(params) { resp ->
                 if(resp.status == 200) {
                     LogTrace("API Structure Resp.Data: ${resp?.data}")
+                    atomicState.apiIssues = false      
                     if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) { 
                         LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.structData = resp?.data
-                        atomicState.apiIssues = false      
                         result = true
                     }
                     else {
@@ -438,11 +438,11 @@ def getApiData(type = null) {
         	httpGet(params) { resp ->
                 if(resp?.status == 200) {
                     LogTrace("API Device Resp.Data: ${resp?.data}")
+                    atomicState.apiIssues = false  
 
                     if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
                         LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.deviceData = resp?.data
-                        atomicState.apiIssues = false  
                         result = true
                     }
                     else {
@@ -740,6 +740,7 @@ void workQueue() {
     def cmdQueue = atomicState?.cmdQ
     try {
     	if(cmdQueue.size() > 0) {
+            runIn(cmdDelay*2, "workQueue", [overwrite: true])
         	atomicState?.pollBlocked = true
             cmdQueue = atomicState.cmdQ
             def cmd = cmdQueue?.remove(0)
@@ -1176,7 +1177,7 @@ def getNestWeatherId() {
     } else if(atomicState?.structures) {
         return "NestWeather${atomicState.structures}"
     } else {
-        LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
+        LogAction("getNestWeatherID No structures ${atomicState?.structures}", "warn", true)
         return ""
     }*/
 }
@@ -1248,6 +1249,7 @@ def addRemoveDevices(uninst = null) {
                     def d4 = getChildDevice(dni)
                     if(!d4) {
                         d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: getNestWeatherId()])
+                        //d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${location.name} - Nest Weather Device"])
                         d4.take()
                         devsCrt = devsCrt + 1
                         LogAction("Created: ${d4.displayName} with (Id: ${dni})", "debug", true)
