@@ -198,7 +198,7 @@ def illuminanceEvent(illum) {
 	def cur = device.currentState("humidity")?.value
 	if(!cur.equals(illum)) {
         log.debug("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
-		sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Humidity is ${illum}" , displayed: false, isStateChange: true)
+		sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
     } else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
 }
 
@@ -226,18 +226,17 @@ def getWeatherConditions() {
     if(cur) {
         state.curWeather = cur
         //log.debug "cur: $cur"
-        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f)
-        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c)
+        state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+        state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
         state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
         state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
         state.curWeatherCond = cur?.current_observation?.weather.toString()
-
+		
+        def curTemp = (state?.tempUnit == "C") ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
         def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
-        temperatureEvent(curWeatherTemp)
+        state.curWeatherTemp = curWeatherTemp
+        temperatureEvent(curTemp)
         humidityEvent(state?.curWeatherHum)
-        
-        def curCondVal = "Current Weather:\nT: ${state?.curWeatherTemp} (${state?.curWeatherHum}%)\n${state?.curWeatherCond}" 
-		state.curWeathVal = "Temp: ${curWeatherTemp} (${state?.curWeatherHum}%)"
 
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
     }

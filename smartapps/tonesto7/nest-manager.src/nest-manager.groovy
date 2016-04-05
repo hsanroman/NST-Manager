@@ -922,11 +922,9 @@ def updateWebStuff(force = false) {
     	getWebFileData()
         getWeatherConditions()
     } 
-    
     if (!force && getLastWebUpdSec() > 1800) {
 		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
 	}
-    
     if(!force && getLastWeatherUpdSec() > 900) {
         if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
     }
