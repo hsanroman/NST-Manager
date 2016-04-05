@@ -353,7 +353,6 @@ def generateEvent(Map results) {
         }
 	}
     lastUpdatedEvent()
-    getWeatherConditions()
     return null
 }
 
