@@ -85,9 +85,9 @@ def authPage() {
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
 	if(!atomicState.accessToken) { getAccessToken() } 
     if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
-    if(!atomicState?.testedDhInst) { deviceHandlerTest() }
+    if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
 	    
-	if (!atomicState.accessToken || !atomicState?.preReqTested || !atomicState?.testedDhInst) {
+	if (!atomicState.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:true) {
             section ("Status Page:") {
         		def desc
@@ -97,7 +97,7 @@ def authPage() {
                 else if (!atomicState?.preReqTested) {
                    	desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
             	} 
-                else if (!!atomicState?.testedDhInst) {
+                else if (!atomicState?.devHandlersTested) {
                 	desc = "Device Handlers are likely Missing or Not Published.  Please read the installation instructions and verify all device handlers are present before continuing."
                 }
                 else {
@@ -109,7 +109,7 @@ def authPage() {
         }
     }
     
-    if(getLastWebUpdSec() > 1800) { getWebFileData() }
+    updateWebStuff()
     
     def description
     def uninstallAllowed = false
@@ -364,9 +364,8 @@ def poll(force = false, type = null) {
 	    if(updChildOnNewOnly) {
         	if (dev || str || atomicState?.needChildUpd || (getLastChildUpdSec() > 1800)) { updateChildData() }
 	    } else { updateChildData() }
-	    if(getLastWebUpdSec() > 1800) {
-	        if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
-	    }
+	    
+        updateWebStuff()
 	    notificationCheck() //Checks if a notification needs to be sent for a specific event
 	}
 }
@@ -387,6 +386,7 @@ def forcedPoll(type = null) {
            	LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str") 
         }
+        updateWebStuff()
    	} else { LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
     updateChildData()
 }
@@ -548,6 +548,7 @@ def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetT
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
 def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
+def getLastWeatherUpdSec() { return !atomicState?.lastWeatherUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWeatherUpdDt).toInteger() }
 /************************************************************************************************
 |										Nest API Commands										|
 *************************************************************************************************/
@@ -904,21 +905,60 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
+def updateWebStuff() {
+	if(getLastWebUpdSec() > 1800) {
+		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+	}
+    if(getLastWeatherUpdSec() > 900) {
+        if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
+    }
+}
+
+def getWeatherConditions() {
+	//log.trace "getWeatherConditions..."
+	try {
+    	LogAction("Retrieving Latest Local Weather Conditions", "info", true)
+    	def curWeather = getWeatherFeature("conditions")
+        if(curWeather) { 
+        	atomicState?.currentWeather = curWeather 
+        	atomicState?.lastWeatherUpdDt = getDtNow()
+        	return true
+        } else {
+        	LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
+            return false
+        }
+    }
+    catch (ex) {
+    	LogAction("getWeatherConditions Exception: ${ex}", "error", true, true)
+        return false
+    }
+}
+
+def getWData() {
+	if(state?.currentWeather) {
+    	return atomicState?.currentWeather
+    } else {
+    	if(getWeatherConditions()) {
+        	return atomicState?.currentWeather
+        }
+    }
+}
+
 def getWebFileData() {
 	def params = [ 
         uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
        	contentType: 'application/json'
     ]
-	def retcval = false
+	def result = false
     try {
 		httpGet(params) { resp ->
 			if(resp.data) {
-            	LogAction("Retrieving Latest appParams.json File from Web", "info", true)
+            	LogAction("Getting Latest Data from appParams.json File...", "info", true)
 				atomicState?.appData = resp?.data
                 atomicState?.lastWebUpdDt = getDtNow()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
-            retcval = true
+            result = true
         }	
     }
 	catch (ex) {
@@ -928,7 +968,7 @@ def getWebFileData() {
         	LogAction("getWebFileData Exception: ${ex}", "error", true, true) 
         }
     }
-    return retcval
+    return result
 }
 
 def refresh() {
@@ -1223,7 +1263,7 @@ def addRemoveDevices(uninst = null) {
 }
 
 def deviceHandlerTest() {
-	if (atomicState.testedDhInst) { return true }
+	if (atomicState.devHandlersTested) { return true }
 
 	try {  
         def d1 = addChildDevice(app.namespace, getThermostatChildName(), "testNestThermostat-Install123", null, [label:"Nest Thermostat:InstallTest"])
@@ -1239,14 +1279,14 @@ def deviceHandlerTest() {
         
         log.debug "device Handler Test completed..."
         
-        atomicState?.testedDhInst = true
+        atomicState?.devHandlersTested = true
         return true
     } 
     catch (ex) {
     	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
 			LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true, true)
        	} else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
-        atomicState.testedDhInst = false
+        atomicState.devHandlersTested = false
         return false
 	}
 }
@@ -1630,6 +1670,7 @@ def setStateVar(frc = false) {
 
 def stateCleanup() {
     //Things that I need to clear up on updates go here
+    if (atomicState?.testedDhInst) { atomicState?.devHandlersTested = true }
     if (atomicState?.missedPollNotif) { atomicState.missedPollNotif = null }
     if (atomicState?.updNotif) { atomicState.updNotif = null }
     if (atomicState?.updChildOnNewOnly) { atomicState.updChildOnNewOnly = null }
