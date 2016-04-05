@@ -22,6 +22,10 @@
     "presence": {
       "type": "rel",
       "ver": "1.1.1"
+    },
+    "weather": {
+      "type": "rel",
+      "ver": "1.0.0"
     }
   },
   "updater": {
