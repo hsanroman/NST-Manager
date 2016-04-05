@@ -31,7 +31,7 @@ def devVer() { return "1.0.0" }
 
 // for the UI
 metadata {
-	definition (name: "Nest Presence", namespace: "tonesto7", author: "Anthony S.") {
+	definition (name: "Nest Weather", namespace: "tonesto7", author: "Anthony S.") {
 
         capability "Illuminance Measurement"
         capability "Sensor"
