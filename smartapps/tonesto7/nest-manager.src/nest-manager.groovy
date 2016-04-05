@@ -1166,7 +1166,7 @@ def getNestPresId() {
     }*/
 }
 def getNestWeatherId() {
-	return "Nest Weather Device - location?.zipCode"
+	return "Nest Weather Device (${location?.zipCode})"
     /*if(settings?.structures) {
         return "NestWeather${settings.structures}"
     } else if(atomicState?.structures) {
