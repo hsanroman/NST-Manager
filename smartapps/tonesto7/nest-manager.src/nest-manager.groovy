@@ -918,10 +918,16 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
 def updateWebStuff(force = false) {
-	if(force || getLastWebUpdSec() > 1800) {
-		if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+	if(force) { 
+    	getWebFileData()
+        getWeatherConditions()
+    } 
+    
+    if (!force && getLastWebUpdSec() > 1800) {
+		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
 	}
-    if(force || getLastWeatherUpdSec() > 900) {
+    
+    if(!force && getLastWeatherUpdSec() > 900) {
         if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
     }
 }
