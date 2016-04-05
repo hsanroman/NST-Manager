@@ -216,6 +216,11 @@ def getTemp() {
 	catch (e) { return 0 }
 }
 
+def getHumidity() { 
+	try { return device.currentValue("humidity") } 
+	catch (e) { return 0 }
+}
+
 def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
 /************************************************************************************************
 |									Weather Info for Tiles										|
@@ -311,8 +316,8 @@ def getWeatherHtml() {
             	<div class="container">
                   <div id="header">Current Weather Conditions</div>
                   <div id="weather">
-               	    Temp: ${state?.curWeatherTemp} </br> 
-                    Humidity: ${state?.curWeatherHum}% </br>
+               	    Temp: ${getTemp()} </br> 
+                    Humidity: ${getHumidity()}% </br>
             	    <img src="${state?.curWeather?.current_observation?.icon_url}">
                	  </div>
             	</div>
