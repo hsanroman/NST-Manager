@@ -1201,152 +1201,87 @@ def getInfoHtml() {
     	head {
         	"""
             <style type="text/css">
-                .outer {
+                .flat-table {
                   width: 100%;
-                  height: 100%;
-                  line-height: 1px;
-                  //display:inline-block;
-                  border-right:1px solid #D6D6D6;
-                  border-bottom:1px solid #D6D6D6;
-                  //border-left:1px solid #D6D6D6;
-                  //border-top:1px solid #D6D6D6;
-                }
-                
-                div.outer {
-                  background: #D6D6D6;
-                  margin: -1px 0 0 -1px;
-                  padding: 1px 0 0 1px;
-                  overflow: hidden;
-                  position: relative;
+                  //height: 400px
+                  border-collapse: collapse;
+                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  border: none;
+                  border-radius: 3px;
+                  -webkit-border-radius: 3px;
+                  -moz-border-radius: 3px;
                 }
 
-                div.box33 {
-                  background: #FFF;
-                  float: left;
-                  margin: 0 1px 1px 0;
-                  width: 33.2%;
-                  width: -webkit-calc(33.33% - 1px);
-                  width: calc(33.33% - 1px);
-                }
-                
-                div.box50 {
-                  background: #FFF;
-                  float: left;
-                  margin: 0 1px 1px 0;
-                  width: 49.9%;
-                  width: -webkit-calc(50% - 1px);
-                  width: calc(50% - 1px);
-                }
-                
-                div.box:last-child {
-                  position: relative;
+                .flat-table th,
+                .flat-table td {
+                  box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
                 }
 
-                div.box:last-child:before,
-                div.box:last-child:after {
-                  background: inherit;
-                  content: '';
-                  display: block;
-                  height: 100%;
-                  left: 100%;
-                  margin: 0 1px;
-                  position: absolute;
-                  width: 100%;
+                .flat-table th {
+                  font-weight: bold;
+                  -webkit-font-smoothing: antialiased;
+                  padding: 1px;
+                  color: #f5f5f5;
+                  text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+                  font-size: 16px;
+                  border-radius: 7px;
+                  -webkit-border-radius: 7px;
+                  -moz-border-radius: 7px;
+                  background: #00a1db;
                 }
 
-                div.box:last-child:after {
-                  left: 200%;
-                  margin: 0 2px;
-                }        
-                
-                body {
-                  //padding: 0px 0px 0px;
-                  //background-size: 300px 300px;
-                }
-                
-                h1 {
-                  color: black;
-                  em {
-                    color: #666;
-                    font-size: 16px;
-                  }
-                }
-                
-                h3 {
-                  color: black;
+                .flat-table td {
+                  color: grey;
+                  padding: 0.7em 1em 0.7em 1.15em;
+                  text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
                   font-size: 14px;
                   text-align: center;
-                  vertical-align: top;
-                  padding: 1px 0px 3px 0px
                 }
-                
-                p {
-                  color: black;
-                  font-size: 14px;
-                  text-align: center;
-                  //vertical-align: top;
+
+                .flat-table tr {
+                  -webkit-transition: background 0.3s, box-shadow 0.3s;
+                  -moz-transition: background 0.3s, box-shadow 0.3s;
+                  transition: background 0.3s, box-shadow 0.3s;
                 }
             </style>
            	"""
         }
         body {
         	"""
-              <div class="outer">
-               	<div class="box33">
-                  <div>
-                    <h3>Network Status:</h3>
-                      <p>${state?.onlineStatus.toString()}</p>	
-                  </div>
-                </div>
-                <div class="box33">
-                  <div>
-                    <h3>Leaf:</h3>
-                      <p>${getLeafHtml()}</p>
-                  </div>
-                </div>
-                <div class="box33">
-                  <div>
-                    <h3>API Status:</h3>
-                      <p>${state?.apiStatus}</p>
-                  </div>
-                </div>
-			  </div>                  
-              
-              <div class="outer">
-               	<div class="box33">
-                  <div>
-                    <h3>Firmware Version:</h3>
-                      <p>${state?.softwareVer.toString()}</p>	
-                  </div>
-                </div>
-                <div class="box33">
-                  <div>
-                    <h3>Debug:</h3>
-                      <p>${state?.debugStatus}</p>
-                  </div>
-                </div>
-                <div class="box33">
-                  <div>
-                    <h3>Device Type:</h3>
-                      <p>${state?.devTypeVer.toString()}</p>	
-                  </div>
-                </div>
-			  </div>
-              
-              <div class="outer">
-                <div class="box50">
-                  <div>
-                    <h3>Nest Last Checked-In:</h3>
-                      <p>${state?.lastConnection.toString()}</p>
-                  </div>
-                </div>
-                <div class="box50">
-                  <div>
-                    <h3>Data Last Received:</h3>
-                    <p>${state?.lastUpdatedDt.toString()}</p>
-                  </div>
-                </div>
-              </div>
+              <table class="flat-table">
+                <thead>
+                  <th> Network Status</th>
+                  <th>Leaf</th>
+                  <th>API Status</th>
+                </thead>
+                   <tbody>
+                     <tr>
+                       <td>${state?.onlineStatus.toString()}</td>
+                         <td>${getLeafHtml()}</td>
+                         <td>${state?.apiStatus}</td>
+                       </tr>
+                       <tr>
+                         <th>Firmware Version</th>
+                         <th>Debug</th>
+                         <th>Device Type</th>
+                      </tr>
+                        <td>${state?.softwareVer.toString()}</td>
+                        <td>${state?.debugStatus}</td>
+                        <td>${state?.devTypeVer.toString()}</td>
+                    </tbody>
+            </table>
+            <table class="flat-table">
+              <thead>
+                <th>Nest Last Checked-In</th>
+                <th>Data Last Received</th>
+              </thead>
+              <tbody>
+                  <tr>
+                    <td>${state?.lastConnection.toString()}</td>
+                    <td>${state?.lastUpdatedDt.toString()}</td>
+                  </tr>
+                </tbody>
+              </table>
             """
         }
     }
