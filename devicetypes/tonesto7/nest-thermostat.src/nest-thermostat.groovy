@@ -161,7 +161,7 @@ metadata {
         	state "unknown",	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
-			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
+			state "default", label: 'refresh', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
 		}
         valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Firmware:\nv${currentValue}')
@@ -553,7 +553,7 @@ def onlineStatusEvent(online) {
 
 def apiStatusEvent(issue) {
 	def appStat = device.currentState("apiStatus")?.value
-    def val = issue ? "issue" : "ok"
+    def val = issue ? "Issue" : "Ok"
     state?.apiStatus = val
 	if(!appStat.equals(val)) { 
         log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
