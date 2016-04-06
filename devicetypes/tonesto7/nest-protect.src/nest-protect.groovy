@@ -150,13 +150,17 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
 		}
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
         
 	main "main2"
-	details(["alarmState", "smoke", "carbonMonoxide", "batteryState" , "lastConnection", "lastTested","lastUpdatedDt", "devTypeVer",  "onlineStatus",  "apiStatus", "refresh", "softwareVer","debugOn"])
+	details(["alarmState", "smoke", "carbonMonoxide", "batteryState", "devInfoHtml", "refresh"])
    }
 }
 
-// handle commands
+mappings {
+	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
+}
+
 def initialize() {
 	log.info "Nest Protect ${textVersion()} ${textCopyright()}"
 	poll()
@@ -214,6 +218,7 @@ def generateEvent(Map results) {
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
         deviceVerEvent()
+        devInfoHtml()
     }
     lastUpdatedEvent()
     return null
@@ -224,6 +229,7 @@ def deviceVerEvent() {
     def pubVer = parent?.latestProtVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    state?.devTypeVer = newData
     if(curData != newData) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
     	sendEvent(name: 'devTypeVer', value: newData, displayed: false)
@@ -236,6 +242,7 @@ def lastCheckinEvent(checkin) {
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
 	def lastChk = device.currentState("lastConnection")?.value
+    state?.lastConnection = lastConn?.toString()
     if(!lastChk.equals(lastConn?.toString())) {
         Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
     	sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
@@ -248,6 +255,7 @@ def lastTestedEvent(dt) {
     def tf = new SimpleDateFormat(formatVal)
     	tf.setTimeZone(location?.timeZone)
     def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
+    state?.lastTested = lastTest
     if(!lastTstVal.equals(lastTest?.toString())) {
     	Logger("UPDATED | Last Manual Test was: (${lastTest}) | Original State: (${lastTstVal})")
     	sendEvent(name: 'lastTested', value: lastTest, displayed: true, isStateChange: true)
@@ -256,6 +264,7 @@ def lastTestedEvent(dt) {
 
 def softwareVerEvent(ver) {
     def verVal = device.currentState("softwareVer")?.value
+    state?.softwareVer = ver
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
         sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false)
@@ -264,20 +273,22 @@ def softwareVerEvent(ver) {
 
 def debugOnEvent(debug) {
 	def val = device.currentState("debugOn")?.value
-    def stateVal = debug ? "On" : "Off"
-	if(!val.equals(stateVal)) {
-    	log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-   	} else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+	if(!val.equals(dVal)) {
+    	log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+   	} else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
-	def appStat = device.currentState("apiStatus")?.value
+	def apiStat = device.currentState("apiStatus")?.value
     def val = issue ? "issue" : "ok"
-	if(!appStat.equals(val)) { 
-        log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
+    state?.apiStatus = val
+	if(!apiStat.equals(val)) { 
+        log.debug("UPDATED | API Status is: (${val}) | Original State: (${apiStat})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
-    } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
+    } else { Logger("API Status is: (${val}) | Original State: (${apiStat})") }
 }
 
 def lastUpdatedEvent() {
@@ -287,6 +298,7 @@ def lastUpdatedEvent() {
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
         Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
     	sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
@@ -331,6 +343,7 @@ def carbonStateEvent(carbon) {
 def onlineStatusEvent(online) {
 	def isOn = device.currentState("onlineStatus")?.value
     def val = online ? "Online" : "Offline"
+    state?.onlineStatus = val
 	if(!isOn.equals(val)) { 
         log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
    		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
@@ -460,4 +473,95 @@ def log(message, level = "trace") {
             break;
     }            
     return null
+}
+
+def getInfoHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+                .flat-table {
+                  width: 100%;
+                  //height: 400px
+                  border-collapse: collapse;
+                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  border: none;
+                  border-radius: 3px;
+                  -webkit-border-radius: 3px;
+                  -moz-border-radius: 3px;
+                }
+
+                .flat-table th,
+                .flat-table td {
+                  box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
+                }
+
+                .flat-table th {
+                  font-weight: bold;
+                  -webkit-font-smoothing: antialiased;
+                  padding: 1px;
+                  color: #f5f5f5;
+                  text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+                  font-size: 16px;
+                  border-radius: 7px;
+                  -webkit-border-radius: 7px;
+                  -moz-border-radius: 7px;
+                  background: #00a1db;
+                }
+
+                .flat-table td {
+                  color: grey;
+                  padding: 0.7em 1em 0.7em 1.15em;
+                  text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+                  font-size: 14px;
+                  text-align: center;
+                }
+
+                .flat-table tr {
+                  -webkit-transition: background 0.3s, box-shadow 0.3s;
+                  -moz-transition: background 0.3s, box-shadow 0.3s;
+                  transition: background 0.3s, box-shadow 0.3s;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+            <table class="flat-table">
+              <thead>
+                <th>Nest Last Checked-In</th>
+                <th>Data Last Received</th>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${state?.lastConnection.toString()}</td>
+                  <td>${state?.lastUpdatedDt.toString()}</td>
+                </tr>
+              </tbody>
+              </table>
+            <table class="flat-table">
+              <thead>
+                <th>Network Status</th>
+                <th>API Status</th>
+                <th>Debug</th>
+              </thead>
+                <tbody>
+                  <tr>
+                    <td>${state?.onlineStatus.toString()}</td>
+                    <td>${state?.apiStatus}</td>
+                    <td>${state?.debugStatus}</td>
+                  </tr>
+                  <tr>
+                    <th>Firmware Version</th>
+                    <th>Device Type</th>
+                  </tr>
+                  <td>${state?.softwareVer.toString()}</td>
+                  
+                  <td>${state?.devTypeVer.toString()}</td>
+               </tbody>
+            </table>
+            
+            """
+        }
+    }
 }
