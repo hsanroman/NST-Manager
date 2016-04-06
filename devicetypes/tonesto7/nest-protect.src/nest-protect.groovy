@@ -218,7 +218,7 @@ def generateEvent(Map results) {
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
         deviceVerEvent()
-        devInfoHtml()
+        //getInfoHtml()
     }
     lastUpdatedEvent()
     return null
@@ -503,9 +503,9 @@ def getInfoHtml() {
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
                   font-size: 16px;
-                  border-radius: 7px;
-                  -webkit-border-radius: 7px;
-                  -moz-border-radius: 7px;
+                  border-radius: 2px;
+                  -webkit-border-radius: 2px;
+                  -moz-border-radius: 2px;
                   background: #00a1db;
                 }
 

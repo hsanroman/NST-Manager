@@ -218,7 +218,7 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3)
         
 		main( tileMain() )
 		details( tileSelect() )
@@ -263,8 +263,6 @@ def poll() {
 def refresh() {
 	parent.refresh()
 }
-
-
 
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
@@ -353,6 +351,7 @@ def generateEvent(Map results) {
         }
 	}
     lastUpdatedEvent()
+    //sendEvent(name:"devInfoHtml", value: getInfoHtml(), isStateChange: true)
     return null
 }
 
@@ -1224,9 +1223,9 @@ def getInfoHtml() {
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
                   font-size: 16px;
-                  border-radius: 7px;
-                  -webkit-border-radius: 7px;
-                  -moz-border-radius: 7px;
+                  border-radius: 2px;
+                  -webkit-border-radius: 2px;
+                  -moz-border-radius: 2px;
                   background: #00a1db;
                 }
 

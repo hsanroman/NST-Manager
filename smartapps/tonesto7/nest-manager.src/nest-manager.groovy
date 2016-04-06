@@ -4,7 +4,7 @@
 |	 Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                  				|
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
-|********************************************************************************************
+|*******************************************************************************************|
 |    There maybe portions of the code that may resemble code from other apps in the         | 
 |    community. I may have used some of it as a point of reference.                         |
 |    Thanks go out to those Authors!!!                                                      |
@@ -52,7 +52,6 @@ preferences {
     page(name: "authPage", title: "Nest", nextPage:"", content:"authPage", uninstall: true, install:true)
     page(name: "prefsPage")
     page(name: "infoPage")
-    page(name: "uninstallPage")
     page(name: "nestInfoPage")
     page(name: "structInfoPage")
     page(name: "tstatInfoPage")
@@ -203,15 +202,13 @@ def authPage() {
                    		}
                 	}
                 }
-                
                 section("Preferences:") { 
         			href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nApp Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
             			image: getAppImg("settings_icon.png")
                 }
-                
             }
             section(" ") { 
-                href "infoPage", title:"App Info and Licensing", description: "Tap to view...", image: getAppImg("info.png")
+            	href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
             }
         }
     }
@@ -2086,7 +2083,13 @@ def debugPrefPage() {
 }
 
 def infoPage () {
-    dynamicPage(name: "infoPage", title: "App & License Info", install: false) {
+    dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
+        section("Help and Instructions:") {
+        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/README.html", style:"embedded", required:false, title:"Readme File", 
+            	description:"View the Projects Readme File..."
+        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+            	description:"View the Help and Instructions Page..."
+        }
         section("About this App:") {
             paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
         }
@@ -2098,10 +2101,6 @@ def infoPage () {
         }
         section("App Revision History:") {
             paragraph appVerInfo()
-        }
-        section("View the Readme:") {
-        	href url:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/README.md", style:"embedded", required:false, title:"Readme File", 
-            	description:"View the Projects Readme File..."
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
@@ -2294,5 +2293,3 @@ private def textLicense() {
         "See the License for the specific language governing permissions and "+
         "limitations under the License." 
 }
-
-// Allow selection of other thermostats to mirror the automation functions of the primary thermostat.
