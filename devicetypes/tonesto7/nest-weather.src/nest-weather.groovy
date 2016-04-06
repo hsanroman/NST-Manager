@@ -1,7 +1,7 @@
 /**
  *  Nest Weather
  *	Author: Anthony S. (@tonesto7)
- *  Author: Ben W. (@desertBlade)
+ *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
  *	
  *
  * Copyright (C) 2016 Anthony S., Ben W.
@@ -57,24 +57,8 @@ metadata {
         
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
         	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
-            		backgroundColors: [
-						// Celsius Color Range
-						[value: 0, color: "#153591"],
-						[value: 7, color: "#1e9cbb"],
-						[value: 15, color: "#90d2a7"],
-						[value: 23, color: "#44b621"],
-						[value: 29, color: "#f1d801"],
-						[value: 33, color: "#d04e00"],
-						[value: 36, color: "#bc2323"],
-						// Fahrenheit Color Range
-						[value: 40, color: "#153591"],
-						[value: 44, color: "#1e9cbb"],
-						[value: 59, color: "#90d2a7"],
-						[value: 74, color: "#44b621"],
-						[value: 84, color: "#f1d801"],
-						[value: 92, color: "#d04e00"],
-						[value: 96, color: "#bc2323"]
-        	])
+            		backgroundColors: getTempColors() )
+
         }
         
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -112,13 +96,40 @@ def configure() {
 	
 }
 
+def getTempColors() {
+	def colorMap
+	if (wantMetric()) {
+		colorMap = [
+			// Celsius Color Range
+			[value: 0, color: "#153591"],
+			[value: 7, color: "#1e9cbb"],
+			[value: 15, color: "#90d2a7"],
+			[value: 23, color: "#44b621"],
+			[value: 29, color: "#f1d801"],
+			[value: 33, color: "#d04e00"],
+			[value: 36, color: "#bc2323"]
+        	]
+	} else {
+		colorMap = [
+			// Fahrenheit Color Range
+			[value: 40, color: "#153591"],
+			[value: 44, color: "#1e9cbb"],
+			[value: 59, color: "#90d2a7"],
+			[value: 74, color: "#44b621"],
+			[value: 84, color: "#f1d801"],
+			[value: 92, color: "#d04e00"],
+			[value: 96, color: "#bc2323"]
+        	]
+	}
+}
+
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def refresh() {
-	parent.refresh()
+	parent.refresh(this)
 }
 
 def generateEvent(Map results) {
@@ -195,8 +206,8 @@ def humidityEvent(humidity) {
 }
 
 def illuminanceEvent(illum) {
-	def cur = device.currentState("humidity")?.value
-	if(!cur.equals(illum)) {
+	def cur = device.currentState("illuminance")?.value.toString()
+	if(!cur.equals(illum.toString())) {
         log.debug("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
 		sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
     } else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
@@ -212,7 +223,7 @@ def temperatureEvent(Double tempVal) {
 }
 
 def getTemp() { 
-	try { return device.currentValue("temperature") } 
+	try { return state.curWeatherTemp } 
 	catch (e) { return 0 }
 }
 
@@ -221,7 +232,7 @@ def getHumidity() {
 	catch (e) { return 0 }
 }
 
-def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
+def wantMetric() { return (state?.tempUnit == "C") }
 /************************************************************************************************
 |									Weather Info for Tiles										|
 *************************************************************************************************/
@@ -236,16 +247,73 @@ def getWeatherConditions() {
         state.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
         state.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
         state.curWeatherCond = cur?.current_observation?.weather.toString()
+        state.curWeatherIcon = cur?.current_observation?.icon.toString()
 		
         def curTemp = (state?.tempUnit == "C") ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
         def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
         state.curWeatherTemp = curWeatherTemp
         temperatureEvent(curTemp)
         humidityEvent(state?.curWeatherHum)
+        illuminanceEvent(estimateLux(state.curWeatherIcon))
 
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
     }
 }
+
+private estimateLux(weatherIcon) {
+        //log.trace "estimateLux ( ${weatherIcon} )"
+        def sunriseDate = null
+        def sunsetDate = null
+        sunriseDate = parent.sunrise()
+        sunsetDate = parent.sunset()
+        def lux = 0
+        def now = new Date().time
+        //log.trace "sunrise: ${sunriseDate.time}  now: ${now} sunset: ${sunsetDate.time}"
+        if (now < sunsetDate.time && sunriseDate.time > sunsetDate.time) {
+                //day
+                switch(weatherIcon) {
+                        case 'tstorms':
+                                lux = 200
+                                break
+                        case ['cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
+                                'chanceflurries', 'chancerain', 'chancesleet',
+                                'chancesnow', 'chancetstorms']:
+                                lux = 1000
+                                break
+                        case 'mostlycloudy':
+                                lux = 2500
+                                break
+                        case ['partlysunny', 'partlycloudy', 'hazy']:
+                                lux = 7500
+                                break
+                        default:
+                                //sunny, clear
+                                lux = 10000
+                }
+
+                //adjust for dusk/dawn
+                //def afterSunrise = now - sunriseDate.time
+                def afterSunrise = now - (sunriseDate.time - (1000*60*60*24) - 60*100*3)
+                def beforeSunset = sunsetDate.time - now
+                def oneHour = 1000 * 60 * 60
+
+                if(afterSunrise < oneHour) {
+                        //dawn
+                        lux = (long)(lux * (afterSunrise/oneHour))
+                } else if (beforeSunset < oneHour) {
+                        //dusk
+                        lux = (long)(lux * (beforeSunset/oneHour))
+                }
+        }
+        else {
+                //night - always set to 10 for now
+                //could do calculations for dusk/dawn too
+                lux = 10
+        }
+
+        lux
+}
+
 
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
