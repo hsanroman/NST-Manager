@@ -35,7 +35,7 @@ Everything!
 
 #### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager/)
 
-#### [GitHub Wiki Page](https://github.com/tonesto7/nest-manager/wiki/Home)
+#### [Projects Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)
 
 ## Things to Know
  * __This is still technically in BETA so you may experience issues!!!__
@@ -148,8 +148,8 @@ _______
 ### Troubleshooting
 **Tip:** *The most common issue is forgetting to enable oAuth for the app under SmartThings*
 
-Check the Wiki before posting question in the forums 
-**[Wiki Home Page](https://github.com/tonesto7/nest-manager/wiki/Home)**
+Please check the Help Page before posting questions in the community forum. 
+**[Nest Manager Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)**
 
 _______
 ### Feature Requests
