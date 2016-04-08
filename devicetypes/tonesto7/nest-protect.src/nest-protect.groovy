@@ -194,7 +194,7 @@ def refresh() {
 				break   
         }	
     } 
-    parent.refresh(this)
+    poll()
 }
 
 def generateEvent(Map results) {	

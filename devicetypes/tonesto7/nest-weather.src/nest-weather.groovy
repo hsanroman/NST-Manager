@@ -129,7 +129,7 @@ def poll() {
 }
 
 def refresh() {
-	parent.refresh(this)
+	poll()
 }
 
 def generateEvent(Map results) {
