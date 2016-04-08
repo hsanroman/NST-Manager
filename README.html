@@ -297,7 +297,7 @@ img {
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. </p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
 <h2>Author</h2>
 <ul>
 <li>@tonesto7</li>
@@ -310,16 +310,18 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <h2>Version Info</h2>
 <p><strong>Latest App Version:</strong> </p>
 <ul>
-<li>Nest Manager - <strong><em>v1.1.0</em></strong></li>
+<li>Nest Manager - <strong><em>v2.0.0</em></strong></li>
+<li>Nest Automations - <strong><em>v1.0.0</em></strong></li>
 </ul>
 <p><strong>Latest Device Versions:</strong></p>
 <ul>
-<li>Nest Presence Device - <strong><em>v1.1.0</em></strong></li>
-<li>Nest Protect Device - <strong><em>v1.1.0</em></strong></li>
-<li>Nest Thermostat Device - <strong><em>v1.1.0</em></strong></li>
+<li>Nest Presence Device - <strong><em>v2.0.0</em></strong></li>
+<li>Nest Protect Device - <strong><em>v2.0.0</em></strong></li>
+<li>Nest Thermostat Device - <strong><em>v2.0.0</em></strong></li>
+<li>Nest Weather Device - <strong><em>v1.0.0</em></strong></li>
 </ul>
 <h2>What's New</h2>
-<p>Everything! </p>
+<h3>New Child Automation</h3>
 <h2>Links</h2>
 <h4><a href="https://github.com/tonesto7/nest-manager/issues">GitHub Project Issues Link</a></h4>
 <h4><a href="https://community.smartthings.com/t/release-nest-manager/">SmartThings Community Forum Link</a></h4>
@@ -359,34 +361,36 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <h2>Installation</h2>
 <h3>Method 1: (Recommended)</h3>
 <p><em>Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices.</em></p>
-<h4>The Manager App</h4>
+<p>If you don't already have Git Integration setup please visit <strong><em><a href="http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html">GitHub Integration Instructions</a></em></strong></p>
+<h4>The Nest Manager and Nest Automation Apps</h4>
 <ul>
 <li>Go to &quot;<strong>My SmartApps</strong>&quot; in the IDE</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
 <li>Click on &quot;<strong>Add New Repository</strong>&quot;</li>
 <li>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></li>
-<li>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select the <strong><em>nest-manager</em></strong></li>
-<li>Check the box next to <strong><em>nest-manager</em></strong> and click &quot;<strong>Execute Update</strong>&quot;</li>
+<li>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager</em></strong> </li>
+<li>Check the box next to <strong><em>nest-manager</em></strong> and <strong><em>nest-automations</em></strong> then click &quot;<strong>Execute Update</strong>&quot;</li>
+<li>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </li>
 <li>
-<p>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </p>
-<h4>You will also need to Enable OAuth under the app preferences in the IDE</h4>
+<p>Click on the <strong><em>Nest Automation</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
+<h3><em>You will also need to Enable OAuth under the Nest Manager app preferences in the IDE</em></h3>
 </li>
 </ul>
-<h4>The Presence, Protect, and Thermostat Device Handlers</h4>
+<h4>The Presence, Protect, Thermostat and Weather Device Handlers</h4>
 <ul>
 <li>Go to My Device Types in the IDE (Not necessary if you added repository for the app)</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
 <li>Click on <strong>Add new repository</strong></li>
 <li>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></li>
 <li>Under My Device Types Click on <strong><em>Update from Repo</em></strong> and select the <strong><em>nest-manager</em></strong></li>
-<li>Check the box next to <strong><em>nest-presence</em></strong>, <strong><em>nest-protect</em></strong> and <strong><em>nest-thermostat</em></strong> then click <strong>Execute Update</strong></li>
+<li>Check the box next to <strong><em>nest-presence</em></strong>, <strong><em>nest-protect</em></strong>, <strong><em>nest-thermostat</em></strong>, and <strong><em>nest-weather</em></strong> then click <strong>Execute Update</strong></li>
 <li>Click on each device link and select &quot;<strong>Publish</strong> and <strong>For Me</strong></li>
 </ul>
 <p>That's it your Done in the IDE... Just install &quot;<strong>Nest Manager</strong>&quot; from the <strong><em>Marketplace &gt; MyApps</em></strong> under the mobile app.</p>
 <p>When updates are available to the source code you will see the color change from black in the IDE.</p>
 <hr />
 <h3>Method 2: The Manual Way</h3>
-<h4>The Manager App</h4>
+<h4>The Nest Manager App</h4>
 <ul>
 <li>Log into your SmartThings account at <a href="https://graph.api.smartthings.com/">https://graph.api.smartthings.com/</a></li>
 <li>Go to &quot;<strong>My SmartApps</strong>&quot;</li>
@@ -394,8 +398,18 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Choose &quot;<strong>From Code</strong>&quot;</li>
 <li>Copy source code from <strong><em>nest-manager.src</em></strong></li>
 <li>Click &quot;<strong>Create</strong>&quot;</li>
+<li>Click on &quot;<strong>Publish</strong>&quot; and &quot;<strong>For me</strong>&quot; </li>
 <li>Go into SmartApp <strong>Nest Manager</strong> Settings</li>
 <li>Click on &quot;<strong>App Settings</strong>&quot; and <strong><em>enable OAuth</em></strong> and click &quot;<strong>Update</strong>&quot;</li>
+</ul>
+<p>#### The Nest Automations App</p>
+<ul>
+<li>Go to &quot;<strong>My SmartApps</strong>&quot;</li>
+<li>Click on &quot;<strong>+ New SmartApp</strong>&quot;</li>
+<li>Choose &quot;<strong>From Code</strong>&quot;</li>
+<li>Copy source code from <strong><em>nest-automations.src</em></strong></li>
+<li>Click &quot;<strong>Create</strong>&quot;</li>
+<li>Click on &quot;<strong>Publish</strong>&quot; and &quot;<strong>For me</strong>&quot;</li>
 </ul>
 <h4>The Presence, Protect, and Thermostat Device Handlers</h4>
 <ul>
@@ -417,6 +431,7 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Choose <strong>Structure</strong></li>
 <li>Choose <strong>Thermostats</strong></li>
 <li>Choose <strong>Protects</strong></li>
+<li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
 <li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
 <li>Tap on &quot;<strong>Done</strong>&quot;</li>
 </ul>
