@@ -19,16 +19,19 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v1.1.0*__
- 
+* Nest Manager - __*v2.0.0*__
+* Nest Automations - __*v1.0.0*__
+
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v1.1.0*__
-* Nest Protect Device - __*v1.1.0*__
-* Nest Thermostat Device - __*v1.1.0*__
+* Nest Presence Device - __*v2.0.0*__
+* Nest Protect Device - __*v2.0.0*__
+* Nest Thermostat Device - __*v2.0.0*__
+* Nest Weather Device - __*v1.0.0*__
 
 ## What's New
-Everything! 
+
+###New Child Automation 
 
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
@@ -69,26 +72,29 @@ __I do not have the ability to see any of your data or who is even using the tok
 ### Method 1: (Recommended)
 _Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices._
 
-#### The Manager App
+If you don't already have Git Integration setup please visit __*[GitHub Integration Instructions](http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html)*__
+
+#### The Nest Manager and Nest Automation Apps
  
  * Go to "**My SmartApps**" in the IDE
  * Click on "**Settings**"
  * Click on "**Add New Repository**"
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
- * Under "**My SmartApps**" Click on "**Update from Repo**" and select the ***nest-manager***
- * Check the box next to ***nest-manager*** and click "**Execute Update**"
+ * Under "**My SmartApps**" Click on "**Update from Repo**" and select ***nest-manager*** 
+ * Check the box next to ***nest-manager*** and ***nest-automations*** then click "**Execute Update**"
  * Click on the ***Nest Manager*** app link and select "**Publish**" and "**For me**" 
+ * Click on the ***Nest Automation*** app link and select "**Publish**" and "**For me**"
  
-	#### You will also need to Enable OAuth under the app preferences in the IDE
+	### *You will also need to Enable OAuth under the Nest Manager app preferences in the IDE*
 
-#### The Presence, Protect, and Thermostat Device Handlers
+#### The Presence, Protect, Thermostat and Weather Device Handlers
  
  * Go to My Device Types in the IDE (Not necessary if you added repository for the app)
  * Click on "**Settings**"
  * Click on **Add new repository**
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
  * Under My Device Types Click on ***Update from Repo*** and select the ***nest-manager***
- * Check the box next to ***nest-presence***, ***nest-protect*** and ***nest-thermostat*** then click **Execute Update**
+ * Check the box next to ***nest-presence***, ***nest-protect***, ***nest-thermostat***, and ***nest-weather*** then click **Execute Update**
  * Click on each device link and select "**Publish** and **For Me**
  
 That's it your Done in the IDE... Just install "**Nest Manager**" from the ***Marketplace > MyApps*** under the mobile app.
@@ -98,7 +104,7 @@ When updates are available to the source code you will see the color change from
 ------
 
 ### Method 2: The Manual Way
-#### The Manager App
+#### The Nest Manager App
  
  * Log into your SmartThings account at [https://graph.api.smartthings.com/](https://graph.api.smartthings.com/)
  * Go to "**My SmartApps**"
@@ -106,8 +112,18 @@ When updates are available to the source code you will see the color change from
  * Choose "**From Code**"
  * Copy source code from ***nest-manager.src***
  * Click "**Create**"
+ * Click on "**Publish**" and "**For me**" 
  * Go into SmartApp **Nest Manager** Settings
  * Click on "**App Settings**" and ***enable OAuth*** and click "**Update**"
+ 
+ #### The Nest Automations App
+ 
+ * Go to "**My SmartApps**"
+ * Click on "**+ New SmartApp**"
+ * Choose "**From Code**"
+ * Copy source code from ***nest-automations.src***
+ * Click "**Create**"
+ * Click on "**Publish**" and "**For me**"
  
 #### The Presence, Protect, and Thermostat Device Handlers
  * Go to "**My Device Handlers**"
@@ -127,6 +143,7 @@ When updates are available to the source code you will see the color change from
  * Choose **Structure**
  * Choose **Thermostats**
  * Choose **Protects**
+ * Choose *Use Nest as Presence Device* (Optional)
  * Choose *Use Nest as Presence Device* (Optional)
  * Tap on "**Done**"
 
