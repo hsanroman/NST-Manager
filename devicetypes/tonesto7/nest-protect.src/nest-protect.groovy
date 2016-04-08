@@ -168,7 +168,7 @@ def initialize() {
 
 def poll() {
 	log.debug "polling parent..."
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def refresh() {
@@ -194,7 +194,7 @@ def refresh() {
 				break   
         }	
     } 
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def generateEvent(Map results) {	
