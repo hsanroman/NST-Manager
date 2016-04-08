@@ -36,15 +36,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "1.2.0" }
-def appVerDate() { "4-5-2016" }
+def appVersion() { "2.0.0" }
+def appVerDate() { "4-8-2016" }
 def appVerInfo() {
     
-    "V1.2.0 (Mar 29th, 2016)\n" +
-    "Fixed: By moving alot of code to automation app I was able to remove alot from Manager App\n" +
-    "Added: Pre-Install Checks are working and enabled by default.\n" +
-    "Added: Moved Automations into Child App named 'Nest Automations'\n\n" +
-    
+    "V2.0.0 (Apr 8th, 2016)\n" +
+    "Fixed: Alot\n\n" +
     "------------------------------------------------"
 }
 
@@ -557,18 +554,18 @@ def ok2PollDevice() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needDevPoll) { return true }
     def pollTime = !settings?.pollValue ? 60 : settings?.pollValue.toInteger()
-    def fudge = pollTime/9
-    if (fudge > 60) { fudge = 50 }
-    return ( ((getLastDevicePollSec() + fudge) > pollTime) ? true : false )
+    def val = pollTime/9
+    if (val > 60) { val = 50 }
+    return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
 }
 
 def ok2PollStruct() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needStrPoll) { return true }
     def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-    def fudge = pollStrTime/9
-    if (fudge > 60) { fudge = 50 }
-    return ( ((getLastStructPollSec() + fudge) > pollStrTime) ? true : false )
+    def val = pollStrTime/9
+    if (val > 60) { val = 50 }
+    return ( ((getLastStructPollSec() + val) > pollStrTime) ? true : false )
 }
 
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }

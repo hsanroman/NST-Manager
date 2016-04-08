@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.2.0"}
+def devVer() { return "2.0.0"}
 
 // for the UI
 metadata {
@@ -95,12 +95,13 @@ metadata {
     			attributeState("default", label:'${currentValue}%', unit:"%")
   			}
   			tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
-   				attributeState("idle",backgroundColor:"#44b621")
-   				attributeState("heating",backgroundColor:"#ffa81e")
-   				attributeState("fan only",		backgroundColor:"#2ABBF0")
-            	attributeState("pending heat",	backgroundColor:"#2ABBF0")
-            	attributeState("pending cool",	backgroundColor:"#2ABBF0")
-            	attributeState("vent economizer",	backgroundColor:"#2ABBF0")
+   				attributeState("idle",            backgroundColor:"#44B621")
+   				attributeState("heating",         backgroundColor:"#FFA81E")
+                attributeState("cooling",         backgroundColor:"#2ABBF0")
+   				attributeState("fan only",		  backgroundColor:"#145D78")
+            	attributeState("pending heat",	  backgroundColor:"#B27515")
+            	attributeState("pending cool",	  backgroundColor:"#197090")
+            	attributeState("vent economizer", backgroundColor:"#8000FF")
   			}
   			tileAttribute("device.thermostatMode", key: "THERMOSTAT_MODE") {
     			attributeState("off", label:'${name}')
@@ -117,25 +118,8 @@ metadata {
   			}
         }
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
-            		backgroundColors: [
-						// Celsius Color Range
-						[value: 0, color: "#153591"],
-						[value: 7, color: "#1e9cbb"],
-						[value: 15, color: "#90d2a7"],
-						[value: 23, color: "#44b621"],
-						[value: 29, color: "#f1d801"],
-						[value: 33, color: "#d04e00"],
-						[value: 36, color: "#bc2323"],
-						// Fahrenheit Color Range
-						[value: 40, color: "#153591"],
-						[value: 44, color: "#1e9cbb"],
-						[value: 59, color: "#90d2a7"],
-						[value: 74, color: "#44b621"],
-						[value: 84, color: "#f1d801"],
-						[value: 92, color: "#d04e00"],
-						[value: 96, color: "#bc2323"]
-        	])
+        	state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
+            		backgroundColors: getTempColors())
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
 	        state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_off_icon.png")
@@ -171,8 +155,6 @@ metadata {
 		}
         valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Network Status:\n${currentValue}')
-            //state("on", label: 'Network Status:\n\Online', backgroundColor:"#44b621")
-            //state("off", label: 'Network Status:\nOffline', backgroundColor:"#bc2323")
 		}
         valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
 			state "true", 	label: 'Debug:\n${currentValue}'
@@ -206,7 +188,7 @@ metadata {
 		}
         
         valueTile("lastConnection", "device.lastConnection", width: 4, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Nest Last Checked-In:\n${currentValue}')
+			state("default", label: 'Nest Checked-In At:\n${currentValue}')
 	    }
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
@@ -230,17 +212,40 @@ def tileMain() {
 }
 
 def tileSelect() { 
-	//log.debug "hvacMode: ${getHvacMode()}"
-	if(getHvacMode() == "heat" || getHvacMode() == "cool") {
-    	//log.debug "tileSelect if | hvacMode: ${getHvacMode()}"
-        return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "onlineStatus", "apiStatus", "softwareVer", "hasLeaf", "lastConnection", "refresh", 
-        		"lastUpdatedDt", "softwareVer", "debugOn", "devTypeVer"] 
-    } 
-    else if(getHvacMode() == "auto" || getHvacMode() == "unknown") { 
-    	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
-    	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
         		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
-    }
+	
+    //Comment out the return section above and uncomment this section to remove the HTML tiles and restore the original ST tiles
+	/*return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+      		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
+            "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]*/
+}
+
+def getTempColors() {
+	def colorMap
+	if (wantMetric()) {
+		colorMap = [
+			// Celsius Color Range
+			[value: 0, color: "#153591"],
+			[value: 7, color: "#1e9cbb"],
+			[value: 15, color: "#90d2a7"],
+			[value: 23, color: "#44b621"],
+			[value: 29, color: "#f1d801"],
+			[value: 33, color: "#d04e00"],
+			[value: 36, color: "#bc2323"]
+        	]
+	} else {
+		colorMap = [
+			// Fahrenheit Color Range
+			[value: 40, color: "#153591"],
+			[value: 44, color: "#1e9cbb"],
+			[value: 59, color: "#90d2a7"],
+			[value: 74, color: "#44b621"],
+			[value: 84, color: "#f1d801"],
+			[value: 92, color: "#d04e00"],
+			[value: 96, color: "#bc2323"]
+        	]
+	}
 }
 
 mappings {
@@ -257,21 +262,20 @@ def parse(String description) {
 
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def refresh() {
-	parent.refresh()
+	poll()
 }
 
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
-	
     if(results) {
         state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
         debugOnEvent(parent.settings?.childDebug)
-		tempUnitEvent(results?.temperature_scale)   // Maybe use getTemperatureScale()  // SmartThings built-in to get ST scale rather than Nest scale
+		tempUnitEvent(getTemperatureScale())
 		canHeatCool(results?.can_heat, results?.can_cool)
         hasFan(results?.has_fan.toString())
         presenceEvent(parent?.locationPresence())
@@ -287,7 +291,7 @@ def generateEvent(Map results) {
         apiStatusEvent(parent?.apiIssues())
        
 		def hvacMode = results?.hvac_mode
-		def tempUnit = device.latestValue('temperatureUnit')
+		def tempUnit = state?.tempUnit
 		switch (tempUnit) {
 			case "C":
 				def heatingSetpoint = 0.0
@@ -631,7 +635,7 @@ def getTemp() {
 
 def tempWaitVal() { return parent?.getChildWaitVal() ? parent?.getChildWaitVal().toInteger() : 4 }
 
-def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
+def wantMetric() { return (state?.tempUnit == "C") }
 
 
 /************************************************************************************************
@@ -1271,7 +1275,7 @@ def getInfoHtml() {
             </table>
             <table class="flat-table">
               <thead>
-                <th>Nest Last Checked-In</th>
+                <th>Nest Checked-In</th>
                 <th>Data Last Received</th>
               </thead>
               <tbody>
