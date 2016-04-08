@@ -231,7 +231,7 @@ def prefsPage() {
         }
         section ("Diagnostics:") {
             input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            paragraph "This will store errors withing the app which you can view. You can share those logs with the developer to help resolve issues..."
+            paragraph "Diagnostics allows error to be stored in the SmartApps data. You can view the logs or share them with the developer to help resolve issues..."
             if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
             else { 
             	LogAction("Diagnostic Log Queuing is Disabled...", "info", false)

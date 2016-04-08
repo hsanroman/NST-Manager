@@ -107,8 +107,9 @@ def getAutomationsActive() {
 }
 
 def subscriber() {
-    subscribe(location, locationChgEvt)
-    if ((extSensorDay || extSensorNight || extSenTstat) {
+    
+    if(extSensorDay || extSensorNight || extSenTstat) {
+    	subscribe(location, locationChgEvt)
 		if(extSensorDay) { subscribe(extSensorDay, "temperature", extSenTempEvt) }
         if(extSensorNight) { subscribe(extSensorNight, "temperature", extSenTempEvt) }
 		if(extSenTstat) {
