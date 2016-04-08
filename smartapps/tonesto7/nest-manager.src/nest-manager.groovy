@@ -332,6 +332,13 @@ def onAppTouch(event) {
     poll(true)
 }
 
+def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	LogAction("Refresh Received from Device...${devId}", "debug", true, true)
+    if(childDebug && child) { child?.log("refresh: ${devId}") }
+    return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
+}
+
 /************************************************************************************************
 |								API/Device Polling Methods										|
 *************************************************************************************************/
@@ -1015,13 +1022,6 @@ def getWebFileData() {
     return result
 }
 
-def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
-	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("Refresh Received from Device...${devId}", "debug", true, true)
-    if(childDebug && child) { child?.log("refresh: ${devId}") }
-    return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
-}
-
 def ver2IntArray(val) { 
 	def ver = val?.split("\\.") 
     return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
@@ -1534,64 +1534,64 @@ def connectionStatus(message, redirectUrl = null) {
     }
 
     def html = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=640">
-<title>SmartThings & Nest connection</title>
-<style type="text/css">
-        @font-face {
-                font-family: 'Swiss 721 W01 Thin';
-                src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot');
-                src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot?#iefix') format('embedded-opentype'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.woff') format('woff'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.ttf') format('truetype'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.svg#swis721_th_btthin') format('svg');
-                font-weight: normal;
-                font-style: normal;
-        }
-        @font-face {
-                font-family: 'Swiss 721 W01 Light';
-                src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot');
-                src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot?#iefix') format('embedded-opentype'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.woff') format('woff'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.ttf') format('truetype'),
-                         url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.svg#swis721_lt_btlight') format('svg');
-                font-weight: normal;
-                font-style: normal;
-        }
-        .container {
-                width: 90%;
-                padding: 4%;
-                /*background: #eee;*/
-                text-align: center;
-        }
-        img {
-                vertical-align: middle;
-        }
-        p {
-                font-size: 2.2em;
-                font-family: 'Swiss 721 W01 Thin';
-                text-align: center;
-                color: #666666;
-                padding: 0 40px;
-                margin-bottom: 0;
-        }
-        span {
-                font-family: 'Swiss 721 W01 Light';
-        }
-</style>
-</head>
-<body>
-        <div class="container">
-                <img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/st-logo%402x.png" alt="SmartThings logo" />
-                <img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/connected-device-icn%402x.png" alt="connected device icon" />
-                <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_icon128.png" alt="nest icon" />
-                ${message}
-        </div>
-</body>
-</html>
-"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta name="viewport" content="width=640">
+        <title>SmartThings & Nest connection</title>
+        <style type="text/css">
+                @font-face {
+                        font-family: 'Swiss 721 W01 Thin';
+                        src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot');
+                        src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.eot?#iefix') format('embedded-opentype'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.woff') format('woff'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.ttf') format('truetype'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-thin-webfont.svg#swis721_th_btthin') format('svg');
+                        font-weight: normal;
+                        font-style: normal;
+                }
+                @font-face {
+                        font-family: 'Swiss 721 W01 Light';
+                        src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot');
+                        src: url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.eot?#iefix') format('embedded-opentype'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.woff') format('woff'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.ttf') format('truetype'),
+                                url('https://s3.amazonaws.com/smartapp-icons/Partner/fonts/swiss-721-light-webfont.svg#swis721_lt_btlight') format('svg');
+                        font-weight: normal;
+                        font-style: normal;
+                }
+                .container {
+                        width: 90%;
+                        padding: 4%;
+                        /*background: #eee;*/
+                        text-align: center;
+                }
+                img {
+                        vertical-align: middle;
+                }
+                p {
+                        font-size: 2.2em;
+                        font-family: 'Swiss 721 W01 Thin';
+                        text-align: center;
+                        color: #666666;
+                        padding: 0 40px;
+                        margin-bottom: 0;
+                }
+                span {
+                        font-family: 'Swiss 721 W01 Light';
+                }
+        </style>
+        </head>
+        <body>
+                <div class="container">
+                        <img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/st-logo%402x.png" alt="SmartThings logo" />
+                        <img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/connected-device-icn%402x.png" alt="connected device icon" />
+                        <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_icon128.png" alt="nest icon" />
+                        ${message}
+                </div>
+        </body>
+        </html>
+        """
     render contentType: 'text/html', data: html
 }
 

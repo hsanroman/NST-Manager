@@ -262,11 +262,11 @@ def parse(String description) {
 
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh(this)
+	poll()    
 }
 
 def refresh() {
-	poll()
+	parent.refresh(this)
 }
 
 def generateEvent(Map results) {
@@ -1291,5 +1291,5 @@ def getInfoHtml() {
 }
 
 def getLeafHtml() {
-    return state?.hasLeaf ? "<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : "<p>${state?.hasLeaf}</p>"
+    return state?.hasLeaf ? "<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : "${state?.hasLeaf}"
 }
