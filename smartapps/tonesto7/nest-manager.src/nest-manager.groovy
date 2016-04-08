@@ -108,7 +108,7 @@ def authPage() {
         }
     }
     
-    updateWebStuff(true)
+    updateWebStuff()
     
     def description
     def uninstallAllowed = false
@@ -202,10 +202,12 @@ def authPage() {
                    		}
                 	}
                 }
+                
                 section("Preferences:") { 
         			href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nApp Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
             			image: getAppImg("settings_icon.png")
                 }
+                
             }
             section(" ") { 
             	href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
@@ -349,7 +351,7 @@ def poll(force = false, type = null) {
 	    def str = false
 	    if (force == true) { forcedPoll(type) }
 	    if ( !force && !ok2PollDevice() && !ok2PollStruct() ) {
-		    LogAction("Nothing to do - Devices Last Updated: ${getLastDevicePollSec()} seconds ago... | Structures Last Updated ${getLastStructPollSec()} seconds ago...", "info", true)
+		    LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago... | Structures Last Updated ${getLastStructPollSec()} seconds ago...", "info", true)
 	    }
 	    else if(!force) {
     		if(ok2PollStruct()) {
@@ -373,9 +375,9 @@ def poll(force = false, type = null) {
 def forcedPoll(type = null) {
 	LogAction("forcedPoll($type) received...", "warn", true)
 	def lastFrcdPoll = getLastForcedPollSec()
-       	atomicState?.lastForcePoll = getDtNow()
-    def pollWaitVal = !atomicState?.pollWaitValue ? 10 : atomicState?.pollWaitValue.toInteger()
+    def pollWaitVal = !settings?.pollWaitVal ? 10 : settings?.pollWaitVal.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
+       	atomicState?.lastForcePoll = getDtNow()
         atomicState?.pollBlocked = false
    		LogAction("Forcing Data Update... Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
@@ -387,7 +389,11 @@ def forcedPoll(type = null) {
             getApiData("str") 
         }
         updateWebStuff(true)
-   	} else { LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${atomicState?.pollWaitValue})...", "debug", true) }
+   	} else { 
+            LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
+            atomicState.needStrPoll = true
+            atomicState.needDevPoll = true
+   	}
     updateChildData()
 }
 
@@ -453,13 +459,15 @@ def getApiData(type = null) {
         }
     }
 	catch(ex) {
+        atomicState.apiIssues = true
         if(ex instanceof groovyx.net.http.HttpResponseException) {
         	if (ex.message.contains("Too Many Requests")) {
             	log.warn "Received '${ex.message}' response code..."
-                atomicState.apiIssues = true
             }
         } else { 
         	LogAction("getApiData (type: $type) Exception: ${ex}", "error", true, true) 
+        	if(type == "str") { atomicState.needStrPoll = true }
+        	else if(type == "dev") { atomicState?.needDevPoll = true }
         }
     }
     return result
@@ -467,7 +475,7 @@ def getApiData(type = null) {
 
 def updateChildData() {
 	LogAction("updateChildData()", "info", true)
-	atomicState.needChildUpd = false
+	atomicState.needChildUpd = true
 	try {
     	atomicState?.lastChildUpdDt = getDtNow()
 		getAllChildDevices().each {
@@ -517,7 +525,9 @@ def updateChildData() {
     catch (ex) {
     	LogAction("updateChildData Exception: ${ex}", "error", true, true)
         atomicState?.lastChildUpdDt = null
+        return
     }
+    atomicState.needChildUpd = false
 }
 
 def locationPresence() {
@@ -535,18 +545,30 @@ def apiIssues() {
     LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
 }
 
+def sunrise() {
+	return location.currentState("sunriseTime")?.dateValue
+}
+
+def sunset() {
+	return location.currentState("sunsetTime")?.dateValue
+}
+
 def ok2PollDevice() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needDevPoll) { return true }
-    def pollTime = !atomicState?.pollValue ? 60 : atomicState?.pollValue.toInteger()
-    return ( ((getLastDevicePollSec() + (pollTime/9)) > pollTime) ? true : false )
+    def pollTime = !settings?.pollValue ? 60 : settings?.pollValue.toInteger()
+    def fudge = pollTime/9
+    if (fudge > 60) { fudge = 50 }
+    return ( ((getLastDevicePollSec() + fudge) > pollTime) ? true : false )
 }
 
 def ok2PollStruct() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needStrPoll) { return true }
-    def pollStrTime = !atomicState?.pollStrValue ? 180 : atomicState?.pollStrValue.toInteger()
-    return ( ((getLastStructPollSec() + (pollStrTime/9)) > pollStrTime) ? true : false )
+    def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
+    def fudge = pollStrTime/9
+    if (fudge > 60) { fudge = 50 }
+    return ( ((getLastStructPollSec() + fudge) > pollStrTime) ? true : false )
 }
 
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }
@@ -702,6 +724,7 @@ def setTargetTempHigh(child, unit, temp) {
 def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 	//log.trace "sendNestApiCmd... $cmdUri, $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId"
 	def childDev = getChildDevice(childId)
+	def cmdDelay = getChildWaitVal()
     try {
         if (!atomicState?.cmdQ) { atomicState.cmdQ = [] }
         def cmdQueue = atomicState?.cmdQ
@@ -710,6 +733,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         if (cmdQueue?.contains(cmdData)) {
             LogAction("Command Exists in queue... Skipping...", "warn", true)
             if(childDebug && childDev) { childDev?.log("Command Exists in queue... Skipping...", "warn") }
+            runIn(cmdDelay*2, "workQueue", [overwrite: true])
         } else {
             LogAction("Adding Command to Queue: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
             if(childDebug && childDev) { childDev?.log("Adding Command to Queue: $cmdData") }
@@ -719,7 +743,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             atomicState?.cmdQ = cmdQueue
             
             atomicState?.lastQcmd = cmdData
-            runIn(2, "workQueue", [overwrite: true])
+            runIn(cmdDelay, "workQueue", [overwrite: true])
         }
         return true
     }
@@ -732,7 +756,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 
 void workQueue() {
 	//log.trace "workQueue..."
-    def cmdDelay = !atomicState.cmdDelayVal ? 4 : atomicState?.cmdDelayVal.toInteger()
+    def cmdDelay = getChildWaitVal()
     if (!atomicState?.cmdQ) { atomicState.cmdQ = [] }
     def cmdQueue = atomicState?.cmdQ
     try {
@@ -743,16 +767,22 @@ void workQueue() {
             def cmd = cmdQueue?.remove(0)
             atomicState.cmdQ = cmdQueue
 
-            cmdProcState(true)
-            def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
-            if ( !cmdres ) {
+            if (cmd[1] == "poll") {
+            	atomicState.needStrPoll = true 
+            	atomicState.needDevPoll = true
             	atomicState.needChildUpd = true
-                atomicState.pollBlocked = false
-                runIn((cmdDelay+4), "postCmd", [overwrite: true])
+            } else {
+                cmdProcState(true)
+                def cmdres = procNestApiCmd(getNestApiUrl(), cmd[0], cmd[1], cmd[2], cmd[3])
+                if ( !cmdres ) {
+                    atomicState.needChildUpd = true
+                    atomicState.pollBlocked = false
+                    runIn((cmdDelay*2), "postCmd", [overwrite: true])
+                }
+                cmdProcState(false)
             }
-            cmdProcState(false)
 
-            atomicState?.needDevPoll = true
+            atomicState.needDevPoll = true
             if(cmd[1] == apiVar().types.struct.toString()) {
             	atomicState.needStrPoll = true 
             }
@@ -921,35 +951,38 @@ def updateWebStuff(force = false) {
         getWeatherConditions()
     } 
     if (!force && getLastWebUpdSec() > 1800) {
-		if(canSchedule()) { runIn(20, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+		if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
 	}
-    if(!force && getLastWeatherUpdSec() > 900) {
+    if(!force && atomicState?.weatherDevice && getLastWeatherUpdSec() > 900) {
         if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
     }
 }
 
 def getWeatherConditions() {
 	//log.trace "getWeatherConditions..."
-	try {
-    	LogAction("Retrieving Latest Local Weather Conditions", "info", true)
-    	def curWeather = getWeatherFeature("conditions")
-        if(curWeather) { 
-        	atomicState?.currentWeather = curWeather 
-        	atomicState?.lastWeatherUpdDt = getDtNow()
-        	return true
-        } else {
-        	LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
-            return false
-        }
-    }
-    catch (ex) {
-    	LogAction("getWeatherConditions Exception: ${ex}", "error", true, true)
-        return false
-    }
+	if(atomicState?.weatherDevice) {
+	    try {
+    	    LogAction("Retrieving Latest Local Weather Conditions", "info", true)
+    	    def curWeather = getWeatherFeature("conditions")
+            if(curWeather) { 
+        	    atomicState?.currentWeather = curWeather 
+        	    atomicState?.lastWeatherUpdDt = getDtNow()
+        	    atomicState.needChildUpd = true
+        	    return true
+            } else {
+        	    LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
+                return false
+            }
+	    }
+	    catch (ex) {
+        	    LogAction("getWeatherConditions Exception: ${ex}", "error", true, true)
+        	    return false
+	    }
+	} else { return false }
 }
 
 def getWData() {
-	if(state?.currentWeather) {
+	if(atomicState?.currentWeather) {
     	return atomicState?.currentWeather
     } else {
     	if(getWeatherConditions()) {
@@ -985,9 +1018,11 @@ def getWebFileData() {
     return result
 }
 
-def refresh() {
-	LogAction("Refresh Received from Device...", "debug", true)
-    poll(true)
+def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
+	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+	LogAction("Refresh Received from Device...${devId}", "debug", true, true)
+    if(childDebug && child) { child?.log("refresh: ${devId}") }
+    return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
 }
 
 def ver2IntArray(val) { 
@@ -995,7 +1030,7 @@ def ver2IntArray(val) {
     return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
 
-def getChildWaitVal() { return atomicState.tempChgWaitVal ? atomicState?.tempChgWaitVal.toInteger() : 4 }
+def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
 def isUpdateAvail(newVer, curVer) {
     try {
@@ -1726,10 +1761,6 @@ def setStateVar(frc = false) {
         def stateVer = 3
 		def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
 		if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) { 
-	 		if(!atomicState?.pollValue) 				{ atomicState.pollValue = 60 }
-     		if(!atomicState?.pollStrValue) 				{ atomicState.pollStrValue = 180 }
-     		if(!atomicState?.pollWaitVal) 				{ atomicState.pollWaitVal = 10 }
-     		if(!atomicState?.tempChgWaitVal) 			{ atomicState?.tempChgWaitVal = 4 }
      		if(!atomicState?.exLogs) 					{ atomicState.exLogs = [] }
      		if(!atomicState?.misPollNotifyWaitVal) 		{ atomicState.misPollNotifyWaitVal = 900 }
      		if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
@@ -1743,6 +1774,11 @@ def setStateVar(frc = false) {
 
 def stateCleanup() {
     //Things that I need to clear up on updates go here
+    if (atomicState?.pollValue) 			{ atomicState.pollValue = null }
+    if (atomicState?.pollStrValue) 			{ atomicState.pollStrValue = null }
+    if (atomicState?.pollWaitVal) 			{ atomicState.pollWaitVal = null }
+    if (atomicState?.tempChgWaitVal) 			{ atomicState?.tempChgWaitVal = null }
+    if (atomicState?.cmdDelayVal) 			{ atomicState?.cmdDelayVal = null }
     if (atomicState?.testedDhInst) { atomicState?.devHandlersTested = true }
     if (atomicState?.missedPollNotif) { atomicState.missedPollNotif = null }
     if (atomicState?.updNotif) { atomicState.updNotif = null }
@@ -1886,7 +1922,7 @@ def pollValEnum() {
 def waitValEnum() {
 	def vals = [
     	1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
-        8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds"
+        8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds"
     ]
     return vals
 }
@@ -1909,25 +1945,17 @@ def pollPrefPage() {
         section("Device Polling:") {
         	def pollValDesc = !pollValue ? "Default: 1 Minute" : pollValue
             input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (1 Minute)", required: false, defaultValue: 60, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
-            if(pollValue) {
-            	atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger()
-            } else { atomicState?.pollValue = !pollValue ? 60 : pollValue.toInteger() }
         }
         section("Location Polling:") {   
         	def pollStrValDesc = !pollStrValue ? "Default: 3 Minutes" : pollStrValue
             input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], description: pollStrValDesc, submitOnChange: true)
-            if(pollStrValue) {
-            	atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger()
-            } else { atomicState?.pollStrValue = !pollStrValue ? 180 : pollStrValue.toInteger() }
         }
         section("Wait Values:") {
         	def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
             input ("pollWaitVal", "enum", title: "Forced Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()], description: pollWaitValDesc,submitOnChange: true)
-            atomicState?.pollWaitVal = !pollWaitVal ? 10 : pollWaitVal.toInteger()
 			
             def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
             input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()], description: tempChgWaitValDesc, submitOnChange: true)
-       		atomicState?.tempChgWaitVal = !tempChgWaitVal ? 4 : tempChgWaitVal.toInteger()
         }
         section("Other Options:") {
         	input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", required: false, defaultValue: true, submitOnChange: true
