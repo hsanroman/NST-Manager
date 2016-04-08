@@ -26,11 +26,11 @@ definition(
     singleInstance: true)
 
 def appVersion() { "1.0.0" }
-def appVerDate() { "3-29-2016" }
+def appVerDate() { "4-8-2016" }
 def appVerInfo() {
     
-    "V1.0.0 (Mar 28th, 2016)\n" +
-    "Fixed: Bugfixes and optimizing...\n\n" +
+    "V1.0.0 (Apr 8th, 2016)\n" +
+    "Added... Everything is new...\n\n" +
     "------------------------------------------------"
 }
 
@@ -39,6 +39,7 @@ preferences {
     page(name: "prefsPage")
     page(name: "debugPrefPage")
     page(name: "automationsPage")
+    page(name: "extSenPage")
     page(name: "wcPage")
     page(name: "modePresPage")
     page(name: "extTempsPage")
@@ -47,6 +48,11 @@ preferences {
 def mainPage() {
 	//log.trace "mainPage()"
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
+    	section("Use Remote Internal Sensor(s) to Control your Thermostat:") {
+        	def extSenDesc = (awayModes && homeModes) ? "Home/Away Modes are Selected\n\nTap to Modify..." : "Tap to Configure..."
+        	href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc,
+            			image: imgIcon("mode_automation_icon.png")
+       	}
 		section("Turn a Thermostat Off when a Window or Door is Open:") {
         	def qOpt = (wcModes || wcDays || (wcStartTime && wcStopTime)) ? "Schedule Options Selected...\n" : ""
         	def desc = (wcContacts && wcTstat) ? "${wcTstat.label}\nwith (${wcContacts ? wcContacts.size() : 0}) Contact(s)\n${qOpt}\nTap to Modify..." : "Tap to Configure..."
@@ -66,8 +72,6 @@ def mainPage() {
        	}
     }
 }
-
-
 
 def installed() {
     log.debug "Installed with settings: ${settings}"
@@ -103,6 +107,18 @@ def getAutomationsActive() {
 }
 
 def subscriber() {
+    subscribe(location, locationChgEvt)
+    if ((extSensorDay || extSensorNight || extSenTstat) {
+		if(extSensorDay) { subscribe(extSensorDay, "temperature", extSenTempEvt) }
+        if(extSensorNight) { subscribe(extSensorNight, "temperature", extSenTempEvt) }
+		if(extSenTstat) {
+            subscribe(extSenTstat, "temperature", extSenTempEvt)
+		    subscribe(extSenTstat, "thermostatMode", extSenTempEvt) 
+        }
+        if(extMotionSensors) { subscribe(extMotionSensors, "motionSensor", extSenMotionEvt) }
+        extSenEvtEval()
+	}
+    
 	if(homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
     if(wcContacts) { subscribe(wcContacts, "contact", wcContactEvt) }
     if(!exUseWeather && exTemp) { subscribe(exTemp, "temperature", exTempEvt, [filterEvents: false]) }
@@ -123,6 +139,105 @@ def updateWeather() {
         exTempEvt(null) 
     }
 }
+/******************************************************************************  
+|                			EXTERNAL SENSOR AUTOMATION CODE	                  |
+*******************************************************************************/
+def extSenPage() {
+	dynamicPage(name: "extSenPage", title: "Remote Sensor Automation", uninstall: false) {
+        section("Choose a Thermostat... ") {
+            input "extSenTstat", "capability.thermostat"
+        }
+        if(extSenTstat) {
+        	section("Mirror Changes from the primary Thermostat to these Thermostats... ") {
+            	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats"
+        	}
+        }
+        section("Rule Type ") {
+         	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"])
+        }
+        // Would like this set somewhere else
+        section("Heat setting..." ) {
+            input "extSenHeatTemp", "decimal", title: "Desired Cool Temp (Degrees)..."
+        }
+        section("Cool setting...") {
+            input "extCoolTemp", "decimal", title: "Desired Heat Temp (Degrees)..."
+        }
+        section("Optionally choose temperature sensor to use instead of the thermostat's... ") {
+            input "extSensorDay", "capability.temperatureMeasurement", title: "Day Temp Sensors", required: false, multiple: true
+            input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", required: false, multiple: true
+        }
+        section("Optionally Evaluate Temps when these sensors detect motion... ") {
+            input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true
+        }
+        section ("Options") {
+            input "extSenModes", "mode", title: "What Modes?", multiple: true, required: false
+
+            // Should be moved to parent app - these should be shared amongst all children
+            input "extTimeBetweenRuns", "number", title: "Time between Fan Runs", required: true, defaultValue: 60
+            input "degreesOfSeperation", "decimal", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3
+        }
+	}
+}
+
+def locationChgEvt(evt) {
+	log.debug "locationChgEvt mode: $evt.value, heat: $heat, cool: $cool"
+	extSenEvtEval()
+}
+
+def extTempHandler(evt) {
+	extSenEvtEval()
+}
+
+private extSenEvtEval() {
+	if (sensor) {
+		def threshold = degreesOfSeperation
+		def tm = extSenTstat.currentThermostatMode 
+		def ct = extSenTstat.currentTemperature
+		def currentTemp = sensor.currentTemperature
+		log.trace("evtEval:, mode: $tm -- temp: $ct, heat: $extSenTstat.currentHeatingSetpoint, cool: $extSenTstat.currentCoolingSetpoint -- "  +
+			"sensor: $currentTemp, heat: $heatingSetpoint, cool: $coolingSetpoint")
+		if (tm in ["cool","auto"]) {
+			// air conditioner
+			if (currentTemp - coolingSetpoint >= threshold) {
+				extSenTstat.setCoolingSetpoint(ct - 2)
+				log.debug "extSenTstat.setCoolingSetpoint(${ct - 2}), ON"
+			}
+			else if (coolingSetpoint - currentTemp >= threshold && ct - extSenTstat.currentCoolingSetpoint >= threshold) {
+				extSenTstat.setCoolingSetpoint(ct + 2)
+				log.debug "extSenTstat.setCoolingSetpoint(${ct + 2}), OFF"
+			}
+		}
+		if (tm in ["heat","emergency heat","auto"]) {
+			// heater
+			if (heatingSetpoint - currentTemp >= threshold) {
+				extSenTstat.setHeatingSetpoint(ct + 2)
+				log.debug "extSenTstat.setHeatingSetpoint(${ct + 2}), ON"
+			}
+			else if (currentTemp - heatingSetpoint >= threshold && extSenTstat.currentHeatingSetpoint - ct >= threshold) {
+				extSenTstat.setHeatingSetpoint(ct - 2)
+				log.debug "thextSenTstatermostat.setHeatingSetpoint(${ct - 2}), OFF"
+			}
+		}
+	}
+	else {
+		extSenTstat.setHeatingSetpoint(heatingSetpoint)
+		extSenTstat.setCoolingSetpoint(coolingSetpoint)
+        if(extSenTstatsMirror) {
+            extSenTstatsMirror.setHeatingSetpoint(heatingSetpoint)
+		    extSenTstatsMirror.setCoolingSetpoint(coolingSetpoint)
+        }
+		extSenTstat.poll()
+	}
+}
+
+// for backward compatibility with existing subscriptions
+def coolingSetpointHandler(evt) {
+	log.debug "coolingSetpointHandler()"
+}
+def heatingSetpointHandler (evt) {
+	log.debug "heatingSetpointHandler ()"
+}
+
 /******************************************************************************  
 |                			WATCH CONTACTS AUTOMATION CODE	                  |
 *******************************************************************************/
