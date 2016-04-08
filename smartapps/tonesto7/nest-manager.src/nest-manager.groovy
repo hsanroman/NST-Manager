@@ -231,7 +231,7 @@ def prefsPage() {
         }
         section ("Diagnostics:") {
             input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            paragraph "Diagnostics allows error to be stored in the SmartApps data. You can view the logs or share them with the developer to help resolve issues..."
+            paragraph "Diagnostics allow errors to be stored inside of the SmartApps data store. You can view the logs or share them with the developer to help resolve issues..."
             if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
             else { 
             	LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
@@ -1774,15 +1774,15 @@ def stateCleanup() {
     if (atomicState?.pollValue) 			{ atomicState.pollValue = null }
     if (atomicState?.pollStrValue) 			{ atomicState.pollStrValue = null }
     if (atomicState?.pollWaitVal) 			{ atomicState.pollWaitVal = null }
-    if (atomicState?.tempChgWaitVal) 			{ atomicState?.tempChgWaitVal = null }
+    if (atomicState?.tempChgWaitVal) 		{ atomicState?.tempChgWaitVal = null }
     if (atomicState?.cmdDelayVal) 			{ atomicState?.cmdDelayVal = null }
-    if (atomicState?.testedDhInst) { atomicState?.devHandlersTested = true }
-    if (atomicState?.missedPollNotif) { atomicState.missedPollNotif = null }
-    if (atomicState?.updNotif) { atomicState.updNotif = null }
-    if (atomicState?.updChildOnNewOnly) { atomicState.updChildOnNewOnly = null }
-    if (atomicState?.disAppIcons) { atomicState.disAppIcons = null }
-    if (atomicState?.showProtAlarmStateEvts) { atomicState.showProtAlarmStateEvts = null } 
-    if (atomicState?.showAwayAsAuto) { atomicState.showAwayAsAuto = null }
+    if (atomicState?.testedDhInst)          { atomicState?.devHandlersTested = true }
+    if (atomicState?.missedPollNotif)       { atomicState.missedPollNotif = null }
+    if (atomicState?.updNotif)              { atomicState.updNotif = null }
+    if (atomicState?.updChildOnNewOnly)     { atomicState.updChildOnNewOnly = null }
+    if (atomicState?.disAppIcons)           { atomicState.disAppIcons = null }
+    if (atomicState?.showProtAlarmStateEvts){ atomicState.showProtAlarmStateEvts = null } 
+    if (atomicState?.showAwayAsAuto)        { atomicState.showAwayAsAuto = null }
 }
 
 
