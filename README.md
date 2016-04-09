@@ -116,8 +116,7 @@ When updates are available to the source code you will see the color change from
  * Go into SmartApp **Nest Manager** Settings
  * Click on "**App Settings**" and ***enable OAuth*** and click "**Update**"
  
- #### The Nest Automations App
- 
+#### The Nest Automations App
  * Go to "**My SmartApps**"
  * Click on "**+ New SmartApp**"
  * Choose "**From Code**"
