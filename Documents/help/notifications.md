@@ -8,13 +8,14 @@ Notifications allows you to receive a message when a certain action occurs.
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_prefs_page_2.png" width="281" height="500">
 
-**The __Send Notifications to__ input will not be shown for users whose accounts do not have contact book enabled.  If you don't have it you can't enable it until SmartThings activates the feature again.**
+**The __Send Notifications to__ input will not be shown for users whose accounts do not have contact book enabled.  If you don't have it you can't enable it until SmartThings activates the feature again. If the Contact book is still not available.  You will see a toggle that will allow sending Push Messages instead of selecting individual users.**
 
 ----------
 #### Quiet Time
 If notifications are active.  It will not send them during the times and days selected.
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/notif_quiet_page.png" width="281" height="500">
+
 * You can also use Modes to activate quiet time
 * *The Start/Stop Time options available are:* 
 	* A Specific Time

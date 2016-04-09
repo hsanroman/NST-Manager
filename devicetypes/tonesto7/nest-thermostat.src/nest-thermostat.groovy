@@ -1198,8 +1198,10 @@ def log(message, level = "trace") {
     return null // always child interface call with a return value
 }
 
+def getImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() { 
+	def leafVal =  state?.hasLeaf ? "<td><img src=\"${getImg("nest_leaf_75.png")}\" style=width:30px; height:30px;></td>" : "<td>No Leaf</td>"
 	renderHTML {
     	head {
         	"""
@@ -1260,7 +1262,7 @@ def getInfoHtml() {
                    <tbody>
                      <tr>
                        <td>${state?.onlineStatus.toString()}</td>
-                         <td>${getLeafHtml()}</td>
+                       	 $leafVal
                          <td>${state?.apiStatus}</td>
                        </tr>
                        <tr>
@@ -1291,5 +1293,7 @@ def getInfoHtml() {
 }
 
 def getLeafHtml() {
-    return state?.hasLeaf ? "<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : "${state?.hasLeaf}"
+    return state?.hasLeaf ? 
+    	"<img src=\"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_leaf_75.png\" style=\"width: 30px;height:30px;\">" : 
+        "${state?.hasLeaf}"
 }

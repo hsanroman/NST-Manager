@@ -39,7 +39,7 @@ preferences {
     page(name: "prefsPage")
     page(name: "debugPrefPage")
     page(name: "automationsPage")
-    page(name: "extSenPage")
+    page(name: "extSensorPage")
     page(name: "wcPage")
     page(name: "modePresPage")
     page(name: "extTempsPage")
@@ -51,7 +51,7 @@ def mainPage() {
     	section("Use Remote Internal Sensor(s) to Control your Thermostat:") {
         	def extSenDesc = (awayModes && homeModes) ? "Home/Away Modes are Selected\n\nTap to Modify..." : "Tap to Configure..."
         	href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc,
-            			image: imgIcon("mode_automation_icon.png")
+            			image: imgIcon("remote_sensor_icon.png")
        	}
 		section("Turn a Thermostat Off when a Window or Door is Open:") {
         	def qOpt = (wcModes || wcDays || (wcStartTime && wcStopTime)) ? "Schedule Options Selected...\n" : ""
@@ -143,39 +143,43 @@ def updateWeather() {
 /******************************************************************************  
 |                			EXTERNAL SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
-def extSenPage() {
-	dynamicPage(name: "extSenPage", title: "Remote Sensor Automation", uninstall: false) {
+def extSensorPage() {
+	dynamicPage(name: "extSensorPage", title: "Remote Sensor Automation", uninstall: false) {
+    	def req = (extSenTstat || extSensorDay || extSensorNight) ? true : false
         section("Choose a Thermostat... ") {
-            input "extSenTstat", "capability.thermostat"
+            input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req
         }
         if(extSenTstat) {
         	section("Mirror Changes from the primary Thermostat to these Thermostats... ") {
-            	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats"
+            	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats", submitOnChange: true, required: false
         	}
         }
-        section("Rule Type ") {
-         	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"])
-        }
-        // Would like this set somewhere else
-        section("Heat setting..." ) {
-            input "extSenHeatTemp", "decimal", title: "Desired Cool Temp (Degrees)..."
-        }
-        section("Cool setting...") {
-            input "extCoolTemp", "decimal", title: "Desired Heat Temp (Degrees)..."
-        }
         section("Optionally choose temperature sensor to use instead of the thermostat's... ") {
-            input "extSensorDay", "capability.temperatureMeasurement", title: "Day Temp Sensors", required: false, multiple: true
-            input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", required: false, multiple: true
+            input "extSensorDay", "capability.temperatureMeasurement", title: "Day Temp Sensors", submitOnChange: true, required: req, multiple: true
+            input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true
         }
-        section("Optionally Evaluate Temps when these sensors detect motion... ") {
-            input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true
-        }
-        section ("Options") {
-            input "extSenModes", "mode", title: "What Modes?", multiple: true, required: false
+        if(extSenTstat && (extSensorDay && extSensorNight)) {
+            section("Rule Type ") {
+                input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true)
+            }
+            // Would like this set somewhere else
+            section("Heat setting..." ) {
+                input "extSenHeatTemp", "decimal", title: "Desired Cool Temp (Degrees)...", submitOnChange: true
+            }
+            section("Cool setting...") {
+                input "extCoolTemp", "decimal", title: "Desired Heat Temp (Degrees)...", submitOnChange: true
+            }
 
-            // Should be moved to parent app - these should be shared amongst all children
-            input "extTimeBetweenRuns", "number", title: "Time between Fan Runs", required: true, defaultValue: 60
-            input "degreesOfSeperation", "decimal", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3
+            section("Optionally Evaluate Temps when these sensors detect motion... ") {
+                input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true
+            }
+            section ("Options") {
+                input "extSenModes", "mode", title: "What Modes?", multiple: true, required: false, submitOnChange: true
+
+                // Should be moved to parent app - these should be shared amongst all children
+                input "extTimeBetweenRuns", "number", title: "Time between Fan Runs", required: true, defaultValue: 60, submitOnChange: true
+                input "degreesOfSeperation", "decimal", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3, submitOnChange: true
+            }
         }
 	}
 }

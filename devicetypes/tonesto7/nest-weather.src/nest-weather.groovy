@@ -53,7 +53,7 @@ metadata {
 	}
 
 	tiles(scale: 2) {
-		htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 6)
+		htmlTile(name:"weatherHtml", action: "getWeatherHtml2", width: 6, height: 6)
         
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
         	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
@@ -81,7 +81,7 @@ metadata {
 
 mappings {
 	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
-	path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
+	path("/getWeatherHtml2") {action: [GET: "getWeatherHtml2"]}
 }
 
 def initialize() {
@@ -364,6 +364,37 @@ def log(message, level = "trace") {
 }
 
 def getWeatherHtml() { 
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+            	#header { 
+                  font-size: 1.5em; font-weight: bold;
+                  text-align: center;
+                }
+                #weather { 
+                  font-size: 1em; 
+                  text-align: center;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+            	<div class="container">
+                  <div id="header">Current Weather Conditions</div>
+                  <div id="weather">
+               	    Temp: ${getTemp()} </br> 
+                    Humidity: ${getHumidity()}% </br>
+            	    <img src="${state?.curWeather?.current_observation?.icon_url}">
+               	  </div>
+            	</div>
+            """
+        }
+    }
+}
+
+def getWeatherHtml2() { 
 	renderHTML {
     	head {
         	"""

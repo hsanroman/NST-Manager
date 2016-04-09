@@ -32,9 +32,13 @@ ___(FYI: Only one location per Manager Install is supported at this time)___
 
 
 * Once the location is selected you will see two inputs with a count of thermostats and protects that were discovered.
-* Right below the two inputs will be a Toggle to **Use Nest as Presence Device**.
+* Right below the two inputs will be a Toggle to **Add Nest Presence Device?**.
 
 	**This will install a seperate device thats sole purpose is to behave like a presence sensor. It is based on your nest locations Home/Away status.** 
+
+* Below the Presence Device will be a Toggle to **Add Weather Device?**.
+
+	**This will install a seperate device thats sole purpose is to pull in the local weather for that location and present it in a beautiful way with automatic refresh.**
 
  	<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 

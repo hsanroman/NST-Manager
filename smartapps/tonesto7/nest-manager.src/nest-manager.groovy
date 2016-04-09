@@ -137,9 +137,8 @@ def authPage() {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
                 if(!appDevType() && isAppUpdateAvail()) {
-                	paragraph "There is an App Update available!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update.", 
-                    	image: getAppImg("update_icon3.png")
-                    href "infoPage", title:"Update Change Log...", description: "Tap to view..."
+                	paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update the code.", 
+                    	image: getAppImg("update_icon.png")
                 }
             }
 			def structs = getNestStructures()
@@ -199,12 +198,10 @@ def authPage() {
                    		}
                 	}
                 }
-                
                 section("Preferences:") { 
         			href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nApp Logs: (${debugStatus()})\nDevice Logs: (${childDebugStatus()})\nTap to configure...", 
             			image: getAppImg("settings_icon.png")
                 }
-                
             }
             section(" ") { 
             	href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
@@ -238,14 +235,12 @@ def prefsPage() {
             	atomicState.exLogs = [] 
             }
         }
-        section ("Time Display:") {
-            input "useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?",  defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png")
-        }
-        section ("App Icons:") {
-            input (name: "disAppIcons", type: "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
-        }
         section("Nest Login:") {
         	href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
+        }
+        section ("Misc. Options:") {
+            input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?",  defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
+            input ("disAppIcons", "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
         }
 		section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false 
@@ -334,7 +329,7 @@ def onAppTouch(event) {
 
 def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("Refresh Received from Device...${devId}", "debug", true, true)
+	LogAction("Refresh Received from Device...${devId}", "debug", true,)
     if(childDebug && child) { child?.log("refresh: ${devId}") }
     return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
 }
@@ -2098,7 +2093,6 @@ def debugPrefPage() {
             }
             else { LogAction("Debug Logs are Disabled...", "info", false) }
         }
-        
         section ("Child Device Logs") {
             input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
             if (childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
@@ -2109,14 +2103,14 @@ def debugPrefPage() {
 
 def infoPage () {
     dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
-        section("Help and Instructions:") {
-        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/README.html", style:"embedded", required:false, title:"Readme File", 
-            	description:"View the Projects Readme File..."
-        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
-            	description:"View the Help and Instructions Page..."
-        }
         section("About this App:") {
             paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
+        }
+        section("Help and Instructions:") {
+        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/README.html", style:"embedded", required:false, title:"Readme File", 
+            	description:"View the Projects Readme File...", image: getAppImg("readme_icon.png")
+        	href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+            	description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
         section("Created by:") {
         	paragraph "Anthony S. (@tonesto7)"
