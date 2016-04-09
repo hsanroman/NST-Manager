@@ -329,7 +329,7 @@ def onAppTouch(event) {
 
 def refresh(child = null) {  // This is backward compatible; in device handlers, change parent.refresh()  to parent.refresh(this) to enable proper logging
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("Refresh Received from Device...${devId}", "debug", true,)
+	LogAction("Refresh Received from Device...${devId}", "debug", true)
     if(childDebug && child) { child?.log("refresh: ${devId}") }
     return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
 }
