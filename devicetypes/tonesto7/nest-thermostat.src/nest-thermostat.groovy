@@ -63,6 +63,7 @@ metadata {
 		command "heatingSetpointDown"
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
+        command "switchMode"
 
 		attribute "temperatureUnit", "string"
         attribute "targetTemp", "string"
@@ -128,11 +129,12 @@ metadata {
             state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-            state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
-			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
-            state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
-            state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
-            state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
+            state("off", 	action:"switchMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
+			state("heat", 	action:"switchMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
+            state("cool", 	action:"switchMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
+            state("auto", 	action:"switchMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
+            state("emergency heat", action:"switchMode", nextState: "updating", icon: "st.thermostat.emergency")
+            state ("updating", label:"Working", icon: "st.secondary.secondary")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
@@ -1013,7 +1015,38 @@ def setHome() {
 
 /************************************************************************************************
 |										HVAC MODE FUNCTIONS										|
-*************************************************************************************************/
+************************************************************************************************/
+
+def modes() {
+    	log.debug "Building Modes list"
+			def modesList  = ['off']
+           	if ( state?.can_heat == true ) { modesList.push('heat') }
+            if ( state?.can_cool == true ) { modesList.push('cool') }
+            if ( state?.can_heat == true || state?.can_cool == true ) { modesList.push('auto') }
+            
+            log.debug "Modes = ${modesList}"
+            return modesList
+}
+
+def switchMode() {
+	log.debug "in switchMode"
+	def currentMode = device.currentState("thermostatMode")?.value
+	def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
+	def modeOrder = modes()
+	def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
+	def nextMode = next(lastTriedMode)
+	switchToMode(nextMode)
+}
+
+def switchToMode(nextMode) {
+	log.debug "In switchToMode = ${nextMode}"
+	if (nextMode in modes()) {
+		state.lastTriedMode = nextMode
+		"$nextMode"()
+	} else {
+		log.debug("no mode method '$nextMode'")
+	}
+}
 
 void off() {
 	log.trace "off()..."
