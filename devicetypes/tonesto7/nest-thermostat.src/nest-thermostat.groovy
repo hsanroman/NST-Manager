@@ -977,8 +977,8 @@ void setCoolingSetpoint(Double reqtemp) {
 }
 
 /************************************************************************************************
-|									NEST PRESENCE FUNCTIONS										|
-*************************************************************************************************/
+|									                                    NEST PRESENCE FUNCTIONS										                            |
+************************************************************************************************/
 def setPresence() {
 	log.trace "setPresence()..."
     def pres = getNestPresence()
@@ -1013,9 +1013,9 @@ def setHome() {
     if (parent.setStructureAway(this, "false") ) { presenceEvent("home") }
 }
 
-/************************************************************************************************
+/**************************************************************
 |										HVAC MODE FUNCTIONS										|
-************************************************************************************************/
+***************************************************************/
 
 def getHvacModes() {
     log.debug "Building Modes list"
@@ -1028,7 +1028,7 @@ def getHvacModes() {
 }
 
 def changeMode() {
-	log.debug "changeMode.."
+    log.debug "changeMode.."
 	def currentMode = device.currentState("thermostatMode")?.value
 	def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
 	def modeOrder = getHvacModes()
@@ -1063,7 +1063,7 @@ void heat() {
     	if (parent.setHvacMode(this, "heat")) { 
         	hvacModeEvent("heat") 
         } else {
-		log.error "Error setting heat mode." 
+		    log.error "Error setting heat mode." 
     	}
     }
 }
@@ -1080,7 +1080,7 @@ void cool() {
     	if (parent.setHvacMode(this, "cool")) { 
         	hvacModeEvent("cool") 
         } else {
-       		log.error "Error setting cool mode." 
+       	    log.error "Error setting cool mode." 
     	}
     }
 }
