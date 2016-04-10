@@ -47,28 +47,27 @@ preferences {
 
 def mainPage() {
 	//log.trace "mainPage()"
+    state?.tempUnit = getTemperatureScale().toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
     	section("Use Remote Internal Sensor(s) to Control your Thermostat:") {
-        	def extSenDesc = (awayModes && homeModes) ? "Home/Away Modes are Selected\n\nTap to Modify..." : "Tap to Configure..."
-        	href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc,
-            			image: imgIcon("remote_sensor_icon.png")
+        	def motInUse = extMotionSensors ? "Motion Triggers Active" : ""
+        	def extSenDesc = (extTmpSensor && extSenHeatTemp && extSenCoolTemp && extSenTstat) ? 
+            	"${extSenTstat}\nRemote Sensors Selected (${extTmpSensor.size()})\n${motInUse}\nTap to Modify..." : "Tap to Configure..."
+        	href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: imgIcon("remote_sensor_icon.png")
        	}
 		section("Turn a Thermostat Off when a Window or Door is Open:") {
         	def qOpt = (wcModes || wcDays || (wcStartTime && wcStopTime)) ? "Schedule Options Selected...\n" : ""
         	def desc = (wcContacts && wcTstat) ? "${wcTstat.label}\nwith (${wcContacts ? wcContacts.size() : 0}) Contact(s)\n${qOpt}\nTap to Modify..." : "Tap to Configure..."
-        	href "wcPage", title: "Configure Sensors to Watch...", description: desc,
-            			image: imgIcon("open_contact.png")
+        	href "wcPage", title: "Configure Sensors to Watch...", description: desc, image: imgIcon("open_contact.png")
        	}
         section("Turn a Thermostat Off based on Outside temps:") {
         	def qOpt = (exModes || exDays || (exStartTime && exStopTime)) ? "Schedule Options Selected...\n" : ""
         	def desc = (!exUseWeather && exTemp && exTstat) ? ("${exTstat?.label}\nwith External Temp Sensor\n${qOpt}\nTap to Modify...") : (exUseWeather ? "${exTstat?.label}\nwith External Weather\n${qOpt}\nTap to Modify..." : "Tap to Configure...")
-        	href "extTempsPage", title: "Turn off based on External Temps...", description: desc,
-            			image: imgIcon("external_temp_icon.png")
+        	href "extTempsPage", title: "Turn off based on External Temps...", description: desc, image: imgIcon("external_temp_icon.png")
        	}
         section("Set Nest Presence Based on ST Modes:") {
-        	def presDesc = (awayModes && homeModes) ? "Home/Away Modes are Selected\n\nTap to Modify..." : "Tap to Configure..."
-        	href "modePresPage", title: "Mode Automations", description: presDesc,
-            			image: imgIcon("mode_automation_icon.png")
+        	def presDesc = (awayModes || homeModes) ? "${homeModes ? "Home: $homeModes" : ""}${awayModes ? "\n\nAway: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+        	href "modePresPage", title: "Mode Automations", description: presDesc, image: imgIcon("mode_automation_icon.png")
        	}
     }
 }
@@ -107,11 +106,10 @@ def getAutomationsActive() {
 }
 
 def subscriber() {
-    
-    if(extSensorDay || extSensorNight || extSenTstat) {
+    if(extTmpSensor || extSenTstat) {
     	subscribe(location, locationChgEvt)
-		if(extSensorDay) { subscribe(extSensorDay, "temperature", extSenTempEvt) }
-        if(extSensorNight) { subscribe(extSensorNight, "temperature", extSenTempEvt) }
+		if(extTmpSensor) { subscribe(extTmpSensor, "temperature", extSenTempEvt) }
+        //if(extSensorNight) { subscribe(extSensorNight, "temperature", extSenTempEvt) }
 		if(extSenTstat) {
             subscribe(extSenTstat, "temperature", extSenTempEvt)
 		    subscribe(extSenTstat, "thermostatMode", extSenTempEvt) 
@@ -145,91 +143,108 @@ def updateWeather() {
 *******************************************************************************/
 def extSensorPage() {
 	dynamicPage(name: "extSensorPage", title: "Remote Sensor Automation", uninstall: false) {
-    	def req = (extSenTstat || extSensorDay || extSensorNight) ? true : false
+    	def req = ((!extTmpSensor) && extSenTstat) ? true : false
         section("Choose a Thermostat... ") {
-            input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req
-        }
-        if(extSenTstat) {
-        	section("Mirror Changes from the primary Thermostat to these Thermostats... ") {
-            	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats", submitOnChange: true, required: false
+            input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
+            if(extSenTstat) { 
+				def tmpVal = "${getDeviceTemp(extSenTstat)}${state?.tempUnit}"    
+                paragraph "Thermostat Temp: ${tmpVal}", image: " "
+            	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats", submitOnChange: true, required: false,
+	                	image: imgIcon("nest_like.png")
+                if(extSenTstatsMirror) { 
+                	extSenTstatsMirror.each { t ->
+						def tmpVal2 = "${getDeviceTemp(extSenTstatsMirror)}${state?.tempUnit}"    
+                		paragraph "Thermostat Temp: ${tmpVal2}", image: " "
+                   	}
+               	}
         	}
         }
-        section("Optionally choose temperature sensor to use instead of the thermostat's... ") {
-            input "extSensorDay", "capability.temperatureMeasurement", title: "Day Temp Sensors", submitOnChange: true, required: req, multiple: true
-            input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true
+        section("Choose Temperature Sensor(s) to Use Instead of the Thermostat's Temp... ") {
+        	paragraph "If more than one sensor is selected then will be combined and the temp averaged between them"
+            input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
+            		image: imgIcon("temperature.png")
+            //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
+            //		image: imgIcon("temperature.png")
+            def tmpVal = (extTmpSensor.size() > 1) ? "Sensor Temp (average): ${getMultiTempAvg(extTmpSensor)}${state?.tempUnit}" : "Sensor Temp: ${getDeviceTemp(extTmpSensor)}${state?.tempUnit}"
+                paragraph "${tmpVal}", image: " "
         }
-        if(extSenTstat && (extSensorDay && extSensorNight)) {
+        if(extSenTstat && extTmpSensor) {
             section("Rule Type ") {
-                input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true)
+                input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true,
+                	image: imgIcon("rule_icon.png"))
             }
-            // Would like this set somewhere else
-            section("Heat setting..." ) {
-                input "extSenHeatTemp", "decimal", title: "Desired Cool Temp (Degrees)...", submitOnChange: true
+            section("Desired Temperatures..." ) {
+                input "extSenHeatTemp", "number", title: "Cool Temp (Degrees)...", submitOnChange: true, image: imgIcon("heat_icon.png")
+                input "extSenCoolTemp", "number", title: "Heat Temp (Degrees)...", submitOnChange: true, image: imgIcon("cool_icon.png")
             }
-            section("Cool setting...") {
-                input "extCoolTemp", "decimal", title: "Desired Heat Temp (Degrees)...", submitOnChange: true
-            }
-
             section("Optionally Evaluate Temps when these sensors detect motion... ") {
-                input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true
+                input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
+                		image: imgIcon("motion_icon.png")
             }
             section ("Options") {
-                input "extSenModes", "mode", title: "What Modes?", multiple: true, required: false, submitOnChange: true
+                input "extSenModes", "mode", title: "What Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
 
                 // Should be moved to parent app - these should be shared amongst all children
                 input "extTimeBetweenRuns", "number", title: "Time between Fan Runs", required: true, defaultValue: 60, submitOnChange: true
-                input "degreesOfSeperation", "decimal", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3, submitOnChange: true
+                input "degreesOfSeperation", "number", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3, submitOnChange: true
             }
         }
 	}
 }
+
 
 def locationChgEvt(evt) {
 	log.debug "locationChgEvt mode: $evt.value, heat: $heat, cool: $cool"
 	extSenEvtEval()
 }
 
-def extTempHandler(evt) {
+def extSenTempEvt(evt) {
 	extSenEvtEval()
 }
 
 private extSenEvtEval() {
-	if (sensor) {
-		def threshold = degreesOfSeperation
-		def tm = extSenTstat.currentThermostatMode 
-		def ct = extSenTstat.currentTemperature
-		def currentTemp = sensor.currentTemperature
-		log.trace("evtEval:, mode: $tm -- temp: $ct, heat: $extSenTstat.currentHeatingSetpoint, cool: $extSenTstat.currentCoolingSetpoint -- "  +
-			"sensor: $currentTemp, heat: $heatingSetpoint, cool: $coolingSetpoint")
-		if (tm in ["cool","auto"]) {
-			// air conditioner
-			if (currentTemp - coolingSetpoint >= threshold) {
-				extSenTstat.setCoolingSetpoint(ct - 2)
-				log.debug "extSenTstat.setCoolingSetpoint(${ct - 2}), ON"
+	if (extTmpSensor) {
+		def tempThreshold = degreesOfSeperation.toInteger()
+		def hvacMode = extSenTstat?.currentThermostatMode 
+		def curTstatTemp = getDeviceTemp(extSenTstat)
+        def curCoolSetpoint = extSenTstat?.currentCoolingSetpoint.toInteger()
+        def curHeatSetpoint = extSenTstat?.currentHeatingSetpoint.toInteger()
+        def curSenTemp = extTmpSensor ? getMultiTempAvg(extTmpSensor) : null
+        log.debug "curTemp: ${curSenTemp}"
+        
+		log.trace("extSenEvtEval:, HvacMode: $hvacMode | Thermostat Temp: $curTstatTemp | Current Heat Setpoint: $curHeatSetpoint | Current Cool Setpoint: $curCoolSetpoint | "  +
+			"Sensor Temp: $curSenTemp | Desired Heat Temp: $extSenHeatTemp | Desired Cool Temp: $extSenCoolTemp")
+		
+        if (hvacMode in ["cool","auto"]) {
+			if ((curSenTemp - extSenCoolTemp.toInteger()) >= tempThreshold) {
+				extSenTstat?.setCoolingSetpoint(curTstatTemp - 2)
+				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - 2}), ON"
 			}
-			else if (coolingSetpoint - currentTemp >= threshold && ct - extSenTstat.currentCoolingSetpoint >= threshold) {
-				extSenTstat.setCoolingSetpoint(ct + 2)
-				log.debug "extSenTstat.setCoolingSetpoint(${ct + 2}), OFF"
+			else if (((extSenCoolTemp.toInteger() - curSenTemp) >= tempThreshold) && (curTstatTemp - curCoolSetpoint) >= tempThreshold) {
+				extSenTstat?.setCoolingSetpoint(curTstatTemp + 2)
+				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + 2}), OFF"
 			}
 		}
-		if (tm in ["heat","emergency heat","auto"]) {
-			// heater
-			if (heatingSetpoint - currentTemp >= threshold) {
-				extSenTstat.setHeatingSetpoint(ct + 2)
-				log.debug "extSenTstat.setHeatingSetpoint(${ct + 2}), ON"
+		if (hvacMode in ["heat","emergency heat","auto"]) {
+            //log.debug "${(extSenHeatTemp - curSenTemp)}"
+			if ((extSenHeatTemp.toInteger() - curSenTemp) >= tempThreshold) {
+				extSenTstat?.setHeatingSetpoint(curTstatTemp + 2)
+				log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + 2}), ON"
 			}
-			else if (currentTemp - heatingSetpoint >= threshold && extSenTstat.currentHeatingSetpoint - ct >= threshold) {
-				extSenTstat.setHeatingSetpoint(ct - 2)
-				log.debug "thextSenTstatermostat.setHeatingSetpoint(${ct - 2}), OFF"
+			else if (((curSenTemp - extSenHeatTemp) >= tempThreshold) && (curHeatSetpoint - curTstatTemp) >= tempThreshold) {
+				extSenTstat?.setHeatingSetpoint(curTstatTemp - 2)
+				log.debug "extSenTstatermostat.setHeatingSetpoint(${curTstatTemp - 2}), OFF"
 			}
 		}
 	}
 	else {
-		extSenTstat.setHeatingSetpoint(heatingSetpoint)
-		extSenTstat.setCoolingSetpoint(coolingSetpoint)
+		extSenTstat.setHeatingSetpoint(extSenHeatTemp.toDouble())
+		extSenTstat.setCoolingSetpoint(extSenCoolTemp.toDouble())
         if(extSenTstatsMirror) {
-            extSenTstatsMirror.setHeatingSetpoint(heatingSetpoint)
-		    extSenTstatsMirror.setCoolingSetpoint(coolingSetpoint)
+        	extSenTstatsMirror.each { t ->
+	            t.setHeatingSetpoint(extSenHeatTemp.toDouble())
+			    t.setCoolingSetpoint(extSenCoolTemp.toDouble())
+        	}
         }
 		extSenTstat.poll()
 	}
@@ -241,6 +256,28 @@ def coolingSetpointHandler(evt) {
 }
 def heatingSetpointHandler (evt) {
 	log.debug "heatingSetpointHandler ()"
+}
+
+def getDeviceTemp(dev) {
+	return dev ? dev?.currentValue("temperature") : null
+}
+
+def getMultiTempAvg(temps) {
+	def tmpAvg = []
+    def tempVal = 0
+	if(temps.size() > 1) {
+    	temps.each { tp ->
+			tmpAvg << tp?.currentTemperature
+        }
+        if(tmpAvg && tmpAvg.size() > 1) {
+            def avg = Math.round(tmpAvg.sum() / tmpAvg.size())
+            log.debug "avg: $avg"
+            if(avg) { tempVal = avg.toInteger() }
+        }
+    } else { tempVal = temps?.currentTemperature }
+    
+    log.debug "tempVal: $tempVal"
+    return tempVal.toInteger()
 }
 
 /******************************************************************************  
@@ -255,6 +292,10 @@ def wcPage() {
             		image: imgIcon("contact_icon.png")
             input name: "wcTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
             		image: imgIcon("nest_like.png")
+            if(wcTstat) {
+            	input name: "wcTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+            		image: imgIcon("nest_like.png")
+            }
 		}
         if(wcContacts && wcTstat) {
         	section("Only During these Days, Times, or Modes:") {
@@ -323,6 +364,12 @@ def wcCheck() {
                     if(lastMode) {
                         if(setTstatMode(wcTstat, lastMode)) {
                             state.wcTurnedOff = false
+                            if(wcTstatMir) { 
+               					wcTstatMir.each { t ->
+                    				setTstatMode(t, lastMode)
+                                    log.debug("Restoring ${lastMode} to ${t}")
+                    			}
+                			}
                             LogAction("${wcTstat.label} has been restored to ${lastMode} Mode because a selected Contacts have Been Closed...", "info", true)
                             if(sendPushOnWc) {
                                 parent?.sendMsg("Info", "${wcTstat.label} has been restored to ${lastMode} Mode because a selected Contacts have Been Closed...")
@@ -346,6 +393,12 @@ def wcCheck() {
                 log.debug("Selected Contacts are Open turning off ${wcTstat}")
                 state.wcTurnedOff = true
                 wcTstat?.off()
+                if(wcTstatMir) { 
+               		wcTstatMir.each { t ->
+                    	t.off()
+                        log.debug("Turned off ${t}")
+                    }
+                }
                 LogAction("${wcTstat.label} has been turned off because a selected Contact has Been Opened", "info", true)
                 if(sendPushOnWc) {
                     parent?.sendMsg("Alert", "${wcTstat.label} has been turned off because a selected Contact has Been Opened")
@@ -442,7 +495,7 @@ def extTempsPage() {
                 def tmpVal = (location?.temperatureScale == "C") ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
                 paragraph "Current Weather Temp: $tmpVal", image: " "
                 input name: "locZipcode", type: "number", title: "Custom ZipCode (Default is Hub Loction)?", submitOnChange: true, required: false,
-                	    image: imgIcon("zipcode_icon.png")
+                	    image: imgIcon("location_icon.png")
                 
                 input name: "weatherRfrshVal", type: "number", title: "Update Weather (in Minutes)?", default: 5, submitOnChange: true, required: false,
                 	    image: imgIcon("start_time_icon.png")
