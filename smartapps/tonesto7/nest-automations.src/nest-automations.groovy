@@ -255,6 +255,10 @@ def wcPage() {
             		image: imgIcon("contact_icon.png")
             input name: "wcTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
             		image: imgIcon("nest_like.png")
+            if(wcTstat) {
+            	input name: "wcTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+            		image: imgIcon("nest_like.png")
+            }
 		}
         if(wcContacts && wcTstat) {
         	section("Only During these Days, Times, or Modes:") {
@@ -323,6 +327,12 @@ def wcCheck() {
                     if(lastMode) {
                         if(setTstatMode(wcTstat, lastMode)) {
                             state.wcTurnedOff = false
+                            if(wcTstatMir) { 
+               					wcTstatMir.each { t ->
+                    				setTstatMode(t, lastMode)
+                                    log.debug("Restoring ${lastMode} to ${t}")
+                    			}
+                			}
                             LogAction("${wcTstat.label} has been restored to ${lastMode} Mode because a selected Contacts have Been Closed...", "info", true)
                             if(sendPushOnWc) {
                                 parent?.sendMsg("Info", "${wcTstat.label} has been restored to ${lastMode} Mode because a selected Contacts have Been Closed...")
@@ -346,6 +356,12 @@ def wcCheck() {
                 log.debug("Selected Contacts are Open turning off ${wcTstat}")
                 state.wcTurnedOff = true
                 wcTstat?.off()
+                if(wcTstatMir) { 
+               		wcTstatMir.each { t ->
+                    	t.off()
+                        log.debug("Turned off ${t}")
+                    }
+                }
                 LogAction("${wcTstat.label} has been turned off because a selected Contact has Been Opened", "info", true)
                 if(sendPushOnWc) {
                     parent?.sendMsg("Alert", "${wcTstat.label} has been turned off because a selected Contact has Been Opened")
