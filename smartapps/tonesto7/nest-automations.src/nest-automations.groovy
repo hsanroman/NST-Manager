@@ -154,7 +154,7 @@ def extSensorPage() {
                 input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
                 if(extSenTstat) { 
                     def tmpVal = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"    
-                    paragraph "Thermostat Temp: ${tmpVal}", image: " "
+                    paragraph "Thermostat Room Temp: ${tmpVal}", image: " "
                     input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Changes on these Thermostats", submitOnChange: true, required: false,
                             image: imgIcon("nest_like.png")
                     if(extSenTstatsMirror) { 
@@ -184,8 +184,9 @@ def extSensorPage() {
                         image: imgIcon("rule_icon.png"))
                 }
                 section("Desired Temperatures..." ) {
-                    input "extSenHeatTemp", "number", title: "Cool Temp (Degrees)...", submitOnChange: true, image: imgIcon("heat_icon.png")
-                    input "extSenCoolTemp", "number", title: "Heat Temp (Degrees)...", submitOnChange: true, image: imgIcon("cool_icon.png")
+                   
+                    input "extSenHeatTemp", "number", title: "Heat Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("heat_icon.png")
+                    input "extSenCoolTemp", "number", title: "Cool Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("cool_icon.png")
                 }
                 section("Optionally Evaluate Temps when these sensors detect motion... ") {
                     input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
@@ -193,7 +194,7 @@ def extSensorPage() {
                 }
                 section ("Options") {
                     input "extSenModes", "mode", title: "Which Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
-                    input "extTimeBetweenRuns", "number", title: "Time between Fan Runs", required: true, defaultValue: 60, submitOnChange: true
+                    input "extTimeBetweenRuns", "number", title: "Time Between Fan Runs (In Minutes)", required: true, defaultValue: 60, submitOnChange: true
                     input "degreesOfSeperation", "number", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3, submitOnChange: true
                 }
             }
@@ -232,7 +233,6 @@ def extSenTempEvt(evt) {
 
 private extSenEvtEval() {
 	if (state?.extSenEnabled && extTmpSensor && extSenTstat) {
-    	log.debug "${extTmpSensor*.currentTemperature}"
 		def tempThreshold = degreesOfSeperation.toInteger()
 		def hvacMode = extSenTstat?.currentThermostatMode 
 		def curTstatTemp = getDeviceTemp(extSenTstat).toInteger()
@@ -256,6 +256,9 @@ private extSenEvtEval() {
 				extSenTstat?.setCoolingSetpoint(curTstatTemp + 2)
 				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + 2}), OFF"
 			}
+            if(curTstatOperState != "idle" && curTstatFanMode == "auto" && getFanRunOk()) {
+            
+            }
 		}
         log.debug "Sensor Heat Diff: ${curSenTemp - extSenHeatTemp.toInteger()}"
 		log.debug "Heat SetPoint and Tstat Temp Diff: ${(curHeatSetpoint - curTstatTemp)}"
@@ -272,13 +275,11 @@ private extSenEvtEval() {
 		}
 	}
 	else {
-		extSenTstat.setHeatingSetpoint(extSenHeatTemp.toDouble())
-		extSenTstat.setCoolingSetpoint(extSenCoolTemp.toDouble())
+		extSenTstat?.setHeatingSetpoint(extSenHeatTemp.toDouble())
+		extSenTstat?.setCoolingSetpoint(extSenCoolTemp.toDouble())
         if(extSenTstatsMirror) {
-        	extSenTstatsMirror.each { t ->
-	            t.setHeatingSetpoint(extSenHeatTemp.toDouble())
-			    t.setCoolingSetpoint(extSenCoolTemp.toDouble())
-        	}
+        	extSenTstatsMirror*.setHeatingSetpoint(extSenHeatTemp.toDouble())
+			extSenTstatsMirror*.setCoolingSetpoint(extSenCoolTemp.toDouble())
         }
 	}
 }
@@ -290,7 +291,11 @@ def coolingSetpointHandler(evt) {
 def heatingSetpointHandler(evt) {
 	log.debug "heatingSetpointHandler()"
 }
-
+def getFanRunOk() { 
+	def val = extTimeBetweenRuns ? extTimeBetweenRuns * 60 : 3600 
+    return (getLastFanRunDtSec() > val) ? true : false
+}
+def getLastFanRunDtSec() { return !state?.lastFanRunDt ? 100000 : GetTimeDiffSeconds(state?.lastFanRunDt).toInteger() }
 def getDeviceTemp(dev) {
 	return dev ? dev?.currentValue("temperature").toString().replaceAll("\\[|\\]", "") : null
 }
@@ -299,16 +304,12 @@ def getDeviceTempAvg(items) {
 	def tmpAvg = []
     def tempVal = 0
 	if(items.size() > 1) {
-    	items?.each { tp ->
-			tmpAvg << tp?.currentTemperature
-        }
+		tmpAvg = items*.currentTemperature
         if(tmpAvg && tmpAvg.size() > 1) {
             tempVal = Math.round(tmpAvg.sum() / tmpAvg.size())
         }
     } 
     else { tempVal = getDeviceTemp(items) }
-    
-    log.debug "tempVal: $tempVal"
     return tempVal.toInteger()
 }
 
