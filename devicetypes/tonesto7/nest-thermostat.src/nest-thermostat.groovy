@@ -1017,15 +1017,21 @@ def setHome() {
 |										HVAC MODE FUNCTIONS										|
 ************************************************************************************************/
 
-def modes() {
-    	log.debug "Building Modes list"
-			def modesList  = ['off']
-           	if ( state?.can_heat == true ) { modesList.push('heat') }
-            if ( state?.can_cool == true ) { modesList.push('cool') }
-            if ( state?.can_heat == true || state?.can_cool == true ) { modesList.push('auto') }
-            
-            log.debug "Modes = ${modesList}"
-            return modesList
+}
+
+def changeMode() {
+	log.debug "in switchMode"
+	def currentMode = device.currentState("thermostatMode")?.value
+	def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
+	def modeOrder = getHvacModes()
+	def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
+	def nextMode = next(lastTriedMode)
+	setHvacMode(nextMode)
+}
+
+def setHvacMode(nextMode) {
+	log.debug "setHvacMode(${nextMode})"
+=======
 }
 
 def switchMode() {
@@ -1044,7 +1050,6 @@ def switchToMode(nextMode) {
 		state.lastTriedMode = nextMode
 		"$nextMode"()
 	} else {
-		log.debug("no mode method '$nextMode'")
 	}
 }
 
