@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.2"}
+def devVer() { return "2.0.0"}
 
 // for the UI
 metadata {
@@ -87,9 +87,6 @@ metadata {
     			attributeState("default", label:'${currentValue}°')
   			}
   			tileAttribute("device.temperature", key: "VALUE_CONTROL") {
-    			//attributeState("default", action: "setTemperature")
-                //attributeState("VALUE_UP", action: "temperatureUp")
- 				//attributeState("VALUE_DOWN", action: "temperatureDown")
             	attributeState("default", action: "levelUpDown")
  				attributeState("VALUE_UP", action: "levelUp")
   				attributeState("VALUE_DOWN", action: "levelDown")
@@ -98,12 +95,13 @@ metadata {
     			attributeState("default", label:'${currentValue}%', unit:"%")
   			}
   			tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
-   				attributeState("idle",backgroundColor:"#44b621")
-   				attributeState("heating",backgroundColor:"#ffa81e")
-   				attributeState("fan only",		backgroundColor:"#2ABBF0")
-            	attributeState("pending heat",	backgroundColor:"#2ABBF0")
-            	attributeState("pending cool",	backgroundColor:"#2ABBF0")
-            	attributeState("vent economizer",	backgroundColor:"#2ABBF0")
+   				attributeState("idle",            backgroundColor:"#44B621")
+   				attributeState("heating",         backgroundColor:"#FFA81E")
+                attributeState("cooling",         backgroundColor:"#2ABBF0")
+   				attributeState("fan only",		  backgroundColor:"#145D78")
+            	attributeState("pending heat",	  backgroundColor:"#B27515")
+            	attributeState("pending cool",	  backgroundColor:"#197090")
+            	attributeState("vent economizer", backgroundColor:"#8000FF")
   			}
   			tileAttribute("device.thermostatMode", key: "THERMOSTAT_MODE") {
     			attributeState("off", label:'${name}')
@@ -119,8 +117,9 @@ metadata {
     			attributeState("default", label:'${currentValue}')
   			}
         }
-        standardTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-        	state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png")
+        valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
+        	state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
+            		backgroundColors: getTempColors())
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
 	        state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_off_icon.png")
@@ -129,10 +128,6 @@ metadata {
             state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-			//state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "st.thermostat.heating-cooling-off")
-			//state("heat", action:"thermostat.cool", 	nextState: "cool", 	icon: "st.thermostat.heat")
-            //state("cool", action:"thermostat.auto", 	nextState: "auto", 	icon: "st.thermostat.cool")
-            //state("auto", action:"thermostat.off", 	nextState: "off", 	icon: "st.thermostat.auto")
             state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
 			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
             state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
@@ -140,22 +135,17 @@ metadata {
             state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
-       		//state "auto",action:"fanOn", icon: "st.thermostat.fan-auto"
-            //state "on",action:"fanAuto", icon: "st.thermostat.fan-on"
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
             state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-        	//state "present", 	label:'home', 		action: "setPresence",	icon: "st.Home.home2"
-			//state "away", 	label:'away', 		action: "setPresence", 	icon: "st.Transportation.transportation5"
-            //state "auto-away",label:'auto\naway', action: "setPresence", 	icon: "st.Transportation.transportation5"
-			state "present", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "home", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
 			state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown",	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
-			state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
+			state "default", label: 'refresh', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
 		}
         valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Firmware:\nv${currentValue}')
@@ -165,8 +155,6 @@ metadata {
 		}
         valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state("default", label: 'Network Status:\n${currentValue}')
-            //state("on", label: 'Network Status:\n\Online', backgroundColor:"#44b621")
-            //state("off", label: 'Network Status:\nOffline', backgroundColor:"#bc2323")
 		}
         valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
 			state "true", 	label: 'Debug:\n${currentValue}'
@@ -175,32 +163,32 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
-        standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false,  decoration: "flat") {
-			state "heatingSetpointUp", label:'  ', action:"heatingSetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#bc2323"
+        standardTile("heatingSetpointUp", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "heatingSetpointUp", label:'  ', action:"heatingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
 		}
         
         valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false) {
-			state "default", label:'${currentValue}', unit:"Heat", backgroundColor:"#bc2323"
+			state "default", label:'${currentValue}', unit:"Heat", backgroundColor:"#FF3300"
 		}
         
         valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false) {
-			state "default", label:'${currentValue}', unit:"Cool", backgroundColor:"#1e9cbb"
+			state "default", label:'${currentValue}', unit:"Cool", backgroundColor:"#0099FF"
 		}
 
 		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
-			state "heatingSetpointDown", label:'  ', action:"heatingSetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#bc2323"
+			state "heatingSetpointDown", label:'  ', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
 		}
         
         standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
-			state "coolingSetpointUp", label:'  ', action:"coolingSetpointUp", icon:"st.thermostat.thermostat-up", backgroundColor:"#1e9cbb"
+			state "coolingSetpointUp", label:'  ', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
 		}
 
 		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
-			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#1e9cbb"
+			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
 		}
         
         valueTile("lastConnection", "device.lastConnection", width: 4, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Nest Last Checked-In:\n${currentValue}')
+			state("default", label: 'Nest Checked-In At:\n${currentValue}')
 	    }
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
 			state("default", label: 'Data Last Received:\n${currentValue}')
@@ -209,6 +197,11 @@ metadata {
         	state "ok", label: "API Status:\nOK"
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
 		}
+        valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
+			state "default", label:'${currentValue}'
+		}
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3)
+        
 		main( tileMain() )
 		details( tileSelect() )
 	}
@@ -219,18 +212,44 @@ def tileMain() {
 }
 
 def tileSelect() { 
-	//log.debug "hvacMode: ${getHvacMode()}"
-	if(getHvacMode() == "heat" || getHvacMode() == "cool") {
-    	//log.debug "tileSelect if | hvacMode: ${getHvacMode()}"
-        return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "onlineStatus", "apiStatus", "softwareVer", "hasLeaf", "lastConnection", "refresh", 
-        		"lastUpdatedDt", "softwareVer", "debugOn", "devTypeVer"] 
-    } 
-    else if(getHvacMode() == "auto" || getHvacMode() == "unknown") { 
-    	//log.debug "tileSelect else if | hvacMode: ${getHvacMode()}"
-    	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "apiStatus", "hasLeaf", "lastConnection", "refresh", 
-                "lastUpdatedDt", "softwareVer", "debugOn", "devTypeVer"]
-    }
+	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+        		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
+	
+    //Comment out the return section above and uncomment this section to remove the HTML tiles and restore the original ST tiles
+	/*return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+      		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
+            "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]*/
+}
+
+def getTempColors() {
+	def colorMap
+	if (wantMetric()) {
+		colorMap = [
+			// Celsius Color Range
+			[value: 0, color: "#153591"],
+			[value: 7, color: "#1e9cbb"],
+			[value: 15, color: "#90d2a7"],
+			[value: 23, color: "#44b621"],
+			[value: 29, color: "#f1d801"],
+			[value: 33, color: "#d04e00"],
+			[value: 36, color: "#bc2323"]
+        	]
+	} else {
+		colorMap = [
+			// Fahrenheit Color Range
+			[value: 40, color: "#153591"],
+			[value: 44, color: "#1e9cbb"],
+			[value: 59, color: "#90d2a7"],
+			[value: 74, color: "#44b621"],
+			[value: 84, color: "#f1d801"],
+			[value: 92, color: "#d04e00"],
+			[value: 96, color: "#bc2323"]
+        	]
+	}
+}
+
+mappings {
+	path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
 }
 
 def initialize() {
@@ -243,21 +262,20 @@ def parse(String description) {
 
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh()
+	poll()    
 }
 
 def refresh() {
-	parent.refresh()
+	parent.refresh(this)
 }
 
 def generateEvent(Map results) {
 	//Logger("generateEvents Parsing data ${results}")
   	Logger("-------------------------------------------------------------------", "warn")
-	
     if(results) {
         state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
         debugOnEvent(parent.settings?.childDebug)
-		tempUnitEvent(results?.temperature_scale)   // Maybe use getTemperatureScale()  // SmartThings built-in to get ST scale rather than Nest scale
+		tempUnitEvent(getTemperatureScale())
 		canHeatCool(results?.can_heat, results?.can_cool)
         hasFan(results?.has_fan.toString())
         presenceEvent(parent?.locationPresence())
@@ -273,7 +291,7 @@ def generateEvent(Map results) {
         apiStatusEvent(parent?.apiIssues())
        
 		def hvacMode = results?.hvac_mode
-		def tempUnit = device.latestValue('temperatureUnit')
+		def tempUnit = state?.tempUnit
 		switch (tempUnit) {
 			case "C":
 				def heatingSetpoint = 0.0
@@ -337,6 +355,7 @@ def generateEvent(Map results) {
         }
 	}
     lastUpdatedEvent()
+    //sendEvent(name:"devInfoHtml", value: getInfoHtml(), isStateChange: true)
     return null
 }
 
@@ -346,9 +365,10 @@ def getDataByName(String name) {
 
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestProtVer().ver.toString()
+    def pubVer = parent?.latestTstatVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    state?.devTypeVer = newData
     if(curData != newData) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
     	sendEvent(name: 'devTypeVer', value: newData, displayed: false)
@@ -357,11 +377,12 @@ def deviceVerEvent() {
 
 def debugOnEvent(debug) {
 	def val = device.currentState("debugOn")?.value
-    def stateVal = debug ? "On" : "Off"
-	if(!val.equals(stateVal)) {
-    	log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-   	} else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+	if(!val.equals(dVal)) {
+    	log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+   	} else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def lastCheckinEvent(checkin) {
@@ -371,6 +392,7 @@ def lastCheckinEvent(checkin) {
     	tf.setTimeZone(location?.timeZone)
    	def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
 	def lastChk = device.currentState("lastConnection")?.value
+    state?.lastConnection = lastConn?.toString()
     if(!lastChk.equals(lastConn?.toString())) {
         log.debug("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
         sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false, isStateChange: true)
@@ -384,6 +406,7 @@ def lastUpdatedEvent() {
     	tf.setTimeZone(location?.timeZone)
    	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
         Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
     	sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
@@ -392,6 +415,7 @@ def lastUpdatedEvent() {
 
 def softwareVerEvent(ver) {
     def verVal = device.currentState("softwareVer")?.value
+    state?.softwareVer = ver
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
         sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false, isStateChange: true)
@@ -407,7 +431,7 @@ def tempUnitEvent(unit) {
     } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
-def targetTempEvent(targetTemp) {
+def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
@@ -421,7 +445,7 @@ def thermostatSetpointEvent(Double targetTemp) {
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
 	    log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
+	    sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
 	} else { Logger("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
 }
 
@@ -430,7 +454,7 @@ def temperatureEvent(Double tempVal) {
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
     if(!temp.equals(rTempVal.toString())) {
         log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-    	sendEvent(name:'temperature', value: rTempVal, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+    	sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
     } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -442,7 +466,7 @@ def heatingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-    	sendEvent(name:'heatingSetpoint', value: rTempVal, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
+    	sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
     } else { Logger("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
@@ -454,13 +478,14 @@ def coolingSetpointEvent(Double tempVal) {
         def disp = false
 		def hvacMode = getHvacMode()
 		if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-    	sendEvent(name:'coolingSetpoint', value: rTempVal, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
+    	sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
     } else { Logger("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
 def hasLeafEvent(Boolean hasLeaf) {
 	def leaf = device.currentState("hasLeaf")?.value
     def lf = hasLeaf ? "On" : "Off"
+    state?.hasLeaf = hasLeaf
 	if(!leaf.equals(lf)) {
         log.debug("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
 		sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
@@ -479,7 +504,7 @@ def presenceEvent(presence) {
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
-    def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
@@ -498,12 +523,13 @@ def hvacModeEvent(mode) {
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
         state?.hvac_mode = newMode
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
+    
 } 
 
 def fanModeEvent(fanActive) {
 	def val = (fanActive == "true") ? "on" : "auto"
 	def fanMode = device.currentState("thermostatFanMode")?.value
-	if(!fanMode.equals(val) && state?.has_fan == true) {
+	if(!fanMode.equals(val)) {
 		log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
         sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
     } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
@@ -521,6 +547,7 @@ def operatingStateEvent(operatingState) {
 def onlineStatusEvent(online) {
 	def isOn = device.currentState("onlineStatus")?.value
     def val = online ? "Online" : "Offline"
+    state?.onlineStatus = val
 	if(!isOn.equals(val)) { 
         log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
    		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -529,7 +556,8 @@ def onlineStatusEvent(online) {
 
 def apiStatusEvent(issue) {
 	def appStat = device.currentState("apiStatus")?.value
-    def val = issue ? "issue" : "ok"
+    def val = issue ? "Issue" : "Ok"
+    state?.apiStatus = val
 	if(!appStat.equals(val)) { 
         log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
    		sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -542,7 +570,8 @@ def canHeatCool(canHeat, canCool) {
 }
 
 def hasFan(hasFan) {
-	state?.has_fan = !hasFan ? false : true
+	def val = (hasFan == "true") ? true : false
+	state?.has_fan = val
 }	
 
 def isEmergencyHeat(val) {
@@ -581,7 +610,7 @@ def getHvacMode() {
 
 def getNestPresence() { 
 	try { return device.currentState("nestPresence").value.toString() } 
-	catch (e) { return "present" }
+	catch (e) { return "home" }
 }
 
 def getPresence() { 
@@ -606,7 +635,7 @@ def getTemp() {
 
 def tempWaitVal() { return parent?.getChildWaitVal() ? parent?.getChildWaitVal().toInteger() : 4 }
 
-def wantMetric() { return (device.currentValue('temperatureUnit') == "C") }
+def wantMetric() { return (state?.tempUnit == "C") }
 
 
 /************************************************************************************************
@@ -704,8 +733,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() + 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         } else {
             //log.debug "Reducing by 1 increment"
@@ -715,8 +744,8 @@ void levelUpDown(tempVal, chgType = null) {
                 if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
                 targetVal = targetVal.toDouble() - 1.0
-                if (targetVal < 51.0) { targetVal = 51.0 }
-                if (targetVal > 89.0) { targetVal = 89.0 }
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
         }
 
@@ -767,7 +796,7 @@ void levelUpDown(tempVal, chgType = null) {
 def canChangeTemp() {
     //log.trace "canChangeTemp()..."
     def curPres = getNestPresence()
-    if (curPres != "away" || curPres != "auto-away") {
+    if (curPres == "home") {
 		def hvacMode = getHvacMode()
 		switch (hvacMode) {
     		case "heat":
@@ -819,24 +848,28 @@ void changeSetpoint(val) {
     }
 }
 
+// Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
 void setHeatingSetpoint(temp) {
     setHeatingSetpoint(temp.toDouble())
 }
 
-void setHeatingSetpoint(Double temp) {
-	log.trace "setHeatingSetpoint()... ($temp)"
+void setHeatingSetpoint(Double reqtemp) {
+	log.trace "setHeatingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
-	def tempUnit = state?.tempUnit
-	def canHeat = state?.can_heat.toBoolean()
+    def tempUnit = state?.tempUnit
+	def temp = 0.0
+    def canHeat = state?.can_heat.toBoolean()
 	def result = false
-    
-    log.debug "Heat Temp Received: ${temp} (${tempUnit})"
+                
+    log.debug "Heat Temp Received: ${reqtemp} (${tempUnit})"
     if (state?.present && canHeat) {
 		switch (tempUnit) {
 			case "C":
+            	temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if (temp) {
                     if (temp < 9.0) { temp = 9.0 }
                     if (temp > 32.0 ) { temp = 32.0 }
+                  	log.debug "Sending Heat Temp ($temp)"
 					if (hvacMode == 'auto') {
 					    parent.setTargetTempLow(this, tempUnit, temp)
                         heatingSetpointEvent(temp)
@@ -850,9 +883,11 @@ void setHeatingSetpoint(Double temp) {
             	result = true
 				break
 			case "F":
-				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
+				temp = reqtemp.round(0).toInteger()
+                if (temp) {
+                    if (temp < 50) { temp = 50 }
+                    if (temp > 90) { temp = 90 }
+                    log.debug "Sending Heat Temp ($temp)"
                     if (hvacMode == 'auto') {
                         parent.setTargetTempLow(this, tempUnit, temp) 
                         heatingSetpointEvent(temp)
@@ -880,26 +915,27 @@ void setCoolingSetpoint(temp) {
     setCoolingSetpoint( temp.toDouble() )
 }
 
-void setCoolingSetpoint(Double temp) {
-	log.trace "setCoolingSetpoint()... ($temp)"
+void setCoolingSetpoint(Double reqtemp) {
+	log.trace "setCoolingSetpoint()... ($reqtemp)"
 	def hvacMode = getHvacMode()
+	def temp = 0.0
 	def tempUnit = state?.tempUnit
-    def canCool = state?.can_cool.toBoolean()
+	def canCool = state?.can_cool.toBoolean()
 	def result = false
-
-    log.debug "Cool Temp Received: ${temp} (${tempUnit})"
+    
+    log.debug "Cool Temp Received: ${reqtemp} (${tempUnit})"
     if (state?.present && canCool) {
 		switch (tempUnit) {
 			case "C":
+            	temp = Math.round(reqtemp.round(1) * 2) / 2.0f
 				if (temp) {
                     if (temp < 9.0) { temp = 9.0 }
                     if (temp > 32.0) { temp = 32.0 }
-					
+					log.debug "Sending Cool Temp ($temp)"
                     if (hvacMode == 'auto') {
 					    parent.setTargetTempHigh(this, tempUnit, temp) 
                         coolingSetpointEvent(temp)
 					} 
-                
                     if (hvacMode == 'cool') {
                         parent.setTargetTemp(this, tempUnit, temp) 
                         thermostatSetpointEvent(temp)
@@ -909,11 +945,12 @@ void setCoolingSetpoint(Double temp) {
             	result = true
 				break
                 
-			default:
+            case "F":
+				temp = reqtemp.round(0).toInteger()
 				if (temp) {
-                    if (temp < 51.0) { temp = 51.0 }
-                    if (temp > 89.0) { temp = 89.0 }
-                    
+                    if (temp < 50) { temp = 50 }
+                    if (temp > 90) { temp = 90 }
+                    log.debug "Sending Cool Temp ($temp)"        
                     if (hvacMode == 'auto') {
                         parent.setTargetTempHigh(this, tempUnit, temp) 
                         coolingSetpointEvent(temp)
@@ -926,6 +963,9 @@ void setCoolingSetpoint(Double temp) {
 				}
             	result = true
             	break
+        	default:
+ 	           	Logger("no Temperature data $tempUnit")
+               	break
 		}
 	} else {
 		log.debug "Skipping cool change"
@@ -942,12 +982,10 @@ def setPresence() {
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
     if(pres == "auto-away" || pres == "away") {
-		parent.setStructureAway(this, "false")
-        presenceEvent("home") 
+		if (parent.setStructureAway(this, "false")) { presenceEvent("home") }
     }
-    else if (pres == "present") {
-        parent.setStructureAway(this, "true")
-        presenceEvent("away")
+    else if (pres == "home") {
+        if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
     }
 }
 
@@ -965,79 +1003,69 @@ def present() {
 
 def setAway() {
 	log.trace "setAway()..."
-    parent.setStructureAway(this, "true")
-    presenceEvent("away")
+    if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
 }
 
 def setHome() {
 	log.trace "setHome()..."
-    parent.setStructureAway(this, "false")
-    presenceEvent("home")
+    if (parent.setStructureAway(this, "false") ) { presenceEvent("home") }
 }
 
 /************************************************************************************************
 |										HVAC MODE FUNCTIONS										|
 *************************************************************************************************/
 
-def off() {
+void off() {
 	log.trace "off()..."
-    def currentMode = getHvacMode()
     if (parent.setHvacMode(this, "off")) {
         hvacModeEvent("off")
     } else {
-       	log.error "Error setting new mode." 
-        hvacModeEvent(currentMode) // reset the tile back
+       	log.error "Error setting off mode." 
     }
 }
 
-def heat() {
+void heat() {
 	log.trace "heat()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat")) { 
         	hvacModeEvent("heat") 
         } else {
-			log.error "Error setting new mode." 
-			hvacModeEvent(currentMode) // reset the tile back
+		log.error "Error setting heat mode." 
     	}
     }
 }
 
-def emergencyHeat() {
+void emergencyHeat() {
     log.trace "emergencyHeat()..."
     log.warn "Emergency Heat setting not allowed"
 }
 
-def cool() {
+void cool() {
 	log.trace "cool()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "cool")) { 
         	hvacModeEvent("cool") 
         } else {
-       		log.error "Error setting new mode." 
-        	hvacModeEvent(currentMode) // reset the tile back
+       		log.error "Error setting cool mode." 
     	}
     }
 }
 
-def auto() {
+void auto() {
 	log.trace "auto()..."
     def curPres = getNestPresence()
-    def currentMode = getHvacMode()
-	if (curPres != "away" || curPres != "auto-away") {
+	if (curPres == "home") {
     	if (parent.setHvacMode(this, "heat-cool")) { 
         	hvacModeEvent("auto") 
         } else {
-       		log.error "Error setting new mode." 
-        	hvacModeEvent(currentMode) // reset the tile back
+       		log.error "Error setting auto mode." 
     	}
     }
 }
 
-def setThermostatMode(modeStr) {
+void setThermostatMode(modeStr) {
 	log.trace "setThermostatMode()..."
 	switch(modeStr) {
     	case "auto":
@@ -1065,36 +1093,60 @@ def setThermostatMode(modeStr) {
 /************************************************************************************************
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
-def fanOn() {
-	if(state?.has_fan.toBoolean()) {
-    	parent.setFanMode(this, true)
-        fanModeEvent("true")
+void fanOn() {
+    log.trace "fanOn()..."
+    def curPres = getNestPresence()
+    if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	        if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
+    } else {
+       		log.error "Error setting fanOn" 
     }
 }
 
-def fanOff() {
+void fanOff() {
 	log.trace "fanOff()..."
-	if(state?.has_fan.toBoolean()) {
-    	parent.setFanMode (this, "off")
-        fanModeEvent("false")
-    }
+    def curPres = getNestPresence()
+	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	    if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
+    } else {
+       		log.error "Error setting fanOff" 
+	}
 }
 
-def fanCirculate() {
+void fanCirculate() {
 	log.trace "fanCirculate()..."
 	log.warn "fanCirculate setting not supported by Nest API"
 }
 
-def fanAuto() {
+void fanAuto() {
 	log.trace "fanAuto()..."
-	if(state?.has_fan.toBoolean()) {
-   		parent.setFanMode(this,false)
-        fanModeEvent("false")
+    def curPres = getNestPresence()
+	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
+   		if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
+    } else {
+       		log.error "Error setting fanAuto" 
     }
 }
 
-def setThermostatFanMode(fanModeStr) {
+void setThermostatFanMode(fanModeStr) {
     log.trace "setThermostatFanMode()... ($fanModeStr)"
+	switch(fanModeStr) {
+    	case "auto":
+        	fanAuto()
+        	break
+    	case "on":
+        	fanOn()
+        	break
+       	case "circulate":
+        	fanCirculate()
+        	break
+        case "off":   // non standard by Nest Capabilities Thermostat
+        	fanOff()
+        	break
+        default:
+        	log.warn "setThermostatFanMode Received an Invalid Request: ${fanModeStr}"
+            break
+    }
 }
 
 
@@ -1144,4 +1196,163 @@ def log(message, level = "trace") {
             break
     }            
     return null // always child interface call with a return value
+}
+
+def getImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
+
+def leafImg() { 
+	return "data:image/gif;base64,R0lGODdhgACAAOYAAAAAAICAAICAgFWqAKqqVWazAG22AGS+AGu+AEC/AGq/FXC/AHC/EIC/AIC/IIC/QGXDAWLEFGvFBXTFAHH"+ 
+    		"GHHHGOY7GOW3HCnHHDm7IFG/IDIDIJHnJKG3KBHHKDnTLFGbMAGbMM4LMM5nMZnfNGXnOHXvPIXTRLnbRE3vRHn3RI4vRRnnSFoDSJnrTLIrTLoPUK43UOmrV"+
+            "AIDVAIfWMYjXM5TXQ4LZJYfZMorZNZnZTYbaLI3bO5LbJIncL5DcP4/dQZLeQ4DfAIDfQJXfSpXfVZ/fUJ/fYI7gN5bgSo/hOpHhPZXhRpniTZXjUZzkUp7kWa"+ 
+            "HkUaDnWZzpTZ7pUp7pWqDrVKLrWZ/vYKbwWwD/AID/AID/gKr/Vb//QP//AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+ 
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAAGEAIf8LSUNDUkdCRzEwMTL/AAAMSExpbm8CEAAAbW50clJHQi"+
+            "BYWVogB84AAgAJAAYAMQAAYWNzcE1TRlQAAAAASUVDIHNSR0IAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1IUCAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+ 
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAARY3BydAAAAVAAAAAzZGVzYwAAAYQAAABsd3RwdAAAAfAAAAAUYmtwdAAAAgQAAAAUclhZWgAAAhgAAAAUZ1hZWgAAAiwAAA"+ 
+            "AUYlhZWgAAAkAAAAAUZG1uZAAAAlQAAABwZG1kZAAAAsQAAACIdnVlZAAAA0wAAACGdmll/3cAAAPUAAAAJGx1bWkAAAP4AAAAFG1lYXMAAAQMAAAAJHRlY2gA"+
+            "AAQwAAAADHJUUkMAAAQ8AAAIDGdUUkMAAAQ8AAAIDGJUUkMAAAQ8AAAIDHRleHQAAAAAQ29weXJpZ2h0IChjKSAxOTk4IEhld2xldHQtUGFja2FyZCBDb21wYW"+ 
+            "55AABkZXNjAAAAAAAAABJzUkdCIElFQzYxOTY2LTIuMQAAAAAAAAAAAAAAEnNSR0IgSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+
+            "AAAAAAAAAAAAAAAAAAAAAAAAAABYWVogAAAAAAAA81EAAf8AAAABFsxYWVogAAAAAAAAAAAAAAAAAAAAAFhZWiAAAAAAAABvogAAOPUAAAOQWFlaIAAAAAAAAG"+
+            "KZAAC3hQAAGNpYWVogAAAAAAAAJKAAAA+EAAC2z2Rlc2MAAAAAAAAAFklFQyBodHRwOi8vd3d3LmllYy5jaAAAAAAAAAAAAAAAFklFQyBodHRwOi8vd3d3Lmll"+
+            "Yy5jaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkZXNjAAAAAAAAAC5JRUMgNjE5NjYtMi4xIERlZmF1bHQgUkdCIGNvbG"+
+            "91ciBzcGFjZSAtIHNSR0L/AAAAAAAAAAAAAAAuSUVDIDYxOTY2LTIuMSBEZWZhdWx0IFJHQiBjb2xvdXIgc3BhY2UgLSBzUkdCAAAAAAAAAAAAAAAAAAAAAAAA"+ 
+            "AAAAAGRlc2MAAAAAAAAALFJlZmVyZW5jZSBWaWV3aW5nIENvbmRpdGlvbiBpbiBJRUM2MTk2Ni0yLjEAAAAAAAAAAAAAACxSZWZlcmVuY2UgVmlld2luZyBDb2"+
+            "5kaXRpb24gaW4gSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB2aWV3AAAAAAATpP4AFF8uABDPFAAD7cwABBMLAANcngAAAAFYWVog/wAA"+
+            "AAAATAlWAFAAAABXH+dtZWFzAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAACjwAAAAJzaWcgAAAAAENSVCBjdXJ2AAAAAAAABAAAAAAFAAoADwAUABkAHgAjAC"+
+            "gALQAyADcAOwBAAEUASgBPAFQAWQBeAGMAaABtAHIAdwB8AIEAhgCLAJAAlQCaAJ8ApACpAK4AsgC3ALwAwQDGAMsA0ADVANsA4ADlAOsA8AD2APsBAQEHAQ0B"+
+            "EwEZAR8BJQErATIBOAE+AUUBTAFSAVkBYAFnAW4BdQF8AYMBiwGSAZoBoQGpAbEBuQHBAckB0QHZAeEB6QHyAfoCAwIMAv8UAh0CJgIvAjgCQQJLAlQCXQJnAn"+
+            "ECegKEAo4CmAKiAqwCtgLBAssC1QLgAusC9QMAAwsDFgMhAy0DOANDA08DWgNmA3IDfgOKA5YDogOuA7oDxwPTA+AD7AP5BAYEEwQgBC0EOwRIBFUEYwRxBH4E"+
+            "jASaBKgEtgTEBNME4QTwBP4FDQUcBSsFOgVJBVgFZwV3BYYFlgWmBbUFxQXVBeUF9gYGBhYGJwY3BkgGWQZqBnsGjAadBq8GwAbRBuMG9QcHBxkHKwc9B08HYQ"+
+            "d0B4YHmQesB78H0gflB/gICwgfCDIIRghaCG4IggiWCKoIvgjSCOcI+wkQCSUJOglPCWT/CXkJjwmkCboJzwnlCfsKEQonCj0KVApqCoEKmAquCsUK3ArzCwsL"+
+            "Igs5C1ELaQuAC5gLsAvIC+EL+QwSDCoMQwxcDHUMjgynDMAM2QzzDQ0NJg1ADVoNdA2ODakNww3eDfgOEw4uDkkOZA5/DpsOtg7SDu4PCQ8lD0EPXg96D5YPsw"+
+            "/PD+wQCRAmEEMQYRB+EJsQuRDXEPURExExEU8RbRGMEaoRyRHoEgcSJhJFEmQShBKjEsMS4xMDEyMTQxNjE4MTpBPFE+UUBhQnFEkUahSLFK0UzhTwFRIVNBVW"+
+            "FXgVmxW9FeAWAxYmFkkWbBaPFrIW1hb6Fx0XQRdlF4kX/64X0hf3GBsYQBhlGIoYrxjVGPoZIBlFGWsZkRm3Gd0aBBoqGlEadxqeGsUa7BsUGzsbYxuKG7Ib2h"+
+            "wCHCocUhx7HKMczBz1HR4dRx1wHZkdwx3sHhYeQB5qHpQevh7pHxMfPh9pH5Qfvx/qIBUgQSBsIJggxCDwIRwhSCF1IaEhziH7IiciVSKCIq8i3SMKIzgjZiOU"+
+            "I8Ij8CQfJE0kfCSrJNolCSU4JWgllyXHJfcmJyZXJocmtyboJxgnSSd6J6sn3CgNKD8ocSiiKNQpBik4KWspnSnQKgIqNSpoKpsqzysCKzYraSudK9EsBSw5LG"+
+            "4soizXLQwtQS12Last4f8uFi5MLoIuty7uLyQvWi+RL8cv/jA1MGwwpDDbMRIxSjGCMbox8jIqMmMymzLUMw0zRjN/M7gz8TQrNGU0njTYNRM1TTWHNcI1/TY3"+
+            "NnI2rjbpNyQ3YDecN9c4FDhQOIw4yDkFOUI5fzm8Ofk6Njp0OrI67zstO2s7qjvoPCc8ZTykPOM9Ij1hPaE94D4gPmA+oD7gPyE/YT+iP+JAI0BkQKZA50EpQW"+
+            "pBrEHuQjBCckK1QvdDOkN9Q8BEA0RHRIpEzkUSRVVFmkXeRiJGZ0arRvBHNUd7R8BIBUhLSJFI10kdSWNJqUnwSjdKfUrESwxLU0uaS+JMKkxyTLpNAk3/Sk2T"+
+            "TdxOJU5uTrdPAE9JT5NP3VAnUHFQu1EGUVBRm1HmUjFSfFLHUxNTX1OqU/ZUQlSPVNtVKFV1VcJWD1ZcVqlW91dEV5JX4FgvWH1Yy1kaWWlZuFoHWlZaplr1W0"+
+            "VblVvlXDVchlzWXSddeF3JXhpebF69Xw9fYV+zYAVgV2CqYPxhT2GiYfViSWKcYvBjQ2OXY+tkQGSUZOllPWWSZedmPWaSZuhnPWeTZ+loP2iWaOxpQ2maafFq"+
+            "SGqfavdrT2una/9sV2yvbQhtYG25bhJua27Ebx5veG/RcCtwhnDgcTpxlXHwcktypnMBc11zuHQUdHB0zHUodYV14XY+/3abdvh3VnezeBF4bnjMeSp5iXnnek"+
+            "Z6pXsEe2N7wnwhfIF84X1BfaF+AX5ifsJ/I3+Ef+WAR4CogQqBa4HNgjCCkoL0g1eDuoQdhICE44VHhauGDoZyhteHO4efiASIaYjOiTOJmYn+imSKyoswi5aL"+
+            "/IxjjMqNMY2Yjf+OZo7OjzaPnpAGkG6Q1pE/kaiSEZJ6kuOTTZO2lCCUipT0lV+VyZY0lp+XCpd1l+CYTJi4mSSZkJn8mmia1ZtCm6+cHJyJnPedZJ3SnkCerp"+
+            "8dn4uf+qBpoNihR6G2oiailqMGo3aj5qRWpMelOKWpphqmi6b9p26n4KhSqMSpN6mpqv8cqo+rAqt1q+msXKzQrUStuK4trqGvFq+LsACwdbDqsWCx1rJLssKz"+
+            "OLOutCW0nLUTtYq2AbZ5tvC3aLfguFm40blKucK6O7q1uy67p7whvJu9Fb2Pvgq+hL7/v3q/9cBwwOzBZ8Hjwl/C28NYw9TEUcTOxUvFyMZGxsPHQce/yD3IvM"+
+            "k6ybnKOMq3yzbLtsw1zLXNNc21zjbOts83z7jQOdC60TzRvtI/0sHTRNPG1EnUy9VO1dHWVdbY11zX4Nhk2OjZbNnx2nba+9uA3AXcit0Q3ZbeHN6i3ynfr+A2"+
+            "4L3hROHM4lPi2+Nj4+vkc+T85YTmDeaW5x/nqegy6LxU6Ubp0Opb6uXrcOv77IbtEe2c7ijutO9A78zwWPDl8XLx//KM8xnzp/Q09ML1UPXe9m32+/eK+Bn4qP"+
+            "k4+cf6V/rn+3f8B/yY/Sn9uv5L/tz/bf//ACwAAAAAgACAAAAH/4BhgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0"+
+            "tba3uLm6u7y9vr/AwcLDxMNVUFLFtVdXUszNV8qwUM9P1tZZ0dKsT8zX391P26rdVODXTeHjp+HfTe/w6eLrpE9W7vH5V/P0oE/m6fLFS0LQWr9P1u4JHEiw4b"+
+            "2Dm64BXNikIUEiBM1BvCRxIjyLIAkGGZlu4yN3CT1+DNlwJJORQZJoLGbt3ZN4Nxeia0KlZ8+c75JUrMiSyUuYSIPM5EUxHRUrUH1KPbezKUuCR5Nqfafr4xSf"+
+            "VMNSbcoQJJEgWbVqFXornjmxcP/BkSUakkkStXiR8gjSpBbBJlPkxY1rdWVDjHfz4v3BmMfeirIw2hxMmKJQlogVq2X8w7Fnx4FhEQxMGe7cq0leptUcpPHn15"+
+            "BbGZ1c+hzZq0TOomUNk/Pr347ttkIruPZNoFZBquad1DXw3zleriJevPRcuiF1M2/d+bn3HDl+BFGFNonx69hBbh/p2zvwHDzAg9+LymV108mvHl2tuLt76PIF"+
+            "CJ90pQCBlnWWpWeRUfwpxoNz/3kmYIA11BDdeKSgxURlp2XXYH/+RfjZhPJVWCENF5LCg11iXYfah4oBIeJrJApoYQ004FgDgaH8wKJtHda1HnuOhfhfjSWaaC"+
+            "L/DUzCUMMSSojCwxLVuRiShut11l6ESJaYg5JMhtlkDY6FMqV5VeUjlIJYDbmliF1++SWYYoYJw53wmbmEeUFahBGMeUEIJ5JK4lhnk3cmiicPoEy54W1FDcme"+
+            "kUd2eSOddiqqKQx5ejIlXwKhRsRy2wlaKaGYirnpqot6Ah6oZZklKaXfAadEfEmmSgOrvOKZg6s8BMXmqC6VyhmtjsGnxIQWMrvkobv2yisSv3JSAxJ8XQUToM"+
+            "2ZOmIO1ILX7CLiHirtuTAggQMnKAarHLebcSkfDhVGAp6q6J6bw7qboBhTS/Ai5RuyuJZbCQ45RJsvujVw8mpqRmVJsITzVmsJ/4oL55swJ5zOOjHF+/KbScIZ"+
+            "89pCohtrsgN8zIn3Mci79stpyau2YLPNnNKwScesefucfDvAMMmdCsPQJMY0a3qzzSrcyfFegc4oIdKQaLpygD5kHXTSdy59swpgB71zeFodKzV8+4rdiKJZ+8"+
+            "C1tF6D3QLYcrs9dnMPnl2i20IvkugOfL8N99cqzE033Sf3nQkMe5mtt3wwqK3InYALPvjShR+uuQqSYwKDD3k/TuHWfke+teWbxr356nTbrcnnM3ZJA+mJUH46"+
+            "6ol6zTTrm6dQwskcw+denDVErjgilOPete6Y83647yWU0Lnnwr9HvPGTG688DMwb7jzYJkAfff8JTR9/yZ1kAojqrtMXsj33cXv/Pdjj1x+90zuvnCyh4p6ocC"+
+            "Inu53gdDe/59nPfpwz3/muVqNCGQpRLahdCwRYMgIWEGwpEJ/47EeC30WQE5xroAMzZTMAWo55F1TBBg84PhK4sATc60QIKZSwGuAAWssD4A2ShkL58Y6FLHSh"+
+            "EF14gw9yYoLNmtMD8ZVDRLRghxnrXgpLsMIgDvEDWCzcJ1RwgxzpyFyKYpoOF4bCC1bRikLEoho/UIIbqGCLXQRj6uaWiMKhq4wFzOAZ6zdEEqzxj3SEo9GYqD"+
+            "Sw1TFxrOqeDzdnAhVmEIgt7OMfJ5mCN4LCBFCEmyERUThE5k7/ivMzQfj2GElJTvKPvzNBKMCGrk0eQm5Kw+P3TABJPprylKdUgSpFAcNzVRIRlfSkLHnXyFqW"+
+            "Mo24TGYGSUE+aamgBMBMwcksOMVa9tGFycymBz6wTGamAG6+KwQVg6m6PFLRmNfMJi49wE5upsAUVCwfrx45iOiRs5N5pKUxS3BLdf6RnezUADejdwoSfLNXLU"+
+            "iBEO2ZuSmSkp/X9KM//wnQgHqAngWVpsm4p0ffpfCZ+0znRCkKUA14QAMmZYELU+FHeYaxnPPTIDqvOFIsVrSkKL0ASi8KTVV8gAXyVOQswRfSiNbUpjdFaU4v"+
+            "wNSffmAVWIThNJvXUOed05r9/6zpTU+qVA0w9atOheoHSKC6RbJOnzNF5lHVaNGcLvWrTcWiWMnHNLOy7qHRM+pat1nRrr4VrhdAgVx9igKy2pV19kQnRCW616"+
+            "R2FbCA9YBgV8FOFNC1gKIkpV4b61idQhauEpDABfi6Cgxss5LOEyVIrblYbHI2oH79LGhFW9FVmPQDoQxpa9fK1r56QKdele0FQkvc0bKTFaPF7V0fmVY/uvao"+
+            "nXWrcIdb3JN6oBXJvetV+QnQqOZVrbyFLQaUOl3qEpe4AL2AK0x6uEaekQS/9Ww7n6vVD/R1qdKF7Hn3a1KdvmK05NOlMU9KCKbeFrq+fWxw9bvf8/ZXA7GQAO"+
+            "Bu91mCD3RAvYUIrUm3mcytwtarC2Zwg9EbXFlIwANFta8EEjHcDpyUpB8G8XRHvN8O2LgDK57FibHqQg3kWBGhtbFXE0zeEM+WxkHGcWhvsWNbXtMDOHaEkiUg"+
+            "ZOAaWcQjvjFxdUFlNopUjVGWxHlvbGPRIpm4ZD6vLySgAZr+0ceYaDCZ5zxlNQeDyh5g7B8vEGZOnHkdXT6lBvpsklDg+c2ELjQoIEDlC3u1zIo2RWghUOYfR7"+
+            "oUEmD0pTfN6U57+tOgDrWoR03qUpv61KhOtapXzepWu/rVsI61rCERCAA7"
+}
+
+def getInfoHtml() { 
+	def leafVal =  state?.hasLeaf ? "<td><img src=\"${leafImg()}\" style=width:20px; height:20px;></td>" : "<td>No Leaf</td>"
+	renderHTML {
+    	head {
+        	"""
+            <style type="text/css">
+                .flat-table {
+                  width: 100%;
+                  //height: 400px
+                  border-collapse: collapse;
+                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  border: none;
+                  border-radius: 3px;
+                  -webkit-border-radius: 3px;
+                  -moz-border-radius: 3px;
+                }
+
+                .flat-table th,
+                .flat-table td {
+                  box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
+                }
+
+                .flat-table th {
+                  font-weight: bold;
+                  -webkit-font-smoothing: antialiased;
+                  padding: 1px;
+                  color: #f5f5f5;
+                  text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+                  font-size: 16px;
+                  border-radius: 2px;
+                  -webkit-border-radius: 2px;
+                  -moz-border-radius: 2px;
+                  background: #00a1db;
+                }
+
+                .flat-table td {
+                  color: grey;
+                  padding: 0.4em 1em 0.4em 1.15em;
+                  text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+                  font-size: 14px;
+                  text-align: center;
+                }
+
+                .flat-table tr {
+                  -webkit-transition: background 0.3s, box-shadow 0.3s;
+                  -moz-transition: background 0.3s, box-shadow 0.3s;
+                  transition: background 0.3s, box-shadow 0.3s;
+                }
+            </style>
+           	"""
+        }
+        body {
+        	"""
+              <table class="flat-table">
+                <thead>
+                  <th> Network Status</th>
+                  <th>Leaf</th>
+                  <th>API Status</th>
+                </thead>
+                   <tbody>
+                     <tr>
+                       <td>${state?.onlineStatus.toString()}</td>
+                       	 $leafVal
+                         <td>${state?.apiStatus}</td>
+                       </tr>
+                       <tr>
+                         <th>Firmware Version</th>
+                         <th>Debug</th>
+                         <th>Device Type</th>
+                      </tr>
+                        <td>${state?.softwareVer.toString()}</td>
+                        <td>${state?.debugStatus}</td>
+                        <td>${state?.devTypeVer.toString()}</td>
+                    </tbody>
+            </table>
+            <table class="flat-table">
+              <thead>
+                <th>Nest Checked-In</th>
+                <th>Data Last Received</th>
+              </thead>
+              <tbody>
+                  <tr>
+                    <td>${state?.lastConnection.toString()}</td>
+                    <td>${state?.lastUpdatedDt.toString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+            """
+        }
+    }
 }
