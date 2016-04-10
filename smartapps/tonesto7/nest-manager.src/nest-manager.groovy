@@ -625,7 +625,7 @@ def apiVar() {
 def setStructureAway(child, value) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	def val = value?.toBoolean()
-	LogAction("setStructureAway: ${devId} (${val})", "debug", true, true)
+	LogAction("setStructureAway: ${devId} (${val})", "debug", true)
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${val})") }
     try {
 		if(val) { 	
@@ -645,7 +645,7 @@ def setStructureAway(child, value) {
 def setFanMode(child, fanOn) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
 	def val = fanOn.toBoolean()
-	LogAction("setFanMode: ${devId} (${val})", "debug", true, true)
+	LogAction("setFanMode: ${devId} (${val})", "debug", true)
     if(childDebug && child) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val})") }
     try {	
 		return sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.fanActive, val, devId)
@@ -659,7 +659,7 @@ def setFanMode(child, fanOn) {
 
 def setHvacMode(child, mode) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("setHvacMode: ${devId} (${mode})", "debug", true, true)
+	LogAction("setHvacMode: ${devId} (${mode})", "debug", true)
     try {
     	return sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.hvacMode, mode.toString(), devId) 
     }
@@ -672,7 +672,7 @@ def setHvacMode(child, mode) {
 
 def setTargetTemp(child, unit, temp) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("setTargetTemp: ${devId} | (${temp})${unit}", "debug", true, true)
+	LogAction("setTargetTemp: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTemp: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
@@ -691,7 +691,7 @@ def setTargetTemp(child, unit, temp) {
 
 def setTargetTempLow(child, unit, temp) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("setTargetTempLow: ${devId} | (${temp})${unit}", "debug", true, true)
+	LogAction("setTargetTempLow: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTempLow: ${devId} | (${temp})${unit}") }
     try {	
 		if(unit == "C") { 
@@ -710,7 +710,7 @@ def setTargetTempLow(child, unit, temp) {
 
 def setTargetTempHigh(child, unit, temp) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("setTargetTempHigh: ${devId} | (${temp})${unit}", "debug", true, true)
+	LogAction("setTargetTempHigh: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
     try {
 		if(unit == "C") { 
