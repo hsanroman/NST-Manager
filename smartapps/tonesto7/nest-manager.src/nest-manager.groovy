@@ -62,6 +62,7 @@ preferences {
     page(name: "devPrefPage")
     page(name: "nestLoginPrefPage")
     page(name: "nestTokenResetPage")
+    page(name: "uninstallPage")
 }
 
 mappings {
@@ -84,7 +85,7 @@ def authPage() {
     if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
 	    
 	if (!atomicState.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
-        return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:true) {
+        return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
         		def desc
            		if(!atomicState?.accessToken) {
@@ -102,6 +103,9 @@ def authPage() {
                 LogAction("Status Message: $desc", "warn", true)
            		paragraph "$desc"
         	}
+            //section(" ") {
+            //	href "uninstallPage", title: "Uninstall...", description: "Tap to Proceed...", image: getAppImg("info.png")
+            //}
         }
     }
     
@@ -113,8 +117,8 @@ def authPage() {
 	
     if(atomicState?.authToken) {
     	description = "You are connected."
-        uninstallAllowed = true
         oauthTokenProvided = true
+        uninstallAllowed = true
        	setStateVar(true)
     } else { description = "Click to enter Nest Credentials" }
 	
@@ -133,7 +137,7 @@ def authPage() {
             }
         }
     } else {
-        return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: uninstallAllowed) {
+        return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: false) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("thermostat_blue%401x.png", true)
                 if(!appDevType() && isAppUpdateAvail()) {
@@ -206,6 +210,9 @@ def authPage() {
             section(" ") { 
             	href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
             }
+            //section(" ") {
+            //	href "uninstallPage", title: "Uninstall...", description: "Tap to Proceed...", image: getAppImg("info.png")
+            //}
         }
     }
 }
@@ -1026,14 +1033,10 @@ def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitV
 
 def isUpdateAvail(newVer, curVer) {
     try {
-    	def cVer = !curVer ? null : curVer?.toString()
-    	def nVer = !newVer ? "0.0.0" : newVer?.toString()
+    	def cVer = !curVer ? 100 : curVer?.toString().replaceAll("\\.", "").toInteger()
+    	def nVer = !newVer ? 100 : newVer?.toString().replaceAll("\\.", "").toInteger()
 		if(cVer) {
-            if ((ver2IntArray(curVer).maj.toInteger() < ver2IntArray(newVer).maj.toInteger()) || 
-       			(ver2IntArray(curVer).min.toInteger() < ver2IntArray(newVer).min.toInteger()) || 
-       			(ver2IntArray(curVer).rev.toInteger() < ver2IntArray(newVer).rev.toInteger())) {
-    			return true
-            }
+            if (nVer > cVer) { return true }
     	} else { return false }
     } catch (ex) { LogAction("isUpdateAvail Exception: ${ex}", "error", true, true) }
 }
@@ -2126,7 +2129,13 @@ def infoPage () {
         }
     }
 }
-
+def uninstallPage() {
+	dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
+    	section("") {
+        	paragraph "Uninstall this App, Automation App and Child Devices"
+        }
+   	}
+}
 def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
        	section("") {
