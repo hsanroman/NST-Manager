@@ -47,6 +47,7 @@ preferences {
 
 def mainPage() {
 	//log.trace "mainPage()"
+    state?.tempUnit = getTemperatureScale().toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
     	section("Use Remote Internal Sensor(s) to Control your Thermostat:") {
         	def motInUse = extMotionSensors ? "Motion Triggers Active" : ""
@@ -145,22 +146,32 @@ def extSensorPage() {
     	def req = ((!extTmpSensor) && extSenTstat) ? true : false
         section("Choose a Thermostat... ") {
             input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
-        }
-        if(extSenTstat) {
-        	section("Mirror Changes of Thermostat Above... ") {
+            if(extSenTstat) { 
+				def tmpVal = "${getDeviceTemp(extSenTstat)}${state?.tempUnit}"    
+                paragraph "Thermostat Temp: ${tmpVal}", image: " "
             	input "extSenTstatsMirror", "capability.thermostat", title: "Additional Thermostats", submitOnChange: true, required: false,
-	                image: imgIcon("nest_like.png")
+	                	image: imgIcon("nest_like.png")
+                if(extSenTstatsMirror) { 
+                	extSenTstatsMirror.each { t ->
+						def tmpVal2 = "${getDeviceTemp(extSenTstatsMirror)}${state?.tempUnit}"    
+                		paragraph "Thermostat Temp: ${tmpVal2}", image: " "
+                   	}
+               	}
         	}
         }
         section("Choose Temperature Sensor(s) to Use Instead of the Thermostat's Temp... ") {
-            input "extTmpSensor", "capability.temperatureMeasurement", title: "Day Temp Sensors", submitOnChange: true, required: req, multiple: true,
+        	paragraph "If more than one sensor is selected then will be combined and the temp averaged between them"
+            input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
             		image: imgIcon("temperature.png")
             //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
             //		image: imgIcon("temperature.png")
+            def tmpVal = (extTmpSensor.size() > 1) ? "Sensor Temp (average): ${getMultiTempAvg(extTmpSensor)}${state?.tempUnit}" : "Sensor Temp: ${getDeviceTemp(extTmpSensor)}${state?.tempUnit}"
+                paragraph "${tmpVal}", image: " "
         }
         if(extSenTstat && extTmpSensor) {
             section("Rule Type ") {
-                input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true)
+                input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true,
+                	image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
                 input "extSenHeatTemp", "number", title: "Cool Temp (Degrees)...", submitOnChange: true, image: imgIcon("heat_icon.png")
@@ -181,6 +192,7 @@ def extSensorPage() {
 	}
 }
 
+
 def locationChgEvt(evt) {
 	log.debug "locationChgEvt mode: $evt.value, heat: $heat, cool: $cool"
 	extSenEvtEval()
@@ -192,37 +204,18 @@ def extSenTempEvt(evt) {
 
 private extSenEvtEval() {
 	if (extTmpSensor) {
-		def tempThreshold = degreesOfSeperation
+		def tempThreshold = degreesOfSeperation.toInteger()
 		def hvacMode = extSenTstat?.currentThermostatMode 
-		def curTstatTemp = extSenTstat?.currentTemperature.toInteger()
+		def curTstatTemp = getDeviceTemp(extSenTstat)
         def curCoolSetpoint = extSenTstat?.currentCoolingSetpoint.toInteger()
         def curHeatSetpoint = extSenTstat?.currentHeatingSetpoint.toInteger()
-        def curSenTemp = 0
-        log.debug "curTemp: ${extTmpSensor?.currentTemperature}"
+        def curSenTemp = extTmpSensor ? getMultiTempAvg(extTmpSensor) : null
+        log.debug "curTemp: ${curSenTemp}"
         
-        if(extTmpSensor) {
-        	def tmpAvg = []
-            if(extTmpSensor.size() == 1) {
-            	curSenTemp = extTmpSensor?.currentTemperature
-                log.debug "curSenTemp: ${curSenTemp}"
-            }
-        	else if(extTmpSensor.size() > 1) {
-            	extTmpSensor.each { s ->
-					tmpAvg << s?.currentTemperature.toInteger()
-                }
-            
-            	if (tmpAvg && tmpAvg != []) {
-            		def avg = (tmpAvg.sum() / tmpAvg.size()).round(0)
-                	log.debug "avg: $avg"
-                	if(avg) { curSenTemp = avg }
-            	}
-            }
-            log.debug "curSenTemp: $curSenTemp | extSenHeatTemp: $extSenHeatTemp | curTstatTemp: $curTstatTemp | tempThreshold: $tempThreshold"
-        }
-		log.trace("extSenEvtEval:, mode: $hvacMode -- temp: $curTstatTemp, heat: $curHeatSetpoint, cool: $curCoolSetpoint"  +
-			"sensor: $curSenTemp, heat: $extSenHeatTemp, cool: $extSenCoolTemp")
-		if (hvacMode in ["cool","auto"]) {
-			// air conditioner
+		log.trace("extSenEvtEval:, HvacMode: $hvacMode | Thermostat Temp: $curTstatTemp | Current Heat Setpoint: $curHeatSetpoint | Current Cool Setpoint: $curCoolSetpoint | "  +
+			"Sensor Temp: $curSenTemp | Desired Heat Temp: $extSenHeatTemp | Desired Cool Temp: $extSenCoolTemp")
+		
+        if (hvacMode in ["cool","auto"]) {
 			if ((curSenTemp - extSenCoolTemp.toInteger()) >= tempThreshold) {
 				extSenTstat?.setCoolingSetpoint(curTstatTemp - 2)
 				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - 2}), ON"
@@ -233,9 +226,8 @@ private extSenEvtEval() {
 			}
 		}
 		if (hvacMode in ["heat","emergency heat","auto"]) {
-			// heater
-            log.debug "${extSenHeatTemp - curSenTemp}"
-			if ((extSenHeatTemp - curSenTemp) >= tempThreshold) {
+            //log.debug "${(extSenHeatTemp - curSenTemp)}"
+			if ((extSenHeatTemp.toInteger() - curSenTemp) >= tempThreshold) {
 				extSenTstat?.setHeatingSetpoint(curTstatTemp + 2)
 				log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + 2}), ON"
 			}
@@ -264,6 +256,28 @@ def coolingSetpointHandler(evt) {
 }
 def heatingSetpointHandler (evt) {
 	log.debug "heatingSetpointHandler ()"
+}
+
+def getDeviceTemp(dev) {
+	return dev ? dev?.currentValue("temperature") : null
+}
+
+def getMultiTempAvg(temps) {
+	def tmpAvg = []
+    def tempVal = 0
+	if(temps.size() > 1) {
+    	temps.each { tp ->
+			tmpAvg << tp?.currentTemperature
+        }
+        if(tmpAvg && tmpAvg.size() > 1) {
+            def avg = Math.round(tmpAvg.sum() / tmpAvg.size())
+            log.debug "avg: $avg"
+            if(avg) { tempVal = avg.toInteger() }
+        }
+    } else { tempVal = temps?.currentTemperature }
+    
+    log.debug "tempVal: $tempVal"
+    return tempVal.toInteger()
 }
 
 /******************************************************************************  
