@@ -101,7 +101,7 @@ def configure() {
 
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def refresh() {
