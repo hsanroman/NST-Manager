@@ -691,7 +691,7 @@ void levelUpDown(tempVal, chgType = null) {
     
     if (canChangeTemp()) {
     // From RBOY https://community.smartthings.com/t/multiattributetile-value-control/41651/23
-    // Determinea OS intended behaviors based on value behaviors (urrgghhh.....ST!)
+    // Determine OS intended behaviors based on value behaviors (urrgghhh.....ST!)
         def upLevel 
         
         if (!state?.lastLevelUpDown) { state.lastLevelUpDown = 0 } // If it isn't defined lets baseline it
@@ -1343,7 +1343,7 @@ def getInfoHtml() {
                 }
 
 				.datetime {
-                  font-size:12px;
+                  font-size:13px;
                 }
             </style>
            	"""
