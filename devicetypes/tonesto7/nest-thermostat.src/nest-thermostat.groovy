@@ -63,6 +63,7 @@ metadata {
 		command "heatingSetpointDown"
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
+        command "changeMode"
 
 		attribute "temperatureUnit", "string"
         attribute "targetTemp", "string"
@@ -128,11 +129,12 @@ metadata {
             state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-            state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
-			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
-            state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
-            state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
-            state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
+            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
+			state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
+            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
+            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
+            state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
+            state ("updating", label:"Working", icon: "st.secondary.secondary")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
@@ -1013,7 +1015,37 @@ def setHome() {
 
 /************************************************************************************************
 |										HVAC MODE FUNCTIONS										|
-*************************************************************************************************/
+************************************************************************************************/
+
+def getHvacModes() {
+    log.debug "Building Modes list"
+	def modesList = ['off']
+    if( state?.can_heat == true ) { modesList.push('heat') }
+    if( state?.can_cool == true ) { modesList.push('cool') }
+    if( state?.can_heat == true || state?.can_cool == true ) { modesList.push('auto') }
+    Logger("Modes = ${modesList}")
+    return modesList
+}
+
+def changeMode() {
+	log.debug "in switchMode"
+	def currentMode = device.currentState("thermostatMode")?.value
+	def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
+	def modeOrder = getHvacModes()
+	def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
+	def nextMode = next(lastTriedMode)
+	setHvacMode(nextMode)
+}
+
+def setHvacMode(nextMode) {
+	log.debug "setHvacMode(${nextMode})"
+	if (nextMode in modes()) {
+		state.lastTriedMode = nextMode
+		"$nextMode"()
+	} else {
+		log.debug("Invalid Mode '$nextMode'")
+	}
+}
 
 void off() {
 	log.trace "off()..."
@@ -1096,10 +1128,10 @@ void setThermostatMode(modeStr) {
 void fanOn() {
     log.trace "fanOn()..."
     def curPres = getNestPresence()
-    if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
-	        if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
+    if( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	    if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
     } else {
-       		log.error "Error setting fanOn" 
+       	log.error "Error setting fanOn" 
     }
 }
 
@@ -1107,9 +1139,9 @@ void fanOff() {
 	log.trace "fanOff()..."
     def curPres = getNestPresence()
 	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
-	    if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
+		if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
     } else {
-       		log.error "Error setting fanOff" 
+       	log.error "Error setting fanOff" 
 	}
 }
 
@@ -1124,7 +1156,7 @@ void fanAuto() {
 	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
    		if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
     } else {
-       		log.error "Error setting fanAuto" 
+    	log.error "Error setting fanAuto" 
     }
 }
 
