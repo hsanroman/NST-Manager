@@ -152,55 +152,52 @@ def updateWeather() {
 *******************************************************************************/
 def extSensorPage() {
 	dynamicPage(name: "extSensorPage", title: "Remote Sensor Automation", uninstall: false) {
+    	if(state?.extSenEnabled == null) { state?.extSenEnabled = true }
     	def req = ((!extTmpSensor) && extSenTstat) ? true : false
-        
-        if(state?.extSenEnabled) {
-            section("Choose a Thermostat... ") {
-                input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
-                if(extSenTstat) { 
-                    def tmpVal = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"    
-                    paragraph "Thermostat Room Temp: ${tmpVal}", image: " "
-                    input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Changes on these Thermostats", submitOnChange: true, required: false,
-                            image: imgIcon("nest_like.png")
-                    if(extSenTstatsMirror) { 
-                        extSenTstatsMirror.each { t ->
-                            def tmpVal2 = "${getDeviceTemp(t)}${state?.tempUnit}"    
-                            paragraph "Thermostat Temp: ${tmpVal2}", image: " "
-                        }
+        section("Choose a Thermostat... ") {
+        	input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
+            if(extSenTstat) { 
+            	def tmpVal = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"    
+                paragraph "Thermostat Room Temp: ${tmpVal}", image: " "
+                input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Changes on these Thermostats", submitOnChange: true, required: false,
+                		image: imgIcon("nest_like.png")
+                if(extSenTstatsMirror) { 
+                	extSenTstatsMirror.each { t ->
+                            paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
                     }
                 }
             }
-            section("Choose Temperature Sensor(s) to use instead of the Thermostat's Ambient Temperature... ") {
-                input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
-                        image: imgIcon("temperature.png")
-                //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
-                //		image: imgIcon("temperature.png")
-                if(extTmpSensor) {
-                    def tmpVal = "Remote Sensor Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
-                    if(extTmpSensor.size() > 1) {
-                        paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
-                        href "extSenShowTempsPage", title: "View Remote Sensor Temps...", description: tmpVal
-                    } else { paragraph "${tmpVal}", image: " " }
-                }
+        }
+        section("Choose Temperature Sensor(s) to use instead of the Thermostat's Ambient Temperature... ") {
+        	input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
+                    image: imgIcon("temperature.png")
+            //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
+            //		image: imgIcon("temperature.png")
+            if(extTmpSensor) {
+            	def tmpVal = "Remote Sensor Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
+                if(extTmpSensor.size() > 1) {
+                	paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
+                    href "extSenShowTempsPage", title: "View Remote Sensor Temps...", description: tmpVal
+                } else { paragraph "${tmpVal}", image: " " }
             }
-            if(extSenTstat && extTmpSensor) {
-                section("Rule Type ") {
-                    input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Heat-Cool","Cirulate"], required: req, submitOnChange: true,
-                        image: imgIcon("rule_icon.png"))
-                }
-                section("Desired Temperatures..." ) {
-                    input "extSenHeatTemp", "number", title: "Set Heat Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("heat_icon.png")
-                    input "extSenCoolTemp", "number", title: "Set Cool Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("cool_icon.png")
-                }
-                section("Optionally Evaluate Temps when these sensors detect motion... ") {
-                    input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
-                            image: imgIcon("motion_icon.png")
-                }
-                section ("Options") {
-                    input "extSenModes", "mode", title: "Only in These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
-                    input "extTimeBetweenRuns", "number", title: "Time Between Fan Runs (In Minutes)", required: true, defaultValue: 60, submitOnChange: true
-                    input "degreesOfSeperation", "number", title: "Temp Threshold to Trigger Fan Run (degrees)", required: true, defaultValue: 3, submitOnChange: true
-                }
+        }
+        if(extSenTstat && extTmpSensor) {
+            section("Rule Type ") {
+               	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Heat-Cool","Cirulate"], required: req, submitOnChange: true,
+                    image: imgIcon("rule_icon.png"))
+            }
+            section("Desired Temperatures..." ) {
+                input "extSenHeatTemp", "number", title: "Set Heat Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("heat_icon.png")
+                input "extSenCoolTemp", "number", title: "Set Cool Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("cool_icon.png")
+            }
+            section("Optionally Evaluate Temps when these sensors detect motion... ") {
+                input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
+                        image: imgIcon("motion_icon.png")
+            }
+            section ("Options") {
+                input "extSenModes", "mode", title: "Only in These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
+                input "extTimeBetweenRuns", "number", title: "Time Between Fan Runs (In Minutes)", required: true, defaultValue: 60, submitOnChange: true
+                input "degreesOfSeperation", "number", title: "Temp Threshold to Trigger Fan Run (degrees)", required: true, defaultValue: 3, submitOnChange: true
             }
         }
         if(extTmpSensor && extSenTstat && extSenHeatTemp && extSenCoolTemp) {
