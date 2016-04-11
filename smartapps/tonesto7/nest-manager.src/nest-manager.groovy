@@ -26,8 +26,8 @@ definition(
     author: "${textAuthor()}",
     description: "${textDesc()}",
     category: "My Apps",
-    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
-    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
+    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
+    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
     oauth: true )
 
@@ -37,10 +37,10 @@ definition(
 }
 
 def appVersion() { "2.0.0" }
-def appVerDate() { "4-8-2016" }
+def appVerDate() { "4-11-2016" }
 def appVerInfo() {
     
-    "V2.0.0 (Apr 8th, 2016)\n" +
+    "V2.0.0 (Apr 11th, 2016)\n" +
     "Fixed: Alot\n\n" +
     "------------------------------------------------"
 }
@@ -109,7 +109,7 @@ def authPage() {
         }
     }
     
-    updateWebStuff()
+    updateWebStuff(true)
     
     def description
     def uninstallAllowed = false
@@ -291,7 +291,7 @@ def initialize() {
     	for (qnum = 0; qnum < 15; qnum++) {
     	    atomicState?."cmdQ${qnum}" = null
     	    setLastCmdSentSeconds(qnum, null)
-    	    setrecentSendCmd(qnum, null)
+    	    setRecentSendCmd(qnum, null)
     	}
     	atomicState.lastChildUpdDt = null // force child update on next poll
     	atomicState.lastForcePoll = null
@@ -837,7 +837,7 @@ void schedNextworkQ(childId) {
     if (!done) {
          runIn(nearestQ, "workQueue", [overwrite: true])
     }
-    if(childDebug && childDev) { childDev?.log("schedNextworkQ queue: ${qnum} | recentSendCmd: ${getrecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
+    if(childDebug && childDev) { childDev?.log("schedNextworkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
 }
 
 private getRecentSendCmd(qnum) {
@@ -990,7 +990,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         }
         setLastCmdSentSeconds(qnum, getDtNow())
 
-//log.trace "procNestApiCmd time update recentSendCmd:  ${getrecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
+//log.trace "procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
 
         httpPutJson(params) { resp ->
             if (resp.status == 307) {
@@ -1513,7 +1513,7 @@ def deviceHandlerTest() {
         def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
         
         def chldCnt = getAllChildDevices()
-        log.debug "d1: ${d1} | d2: ${d2} | d3: ${d3} | devCnt: ${chldCnt.size()}"
+        log.debug "d1: ${d1} | d2: ${d2} | d3: ${d3} | d4: ${d4} || devCnt: ${chldCnt.size()}"
 
 		if (d1) {
             tDevInst = true 
@@ -1913,7 +1913,7 @@ def setStateVar(frc = false) {
      		if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
      		if(!atomicState?.updNotifyWaitVal) 			{ atomicState.updNotifyWaitVal = 7200 }
         	atomicState?.stateVarUpd = true
-        	atomicState?.stateVarVer = atomicState?.appData.state.stateVarVer ? atomicState?.appData.state.stateVarVer.toInteger() : 0
+        	atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
             stateCleanup()
         }
     } catch (ex) { LogAction("setStateVar Exception: ${ex}", "error", true, true) }
@@ -1921,20 +1921,20 @@ def setStateVar(frc = false) {
 
 def stateCleanup() {
     //Things that I need to clear up on updates go here
-    if (atomicState?.pollValue) 			{ atomicState.pollValue = null }
-    if (atomicState?.pollStrValue) 			{ atomicState.pollStrValue = null }
-    if (atomicState?.pollWaitVal) 			{ atomicState.pollWaitVal = null }
+    if (atomicState?.pollValue) 			{ atomicState?.pollValue = null }
+    if (atomicState?.pollStrValue) 			{ atomicState?.pollStrValue = null }
+    if (atomicState?.pollWaitVal) 			{ atomicState?.pollWaitVal = null }
     if (atomicState?.tempChgWaitVal) 		{ atomicState?.tempChgWaitVal = null }
     if (atomicState?.cmdDelayVal) 			{ atomicState?.cmdDelayVal = null }
     if (atomicState?.testedDhInst)          { atomicState?.devHandlersTested = true }
-    if (atomicState?.missedPollNotif)       { atomicState.missedPollNotif = null }
-    if (atomicState?.updNotif)              { atomicState.updNotif = null }
-    if (atomicState?.updChildOnNewOnly)     { atomicState.updChildOnNewOnly = null }
-    if (atomicState?.disAppIcons)           { atomicState.disAppIcons = null }
-    if (atomicState?.showProtAlarmStateEvts){ atomicState.showProtAlarmStateEvts = null } 
-    if (atomicState?.showAwayAsAuto)        { atomicState.showAwayAsAuto = null }
-    if (atomicState?.cmdQ)                  { atomicState.cmdQ = null }
-    if (atomicState?.recentSendCmd)         { atomicState.recentSendCmd = null }
+    if (atomicState?.missedPollNotif)       { atomicState?.missedPollNotif = null }
+    if (atomicState?.updNotif)              { atomicState?.updNotif = null }
+    if (atomicState?.updChildOnNewOnly)     { atomicState?.updChildOnNewOnly = null }
+    if (atomicState?.disAppIcons)           { atomicState?.disAppIcons = null }
+    if (atomicState?.showProtAlarmStateEvts){ atomicState?.showProtAlarmStateEvts = null } 
+    if (atomicState?.showAwayAsAuto)        { atomicState?.showAwayAsAuto = null }
+    if (atomicState?.cmdQ)                  { atomicState?.cmdQ = null }
+    if (atomicState?.recentSendCmd)         { atomicState?.recentSendCmd = null }
 }
 
 
