@@ -153,7 +153,7 @@ def updateWeather() {
 def extSensorPage() {
 	dynamicPage(name: "extSensorPage", title: "Remote Sensor Automation", uninstall: false) {
     	if(state?.extSenEnabled == null) { state?.extSenEnabled = true }
-    	def req = ((!extTmpSensor) && extSenTstat) ? true : false
+    	def req = (!extTmpSensor && extSenTstat) ? true : false
         section("Choose a Thermostat... ") {
         	input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
             if(extSenTstat) { 
@@ -183,7 +183,7 @@ def extSensorPage() {
         }
         if(extSenTstat && extTmpSensor) {
             section("Rule Type ") {
-               	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Heat-Cool","Cirulate"], required: req, submitOnChange: true,
+               	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Heat-Cool","Cirulate"], required: true, submitOnChange: true,
                     image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
