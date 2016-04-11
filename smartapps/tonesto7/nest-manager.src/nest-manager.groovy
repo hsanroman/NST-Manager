@@ -289,9 +289,9 @@ def initialize() {
     	atomicState.cmdQlist = []
     	def qnum = 0
     	for (qnum = 0; qnum < 15; qnum++) {
-    	    atomicState?."cmdQ${qnum}" = null
-    	    setLastCmdSentSeconds(qnum, null)
-    	    setRecentSendCmd(qnum, null)
+    	    if (atomicState?."cmdQ${qnum}") { atomicState?."cmdQ${qnum}" = null }
+    	    if (atomicState?."lastCmdSentDt${qnum}") { setLastCmdSentSeconds(qnum, null) }
+    	    if (atomicState?."recentSendCmd${qnum}") { setRecentSendCmd(qnum, null) }
     	}
     	atomicState.lastChildUpdDt = null // force child update on next poll
     	atomicState.lastForcePoll = null
@@ -777,6 +777,10 @@ private getQueueNumber(cmdTypeId, childId) {
         cmdQueueList = atomicState?.cmdQlist
         cmdQueueList << cmdTypeId    
         atomicState.cmdQlist = cmdQueueList
+        qnum = cmdQueueList.indexOf(cmdTypeId)
+        atomicState?."cmdQ${qnum}" = null
+        setLastCmdSentSeconds(qnum, null)
+        setRecentSendCmd(qnum, null)
     }
     qnum = cmdQueueList.indexOf(cmdTypeId)
     if (qnum == -1 ) { if(childDebug && childDev) { childDev?.log("getQueueNumber: NOT FOUND" ) } }
