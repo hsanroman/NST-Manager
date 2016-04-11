@@ -2116,7 +2116,7 @@ def notifPrefPage() {
 			}
         	section("Missed Poll Notification:") {
         		input "missedPollNotif", "bool", title: "Send for Missed Polls...", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png")
-                if(missedPollNotif) {
+                if(missedPollNotif == true) {
                     def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
                     input ("misPollNotifyWaitVal", "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], description: misPollNotifyWaitValDesc, submitOnChange: true)
             		if(misPollNotifyWaitVal) {
@@ -2140,7 +2140,7 @@ def notifPrefPage() {
             }
             section("App and Device Updates:") {
                 input "updNotif", "bool", title: "Send for Updates...", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("update_icon3.png")
-               	if(updNotif) {
+               	if(updNotif == true) {
                     def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
                     input ("updNotifyWaitVal", "enum", title: "Send reminders every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], description: updNotifyWaitValDesc, submitOnChange: true)
             		if(updNotifyWaitVal) {
