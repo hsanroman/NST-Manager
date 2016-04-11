@@ -131,7 +131,7 @@ def authPage() {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
-            section(){
+            section(""){
                 paragraph "Tap 'Nest Login' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
                 href url: redirectUrl, style:"embedded", required: true, title: "Nest Login", description: description
             }
@@ -174,7 +174,7 @@ def authPage() {
                     			image: getAppImg("protect_icon.png")) 
                     }
                     atomicState?.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Add Nest Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
+                    input(name: "presDevice", title:"Add Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
                     			image: getAppImg("nest_dev_pres_icon.png")) 
                     atomicState?.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?", type: "bool", default: false, required: false, submitOnChange: true, 
@@ -1045,7 +1045,7 @@ def newUpdNotify() {
             def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
         	def tstat = !tUpd ? "" : "Thermostat: v${atomicState?.appData.versions.thermostat.ver.toString()}"
             def autoApp = !autoUpd ? "" : "Automation App: v${atomicState?.appData.versions.autoapp.ver.toString()}"
-            def weat = !wUpd ? "" : "Automation App: v${atomicState?.appData.versions.weather.ver.toString()}"
+            def weat = !wUpd ? "" : "Weather App: v${atomicState?.appData.versions.weather.ver.toString()}"
             def now = new Date()
         	sendMsg("Info", "Update(s) are available: ${appl}${autoApp}${weat}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
         	atomicState?.lastUpdMsgDt = getDtNow()
@@ -1412,7 +1412,7 @@ def addRemoveDevices(uninst = null) {
                     def dni = getNestWeatherId()
                     def d4 = getChildDevice(dni)
                     if(!d4) {
-                        d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: getNestWeatherId()])
+                        d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "Nest Weather (${location?.zipCode})"])
                         //d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${location.name} - Nest Weather Device"])
                         d4.take()
                         devsCrt = devsCrt + 1
@@ -1496,31 +1496,15 @@ def deviceHandlerTest() {
         def d1 = addChildDevice(app.namespace, getThermostatChildName(), "testNestThermostat-Install123", null, [label:"Nest Thermostat:InstallTest"])
 		def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
         def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
-        def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
-        
-        def chldCnt = getAllChildDevices()
-        log.debug "d1: ${d1} | d2: ${d2} | d3: ${d3} | d4: ${d4} || devCnt: ${chldCnt.size()}"
+       	def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
 
-		if (d1) {
-            tDevInst = true 
-            deleteChildDevice("testNestThermostat-Install123") 
-        } 
-    	if (d2) { 
-            presDevInst = true
-            deleteChildDevice("testNestPresence-Install123") 
-        } 
-    	if (d3) { 
-            pDevInst = true
-            deleteChildDevice("testNestProtect-Install123") 
-        } 
-        if (d4) { 
-            wDevInst = true
-            deleteChildDevice("testNestWeather-Install123") 
-        }
-        log.debug "Device Handler Install Test Completed..."
-        
-        atomicState?.devHandlersTested = true
-        return true
+		def testDevs = getAllChildDevices()
+        log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} || devCnt: ${testDevs.size()}"
+        if(testDevs.size() == 4) {
+			testDevs?.each { deleteChildDevice(it.deviceNetworkId) }
+            atomicState?.devHandlersTested = true
+        	return true
+    	}
     } 
     catch (ex) {
     	if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
