@@ -611,30 +611,11 @@ private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSe
 
 def apiVar() {
 	def api = [	
-    	types:	[	
-        			struct:"structures", 
-    				cos:"devices/smoke_co_alarms", 
-                	tstat:"devices/thermostats", 
-                	meta:"metadata"
-              	],
-    	objs:	[
-    				targetF:"target_temperature_f", 
-        			targetC:"target_temperature_c", 
-        			targetLowF:"target_temperature_low_f",
-        			targetLowC:"target_temperature_low_c",
-        			targetHighF:"target_temperature_high_f",
-        			targetHighC:"target_temperature_high_c",
-        			fanActive:"fan_timer_active",
-        			fanTimer:"fan_timer_timeout",
-        			hvacMode:"hvac_mode",
-        			away:"away"
-    			],
-        modes: 	[
-    				heat:"heat",
-        			cool:"cool",
-        			heatCool:"heat-cool",
-        			off:"off"
-    			]
+    	types:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", meta:"metadata" ],
+    	objs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f",
+        		  targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
+        		  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away" ],
+        modes: 	[ heat:"heat", cool:"cool", heatCool:"heat-cool", off:"off" ]
    	]
     return api
 }
@@ -827,8 +808,8 @@ void schedNextworkQ(childId) {
                 done = true
                 return
             } else {
-                if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestq) {
-                    nearestQ = 60 - getLastCmdSentSeconds(idx) + cmdDelay 
+                if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
+                    nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay) 
                     qnum = idx
                 }
             }
@@ -875,7 +856,7 @@ void workQueue() {
                 return
             } else {
                 if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
-                    nearestQ = 60 - getLastCmdSentSeconds(idx) + cmdDelay 
+                    nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay) 
                     qnum = idx
                 }
             }
@@ -906,7 +887,7 @@ void workQueue() {
                 if ( !cmdres ) {
                     atomicState.needChildUpd = true
                     atomicState.pollBlocked = false
-                    runIn((cmdDelay*2), "postCmd", [overwrite: true])
+                    runIn((cmdDelay * 2), "postCmd", [overwrite: true])
                 }
                 cmdProcState(false)
             }
@@ -927,8 +908,8 @@ void workQueue() {
                         done = true
                         return
                     } else {
-                        if ((60 - getLastCmdSentSeconds(idx)+cmdDelay) < nearestQ) {
-                            nearestQ = 60 - getLastCmdSentSeconds(idx)+cmdDelay 
+                        if ((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
+                            nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
                             qnum = idx
                         }
                     }
@@ -940,7 +921,7 @@ void workQueue() {
             if(cmdQueue?.size() == 0) {
             	atomicState.pollBlocked = false
             	atomicState.needChildUpd = true
-                runIn(cmdDelay+2, "postCmd", [overwrite: true])
+                runIn(cmdDelay + 2, "postCmd", [overwrite: true])
             }
             else { schedNextworkQ(null) }
             
@@ -960,7 +941,7 @@ void workQueue() {
         atomicState.needChildUpd = true
         atomicState?.pollBlocked = false
         runIn(60, "workQueue", [overwrite: true])
-        runIn((60+4), "postCmd", [overwrite: true])
+        runIn((60 + 4), "postCmd", [overwrite: true])
     	return
     }
 }
