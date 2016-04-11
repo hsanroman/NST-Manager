@@ -51,12 +51,13 @@ def mainPage() {
     state?.tempUnit = getTemperatureScale().toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
     	section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-            def senDesc = (extTmpSensor) ?: ("Temp${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}")
+            def senDesc = (extTmpSensor) ? ("${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}") : ""
             def motInUse = extMotionSensors ? "\nMotion Triggers Active" : ""
             def senModes = extSenModes ? "\nMode Filters Active" : ""
-            def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nTemp Desired - H: ${extSenHeatTemp}°${state?.tempUnit} | C: ${extSenCoolTemp}°${state?.tempUnit}" : ""
+            def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
+            def senRuleType = extSenRuleType ? "\nRule-Type: ${extSenRuleType}" : ""
             def extSenDesc = (extTmpSensor && extSenHeatTemp && extSenCoolTemp && extSenTstat) ? 
-            	"Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}\nSensor ${senDesc}${senSetTemps}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
+            	"Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}\nSensor Temp${senDesc}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
         	href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: imgIcon("remote_sensor_icon.png")
        	}
 		section("Turn a Thermostat Off when a Window or Door is Open:") {
@@ -174,7 +175,7 @@ def extSensorPage() {
             //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
             //		image: imgIcon("temperature.png")
             if(extTmpSensor) {
-            	def tmpVal = "Remote Sensor Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
+            	def tmpVal = "Remote Sensor Temp${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
                 if(extTmpSensor.size() > 1) {
                 	paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                     href "extSenShowTempsPage", title: "View Remote Sensor Temps...", description: tmpVal
