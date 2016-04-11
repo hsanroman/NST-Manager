@@ -289,9 +289,9 @@ def initialize() {
     	atomicState.cmdQlist = []
     	def qnum = 0
     	for (qnum = 0; qnum < 15; qnum++) {
-    	    atomicState?."cmdQ${qnum}" = null
-    	    setLastCmdSentSeconds(qnum, null)
-    	    setRecentSendCmd(qnum, null)
+    	    if (atomicState?."cmdQ${qnum}") { atomicState?."cmdQ${qnum}" = null }
+    	    if (atomicState?."lastCmdSentDt${qnum}") { setLastCmdSentSeconds(qnum, null) }
+    	    if (atomicState?."recentSendCmd${qnum}") { setRecentSendCmd(qnum, null) }
     	}
     	atomicState.lastChildUpdDt = null // force child update on next poll
     	atomicState.lastForcePoll = null
@@ -742,7 +742,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
             if (cmdQueue?.contains(cmdData)) {
                 LogAction("Command Exists in queue... Skipping...", "warn", true)
                 if(childDebug && childDev) { childDev?.log("Command Exists in queue ${qnum}... Skipping...", "warn") }
-                schedNextworkQ(childId)
+                schedNextWorkQ(childId)
             } else {
                 LogAction("Adding Command to Queue ${qnum}: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
                 if(childDebug && childDev) { childDev?.log("Adding Command to Queue ${qnum}: $cmdData") }
@@ -752,7 +752,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
                 atomicState."cmdQ${qnum}" = cmdQueue
 
                 atomicState?.lastQcmd = cmdData
-                schedNextworkQ(childId)
+                schedNextWorkQ(childId)
             }
             return true
 
@@ -777,6 +777,10 @@ private getQueueNumber(cmdTypeId, childId) {
         cmdQueueList = atomicState?.cmdQlist
         cmdQueueList << cmdTypeId    
         atomicState.cmdQlist = cmdQueueList
+        qnum = cmdQueueList.indexOf(cmdTypeId)
+        atomicState?."cmdQ${qnum}" = null
+        setLastCmdSentSeconds(qnum, null)
+        setRecentSendCmd(qnum, null)
     }
     qnum = cmdQueueList.indexOf(cmdTypeId)
     if (qnum == -1 ) { if(childDebug && childDev) { childDev?.log("getQueueNumber: NOT FOUND" ) } }
@@ -784,7 +788,7 @@ private getQueueNumber(cmdTypeId, childId) {
     return qnum
 }
  
-void schedNextworkQ(childId) {
+void schedNextWorkQ(childId) {
     def childDev = getChildDevice(childId)
     def cmdDelay = getChildWaitVal()
     //
@@ -818,7 +822,7 @@ void schedNextworkQ(childId) {
     if (!done) {
          runIn(nearestQ, "workQueue", [overwrite: true])
     }
-    if(childDebug && childDev) { childDev?.log("schedNextworkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
+    if(childDebug && childDev) { childDev?.log("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
 }
 
 private getRecentSendCmd(qnum) {
@@ -1104,7 +1108,7 @@ def getWeatherConditions() {
     	    LogAction("Retrieving Latest Local Weather Conditions", "info", true)
     	    def curWeather = getWeatherFeature("conditions")
             if(curWeather) { 
-        	    atomicState?.currentWeather = curWeather 
+        	    atomicState?.curWeather = curWeather 
         	    atomicState?.lastWeatherUpdDt = getDtNow()
         	    atomicState.needChildUpd = true
         	    return true
@@ -1121,11 +1125,11 @@ def getWeatherConditions() {
 }
 
 def getWData() {
-	if(atomicState?.currentWeather) {
-    	return atomicState?.currentWeather
+	if(atomicState?.curWeather) {
+    	return atomicState?.curWeather
     } else {
     	if(getWeatherConditions()) {
-        	return atomicState?.currentWeather
+        	return atomicState?.curWeather
         }
     }
 }
@@ -1452,6 +1456,7 @@ def addRemoveDevices(uninst = null) {
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestPresId() }
             }
             else if (!atomicState?.weatherDevice) {
+            	atomicState?.curWeather = null 
             	delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
             }            
         	else {
@@ -1916,6 +1921,7 @@ def stateCleanup() {
     if (atomicState?.showAwayAsAuto)        { atomicState?.showAwayAsAuto = null }
     if (atomicState?.cmdQ)                  { atomicState?.cmdQ = null }
     if (atomicState?.recentSendCmd)         { atomicState?.recentSendCmd = null }
+    if (atomicState?.currentWeather)        { atomicState?.currentWeather = null }
 }
 
 

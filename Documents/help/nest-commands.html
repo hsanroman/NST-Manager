@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>help-page</title>
+<title>nest-commands</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style type="text/css">
 /* GitHub stylesheet for MarkdownPad (http://markdownpad.com) */
@@ -291,23 +291,14 @@ img {
 </style>
 </head>
 <body>
-<h1><img src="https://github.com/tonesto7/nest-manager/raw/master/Images/App/help_icon.png" width="52" height="52"> Nest Manager Help Page</h1>
-<h2>Getting Started Instruction</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/getting-started.html">Getting Started...</a></em></h3>
-<h2><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/diag_icon.png" width="48" height="48"> Troubleshooting:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/diagnostics.html">Diagnostics...</a></em></h3>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/logging.html">Logging...</a></em></h3>
-<h2><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/notification_icon.png" width="48" height="48"> Notifications:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/notifications.html">Notifications</a></em></h3>
-<h2><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/device_pref_icon.png" width="48" height="48"> Customizing Preferences:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/polling-timing.html">Polling &amp; Timing...</a></em></h3>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/device-preferences.html">Device Options...</a></em></h3>
-<h2><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png" width="48" height="48"> Automation Info:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-automations.html">Nest Automations</a></em></h3>
-<h2>Sending Nest Commands:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html">Nest Commands...</a></em></h3>
-<h2>Rule Machine Custom Commands:</h2>
-<h3><em><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html">Custom Commands...</a></em></h3>
+<h2>Nest command rate limits</h2>
+<p>Nest rates limits commands to their APIs based on devices and structures. This is done to ensure availability of their services, and to not impact the operation of the devices.</p>
+<p>Writes (changes of temps or modes) to Nest devices requires the device to wake up and synchronize its state. This can impact battery life so Nest implemented rate limits. If a device’s battery is low, nest will reject all changes until the battery is recharged.</p>
+<p>Nest describes this in: <a href="https://developer.nest.com/documentation/cloud/data-rate-limits/">https://developer.nest.com/documentation/cloud/data-rate-limits/</a></p>
+<h3>How commands work with Nest Manager:</h3>
+<p>It is important when designing your automation's using Nest, that your automation's do not require more changes than Nest will allow in a period of time.</p>
+<p>The Nest Manager for SmartThings implements throttling to keep requests within Nest’s rate limits. <strong><em>If commands are received for a device that exceeds the Nest rate limits, the Nest Manager will slow the commands to 1 per minute for the device that is over the limit.</em></strong></p>
+<p><strong>Nest may reject commands if the battery state of the Nest device is low. If this occurs, Nest will not accept any commands for the device.</strong></p>
 
 </body>
 </html>

@@ -24,6 +24,10 @@
 
 ### *[Nest Automations](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-automations.html)*
 
+## Sending Nest Commands:
+
+### *[Nest Commands...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/nest-commands.html)*
+
 ## Rule Machine Custom Commands:
 
 ### *[Custom Commands...](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help/rule-machine-cmds.html)*
