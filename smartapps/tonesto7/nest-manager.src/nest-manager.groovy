@@ -927,7 +927,7 @@ void workQueue() {
             	atomicState.needChildUpd = true
                 runIn(cmdDelay + 2, "postCmd", [overwrite: true])
             }
-            else { schedNextworkQ(null) }
+            else { schedNextWorkQ(null) }
             
             atomicState?.cmdLastProcDt = getDtNow()
             if(cmdQueue?.size() > 10) {
