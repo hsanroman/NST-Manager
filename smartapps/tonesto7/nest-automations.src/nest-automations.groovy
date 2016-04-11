@@ -51,7 +51,7 @@ def mainPage() {
     state?.tempUnit = getTemperatureScale().toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
     	section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-            def senDesc = "Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
+            def senDesc = "Temp${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
             def motInUse = extMotionSensors ? "\nMotion Triggers Active" : ""
             def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nTemp Desired - H: ${extSenHeatTemp}°${state?.tempUnit} | C: ${extSenCoolTemp}°${state?.tempUnit}" : ""
@@ -106,7 +106,11 @@ def initialize() {
 }
 
 def getAutomationsActive() { 
-	parent.automationsActive(((wcContacts && wcTstat) || (awayModes && homeModes) || (homeStMode && awayStMode)) ? true : false)
+	def remActive = (extTmpSensor && extSenTstat && extSenHeatTemp && extSenCoolTemp)
+    def conActive = (wcContacts && wcTstat)
+    def nestModesActive = (awayModes && homeModes)
+    def autoDesc = "${remActive ? "Remote Sensors Active..." : ""}${conActive ? "\nContact Watcher Active..." : ""}${nestModesActive ? "Mode Automation Active..." : ""}"
+	parent.automationsActive(((remActive || conActive || nestModesActive) ? true : false), autoDesc)
 }
 
 def subscriber() {
@@ -142,6 +146,7 @@ def updateWeather() {
         exTempEvt(null) 
     }
 }
+
 /******************************************************************************  
 |                			EXTERNAL SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
@@ -165,13 +170,13 @@ def extSensorPage() {
                     }
                 }
             }
-            section("Choose Temperature Sensor(s) to Use Instead of the Thermostat's Ambient Temperature... ") {
+            section("Choose Temperature Sensor(s) to use instead of the Thermostat's Ambient Temperature... ") {
                 input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
                         image: imgIcon("temperature.png")
                 //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
                 //		image: imgIcon("temperature.png")
                 if(extTmpSensor) {
-                    def tmpVal = "Sensor Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
+                    def tmpVal = "Remote Sensor Temp${(extTmpSensor.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
                     if(extTmpSensor.size() > 1) {
                         paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                         href "extSenShowTempsPage", title: "View Remote Sensor Temps...", description: tmpVal
@@ -179,23 +184,22 @@ def extSensorPage() {
                 }
             }
             if(extSenTstat && extTmpSensor) {
-                section("Rule Type ") {
+                /*section("Rule Type ") {
                     input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Cirulate"], submitOnChange: true,
                         image: imgIcon("rule_icon.png"))
-                }
+                }*/
                 section("Desired Temperatures..." ) {
-                   
-                    input "extSenHeatTemp", "number", title: "Heat Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("heat_icon.png")
-                    input "extSenCoolTemp", "number", title: "Cool Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("cool_icon.png")
+                    input "extSenHeatTemp", "number", title: "Set Heat Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("heat_icon.png")
+                    input "extSenCoolTemp", "number", title: "Set Cool Temp (°${state?.tempUnit})", submitOnChange: true, image: imgIcon("cool_icon.png")
                 }
                 section("Optionally Evaluate Temps when these sensors detect motion... ") {
                     input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
                             image: imgIcon("motion_icon.png")
                 }
                 section ("Options") {
-                    input "extSenModes", "mode", title: "Which Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
+                    input "extSenModes", "mode", title: "Only in These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
                     input "extTimeBetweenRuns", "number", title: "Time Between Fan Runs (In Minutes)", required: true, defaultValue: 60, submitOnChange: true
-                    input "degreesOfSeperation", "number", title: "Degrees off to trigger Fan run", required: true, defaultValue: 3, submitOnChange: true
+                    input "degreesOfSeperation", "number", title: "Temp Threshold to Trigger Fan Run (degrees)", required: true, defaultValue: 3, submitOnChange: true
                 }
             }
         }
@@ -207,6 +211,7 @@ def extSensorPage() {
         } else { state?.extSenEnabled = false }
 	}
 }
+
 def extSenShowTempsPage() {
 	dynamicPage(name: "extSenShowTempsPage", uninstall: false) {
     	if(extTmpSensor) { 
@@ -231,9 +236,10 @@ def extSenTempEvt(evt) {
 	extSenEvtEval()
 }
 
+// Was based off of Keep Me Cozy II
 private extSenEvtEval() {
-	if (state?.extSenEnabled && extTmpSensor && extSenTstat) {
-		def tempThreshold = degreesOfSeperation.toInteger()
+	if (state?.extSenEnabled && modesOk(extSenModes) && extTmpSensor && extSenTstat) {
+		def threshold = degreesOfSeperation.toInteger()
 		def hvacMode = extSenTstat?.currentThermostatMode 
 		def curTstatTemp = getDeviceTemp(extSenTstat).toInteger()
         def curTstatOperState = extSenTstat?.currentThermostatOperatingState
@@ -245,30 +251,31 @@ private extSenEvtEval() {
         log.trace "Thermostat Info - Temperature: $curTstatTemp | HeatSetpoint: $curHeatSetpoint | CoolSetpoint: $curCoolSetpoint | HvacMode: $hvacMode | OperatingState: $curTstatOperState | FanMode: $curTstatFanMode" 
 		log.trace("Desired Temps - Heat: $extSenHeatTemp | Cool: $extSenCoolTemp")
 		
-        log.debug "Sensor Cool Diff: ${curSenTemp - extSenCoolTemp.toInteger()}"
-        
         if (hvacMode in ["cool","auto"]) {
-			if ((curSenTemp - extSenCoolTemp.toInteger()) >= tempThreshold) {
+			if ((curSenTemp - extSenCoolTemp.toInteger()) >= threshold) {
 				extSenTstat?.setCoolingSetpoint(curTstatTemp - 2)
 				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - 2}), ON"
 			}
-			else if (((extSenCoolTemp.toInteger() - curSenTemp) >= tempThreshold) && (curTstatTemp - curCoolSetpoint) >= tempThreshold) {
+			else if (((extSenCoolTemp.toInteger() - curSenTemp) >= threshold) && (curTstatTemp - curCoolSetpoint) >= threshold) {
 				extSenTstat?.setCoolingSetpoint(curTstatTemp + 2)
 				log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + 2}), OFF"
 			}
             if(curTstatOperState != "idle" && curTstatFanMode == "auto" && getFanRunOk()) {
-            
+            	if(((extSenCoolTemp.toInteger() - curSenTemp) < threshold) && (curTstatTemp - curCoolSetpoint) < threshold) {
+                
+                }
             }
 		}
+        
         log.debug "Sensor Heat Diff: ${curSenTemp - extSenHeatTemp.toInteger()}"
 		log.debug "Heat SetPoint and Tstat Temp Diff: ${(curHeatSetpoint - curTstatTemp)}"
         if (hvacMode in ["heat","emergency heat","auto"]) {
-			if ((extSenHeatTemp.toInteger() - curSenTemp) >= tempThreshold) {
+			if ((extSenHeatTemp.toInteger() - curSenTemp) >= threshold) {
 				extSenTstat?.setHeatingSetpoint(curTstatTemp + 2)
 				log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + 2}), ON"
 			}
            
-			else if (((curSenTemp - extSenHeatTemp) >= tempThreshold) && (curHeatSetpoint - curTstatTemp) >= tempThreshold) {
+			else if (((curSenTemp - extSenHeatTemp) >= threshold) && (curHeatSetpoint - curTstatTemp) >= threshold) {
 				extSenTstat?.setHeatingSetpoint(curTstatTemp - 2)
 				log.debug "extSenTstatermostat.setHeatingSetpoint(${curTstatTemp - 2}), OFF"
 			}
@@ -303,7 +310,7 @@ def getDeviceTemp(dev) {
 def getDeviceTempAvg(items) {
 	def tmpAvg = []
     def tempVal = 0
-	if(items.size() > 1) {
+	if(items?.size() > 1) {
 		tmpAvg = items*.currentTemperature
         if(tmpAvg && tmpAvg.size() > 1) {
             tempVal = Math.round(tmpAvg.sum() / tmpAvg.size())
@@ -591,7 +598,6 @@ def getExtConditions() {
     state?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     state?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
     log.debug "${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c}"
-
 }
 
 def getExTempOk() { 
