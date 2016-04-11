@@ -88,15 +88,15 @@ metadata {
         }
         standardTile("main2", "device.alarmState", width: 2, height: 2) {
     		state("default", label:'--', icon: "st.unknown.unknown.unknown")
-			state("ok", label:"clear", backgroundColor:"#44B621", 
+			state("ok", label:"clear", backgroundColor:"#44B621",
             	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/alarm_clear.png")
-			state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813", 
+			state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813",
             	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
-            state("smoke-emergency", label:"SMOKE!", backgroundColor:"#e86d13", 
+            state("smoke-emergency", label:"SMOKE!", backgroundColor:"#e8d813",
             	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_emergency.png")
-			state("co-warning", label:"CO!\nWARNING!", backgroundColor:"#e8d813", 
+			state("co-warning", label:"CO!\nWARNING!", backgroundColor:"#e86d13",
             	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_warn.png")
-  			state("co-emergency", label:"CO!", backgroundColor:"#e86d13", 
+  			state("co-emergency", label:"CO!", backgroundColor:"#e86d13",
             	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/co_emergency.png")
   		}
 		standardTile("smoke", "device.Nestsmoke", width: 2, height: 2) {
@@ -164,6 +164,10 @@ mappings {
 def initialize() {
 	log.info "Nest Protect ${textVersion()} ${textCopyright()}"
 	poll()
+}
+
+def parse(String description) {
+	log.debug "Parsing '${description}'"
 }
 
 def poll() {

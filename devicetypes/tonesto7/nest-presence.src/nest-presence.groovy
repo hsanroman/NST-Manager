@@ -95,9 +95,7 @@ def parse(String description) {
 	log.debug "Parsing '${description}'"
 }
 
-def configure() {
-	
-}
+def configure() { }
 
 def poll() {
 	log.debug "Polling parent..."
