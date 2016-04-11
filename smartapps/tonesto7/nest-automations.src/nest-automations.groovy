@@ -183,7 +183,7 @@ def extSensorPage() {
         }
         if(extSenTstat && extTmpSensor) {
             section("Rule Type ") {
-               	input(name: "extSenRuleType", type: "enum", title: "Type", options: ["Heat","Cool","Heat-Cool","Cirulate"], required: true, submitOnChange: true,
+               	input(name: "extSenRuleType", type: "enum", title: "Action Type", options: ["Heat","Cool","Heat-Cool","Circulate"], required: true, submitOnChange: true,
                     image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
