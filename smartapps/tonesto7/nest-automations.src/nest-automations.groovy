@@ -51,7 +51,7 @@ def mainPage() {
     state?.tempUnit = getTemperatureScale().toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
     	section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-            def senDesc = "Temp${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}"
+            def senDesc = (extTmpSensor) ?: ("Temp${(extTmpSensor?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extTmpSensor)}°${state?.tempUnit}")
             def motInUse = extMotionSensors ? "\nMotion Triggers Active" : ""
             def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nTemp Desired - H: ${extSenHeatTemp}°${state?.tempUnit} | C: ${extSenCoolTemp}°${state?.tempUnit}" : ""
@@ -328,7 +328,8 @@ def getDeviceTemp(dev) {
 def getDeviceTempAvg(items) {
 	def tmpAvg = []
     def tempVal = 0
-	if(items?.size() > 1) {
+	if(!items) { return tempVal }
+    else if(items?.size() > 1) {
 		tmpAvg = items*.currentTemperature
         if(tmpAvg && tmpAvg.size() > 1) {
             tempVal = Math.round(tmpAvg.sum() / tmpAvg.size())
