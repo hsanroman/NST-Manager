@@ -52,8 +52,8 @@ metadata {
 		//command "setAway"
         //command "setHome"
         command "setPresence"
-        command "setFanMode"
-        command "setTemperature"
+        //command "setFanMode"
+        //command "setTemperature"
         command "setThermostatMode"
         command "levelUpDown"
  	    command "levelUp"
@@ -979,7 +979,7 @@ void setCoolingSetpoint(Double reqtemp) {
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
-def setPresence() {
+void setPresence() {
 	log.trace "setPresence()..."
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
@@ -992,13 +992,13 @@ def setPresence() {
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
-def away() {
+void away() {
     log.trace "away()..."
     setAway()
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
-def present() {
+void present() {
     log.trace "present()..."
     setHome()
 }
