@@ -157,12 +157,12 @@ def extSensorPage() {
     	if(state?.extSenEnabled == null) { state?.extSenEnabled = true }
     	def req = (!extTmpSensor && extSenTstat) ? true : false
         section("Choose a Thermostat... ") {
-        	input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("nest_like.png")
+        	input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("thermostat_icon.png")
             if(extSenTstat) { 
             	def tmpVal = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"    
                 paragraph "Thermostat Room Temp: ${tmpVal}", image: " "
                 input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Changes on these Thermostats", submitOnChange: true, required: false,
-                		image: imgIcon("nest_like.png")
+                		image: imgIcon("thermostat_icon.png")
                 if(extSenTstatsMirror) { 
                 	extSenTstatsMirror.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
@@ -172,7 +172,7 @@ def extSensorPage() {
         }
         section("Choose Temperature Sensor(s) to use instead of the Thermostat's Ambient Temperature... ") {
         	input "extTmpSensor", "capability.temperatureMeasurement", title: "Remote Temp Sensors...", submitOnChange: true, required: req, multiple: true,
-                    image: imgIcon("temperature.png")
+                    image: imgIcon("temperature_icon.png")
             //input "extSensorNight", "capability.temperatureMeasurement", title: "Night Temp Sensors", submitOnChange: true, required: req, multiple: true,
             //		image: imgIcon("temperature.png")
             if(extTmpSensor) {
@@ -371,10 +371,10 @@ def wcPage() {
 			input name: "wcContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
             		image: imgIcon("contact_icon.png")
             input name: "wcTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-            		image: imgIcon("nest_like.png")
+            		image: imgIcon("thermostat_icon.png")
             if(wcTstat) {
             	input name: "wcTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-            		image: imgIcon("nest_like.png")
+            		image: imgIcon("thermostat_icon.png")
             }
 		}
         if(wcContacts && wcTstat) {
@@ -582,14 +582,14 @@ def extTempsPage() {
             }
             if(!exUseWeather) {
             	input "exTemp", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", submitOnChange: true, multiple: false, required: req, 
-            			image: imgIcon("temperature.png")
+            			image: imgIcon("temperature_icon.png")
                 if(exTemp) {
                 	def tmpVal = "${exTemp?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
                 	paragraph "Current Sensor Temp: ${tmpVal}", image: " "
                 }
             }
             input name: "exTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
-            		image: imgIcon("nest_like.png")
+            		image: imgIcon("thermostat_icon.png")
             if(exTstat) {
             	def tmpVal = "${exTstat?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
                 	paragraph "Current Thermostat Temp: ${tmpVal}", image: " "

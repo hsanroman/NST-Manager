@@ -166,7 +166,7 @@ def authPage() {
                     if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
                     if (stats?.size() > 0) { 
                     	input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
-                        		image: getAppImg("nest_like.png")) 
+                        		image: getAppImg("thermostat_icon.png")) 
                         atomicState?.thermostats = thermostats ? statState(thermostats) : null }
                     
                     if (coSmokes.size() > 0) { 
@@ -174,10 +174,10 @@ def authPage() {
                     			image: getAppImg("protect_icon.png")) 
                     }
                     atomicState?.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Add Presence Device?", type: "bool", default: false, required: false, submitOnChange: true, 
-                    			image: getAppImg("nest_dev_pres_icon.png")) 
+                    input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
+                    			image: getAppImg("presence_icon.png")) 
                     atomicState?.presDevice = presDevice ? true : false
-                    input(name: "weatherDevice", title:"Add Weather Device?", type: "bool", default: false, required: false, submitOnChange: true, 
+                    input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
                     			image: getAppImg("weather_icon.png")) 
                     atomicState?.weatherDevice = weatherDevice ? true : false
                 }
