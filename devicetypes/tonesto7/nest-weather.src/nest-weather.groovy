@@ -431,7 +431,6 @@ def getWeatherHtml2() {
             }
 
             #weatherInfo {
-              font-size: 1em;
               text-align: left;
             }
 			#leftData {
@@ -439,7 +438,7 @@ def getWeatherHtml2() {
                 float:left;
               }
             #city {
-            	font-size: 2vw;
+            	font-size: 3vw;
                 }
             
             #temp {
@@ -447,7 +446,7 @@ def getWeatherHtml2() {
             }
 
             #data {
-              font-size: 2vw;
+              font-size: 3vw;
               float: right;
               width: 30%
             }
