@@ -1261,14 +1261,15 @@ def getImgBase64(url,type) {
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() {
-	def leafVal =  state?.hasLeaf ? "<td><img src=\"${getImgBase64(getImg("nest_leaf_75.gif"), "gif")}\" style=width:20px; height:20px;></td>" : "<td>No Leaf</td>"
+	def leafVal =  state?.hasLeaf ? "<td><img src=\"${getImgBase64(getImg("nest_leaf_75.gif"), "gif")}\" class='leafImg'></td>" : "<td>No Leaf</td>"
 	renderHTML {
     	head {
         	"""
             <style type="text/css">
                 .flat-table {
                   width: 100%;
-                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  font-family: 'Lucida Grande';
+                  src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
                   border: none;
                   border-radius: 3px;
                   -webkit-border-radius: 3px;
@@ -1278,7 +1279,7 @@ def getInfoHtml() {
                 .flat-table th,
                 .flat-table td {
                   box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
-                  padding: 2px;
+                  padding: 4px;
                   font-size: 14px;
                 }
 
@@ -1307,32 +1308,35 @@ def getInfoHtml() {
 				.datetime {
                   font-size:13px;
                 }
+                .leafImg {
+                  width:30px; height:30px;
+                }
             </style>
            	"""
         }
         body {
         	"""
-              <table class="flat-table">
-                <thead>
-                  <th> Network Status</th>
-                  <th>Leaf</th>
-                  <th>API Status</th>
-                </thead>
-                   <tbody>
-                     <tr>
-                       <td>${state?.onlineStatus.toString()}</td>
-                       	 $leafVal
-                         <td>${state?.apiStatus}</td>
-                       </tr>
-                       <tr>
-                         <th>Firmware Version</th>
-                         <th>Debug</th>
-                         <th>Device Type</th>
-                      </tr>
-                        <td>${state?.softwareVer.toString()}</td>
-                        <td>${state?.debugStatus}</td>
-                        <td>${state?.devTypeVer.toString()}</td>
-                    </tbody>
+             <table class="flat-table">
+               <thead>
+                 <th>Network Status</th>
+                 <th>Leaf</th>
+                 <th>API Status</th>
+               </thead>
+                 <tbody>
+                   <tr>
+                     <td>${state?.onlineStatus.toString()}</td>
+               	  	 $leafVal
+                     <td>${state?.apiStatus}</td>
+                   </tr>
+                   <tr>
+                     <th>Firmware Version</th>
+                     <th>Debug</th>
+                     <th>Device Type</th>
+                   </tr>
+                   <td>${state?.softwareVer.toString()}</td>
+                   <td>${state?.debugStatus}</td>
+                   <td>${state?.devTypeVer.toString()}</td>
+                 </tbody>
             </table>
             <table class="flat-table">
               <thead>
@@ -1340,12 +1344,12 @@ def getInfoHtml() {
                 <th>Data Last Received</th>
               </thead>
               <tbody>
-                  <tr>
+                <tr>
                   <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
                   <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
-                  </tr>
-                </tbody>
-              </table>
+                </tr>
+              </tbody>
+             </table>
             """
         }
     }
