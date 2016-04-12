@@ -52,8 +52,8 @@ metadata {
 		//command "setAway"
         //command "setHome"
         command "setPresence"
-        command "setFanMode"
-        command "setTemperature"
+        //command "setFanMode"
+        //command "setTemperature"
         command "setThermostatMode"
         command "levelUpDown"
  	    command "levelUp"
@@ -63,6 +63,7 @@ metadata {
 		command "heatingSetpointDown"
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
+        command "changeMode"
 
 		attribute "temperatureUnit", "string"
         attribute "targetTemp", "string"
@@ -128,11 +129,12 @@ metadata {
             state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-            state("off", 	action:"thermostat.heat", 	nextState: "heat", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
-			state("heat", 	action:"thermostat.cool", 	nextState: "cool", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
-            state("cool", 	action:"thermostat.auto", 	nextState: "auto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
-            state("auto", 	action:"thermostat.off", 	nextState: "off", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
-            state("emergency heat", action:"thermostat.heat", nextState: "heat", icon: "st.thermostat.emergency")
+            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
+			state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
+            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
+            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
+            state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
+            state ("updating", label:"Working", icon: "st.secondary.secondary")
 		}
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
@@ -977,7 +979,7 @@ void setCoolingSetpoint(Double reqtemp) {
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
-def setPresence() {
+void setPresence() {
 	log.trace "setPresence()..."
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
@@ -990,13 +992,13 @@ def setPresence() {
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
-def away() {
+void away() {
     log.trace "away()..."
     setAway()
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
-def present() {
+void present() {
     log.trace "present()..."
     setHome()
 }
@@ -1013,7 +1015,37 @@ def setHome() {
 
 /************************************************************************************************
 |										HVAC MODE FUNCTIONS										|
-*************************************************************************************************/
+************************************************************************************************/
+
+def getHvacModes() {
+    log.debug "Building Modes list"
+	def modesList = ['off']
+    if( state?.can_heat == true ) { modesList.push('heat') }
+    if( state?.can_cool == true ) { modesList.push('cool') }
+    if( state?.can_heat == true || state?.can_cool == true ) { modesList.push('auto') }
+    Logger("Modes = ${modesList}")
+    return modesList
+}
+
+def changeMode() {
+	log.debug "changeMode.."
+	def currentMode = device.currentState("thermostatMode")?.value
+	def lastTriedMode = state.lastTriedMode ?: currentMode ?: "off"
+	def modeOrder = getHvacModes()
+	def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
+	def nextMode = next(lastTriedMode)
+	setHvacMode(nextMode)
+}
+
+def setHvacMode(nextMode) {
+	log.debug "setHvacMode(${nextMode})"
+	if (nextMode in modes()) {
+		state.lastTriedMode = nextMode
+		"$nextMode"()
+	} else {
+		log.debug("Invalid Mode '$nextMode'")
+	}
+}
 
 void off() {
 	log.trace "off()..."
@@ -1096,10 +1128,10 @@ void setThermostatMode(modeStr) {
 void fanOn() {
     log.trace "fanOn()..."
     def curPres = getNestPresence()
-    if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
-	        if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
+    if( (curPres == "home") && state?.has_fan.toBoolean() ) {
+	    if (parent.setFanMode(this, true) ) { fanModeEvent("true") }
     } else {
-       		log.error "Error setting fanOn" 
+       	log.error "Error setting fanOn" 
     }
 }
 
@@ -1107,9 +1139,9 @@ void fanOff() {
 	log.trace "fanOff()..."
     def curPres = getNestPresence()
 	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
-	    if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
+		if (parent.setFanMode (this, "off") ) { fanModeEvent("false") } 
     } else {
-       		log.error "Error setting fanOff" 
+       	log.error "Error setting fanOff" 
 	}
 }
 
@@ -1124,7 +1156,7 @@ void fanAuto() {
 	if ( (curPres == "home") && state?.has_fan.toBoolean() ) {
    		if (parent.setFanMode(this,false) ) { fanModeEvent("false") }
     } else {
-       		log.error "Error setting fanAuto" 
+    	log.error "Error setting fanAuto" 
     }
 }
 
@@ -1198,75 +1230,38 @@ def log(message, level = "trace") {
     return null // always child interface call with a return value
 }
 
-def getImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
-
-def leafImg() { 
-	return "data:image/gif;base64,R0lGODdhgACAAOYAAAAAAICAAICAgFWqAKqqVWazAG22AGS+AGu+AEC/AGq/FXC/AHC/EIC/AIC/IIC/QGXDAWLEFGvFBXTFAHH"+ 
-    		"GHHHGOY7GOW3HCnHHDm7IFG/IDIDIJHnJKG3KBHHKDnTLFGbMAGbMM4LMM5nMZnfNGXnOHXvPIXTRLnbRE3vRHn3RI4vRRnnSFoDSJnrTLIrTLoPUK43UOmrV"+
-            "AIDVAIfWMYjXM5TXQ4LZJYfZMorZNZnZTYbaLI3bO5LbJIncL5DcP4/dQZLeQ4DfAIDfQJXfSpXfVZ/fUJ/fYI7gN5bgSo/hOpHhPZXhRpniTZXjUZzkUp7kWa"+ 
-            "HkUaDnWZzpTZ7pUp7pWqDrVKLrWZ/vYKbwWwD/AID/AID/gKr/Vb//QP//AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+ 
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAAGEAIf8LSUNDUkdCRzEwMTL/AAAMSExpbm8CEAAAbW50clJHQi"+
-            "BYWVogB84AAgAJAAYAMQAAYWNzcE1TRlQAAAAASUVDIHNSR0IAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1IUCAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+ 
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAARY3BydAAAAVAAAAAzZGVzYwAAAYQAAABsd3RwdAAAAfAAAAAUYmtwdAAAAgQAAAAUclhZWgAAAhgAAAAUZ1hZWgAAAiwAAA"+ 
-            "AUYlhZWgAAAkAAAAAUZG1uZAAAAlQAAABwZG1kZAAAAsQAAACIdnVlZAAAA0wAAACGdmll/3cAAAPUAAAAJGx1bWkAAAP4AAAAFG1lYXMAAAQMAAAAJHRlY2gA"+
-            "AAQwAAAADHJUUkMAAAQ8AAAIDGdUUkMAAAQ8AAAIDGJUUkMAAAQ8AAAIDHRleHQAAAAAQ29weXJpZ2h0IChjKSAxOTk4IEhld2xldHQtUGFja2FyZCBDb21wYW"+ 
-            "55AABkZXNjAAAAAAAAABJzUkdCIElFQzYxOTY2LTIuMQAAAAAAAAAAAAAAEnNSR0IgSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+
-            "AAAAAAAAAAAAAAAAAAAAAAAAAABYWVogAAAAAAAA81EAAf8AAAABFsxYWVogAAAAAAAAAAAAAAAAAAAAAFhZWiAAAAAAAABvogAAOPUAAAOQWFlaIAAAAAAAAG"+
-            "KZAAC3hQAAGNpYWVogAAAAAAAAJKAAAA+EAAC2z2Rlc2MAAAAAAAAAFklFQyBodHRwOi8vd3d3LmllYy5jaAAAAAAAAAAAAAAAFklFQyBodHRwOi8vd3d3Lmll"+
-            "Yy5jaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkZXNjAAAAAAAAAC5JRUMgNjE5NjYtMi4xIERlZmF1bHQgUkdCIGNvbG"+
-            "91ciBzcGFjZSAtIHNSR0L/AAAAAAAAAAAAAAAuSUVDIDYxOTY2LTIuMSBEZWZhdWx0IFJHQiBjb2xvdXIgc3BhY2UgLSBzUkdCAAAAAAAAAAAAAAAAAAAAAAAA"+ 
-            "AAAAAGRlc2MAAAAAAAAALFJlZmVyZW5jZSBWaWV3aW5nIENvbmRpdGlvbiBpbiBJRUM2MTk2Ni0yLjEAAAAAAAAAAAAAACxSZWZlcmVuY2UgVmlld2luZyBDb2"+
-            "5kaXRpb24gaW4gSUVDNjE5NjYtMi4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB2aWV3AAAAAAATpP4AFF8uABDPFAAD7cwABBMLAANcngAAAAFYWVog/wAA"+
-            "AAAATAlWAFAAAABXH+dtZWFzAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAACjwAAAAJzaWcgAAAAAENSVCBjdXJ2AAAAAAAABAAAAAAFAAoADwAUABkAHgAjAC"+
-            "gALQAyADcAOwBAAEUASgBPAFQAWQBeAGMAaABtAHIAdwB8AIEAhgCLAJAAlQCaAJ8ApACpAK4AsgC3ALwAwQDGAMsA0ADVANsA4ADlAOsA8AD2APsBAQEHAQ0B"+
-            "EwEZAR8BJQErATIBOAE+AUUBTAFSAVkBYAFnAW4BdQF8AYMBiwGSAZoBoQGpAbEBuQHBAckB0QHZAeEB6QHyAfoCAwIMAv8UAh0CJgIvAjgCQQJLAlQCXQJnAn"+
-            "ECegKEAo4CmAKiAqwCtgLBAssC1QLgAusC9QMAAwsDFgMhAy0DOANDA08DWgNmA3IDfgOKA5YDogOuA7oDxwPTA+AD7AP5BAYEEwQgBC0EOwRIBFUEYwRxBH4E"+
-            "jASaBKgEtgTEBNME4QTwBP4FDQUcBSsFOgVJBVgFZwV3BYYFlgWmBbUFxQXVBeUF9gYGBhYGJwY3BkgGWQZqBnsGjAadBq8GwAbRBuMG9QcHBxkHKwc9B08HYQ"+
-            "d0B4YHmQesB78H0gflB/gICwgfCDIIRghaCG4IggiWCKoIvgjSCOcI+wkQCSUJOglPCWT/CXkJjwmkCboJzwnlCfsKEQonCj0KVApqCoEKmAquCsUK3ArzCwsL"+
-            "Igs5C1ELaQuAC5gLsAvIC+EL+QwSDCoMQwxcDHUMjgynDMAM2QzzDQ0NJg1ADVoNdA2ODakNww3eDfgOEw4uDkkOZA5/DpsOtg7SDu4PCQ8lD0EPXg96D5YPsw"+
-            "/PD+wQCRAmEEMQYRB+EJsQuRDXEPURExExEU8RbRGMEaoRyRHoEgcSJhJFEmQShBKjEsMS4xMDEyMTQxNjE4MTpBPFE+UUBhQnFEkUahSLFK0UzhTwFRIVNBVW"+
-            "FXgVmxW9FeAWAxYmFkkWbBaPFrIW1hb6Fx0XQRdlF4kX/64X0hf3GBsYQBhlGIoYrxjVGPoZIBlFGWsZkRm3Gd0aBBoqGlEadxqeGsUa7BsUGzsbYxuKG7Ib2h"+
-            "wCHCocUhx7HKMczBz1HR4dRx1wHZkdwx3sHhYeQB5qHpQevh7pHxMfPh9pH5Qfvx/qIBUgQSBsIJggxCDwIRwhSCF1IaEhziH7IiciVSKCIq8i3SMKIzgjZiOU"+
-            "I8Ij8CQfJE0kfCSrJNolCSU4JWgllyXHJfcmJyZXJocmtyboJxgnSSd6J6sn3CgNKD8ocSiiKNQpBik4KWspnSnQKgIqNSpoKpsqzysCKzYraSudK9EsBSw5LG"+
-            "4soizXLQwtQS12Last4f8uFi5MLoIuty7uLyQvWi+RL8cv/jA1MGwwpDDbMRIxSjGCMbox8jIqMmMymzLUMw0zRjN/M7gz8TQrNGU0njTYNRM1TTWHNcI1/TY3"+
-            "NnI2rjbpNyQ3YDecN9c4FDhQOIw4yDkFOUI5fzm8Ofk6Njp0OrI67zstO2s7qjvoPCc8ZTykPOM9Ij1hPaE94D4gPmA+oD7gPyE/YT+iP+JAI0BkQKZA50EpQW"+
-            "pBrEHuQjBCckK1QvdDOkN9Q8BEA0RHRIpEzkUSRVVFmkXeRiJGZ0arRvBHNUd7R8BIBUhLSJFI10kdSWNJqUnwSjdKfUrESwxLU0uaS+JMKkxyTLpNAk3/Sk2T"+
-            "TdxOJU5uTrdPAE9JT5NP3VAnUHFQu1EGUVBRm1HmUjFSfFLHUxNTX1OqU/ZUQlSPVNtVKFV1VcJWD1ZcVqlW91dEV5JX4FgvWH1Yy1kaWWlZuFoHWlZaplr1W0"+
-            "VblVvlXDVchlzWXSddeF3JXhpebF69Xw9fYV+zYAVgV2CqYPxhT2GiYfViSWKcYvBjQ2OXY+tkQGSUZOllPWWSZedmPWaSZuhnPWeTZ+loP2iWaOxpQ2maafFq"+
-            "SGqfavdrT2una/9sV2yvbQhtYG25bhJua27Ebx5veG/RcCtwhnDgcTpxlXHwcktypnMBc11zuHQUdHB0zHUodYV14XY+/3abdvh3VnezeBF4bnjMeSp5iXnnek"+
-            "Z6pXsEe2N7wnwhfIF84X1BfaF+AX5ifsJ/I3+Ef+WAR4CogQqBa4HNgjCCkoL0g1eDuoQdhICE44VHhauGDoZyhteHO4efiASIaYjOiTOJmYn+imSKyoswi5aL"+
-            "/IxjjMqNMY2Yjf+OZo7OjzaPnpAGkG6Q1pE/kaiSEZJ6kuOTTZO2lCCUipT0lV+VyZY0lp+XCpd1l+CYTJi4mSSZkJn8mmia1ZtCm6+cHJyJnPedZJ3SnkCerp"+
-            "8dn4uf+qBpoNihR6G2oiailqMGo3aj5qRWpMelOKWpphqmi6b9p26n4KhSqMSpN6mpqv8cqo+rAqt1q+msXKzQrUStuK4trqGvFq+LsACwdbDqsWCx1rJLssKz"+
-            "OLOutCW0nLUTtYq2AbZ5tvC3aLfguFm40blKucK6O7q1uy67p7whvJu9Fb2Pvgq+hL7/v3q/9cBwwOzBZ8Hjwl/C28NYw9TEUcTOxUvFyMZGxsPHQce/yD3IvM"+
-            "k6ybnKOMq3yzbLtsw1zLXNNc21zjbOts83z7jQOdC60TzRvtI/0sHTRNPG1EnUy9VO1dHWVdbY11zX4Nhk2OjZbNnx2nba+9uA3AXcit0Q3ZbeHN6i3ynfr+A2"+
-            "4L3hROHM4lPi2+Nj4+vkc+T85YTmDeaW5x/nqegy6LxU6Ubp0Opb6uXrcOv77IbtEe2c7ijutO9A78zwWPDl8XLx//KM8xnzp/Q09ML1UPXe9m32+/eK+Bn4qP"+
-            "k4+cf6V/rn+3f8B/yY/Sn9uv5L/tz/bf//ACwAAAAAgACAAAAH/4BhgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0"+
-            "tba3uLm6u7y9vr/AwcLDxMNVUFLFtVdXUszNV8qwUM9P1tZZ0dKsT8zX391P26rdVODXTeHjp+HfTe/w6eLrpE9W7vH5V/P0oE/m6fLFS0LQWr9P1u4JHEiw4b"+
-            "2Dm64BXNikIUEiBM1BvCRxIjyLIAkGGZlu4yN3CT1+DNlwJJORQZJoLGbt3ZN4Nxeia0KlZ8+c75JUrMiSyUuYSIPM5EUxHRUrUH1KPbezKUuCR5Nqfafr4xSf"+
-            "VMNSbcoQJJEgWbVqFXornjmxcP/BkSUakkkStXiR8gjSpBbBJlPkxY1rdWVDjHfz4v3BmMfeirIw2hxMmKJQlogVq2X8w7Fnx4FhEQxMGe7cq0leptUcpPHn15"+
-            "BbGZ1c+hzZq0TOomUNk/Pr347ttkIruPZNoFZBquad1DXw3zleriJevPRcuiF1M2/d+bn3HDl+BFGFNonx69hBbh/p2zvwHDzAg9+LymV108mvHl2tuLt76PIF"+
-            "CJ90pQCBlnWWpWeRUfwpxoNz/3kmYIA11BDdeKSgxURlp2XXYH/+RfjZhPJVWCENF5LCg11iXYfah4oBIeJrJApoYQ004FgDgaH8wKJtHda1HnuOhfhfjSWaaC"+
-            "L/DUzCUMMSSojCwxLVuRiShut11l6ESJaYg5JMhtlkDY6FMqV5VeUjlIJYDbmliF1++SWYYoYJw53wmbmEeUFahBGMeUEIJ5JK4lhnk3cmiicPoEy54W1FDcme"+
-            "kUd2eSOddiqqKQx5ejIlXwKhRsRy2wlaKaGYirnpqot6Ah6oZZklKaXfAadEfEmmSgOrvOKZg6s8BMXmqC6VyhmtjsGnxIQWMrvkobv2yisSv3JSAxJ8XQUToM"+
-            "2ZOmIO1ILX7CLiHirtuTAggQMnKAarHLebcSkfDhVGAp6q6J6bw7qboBhTS/Ai5RuyuJZbCQ45RJsvujVw8mpqRmVJsITzVmsJ/4oL55swJ5zOOjHF+/KbScIZ"+
-            "89pCohtrsgN8zIn3Mci79stpyau2YLPNnNKwScesefucfDvAMMmdCsPQJMY0a3qzzSrcyfFegc4oIdKQaLpygD5kHXTSdy59swpgB71zeFodKzV8+4rdiKJZ+8"+
-            "C1tF6D3QLYcrs9dnMPnl2i20IvkugOfL8N99cqzE033Sf3nQkMe5mtt3wwqK3InYALPvjShR+uuQqSYwKDD3k/TuHWfke+teWbxr356nTbrcnnM3ZJA+mJUH46"+
-            "6ol6zTTrm6dQwskcw+denDVErjgilOPete6Y83647yWU0Lnnwr9HvPGTG688DMwb7jzYJkAfff8JTR9/yZ1kAojqrtMXsj33cXv/Pdjj1x+90zuvnCyh4p6ocC"+
-            "Inu53gdDe/59nPfpwz3/muVqNCGQpRLahdCwRYMgIWEGwpEJ/47EeC30WQE5xroAMzZTMAWo55F1TBBg84PhK4sATc60QIKZSwGuAAWssD4A2ShkL58Y6FLHSh"+
-            "EF14gw9yYoLNmtMD8ZVDRLRghxnrXgpLsMIgDvEDWCzcJ1RwgxzpyFyKYpoOF4bCC1bRikLEoho/UIIbqGCLXQRj6uaWiMKhq4wFzOAZ6zdEEqzxj3SEo9GYqD"+
-            "Sw1TFxrOqeDzdnAhVmEIgt7OMfJ5mCN4LCBFCEmyERUThE5k7/ivMzQfj2GElJTvKPvzNBKMCGrk0eQm5Kw+P3TABJPprylKdUgSpFAcNzVRIRlfSkLHnXyFqW"+
-            "Mo24TGYGSUE+aamgBMBMwcksOMVa9tGFycymBz6wTGamAG6+KwQVg6m6PFLRmNfMJi49wE5upsAUVCwfrx45iOiRs5N5pKUxS3BLdf6RnezUADejdwoSfLNXLU"+
-            "iBEO2ZuSmSkp/X9KM//wnQgHqAngWVpsm4p0ffpfCZ+0znRCkKUA14QAMmZYELU+FHeYaxnPPTIDqvOFIsVrSkKL0ASi8KTVV8gAXyVOQswRfSiNbUpjdFaU4v"+
-            "wNSffmAVWIThNJvXUOed05r9/6zpTU+qVA0w9atOheoHSKC6RbJOnzNF5lHVaNGcLvWrTcWiWMnHNLOy7qHRM+pat1nRrr4VrhdAgVx9igKy2pV19kQnRCW616"+
-            "R2FbCA9YBgV8FOFNC1gKIkpV4b61idQhauEpDABfi6Cgxss5LOEyVIrblYbHI2oH79LGhFW9FVmPQDoQxpa9fK1r56QKdele0FQkvc0bKTFaPF7V0fmVY/uvao"+
-            "nXWrcIdb3JN6oBXJvetV+QnQqOZVrbyFLQaUOl3qEpe4AL2AK0x6uEaekQS/9Ww7n6vVD/R1qdKF7Hn3a1KdvmK05NOlMU9KCKbeFrq+fWxw9bvf8/ZXA7GQAO"+
-            "Bu91mCD3RAvYUIrUm3mcytwtarC2Zwg9EbXFlIwANFta8EEjHcDpyUpB8G8XRHvN8O2LgDK57FibHqQg3kWBGhtbFXE0zeEM+WxkHGcWhvsWNbXtMDOHaEkiUg"+
-            "ZOAaWcQjvjFxdUFlNopUjVGWxHlvbGPRIpm4ZD6vLySgAZr+0ceYaDCZ5zxlNQeDyh5g7B8vEGZOnHkdXT6lBvpsklDg+c2ELjQoIEDlC3u1zIo2RWghUOYfR7"+
-            "oUEmD0pTfN6U57+tOgDrWoR03qUpv61KhOtapXzepWu/rVsI61rCERCAA7"
+def getImgBase64(url,type) {
+	def params = [ 
+        uri: url,
+       	contentType: 'image/$type'
+    ]
+    try {
+		httpGet(params) { resp ->
+			if(resp.data) {
+            	def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+    			int size = 1024
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                   	bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+            	String s = buf?.encodeBase64()
+            	//log.debug "resp: ${s}"
+                return s ? "data:image/${type};base64,${s.toString()}" : null
+			}
+        }	
+    }
+	catch (ex) {
+    	log.error "getImageBytes Exception: $ex"
+    }
 }
 
-def getInfoHtml() { 
-	def leafVal =  state?.hasLeaf ? "<td><img src=\"${leafImg()}\" style=width:20px; height:20px;></td>" : "<td>No Leaf</td>"
+def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
+
+def getInfoHtml() {
+	def leafVal =  state?.hasLeaf ? "<td><img src=\"${getImgBase64(getImg("nest_leaf_75.gif"), "gif")}\" style=width:20px; height:20px;></td>" : "<td>No Leaf</td>"
 	renderHTML {
     	head {
         	"""
