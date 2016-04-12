@@ -159,7 +159,7 @@ metadata {
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 3)
         
 	main "main2"
-	details(["alarmState", "filler", "batteryState", "devInfoHtml", "refresh"])
+	details(["alarmState", "filler", "batteryState",  "filler", "devInfoHtml", "refresh"])
    }
 }
 
