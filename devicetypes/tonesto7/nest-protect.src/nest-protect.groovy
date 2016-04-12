@@ -37,8 +37,7 @@ def devVer() { return "1.2.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
-		//capability "Polling"
-		capability "Sensor"
+		capability "Polling"
 		capability "Battery"
 		capability "Smoke Detector"
 		capability "Carbon Monoxide Detector"
@@ -497,13 +496,13 @@ def getCarbonImg() {
 	def carbonVal = device.currentState("NestcarbonMonoxide")?.value
     switch(carbonVal) {
     	case "warn":
-        	return getImgBase64(getImg("co_warn.png"), "png")
+        	return getImgBase64(getTestImg("co_warn.png"), "png")
         	break
         case "emergency":
-        	return getImgBase64(getImg("co_emergency.png"), "png")
+        	return getImgBase64(getTestImg("co_emergency.png"), "png")
         	break
         default:
-        	return getImgBase64(getImg("co_clear.png"), "png")
+        	return getImgBase64(getTestImg("co_clear.png"), "png")
         	break
     }
 }
@@ -512,13 +511,13 @@ def getSmokeImg() {
 	def smokeVal = device.currentState("Nestsmoke")?.value
     switch(smokeVal) {
     	case "warn":
-        	return getImgBase64(getImg("smoke_warn.png"), "png")
+        	return getImgBase64(getTestImg("smoke_warn.png"), "png")
         	break
         case "emergency":
-        	return getImgBase64(getImg("smoke_emergency.png"), "png")
+        	return getImgBase64(getTestImg("smoke_emergency.png"), "png")
         	break
         default:
-        	return getImgBase64(getImg("smoke_clear.png"), "png")
+        	return getImgBase64(getTestImg("smoke_clear.png"), "png")
         	break
     }
 }
@@ -534,7 +533,7 @@ def getImgBase64(url,type) {
             	def respData = resp?.data
                 ByteArrayOutputStream bos = new ByteArrayOutputStream()
                 int len
-    			int size = 1024
+    			int size = 2048
                 byte[] buf = new byte[size]
                 while ((len = respData.read(buf, 0, size)) != -1)
                    	bos.write(buf, 0, len)
@@ -550,16 +549,14 @@ def getImgBase64(url,type) {
     	log.error "getImageBytes Exception: $ex"
     }
 }
-
+def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() { 
 	def battImg = (state?.battVal == "low") ? "<td><img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\"></td>" : 
     		"<td><img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\"></td>"
-    def coImg = (state?.battVal == "low") ? "<td><img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\"></td>" : 
-    		"<td><img class='alarmImg' src=\"${getCarbonImg()}\"></td>"
-    def smokeImg = (state?.battVal == "low") ? "<td><img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\"></td>" : 
-    		"<td><img class='alarmImg' src=\"${getSmokeImg()}\"></td>"
+    def coImg = "<td><img class='alarmImg' src=\"${getCarbonImg()}\"></td>"
+    def smokeImg = "<td><img class='alarmImg' src=\"${getSmokeImg()}\"></td>"
 	renderHTML {
     	head {
         	"""
@@ -619,7 +616,7 @@ def getInfoHtml() {
                 }
                 .alarmImg {
                   vertical-align: top;
-                  width:175px; height:175px;
+                  width:125px; height:125px;
                 }
             </style>
            	"""
