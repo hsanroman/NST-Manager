@@ -31,7 +31,7 @@ def devVer() { return "2.0.0"}
 metadata {
 	definition (name: "Nest Thermostat", namespace: "tonesto7", author: "Anthony S.") {
 		capability "Actuator"
-        capability "Polling"
+        //capability "Polling"
 		capability "Relative Humidity Measurement"
         capability "Refresh"
         capability "Sensor"
