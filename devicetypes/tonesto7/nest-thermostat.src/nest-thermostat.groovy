@@ -139,6 +139,7 @@ metadata {
        standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
 			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
             state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
+            state "disabled", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_disabled.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
 			state "home", 	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
@@ -171,22 +172,27 @@ metadata {
         
         valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false) {
 			state "default", label:'${currentValue}', unit:"Heat", backgroundColor:"#FF3300"
+            state "disabled", label: ''
 		}
         
         valueTile("coolingSetpoint", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false) {
 			state "default", label:'${currentValue}', unit:"Cool", backgroundColor:"#0099FF"
+            state "disabled", label: ''
 		}
 
 		standardTile("heatingSetpointDown", "device.heatingSetpoint",  width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "heatingSetpointDown", label:'  ', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
+            state "disabled", label: ''
 		}
         
         standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
 			state "coolingSetpointUp", label:'  ', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+            state "disabled", label: ''
 		}
 
 		standardTile("coolingSetpointDown", "device.coolingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "coolingSetpointDown", label:'  ', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+            state "disabled", label: ''
 		}
         
         valueTile("lastConnection", "device.lastConnection", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -216,12 +222,14 @@ def tileMain() {
 def tileSelect() { 
 	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
         		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
-	
-    //Comment out the return section above and uncomment this section to remove the HTML tiles and restore the original ST tiles
-	/*return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-      		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
-            "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]*/
 }
+
+//Comment out the return section above and uncomment this section to remove the HTML tiles and restore the original ST tiles
+/*def tileSelect() {
+	return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+      		"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
+            "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
+}*/
 
 def getTempColors() {
 	def colorMap
@@ -525,11 +533,10 @@ def hvacModeEvent(mode) {
    		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
         state?.hvac_mode = newMode
    	} else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
-    
 } 
 
 def fanModeEvent(fanActive) {
-	def val = (fanActive == "true") ? "on" : "auto"
+	def val = state?.hasFan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
 	def fanMode = device.currentState("thermostatFanMode")?.value
 	if(!fanMode.equals(val)) {
 		log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
@@ -1039,7 +1046,7 @@ def changeMode() {
 
 def setHvacMode(nextMode) {
 	log.debug "setHvacMode(${nextMode})"
-	if (nextMode in modes()) {
+	if (nextMode in getHvacModes()) {
 		state.lastTriedMode = nextMode
 		"$nextMode"()
 	} else {
