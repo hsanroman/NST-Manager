@@ -119,7 +119,7 @@ def authPage() {
         description = "You are connected."
         oauthTokenProvided = true
         uninstallAllowed = true
-           setStateVar(true)
+        setStateVar(true)
     } else { description = "Click to enter Nest Credentials" }
     
     def redirectUrl = buildRedirectUrl
@@ -154,7 +154,7 @@ def authPage() {
             }
             
             if (structures) {
-                   atomicState?.structures = structures ? structures : null
+                atomicState?.structures = structures ? structures : null
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats" 
                 LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
@@ -194,12 +194,12 @@ def authPage() {
                 if((atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) || diagLogs) {
                     def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
                     section(diagInfoDesc) {
-                           if(atomicState.structures && (atomicState.thermostats ||atomicState.protects) && atomicState?.isInstalled) {
-                               href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
+                        if(atomicState.structures && (atomicState.thermostats ||atomicState.protects) && atomicState?.isInstalled) {
+                            href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
                         }
                         if(diagLogs) {
-                               href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", image: getAppImg("diag_icon.png")
-                           }
+                            href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", image: getAppImg("diag_icon.png")
+                        }
                     }
                 }
                 section("Preferences:") { 
@@ -395,23 +395,23 @@ def forcedPoll(type = null) {
     def lastFrcdPoll = getLastForcedPollSec()
     def pollWaitVal = !settings?.pollWaitVal ? 10 : settings?.pollWaitVal.toInteger()
     if (lastFrcdPoll > pollWaitVal) { //<< This limits manual forces to 10 seconds or more
-           atomicState?.lastForcePoll = getDtNow()
+        atomicState?.lastForcePoll = getDtNow()
         atomicState?.pollBlocked = false
-           LogAction("Forcing Data Update... Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
+        LogAction("Forcing Data Update... Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
         if (type == "dev" || !type) { 
-               LogAction("Forcing Update of Device Data...", "info", true)
-               getApiData("dev")
+            LogAction("Forcing Update of Device Data...", "info", true)
+            getApiData("dev")
         }
-           if (type == "str" || !type) { 
-               LogAction("Forcing Update of Structure Data...", "info", true)
+        if (type == "str" || !type) { 
+            LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str") 
         }
         updateWebStuff(true)
-       } else { 
-            LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
-            atomicState.needStrPoll = true
-            atomicState.needDevPoll = true
-       }
+    } else { 
+        LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
+        atomicState.needStrPoll = true
+        atomicState.needDevPoll = true
+    }
     updateChildData()
 }
 
@@ -447,7 +447,6 @@ def getApiData(type = null) {
                     else {
                         //LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
                     }
-
                 } else { 
                     LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
                 }
@@ -460,7 +459,6 @@ def getApiData(type = null) {
                 if(resp?.status == 200) {
                     LogTrace("API Device Resp.Data: ${resp?.data}")
                     atomicState.apiIssues = false  
-
                     if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) { 
                         LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.deviceData = resp?.data
@@ -469,7 +467,6 @@ def getApiData(type = null) {
                     else {
                         //LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
                     }
-
                 } else { 
                     LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true, true) 
                 }
@@ -621,14 +618,14 @@ def setStructureAway(child, value) {
     LogAction("setStructureAway: ${devId} (${val})", "debug", true)
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${val})") }
     try {
-        if(val) { 	
+        if(val) {
             return sendNestApiCmd(atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "away", devId)
         }
-        else { 		
+        else {
             return sendNestApiCmd(atomicState?.structures, apiVar().types.struct, apiVar().objs.away, "home", devId)
         }
     }
-    catch (ex) { 
+    catch (ex) {
         LogAction("setStructureAway Exception: ${ex}", "debug", true, true) 
         if (childDebug && child) { child?.log("setStructureAway Exception: ${ex}", "error") }
         return false
@@ -640,9 +637,9 @@ def setFanMode(child, fanOn) {
     def val = fanOn.toBoolean()
     LogAction("setFanMode: ${devId} (${val})", "debug", true)
     if(childDebug && child) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val})") }
-    try {	
+    try {
         return sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.fanActive, val, devId)
-     }
+    }
     catch (ex) { 
         LogAction("setFanMode Exception: ${ex}", "error", true, true) 
         if(childDebug) { child?.log("setFanMode Exception: ${ex}", "error") }
@@ -671,11 +668,11 @@ def setTargetTemp(child, unit, temp) {
         if(unit == "C") { 
             return sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetC, temp, devId) 
         }
-        else { 
+        else {
             return sendNestApiCmd(devId, apiVar().types.tstat, apiVar().objs.targetF, temp, devId) 
         }
     }
-    catch (ex) { 
+    catch (ex) {
         LogAction("setTargetTemp Exception: ${ex}", "error", true, true) 
         if(childDebug && child) { child?.log("setTargetTemp Exception: ${ex}", "error") }
         return false
@@ -726,7 +723,6 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
     if(childDebug && childDev) { childDev?.log("sendNestApiCmd... $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId") }
     try {
         if(cmdTypeId) {
-
             def qnum = getQueueNumber(cmdTypeId, childId)
             if (qnum == -1 ) { return false }
 
@@ -745,7 +741,6 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
                 cmdQueue = atomicState?."cmdQ${qnum}"
                 cmdQueue << cmdData
                 atomicState."cmdQ${qnum}" = cmdQueue
-
                 atomicState?.lastQcmd = cmdData
                 schedNextWorkQ(childId)
             }
@@ -1071,7 +1066,7 @@ def sendMsg(String msg, String msgType) {
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
                 log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"	
-               }
+            }
         }
     } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
 }
@@ -1296,13 +1291,13 @@ def statState(val) {
     def stats = [:]
     def tstats = getNestThermostats()
     tstats.each { stat ->
-           def statId = stat?.key
-           def statData = stat?.value
+        def statId = stat?.key
+        def statData = stat?.value
         val.each { st ->
             if(statId == st) {
-                  def adni = [statId].join('.')
+                def adni = [statId].join('.')
                 stats[adni] = statData
-               }
+            }
         }
     }
     return stats
@@ -1312,9 +1307,9 @@ def coState(val) {
     def protects = [:]
     def nProtects = getNestProtects()
     nProtects.each { dev ->
-       val.each { pt ->
-            if(dev?.key == pt) {             
-                   def bdni = [dev?.key].join('.')
+        val.each { pt ->
+        if(dev?.key == pt) {             
+            def bdni = [dev?.key].join('.')
                 protects[bdni] = dev?.value
             }
         }
@@ -1334,7 +1329,8 @@ def getNestPresId() {
     def dni = "Nest Presence Device"
     def d3 = getChildDevice(dni)
     if(d3) { return "Nest Presence Device" }  // found old name, return it
-    else { if(atomicState?.structures) { return "NestPres${atomicState.structures}" }
+    else { 
+        if(atomicState?.structures) { return "NestPres${atomicState.structures}" }
         else {
             LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
             return ""
@@ -1356,7 +1352,8 @@ def getNestWeatherId() {
     def dni = "Nest Weather Device (${location?.zipCode})"
     def d4 = getChildDevice(dni)
     if(d4) { return "Nest Weather Device (${location?.zipCode})" }  // found old name, return it
-    else { if(atomicState?.structures) { return "NestWeather${settings.structures}" }
+    else { 
+        if(atomicState?.structures) { return "NestWeather${settings.structures}" }
         else {
             LogAction("getNestWeatherId No structures ${atomicState?.structures}", "warn", true)
             return ""
@@ -1389,11 +1386,11 @@ def addRemoveDevices(uninst = null) {
                         def d1Label = "Nest Thermostat - ${dni.value}"
                         if (atomicState?.altNames) { d1Label = "${location.name} - ${dni.value}" }
                         d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d1Label}"])
-                         //d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
+                        //d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
                         d.take()
                         devsCrt = devsCrt + 1
                         changedDevs = true
-                           LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
+                        LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
                     } else {
                         LogAction("Found: ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
                     }
@@ -1548,7 +1545,7 @@ def deviceHandlerTest() {
     catch (ex) {
         if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
             LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true, true)
-           } else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
+        } else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
         atomicState.devHandlersTested = false
         return false
     }
@@ -1578,7 +1575,7 @@ def getEndpointUrl() {
         httpGet(params) { resp ->
             LogAction("EndPoint URL: ${resp?.data?.uri}", "trace", false, false, true)
             return resp?.data?.uri
-            }	
+        }	
     } catch (ex) { LogAction("getEndpointUrl Exception: ${ex}", "error", true, true) }
 }
 
@@ -1589,8 +1586,8 @@ def getAccessToken() {
     }
     catch (ex) { 
         def msg = "Error: OAuth is not Enabled for the Nest Manager application!!!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE..."
-            sendPush(msg)
-            LogAction("getAccessToken Exception | $msg", "warn", true)
+        sendPush(msg)
+        LogAction("getAccessToken Exception | $msg", "warn", true)
         return false 
     }
 }
@@ -1604,10 +1601,10 @@ def oauthInitUrl() {
     //log.debug "oauthInitUrl with callback: ${callbackUrl}"
     atomicState.oauthInitState = UUID?.randomUUID().toString()
     def oauthParams = [
-            response_type: "code",
-            client_id: clientId(),
-            state: atomicState?.oauthInitState,
-            redirect_uri: callbackUrl //"https://graph.api.smartthings.com/oauth/callback"
+        response_type: "code",
+        client_id: clientId(),
+        state: atomicState?.oauthInitState,
+        redirect_uri: callbackUrl //"https://graph.api.smartthings.com/oauth/callback"
     ]
     redirect(location: "https://home.nest.com/login/oauth2?${toQueryString(oauthParams)}")
 }
@@ -1650,7 +1647,7 @@ def revokeNestToken() {
     def params = [
         uri: "https://api.home.nest.com",
         path: "/oauth2/access_tokens/${atomicState?.authToken}",
-           contentType: 'application/json'
+        contentType: 'application/json'
     ]
     try {
         httpDelete(params) { resp ->
@@ -1678,19 +1675,15 @@ def success() {
 
 def fail() {
     def message = """
-        <p>The connection could not be established!</p>
-        <p>Click 'Done' to return to the menu.</p>
+    <p>The connection could not be established!</p>
+    <p>Click 'Done' to return to the menu.</p>
     """
     connectionStatus(message)
 }
 
 def connectionStatus(message, redirectUrl = null) {
     def redirectHtml = ""
-    if (redirectUrl) {
-        redirectHtml = """
-            <meta http-equiv="refresh" content="3; url=${redirectUrl}" />
-        """
-    }
+    if (redirectUrl) { redirectHtml = """<meta http-equiv="refresh" content="3; url=${redirectUrl}" />""" }
 
     def html = """
         <!DOCTYPE html>
@@ -1805,10 +1798,10 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
             if(!tmpExLogs) { 
                 tmpExLogs = [] 
                 tmpExLogs << logEntry
-               }
+            }
             else if (curStateSize < (maxStateSize - logMsgLngth)) {
                 tmpExLogs << logEntry
-               }
+            }
             else if (curStateSize > (maxStateSize - logMsgLngth)) { 
                 tmpExLogs.remove(0) // << Removes first item in the list to make room
                 tmpExLogs << logEntry
@@ -1821,33 +1814,32 @@ def LogAction(msg, type = "debug", showAlways = false, diag = false) {
 
 def renderLogJson() {
     try {
-          def values = []
+        def values = []
         def exLogs = atomicState?.exLogs
-          if (!exLogs) { values = [nothing: "found"] }
-          else {
+        if (!exLogs) { values = [nothing: "found"] }
+        else {
             def logJson = new groovy.json.JsonOutput().toJson(exLogs)
-              def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
-              render contentType: "application/json", data: logString
-          }
+            def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
+            render contentType: "application/json", data: logString
+        }
     } catch (ex) { LogAction("renderLogJson Exception: ${ex}", "error", true, true) }
 }
 
 def renderStateJson() {
     try {
-          def values = []
-          state?.each { item ->
+        def values = []
+        state?.each { item ->
             switch (item.key) {
                 case ["accessToken", "authToken", "exLogs", "structData","deviceData"]:
                     break
                 default:
                     values << item
-                     break
+                    break
             }
         }
         def logJson = new groovy.json.JsonOutput().toJson(values)
-          def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
-          render contentType: "application/json", data: logString
-          
+        def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
+        render contentType: "application/json", data: logString
     } catch (ex) { LogAction("renderStateJson Exception: ${ex}", "error", true, true) }
 }
 
@@ -1858,21 +1850,20 @@ def renderDebugJson() {
         if (!atomicState?.exLogs) { exLog = [nothing: "found"] }
         else { exLog = atomicState?.exLog }
         
-          def stateVals = []
-          state?.each { item ->
+        def stateVals = []
+        state?.each { item ->
             switch (item.key) {
                 case ["accessToken", "authToken",]:
                     break
                 default:
                     stateVals << item
-                     break
+                    break
             }
         }
         dbgData = ["LogData":exLog, "StateData":stateVals] 
         def logJson = new groovy.json.JsonOutput().toJson(dbgData)
-          def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
-          render contentType: "application/json", data: logString
-          
+        def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
+        render contentType: "application/json", data: logString
     } catch (ex) { LogAction("renderDebugJson Exception: ${ex}", "error", true, true) }
 }
 
@@ -1897,7 +1888,7 @@ def Logger(msg, type) {
             default:
                 log.debug "${msg}"
                 break
-           }
+        }
     }
     else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
 }
@@ -1917,10 +1908,10 @@ def setStateVar(frc = false) {
         def stateVer = 3
         def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
         if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) { 
-             if(!atomicState?.exLogs) 					{ atomicState.exLogs = [] }
-             if(!atomicState?.misPollNotifyWaitVal) 		{ atomicState.misPollNotifyWaitVal = 900 }
-             if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
-             if(!atomicState?.updNotifyWaitVal) 			{ atomicState.updNotifyWaitVal = 7200 }
+            if(!atomicState?.exLogs)                    { atomicState.exLogs = [] }
+            if(!atomicState?.misPollNotifyWaitVal) 	    { atomicState.misPollNotifyWaitVal = 900 }
+            if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
+            if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
             atomicState?.stateVarUpd = true
             atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
         }
@@ -2007,12 +1998,12 @@ def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/$imgName" : "" }
                             
-def latestTstatVer() { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
-def latestProtVer() { return atomicState?.appData?.versions?.protect ?: "unknown" }
-def latestPresVer() { return atomicState?.appData?.versions?.presence ?: "unknown" }
-def latestAutoAppVer() { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
-def latestWeathVer() { return atomicState?.appData?.versions?.weather ?: "unknown" }
-def getUse24Time() { return useMilitaryTime ? true : false }
+def latestTstatVer()    { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
+def latestProtVer()     { return atomicState?.appData?.versions?.protect ?: "unknown" }
+def latestPresVer()     { return atomicState?.appData?.versions?.presence ?: "unknown" }
+def latestAutoAppVer()  { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
+def latestWeathVer()    { return atomicState?.appData?.versions?.weather ?: "unknown" }
+def getUse24Time()      { return useMilitaryTime ? true : false }
 
 private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
 private childDebugStatus() { return !childDebug ? "Off" : "On" } //Keep this
@@ -2027,7 +2018,7 @@ def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDa
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
     if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
-       else {
+    else {
         LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
     }
     return tf.format(dt)
@@ -2344,23 +2335,23 @@ def uninstallPage() {
         section("") {
             paragraph "Uninstall this App, Automation App and Child Devices"
         }
-       }
+    }
 }
 
 def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
-           section("") {
+        section("") {
             paragraph "This page will allow you to view/export diagnostic logs and state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
         }
         section("Export or View the Logs") {
-               href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
+            href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                        title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                        title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false, 
                        title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("debug_data_icon.png")
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", image: getAppImg("reset_icon.png")
-           }
+        }
         section("Last Nest Command") {
             def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
             def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
@@ -2381,8 +2372,8 @@ def resetDiagQueuePage() {
 def nestLoginPrefPage () {
     dynamicPage(name: "nestLoginPrefPage", install: false) {
         section("Nest Login Preferences:") {
-               href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
-           }
+            href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
+        }
     }
 }
 
@@ -2424,22 +2415,22 @@ def structInfoPage () {
         section("") {
             paragraph "\nLocation Info:", image: getAppImg("nest_structure_icon.png")
         }
-           for(str in atomicState?.structData) {
+        for(str in atomicState?.structData) {
             if (str.key == atomicState?.structures) {
-                   def strId = str.key
+                def strId = str.key
                 def strData = str.value
                 section("Location Name: ${strData.name}") {
                     strData.each { item ->
                         switch (item.key) {
                             case [ "wheres" ]:
-                                   break
-                               default: 
+                                break
+                            default: 
                                 paragraph "${item.key.toString().capitalize()}: ${item.value}"
-                                   break
+                                break
                         }
                     }
                 }
-            }        
+            }
         }
     }
 }
@@ -2454,11 +2445,11 @@ def tstatInfoPage () {
             section("Thermostat Name: ${tstat.value}") {
                 atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
                     switch (dev.key) {
-                           case [ "where_id" ]:  //<< Excludes certain keys from being shown
-                               break
+                        case [ "where_id" ]:  //<< Excludes certain keys from being shown
+                            break
                         default: 
-                               devs << "${dev.key.toString().capitalize()}: ${dev.value}"
-                               break
+                            devs << "${dev.key.toString().capitalize()}: ${dev.value}"
+                            break
                     }
                 }
                 devs.sort().each { item ->
@@ -2480,11 +2471,11 @@ def protInfoPage () {
                 atomicState?.deviceData?.smoke_co_alarms[prot.key].each { dev ->
                     log.debug "prot dev: $dev"
                     switch (dev.key) {
-                           case [ "where_id" ]:  //<< Excludes certain keys from being shown
-                               break
+                        case [ "where_id" ]:  //<< Excludes certain keys from being shown
+                            break
                         default: 
-                               devs << "${dev.key.toString().capitalize()}: ${dev.value}"
-                               break
+                            devs << "${dev.key.toString().capitalize()}: ${dev.value}"
+                            break
                     }
                 }
                 devs.sort().each { item ->
