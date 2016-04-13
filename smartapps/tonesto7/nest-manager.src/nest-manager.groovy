@@ -586,7 +586,7 @@ def ok2PollStruct() {
     return ( ((getLastStructPollSec() + val) > pollStrTime) ? true : false )
 }
 
-def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects)) ? true : false }
+def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) ? true : false }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
@@ -1372,7 +1372,7 @@ def getNestWeatherId() {
 }*/
 
 def addRemoveDevices(uninst = null) {
-    def changedDevs = false
+    def retVal = false
     try {
         def tstats
         def nProtects
@@ -1389,7 +1389,6 @@ def addRemoveDevices(uninst = null) {
                         //d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
                         d.take()
                         devsCrt = devsCrt + 1
-                        changedDevs = true
                         LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
                     } else {
                         LogAction("Found: ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
@@ -1408,7 +1407,6 @@ def addRemoveDevices(uninst = null) {
                         //d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${location.name} - ${dni.value}"])
                         d2.take()
                         devsCrt = devsCrt + 1
-                        changedDevs = true
                         LogAction("Created: ${d2.displayName} with (Id: ${dni.key})", "debug", true)
                     } else {
                         LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
@@ -1429,7 +1427,6 @@ def addRemoveDevices(uninst = null) {
                         //d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${location.name} - Nest Presence Device"])
                         d3.take()
                         devsCrt = devsCrt + 1
-                        changedDevs = true
                         LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
                     } else {
                         LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
@@ -1437,6 +1434,7 @@ def addRemoveDevices(uninst = null) {
                     //return d3
                 } catch (ex) { 
                     LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true) 
+                    retVal = false
                 }
             }
             
@@ -1451,7 +1449,6 @@ def addRemoveDevices(uninst = null) {
                         //d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${location.name} - Nest Weather Device"])
                         d4.take()
                         devsCrt = devsCrt + 1
-                        changedDevs = true
                         LogAction("Created: ${d4.displayName} with (Id: ${dni})", "debug", true)
                     } else {
                         LogAction("Found: ${d4.displayName} with (Id: ${dni}) already exists", "debug", true)
@@ -1459,6 +1456,7 @@ def addRemoveDevices(uninst = null) {
                     //return d4
                 } catch (ex) { 
                     LogAction("Nest Weather Device Type is Likely not installed/published", "warn", true) 
+                    retVal = false
                 }
             }
             def presCnt = 0
@@ -1503,8 +1501,8 @@ def addRemoveDevices(uninst = null) {
         if(delete.size() > 0) { 
             LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true) 
             delete.each { deleteChildDevice(it.deviceNetworkId) }
-            changedDevs = true
         }
+        retVal = true
     } catch (ex) { 
         if(ex instanceof physicalgraph.exception.ConflictException) {
             def msg = "Error: Can't Delete App because Devices are still in use in other Apps, Routines, or Rules.  Please double check before trying again."
@@ -1517,9 +1515,9 @@ def addRemoveDevices(uninst = null) {
             LogAction("addRemoveDevices Exception | $msg", "warn", true, true)
         } 
         else { LogAction("addRemoveDevices Exception: ${ex}", "error", true, true) }
-        changedDevs = true
+        retVal = false
     }
-    return changedDevs
+    return retVal
 }
 
 def deviceHandlerTest() {
