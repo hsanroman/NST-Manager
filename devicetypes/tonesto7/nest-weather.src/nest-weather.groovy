@@ -148,6 +148,7 @@ def generateEvent(Map results) {
    	}
     lastUpdatedEvent()
     getWeatherConditions()
+    getWeatherForecast()
  	return null
 }
 
@@ -267,6 +268,14 @@ def getWeatherConditions() {
         illuminanceEvent(estimateLux(state.curWeatherIcon))
 
         Logger("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
+    }
+}
+
+def getWeatherForecast() {
+    def cur = parent?.getWForecastData()
+    if(cur) {
+        state.curForecast = cur
+        //log.debug "cur: $cur"
     }
 }
 
