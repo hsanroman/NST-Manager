@@ -33,11 +33,12 @@ preferences {
             ])
 }
 
-def devVer() { return "1.2.0" }
+def devVer() { return "2.0.0" }
 
 metadata {
 	definition (name: "Nest Protect", author: "Anthony S.", namespace: "tonesto7") {
-		capability "Polling"
+		//capability "Polling"
+        capability "Sensor"
 		capability "Battery"
 		capability "Smoke Detector"
 		capability "Carbon Monoxide Detector"
@@ -244,7 +245,7 @@ def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
     def pubVer = parent?.latestProtVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
-    def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    def newData = (pubVer != dVer) ? "v${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData
     if(curData != newData) {
         Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
@@ -283,7 +284,7 @@ def softwareVerEvent(ver) {
     state?.softwareVer = ver
     if(!verVal.equals(ver)) {
     	log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
-        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false)
+        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
     } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
@@ -553,8 +554,8 @@ def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/to
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() { 
-	def battImg = (state?.battVal == "low") ? "<td><img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\"></td>" : 
-    		"<td><img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\"></td>"
+	def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" : 
+    		"<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
     def coImg = "<td><img class='alarmImg' src=\"${getCarbonImg()}\"></td>"
     def smokeImg = "<td><img class='alarmImg' src=\"${getSmokeImg()}\"></td>"
 	renderHTML {
@@ -575,11 +576,9 @@ def getInfoHtml() {
                 .flat-table td {
                   box-shadow: inset 0 0px rgba(0, 0, 0, 0.25), inset 0 0px rgba(0, 0, 0, 0.25);
                   padding: 4px;
-                  font-size: 15px;
                 }
-
+				
                 .flat-table th {
-                  font-weight: bold;
                   -webkit-font-smoothing: antialiased;
                   color: #f5f5f5;
                   text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
@@ -605,11 +604,33 @@ def getInfoHtml() {
                   width: 100%;
                   height: 100%;
                 }
+                
                 .img-table tr {
                   text-align: center;
                 }
+                .h40 {
+                  width: 39.99%;
+                  font-weight: bold;
+                  font-size: 3.4vmin;
+                }
+                .h20 {
+                  width: 19.99%;
+                  font-weight: bold;
+                  font-size: 3.4vmin;
+                }
+                .r40 {
+                  width: 39.99%;
+                  font-size: 3.6vmin;
+                }
+                .r20 {
+                  width: 19.99%;
+                  font-size: 3.6vmin;
+                }
+                .rowLong {
+                  font-size: 3.3vmin;
+                }
                 .datetime {
-                  font-size:13px;
+                  font-size: 3.3vmin;
                 }
                 .battImg {
                   width:50px; height:25px;
@@ -633,30 +654,30 @@ def getInfoHtml() {
             </table>
             <table class="flat-table">
               <thead>
-                <th>Network Status</th>
-                <th>Battery</th>
-                <th>API Status</th>
+                <th class="h40">Network Status</th>
+                <th class="h20">Battery</th>
+                <th class="h40">API Status</th>
               </thead>
                 <tbody>
                   <tr>
-                    <td>${state?.onlineStatus.toString()}</td>
-                    $battImg
-                   <td>${state?.apiStatus}</td>
+                    <td class="r40">${state?.onlineStatus.toString()}</td>
+                    <td class="r20">${battImg}</td>
+                    <td class="r40">${state?.apiStatus}</td>
                   </tr>
             	  <tr>
-                    <th>Firmware Version</th>
-                    <th>Debug</th>
-                    <th>Device Type</th>
+                    <th class="h40" width=33.33%>Firmware Version</th>
+                    <th class="h20">Debug</th>
+                    <th class="h40">Device Type</th>
               	  </tr>
-                  <td>${state?.softwareVer.toString()}</td>
-                  <td>${state?.debugStatus}</td>
-                  <td>${state?.devTypeVer.toString()}</td>
+                  <td class="r40">v${state?.softwareVer.toString()}</td>
+                  <td class="r20">${state?.debugStatus}</td>
+                  <td class="rowLong">${state?.devTypeVer.toString()}</td>
                 </tbody>
              </table>
          	 <table class="flat-table">
                <thead>
-                 <th>Nest Last Checked-In</th>
-                 <th>Data Last Received</th>
+                 <th class="h40">Nest Last Checked-In</th>
+                 <th class="h40">Data Last Received</th>
                </thead>
               <tbody>
                 <tr>
