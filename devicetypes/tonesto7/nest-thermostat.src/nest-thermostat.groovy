@@ -202,7 +202,7 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
         
 		main( tileMain() )
 		details( tileSelect() )
@@ -1261,7 +1261,8 @@ def getImgBase64(url,type) {
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getInfoHtml() {
-	def leafImg =  state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_75.gif"), "gif")}\" class='leafImg'>" : "No Leaf"
+	def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" : 
+    				"<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
 	renderHTML {
     	head {
         	"""
@@ -1307,31 +1308,35 @@ def getInfoHtml() {
                 .h40 {
                   width: 39.99%;
                   font-weight: bold;
-                  font-size: 3.4vmin;
+                  font-size: 3.2vmax;
                 }
 
                 .h20 {
                   width: 19.99%;
                   font-weight: bold;
-                  font-size: 3.4vmin;
+                  font-size: 3.5vmax;
                 }
 
                 .r40 {
                   width: 39.99%;
-                  font-size: 3.6vmin;
+                  font-size: 3.8vmax;
                 }
 
                 .r20 {
                   width: 19.99%;
-                  font-size: 3.6vmin;
+                  font-size: 3.8vmax;
                 }
 
                 .rowLong {
-                  font-size: 3.3vmin;
+                  font-size: 3.58vmax;
+                }
+
+                .datetime {
+                  font-size: 3.2vmax;
                 }
                 .leafImg {
-                  width: 30px;
-                  height: 30px;
+                  width: 25px;
+                  height: 25px;
                 }
             </style>
            	"""
@@ -1367,8 +1372,8 @@ def getInfoHtml() {
               </thead>
               <tbody>
                 <tr>
-                  <td><div class="rowLong">${state?.lastConnection.toString()}</div></td>
-                  <td><div class="rowLong">${state?.lastUpdatedDt.toString()}</div></td>
+                  <td><div class="datetime">${state?.lastConnection.toString()}</div></td>
+                  <td><div class="datetime">${state?.lastUpdatedDt.toString()}</div></td>
                 </tr>
               </tbody>
              </table>
