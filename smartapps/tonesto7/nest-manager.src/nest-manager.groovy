@@ -1102,8 +1102,10 @@ def getWeatherConditions() {
 	    try {
     	    LogAction("Retrieving Latest Local Weather Conditions", "info", true)
     	    def curWeather = getWeatherFeature("conditions")
-            if(curWeather) { 
+    	    def curForecast = getWeatherFeature("forecast")
+            if(curWeather && curForecast) { 
         	    atomicState?.curWeather = curWeather 
+        	    atomicState?.curForecast = curForecast 
         	    atomicState?.lastWeatherUpdDt = getDtNow()
         	    atomicState.needChildUpd = true
         	    return true
@@ -1125,6 +1127,16 @@ def getWData() {
     } else {
     	if(getWeatherConditions()) {
         	return atomicState?.curWeather
+        }
+    }
+}
+
+def getWForecastData() {
+	if(atomicState?.curForecast) {
+    	return atomicState?.curForecast
+    } else {
+    	if(getWeatherConditions()) {
+        	return atomicState?.curForecast
         }
     }
 }
