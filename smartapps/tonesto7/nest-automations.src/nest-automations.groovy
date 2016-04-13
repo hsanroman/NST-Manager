@@ -61,21 +61,21 @@ def mainPage() {
             def extSenDesc = ((extSensorDay || extSensorNight) && extSenHeatTemp && extSenCoolTemp && extSenTstat) ? 
                 "${senEnabDesc}Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}\n${senDayDesc}${senNightDesc}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
             href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: imgIcon("remote_sensor_icon.png")
-           }
+        }
         section("Turn a Thermostat Off when a Window or Door is Open:") {
             def qOpt = (wcModes || wcDays || (wcStartTime && wcStopTime)) ? "Schedule Options Selected...\n" : ""
             def desc = (wcContacts && wcTstat) ? "${wcTstat.label}\nwith (${wcContacts ? wcContacts.size() : 0}) Contact(s)\n${qOpt}\nTap to Modify..." : "Tap to Configure..."
             href "wcPage", title: "Configure Sensors to Watch...", description: desc, image: imgIcon("open_contact.png")
-           }
+        }
         section("Turn a Thermostat Off based on Outside temps:") {
             def qOpt = (exModes || exDays || (exStartTime && exStopTime)) ? "Schedule Options Selected...\n" : ""
             def desc = (!exUseWeather && exTemp && exTstat) ? ("${exTstat?.label}\nwith External Temp Sensor\n${qOpt}\nTap to Modify...") : (exUseWeather ? "${exTstat?.label}\nwith External Weather\n${qOpt}\nTap to Modify..." : "Tap to Configure...")
             href "extTempsPage", title: "Turn off based on External Temps...", description: desc, image: imgIcon("external_temp_icon.png")
-           }
+        }
         section("Set Nest Presence Based on ST Modes:") {
             def presDesc = (awayModes || homeModes) ? "${homeModes ? "Home: $homeModes" : ""}${awayModes ? "\n\nAway: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
             href "modePresPage", title: "Mode Automations", description: presDesc, image: imgIcon("mode_automation_icon.png")
-           }
+        }
     }
 }
 
@@ -166,33 +166,33 @@ def extSensorPage() {
                         image: imgIcon("thermostat_icon.png")
                 if(extSenTstatsMirror) { 
                     extSenTstatsMirror.each { t ->
-                    	paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
+                        paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
                     }
                 }
             }
         }
         section("Choose Daytime Temperature Sensor(s) to use instead of the Thermostat's...") {
             input "extSensorDay", "capability.temperatureMeasurement", title: "Daytime Temp Sensors...", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false),
-            		multiple: true, image: imgIcon("temperature_icon.png")
+                    multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorDay) {
                 input "extSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: (extSensorDay ? true : false),
                         image: imgIcon("mode_icon.png")
                 def tmpVal = "Day Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                 if(extSensorDay.size() > 1) {
-                	href "extSenShowTempsPage", title: "View Day Sensor Temps...", description: tmpVal, image: " "
+                    href "extSenShowTempsPage", title: "View Day Sensor Temps...", description: tmpVal, image: " "
                     paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                 } else { paragraph "${tmpVal}", image: " " }
             }
          }
          section("Choose NightTime Temperature Sensor(s) to use instead of the Thermostat's...") {
             input "extSensorNight", "capability.temperatureMeasurement", title: "NightTime Temp Sensors", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false), 
-            		multiple: true, image: imgIcon("temperature_icon.png")
+                    multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorNight) {
                 input "extSensorNightModes", "mode", title: "NightTime Modes...", multiple: true, submitOnChange: true, required: (extSensorNight ? true : false),
                         image: imgIcon("mode_icon.png")
                 def tmpVal = "Night Sensor Temp${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
                 if(extSensorNight.size() > 1) {
-                	href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
+                    href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
                     paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                 } else { paragraph "${tmpVal}", image: " " }
             }
@@ -226,16 +226,16 @@ def extSensorPage() {
 }
 
 def extSenRuleEnum() {
-	def vals = [ "H":"Heat","C":"Cool","H_C":"Auto","H_Circ":"Heat/Circulate","C_Circ":"Cool/Circulate","H_C_Circ":"Auto/Circulate" ]
+    def vals = [ "H":"Heat","C":"Cool","H_C":"Auto","H_Circ":"Heat/Circulate","C_Circ":"Cool/Circulate","H_C_Circ":"Auto/Circulate" ]
     return vals
 }
 
 def extSenRuleName() {
     def result = "unknown"
-	if(extSenRuleType) {
+    if(extSenRuleType) {
         extSenRuleEnum().each { item ->
             if(item?.key.toString() == extSenRuleType?.toString()) { 
-            	result = item?.value
+                result = item?.value
             }
         }
     } 
@@ -376,8 +376,8 @@ def heatingSetpointHandler(evt) {
 }
 
 def getExtModeOk() {
-	if(extSensorDayModes || extSensorNightModes) {
-    	return(isInMode(extSensorDayModes) || isInMode(extSensorNightModes)) ? true : false
+    if(extSensorDayModes || extSensorNightModes) {
+        return(isInMode(extSensorDayModes) || isInMode(extSensorNightModes)) ? true : false
     }
     return false
 }
@@ -558,14 +558,14 @@ def wcContactEvt(evt) {
     def wcOk = getWcContactsOk()
     state.wcState = (evt.value == "closed") ? "closed" : "open"
     if(wcScheduleOk()) {
-           if (conVal == "open" && !curMode == "off") {
-               state.wcOpenDt = getDtNow()
+        if (conVal == "open" && !curMode == "off") {
+            state.wcOpenDt = getDtNow()
             log.debug "wcContactEvt() | Scheduling Thermostat OFF in (${getWcOffDelayVal()} seconds)..."
             runIn(getWcOffDelayVal().toInteger(), "wcCheck", [overwrite: true]) 
         }
         else if(conVal == "closed" && (restModeOnClose && curMode == "off" && state?.wcTurnedOff == true)) {
             state.wcCloseDt = getDtNow()
-               log.debug "wcContactEvt() | Scheduling Thermostat ON in (${getWcOnDelayVal()} seconds)..."
+            log.debug "wcContactEvt() | Scheduling Thermostat ON in (${getWcOnDelayVal()} seconds)..."
             runIn(getWcOnDelayVal().toInteger(), "wcCheck", [overwrite: true])
         }
     }
@@ -762,8 +762,7 @@ def exCheck() {
                                 parent?.sendMsg("Info", "${exTstat?.label} has been restored to ${lastMode} Mode because External Temp is above Threshhold...")
                             }
                         }
-                    }
-                    else { LogAction("exCheck() | lastMode was not found...", "error", true) }
+                    } else { LogAction("exCheck() | lastMode was not found...", "error", true) }
                 }
             }
         } 
@@ -797,14 +796,14 @@ def exTempEvt(evt) {
     def exOk = getExTempOk()
     log.debug "exOk: $exOk"
     if(exScheduleOk()) {
-           if (!exOk && !curMode.equals("off")) {
-               state.exTempGoodDt = getDtNow()
+        if (!exOk && !curMode.equals("off")) {
+            state.exTempGoodDt = getDtNow()
             log.debug "exTempEvt() | Scheduling Thermostat OFF in (${getExOffDelayVal()} seconds)..."
             runIn(getExOffDelayVal().toInteger(), "exCheck", [overwrite: true]) 
         }
         else if(exOk && (exRestoreMode && state?.exTurnedOff == true)) {
             state.exTempBadDt = getDtNow()
-               log.debug "exTempEvt() | Scheduling Thermostat ON in (${getExOnDelayVal()} seconds)..."
+            log.debug "exTempEvt() | Scheduling Thermostat ON in (${getExOnDelayVal()} seconds)..."
             runIn(getExOnDelayVal().toInteger(), "exCheck", [overwrite: true])
         }
     }
@@ -853,9 +852,7 @@ def LogTrace(msg) { if(parent?.advAppDebug) { Logger(msg, "trace") } }
 def LogAction(msg, type = "debug", showAlways = false) {
     try {
         if(showAlways) { Logger(msg, type) }
-    
         else if (parent?.appDebug && !showAlways) { Logger(msg, type) }
-        
     } catch (ex) { log.error("LogAction Exception: ${ex}") }
 }
 
@@ -880,7 +877,7 @@ def Logger(msg, type) {
             default:
                 log.debug "${msg}"
                 break
-           }
+        }
     }
     else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
 }
@@ -898,7 +895,7 @@ private isAppDebug() { return state?.appDebug ? true : false } //Keep This
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
     if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
-       else {
+    else {
         LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
     }
     return tf.format(dt)
@@ -935,7 +932,7 @@ def modesOk(modeEntry) {
     if (modeEntry) {
         modeEntry?.each { m ->
             if(m.toString() == location?.mode.toString()) { return false }
-         }  
+        }  
         return true
     }
     return true
@@ -945,7 +942,7 @@ def isInMode(modeList) {
     if (modeList) {
         modeList?.each { m ->
             if(m.toString() == location?.mode.toString()) { return true }
-         }  
+        }  
         return false
     }
     return false
