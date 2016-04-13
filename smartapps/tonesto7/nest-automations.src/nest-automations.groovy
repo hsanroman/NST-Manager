@@ -281,7 +281,7 @@ def extSenTempEvt(evt) {
 
 // Was based off of Keep Me Cozy II
 private extSenEvtEval() {
-    if (state?.extSenEnabled && modesOk(extSenModes) && (extSensorDay || extSensorNight) && extSenTstat) {
+    if (state?.extSenEnabled && modesOk(extSenModes) && (extSensorDay || extSensorNight) && extSenTstat && getExtModeOk()) {
         def threshold = degreesOfSeperation.toInteger()
         def hvacMode = extSenTstat?.currentThermostatMode.toString() 
         def curTstatTemp = getDeviceTemp(extSenTstat).toInteger()
@@ -294,7 +294,6 @@ private extSenEvtEval() {
         log.trace "Remote Sensor Temp: ${curSenTemp}"
         log.trace "Thermostat Info - Temperature: $curTstatTemp | HeatSetpoint: $curHeatSetpoint | CoolSetpoint: $curCoolSetpoint | HvacMode: $hvacMode | OperatingState: $curTstatOperState | FanMode: $curTstatFanMode" 
         log.trace "Desired Temps - Heat: $extSenHeatTemp | Cool: $extSenCoolTemp"
-        
         if (hvacMode in ["cool","auto"]) {
             if ((curSenTemp - extSenCoolTemp.toInteger()) > threshold) {
                 if(extSenRuleType in ["C", "H_C", "H_C_Circ"]) {
@@ -375,9 +374,16 @@ def coolingSetpointHandler(evt) {
 def heatingSetpointHandler(evt) {
     log.debug "heatingSetpointHandler()"
 }
+
+def getExtModeOk() {
+	if(extSensorDayModes || extSensorNightModes) {
+    	return(isInMode(extSensorDayModes) || isInMode(extSensorNightModes)) ? true : false
+    }
+    return false
+}
 def getFanRunOk(operState, fanState) { 
     def val = extTimeBetweenRuns ? extTimeBetweenRuns.toInteger() * 60 : 3600
-    def cond = (extSenRuleType == "Circulate" && operState == "idle" && fanState == "auto") ? true : false
+    def cond = ((extSenRuleType in ["H_Circ", "C_Circ", "H_C_Circ"]) && operState == "idle" && fanState == "auto") ? true : false
     def timeSince = (getLastFanRunDtSec() > val)
     def result = (timeSince && cond) ? true : false
     log.debug "getFanRunOk(): cond: $cond | timeSince: $timeSince | val: $val | $result"
@@ -390,10 +396,10 @@ def getDeviceTemp(dev) {
 }
 
 def getRemoteSenTemp() {
-    if(extSensorDay && isInMode(extSensorDayModes)) {
+    if(extSensorDay) {
         return getDeviceTempAvg(extSensorDay)
     }
-    else if(extSensorNight && isInMode(extSensorNightModes)) {
+    else if(extSensorNight) {
         return getDeviceTempAvg(extSensorNight)        
     }
     else {
