@@ -275,9 +275,9 @@ def uninstalled() {
         revokeAccessToken()
         //Revokes Nest Auth Token
         if(atomicState?.authToken) { revokeNestToken() }
+        //sends notification of uninstall
+        sendNotificationEvent("${textAppName()} is uninstalled...")
     }
-    //sends notification of uninstall
-    sendNotificationEvent("${textAppName()} is uninstalled...")
 }
 
 def initialize() {
@@ -326,7 +326,7 @@ def subscriber() {
 }
 
 def setPollingState() {
-    if (!atomicState.thermostats && !atomicState.protects) { 
+    if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.weatherDevice) { 
         LogAction("No Devices Selected...Polling is Off!!!", "info", true)
         unschedule()
         atomicState.pollingOn = false 
@@ -334,11 +334,36 @@ def setPollingState() {
         if(!atomicState.pollingOn) { 
             LogAction("Polling is Now ACTIVE!!!", "info", true)
             atomicState.pollingOn = true
-            schedule("* 0/1 * * * ?", poll)  // this runs every minute
+            def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
+            def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
+            def weatherTimer = pollTime
+            if(atomicState?.weatherDevice) { weatherTimer = 900 }
+            def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
+            def random = new Random()
+            def random_int = random.nextInt(60)
+            timgcd = (timgcd.toInteger() / 60) < 1 ? 1 : timgcd.toInteger()/60
+            def random_dint = random.nextInt(timgcd.toInteger())
+            LogAction("cron is  ${random_int} ${random_dint}/${timgcd} * * * ?", "info", true)
+            schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)  // this runs every timgcd minutes
             poll(true)
         }
         if(!atomicState.isInstalled) { poll(true) }
     }
+}
+
+private gcd(a, b) {
+    while (b > 0) {
+        long temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+private gcd(input = []) {
+    long result = input[0];
+    for(int i = 1; i < input.size; i++) result = gcd(result, input[i]);
+    return result;
 }
 
 def onAppTouch(event) {
@@ -364,6 +389,7 @@ def pollWatcher(evt) {
 
 def poll(force = false, type = null) {
     if(isPollAllowed()) { 
+        unschedule("postCmd")
         def dev = false
         def str = false
         if (force == true) { forcedPoll(type) }
@@ -491,6 +517,7 @@ def getApiData(type = null) {
 def updateChildData() {
     LogAction("updateChildData()", "info", true)
     atomicState.needChildUpd = true
+    runIn(40, "postCmd", [overwrite: true])
     try {
         atomicState?.lastChildUpdDt = getDtNow()
         getAllChildDevices().each {
@@ -542,6 +569,7 @@ def updateChildData() {
         atomicState?.lastChildUpdDt = null
         return
     }
+    unschedule("postCmd")
     atomicState.needChildUpd = false
 }
 
@@ -571,7 +599,7 @@ def sunset() {
 def ok2PollDevice() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needDevPoll) { return true }
-    def pollTime = !settings?.pollValue ? 60 : settings?.pollValue.toInteger()
+    def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
     def val = pollTime/9
     if (val > 60) { val = 50 }
     return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
@@ -1078,20 +1106,24 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
-def updateWebStuff(force = false) {
-    if(force) { 
-        getWebFileData()
-        getWeatherConditions()
-    } 
-    if (!force && getLastWebUpdSec() > 1800) {
-        if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+def updateWebStuff(now = false) {
+    if (getLastWebUpdSec() > (1800)) {
+        if(now) {
+            getWebFileData()
+        } else {
+            if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+        }
     }
-    if(!force && atomicState?.weatherDevice && getLastWeatherUpdSec() > 900) {
-        if(canSchedule()) { runIn(5, "getWeatherConditions", [overwrite: true]) }
+    if(atomicState?.weatherDevice && getLastWeatherUpdSec() > 900) {
+        if(now) {
+            getWeatherConditions(now)
+        } else {
+            if(canSchedule()) { runIn(15, "getWeatherConditions", [overwrite: true]) }
+        }
     }
 }
 
-def getWeatherConditions() {
+def getWeatherConditions(force = false) {
     //log.trace "getWeatherConditions..."
     if(atomicState?.weatherDevice) {
         try {
@@ -1103,6 +1135,7 @@ def getWeatherConditions() {
                 atomicState?.curForecast = curForecast 
                 atomicState?.lastWeatherUpdDt = getDtNow()
                 atomicState.needChildUpd = true
+                if (!force) { runIn(30, "postCmd", [overwrite: true]) }
                 return true
             } else {
                 LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
@@ -1120,7 +1153,7 @@ def getWData() {
     if(atomicState?.curWeather) {
         return atomicState?.curWeather
     } else {
-        if(getWeatherConditions()) {
+        if(getWeatherConditions(true)) {
             return atomicState?.curWeather
         }
     }
@@ -1130,7 +1163,7 @@ def getWForecastData() {
     if(atomicState?.curForecast) {
         return atomicState?.curForecast
     } else {
-        if(getWeatherConditions()) {
+        if(getWeatherConditions(true)) {
             return atomicState?.curForecast
         }
     }
@@ -1531,7 +1564,6 @@ def deviceHandlerTest() {
         def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
         def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
         def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
-
         def testDevs = getAllChildDevices()
         log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} || devCnt: ${testDevs.size()}"
         if(testDevs.size() == 4) {
@@ -2136,8 +2168,8 @@ def pollPrefPage() {
             paragraph "\nPolling Preferences\n", image: getAppImg("timer_icon.png")
         }
         section("Device Polling:") {
-            def pollValDesc = !pollValue ? "Default: 1 Minute" : pollValue
-            input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (1 Minute)", required: false, defaultValue: 60, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
+            def pollValDesc = !pollValue ? "Default: 3 Minutes" : pollValue
+            input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
         }
         section("Location Polling:") {   
             def pollStrValDesc = !pollStrValue ? "Default: 3 Minutes" : pollStrValue
