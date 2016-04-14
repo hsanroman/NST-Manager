@@ -55,7 +55,7 @@ def mainPage() {
             def senNightDesc = (extSensorNight) ? ("\nNight Sensor${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}") : ""
             def senEnabDesc = !state?.extSenEnabled ? "External Sensor Disabled...\n" : ""
             def motInUse = extMotionSensors ? ("\nMotion Events: ${!extMotionSensorModes ? "Active" : (isInMode(extMotionSensorModes) ? "Active(Mode Ok)" : "Not Active(!Mode)")}") : ""
-			def senModes = extSenModes ? "\nMode Filters Active" : ""
+            def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
             def senRuleType = extSenRuleType ? "\nRule-Type: ${extSenRuleName()}" : ""
             def extSenDesc = ((extSensorDay || extSensorNight) && extSenHeatTemp && extSenCoolTemp && extSenTstat) ? 
@@ -113,7 +113,7 @@ def getAutomationsActive() {
     def conActive = (wcContacts && wcTstat)
     def nestModesActive = (awayModes && homeModes)
     def autoDesc = "${remActive ? "Remote Sensors Active..." : ""}${conActive ? "\nContact Watcher Active..." : ""}${nestModesActive ? "Mode Automation Active..." : ""}"
-    parent.automationsActive(((remActive || conActive || nestModesActive) ? true : false), autoDesc)
+    parent?.automationsActive(((remActive || conActive || nestModesActive) ? true : false), autoDesc)
 }
 
 def subscriber() {
@@ -199,11 +199,11 @@ def extSensorPage() {
         }
         if(extSenTstat && (extSensorDay || extSensorNight)) {
             section("Select an Action Type:") {
-                   input(name: "extSenRuleType", type: "enum", title: "Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true,
-                    image: imgIcon("rule_icon.png"))
+                    input(name: "extSenRuleType", type: "enum", title: "Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true,
+                            image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
-            	def tempReq = (extSenRuleType == "Circ") ? false : true
+                def tempReq = (extSenRuleType == "Circ") ? false : true
                 input "extSenHeatTemp", "number", title: "Set Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("heat_icon.png")
                 input "extSenCoolTemp", "number", title: "Set Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("cool_icon.png")
             }
@@ -245,10 +245,10 @@ def extSenMotionEvt(evt) {
     }
 }
 def extCheckMotion() {
-    def isMotion = extMotionSensors?.currentState("motion").value.equals("active") ? true : false
-    if(isMotion)
+    def isMotion = extMotionSensors?.currentState("motion")?.value.equals("active") ? true : false
+    if(isMotion) {
         extSenEvtEval()
-    
+    }
 }
 
 def extSenTempEvt(evt) {
@@ -523,7 +523,8 @@ def wcTimeOk() {
         if(wcStartTime && wcStopTime) { 
             if(wcStartTime) { strtTime = wcStartTime }
             if(wcStopTime) { stopTime = wcStopTime }
-        } else { return true }  
+        } else { return true } 
+        
         if (strtTime && stopTime) {
             return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
         } else { return true }
@@ -579,7 +580,7 @@ def wcCheck() {
                 state.wcTurnedOff = true
                 wcTstat?.off()
                 if(wcTstatMir) { 
-                       wcTstatMir.each { t ->
+                    wcTstatMir.each { t ->
                         t.off()
                         log.debug("Turned off ${t}")
                     }
@@ -600,7 +601,7 @@ def wcContactEvt(evt) {
     def curMode = wcTstat.currentState("thermostatMode").value.toString()
     def conVal = evt.value.toString()
     def wcOk = getWcContactsOk()
-    state.wcState = (evt.value == "closed") ? "closed" : "open"
+    state?.wcState = (evt.value == "closed") ? "closed" : "open"
     if(wcScheduleOk()) {
         if (conVal == "open" && !curMode == "off") {
             state.wcOpenDt = getDtNow()
@@ -655,7 +656,7 @@ def checkNestPresMode() {
        if (awayModes) {
         awayModes?.each { m ->
             if(m?.toString() == curMode) { 
-                   LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
+                LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
                 setStructureAway(null, true) 
             }
         }
@@ -878,7 +879,7 @@ def setTstatMode(tstat, mode) {
         } else { 
             LogAction("setTstatMode() | mode was not found...", "error", true)
             return false
-        }	
+        }
     }
     catch (ex) { 
         LogAction("setTstatMode() Exception | ${ex}", "error", true) 
@@ -996,8 +997,8 @@ def time2Str(time) {
     if (time) {
         def t = timeToday(time, location?.timeZone)
         def f = new java.text.SimpleDateFormat("h:mm a")
-        f.setTimeZone(location.timeZone ?: timeZone(time))
-        f.format(t)
+        f?.setTimeZone(location.timeZone ?: timeZone(time))
+        f?.format(t)
     }
 }
 
