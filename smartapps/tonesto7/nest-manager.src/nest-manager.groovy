@@ -5,7 +5,7 @@
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |*******************************************************************************************|
-|    There maybe portions of the code that may resemble code from other apps in the         | 
+|    There maybe portions of the code that may resemble code from other apps in the         |
 |    community. I may have used some of it as a point of reference.                         |
 |    Thanks go out to those Authors!!!                                                      |
 |                                                                                           |
@@ -26,9 +26,10 @@ definition(
     author: "${textAuthor()}",
     description: "${textDesc()}",
     category: "My Apps",
-    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
-    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
+    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
+    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
+    singleInstance: true,
     oauth: true )
 
 {
@@ -37,10 +38,10 @@ definition(
 }
 
 def appVersion() { "2.0.0" }
-def appVerDate() { "4-11-2016" }
+def appVerDate() { "4-15-2016" }
 def appVerInfo() {
     
-    "V2.0.0 (Apr 11th, 2016)\n" +
+    "V2.0.0 (Apr 15th, 2016)\n" +
     "Fixed: Alot\n\n" +
     "------------------------------------------------"
 }
@@ -72,7 +73,7 @@ mappings {
         path("/renderLogs")		{action: [GET: "renderLogJson"]}
         path("/renderState")	{action: [GET: "renderStateJson"]}
         path("/renderDebug")	{action: [GET: "renderDebugJson"]}
-       }
+    }
 }
 
 def childAutoAppName() { return "Nest Automations" }
@@ -88,9 +89,9 @@ def authPage() {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
                 def desc
-                   if(!atomicState?.accessToken) {
+                if(!atomicState?.accessToken) {
                     desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again..."
-                   }
+                }
                 else if (!atomicState?.preReqTested) {
                        desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
                 } 
@@ -99,13 +100,10 @@ def authPage() {
                 }
                 else {
                        desc = "Application Status has not received any messages to display"
-                   }
+                }
                 LogAction("Status Message: $desc", "warn", true)
-                   paragraph "$desc"
+                paragraph "$desc"
             }
-            //section(" ") {
-            //	href "uninstallPage", title: "Uninstall...", description: "Tap to Proceed...", image: getAppImg("info.png")
-            //}
         }
     }
     
@@ -221,7 +219,10 @@ def authPage() {
 def prefsPage() {
     dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false) {
         section("Polling:") {
-            def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active"
+            def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
+            def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
+            def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
+            def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active\n$pollDevDesc$pollStrDesc$pollWeaDesc"
             href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\nTap to configure...", image: getAppImg("timer_icon.png")
         }
         section("Devices:") {
@@ -886,7 +887,6 @@ void workQueue() {
     }
 
     //log.trace("workQueue Run queue: ${qnum}" )
-
     if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
     def cmdQueue = atomicState?."cmdQ${qnum}"
     try {
@@ -1014,13 +1014,15 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
             else {
                 LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
             }
-           }
+        }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
         }
-            if (ex.message.contains("Bad Request")) {
-            }
+        if (ex.message.contains("Bad Request")) {
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+        }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
         atomicState.apiIssues = true
     }
@@ -1082,8 +1084,8 @@ def sendMsg(String msg, String msgType) {
                 log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"	
             }
         } else {
-               LogAction("contact book not enabled", "debug", true)
-               if (usePush) {
+            LogAction("contact book not enabled", "debug", true)
+            if (usePush) {
                 sendPush(newMsg)
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
@@ -1114,7 +1116,7 @@ def updateWebStuff(now = false) {
             if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
         }
     }
-    if(atomicState?.weatherDevice && getLastWeatherUpdSec() > 900) {
+    if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (pollWeatherValue ? pollWeatherValue.toInteger() : 900)) {
         if(now) {
             getWeatherConditions(now)
         } else {
@@ -1216,36 +1218,36 @@ def isUpdateAvail(newVer, curVer) {
 def isAppUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.app.ver, appVersion())) {
            return true
-       } else { return false }
+    } else { return false }
 }
 def isPresUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.presence.ver, atomicState?.presDevVer)) {
            return true
-       } else { return false }
+    } else { return false }
 }
 
 def isProtUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.protect.ver, atomicState?.pDevVer)) {
            return true
-       } else { return false }
+    } else { return false }
 }
 
 def isTstatUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.thermostat.ver, atomicState?.tDevVer)) {
            return true
-       } else { return false }
+    } else { return false }
 }
 
 def isAutoAppUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.autoapp.ver, atomicState?.autoAppVer)) {
            return true
-       } else { return false }
+    } else { return false }
 }
 
 def isWeathUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
            return true
-       } else { return false }
+    } else { return false }
 }
 
 /************************************************************************************************
@@ -2041,9 +2043,9 @@ private isAppDebug() { return !appDebug ? false : true } //Keep This
 private isChildDebug() { return !childDebug ? false : true } //Keep This
 def getQTimeStrtLbl() { return (qStartInput == "A specific time") ? (qStartTime ? "Start: ${time2Str(qStartTime)}" : null) : ((qStartInput == "sunset" || qStartInput == "sunrise") ? "Start: ${qstartInput.toString().capitalize()}" : null) }
 def getQTimeStopLbl() { return (qStopInput == "A specific time") ? (qStopTime ? "Stop: ${time2Str(qStopTime)}" : null) : ((qStopInput == "sunset" || qStopInput == "sunrise") ? "Stop : ${qStopInput.toString().capitalize()}" : null) }
-def getQModesLbl() { return quietModes ? "Quiet Mode(s): ${quietModes}" : null }
+def getQModesLbl() { return quietModes ? "${(((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl()) ? "\n" : "")}Quiet Mode(s): ${quietModes}" : null }
 def getQDayLbl() { return quietDays ? "Days: ${quietDays}" : null }
-def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl() || getQModesLbl()) ? "${(getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}\n" : ""}${(quietDays ? "${getQDayLbl()}" : "")}${(quietModes ? "\n${getQModesLbl()}" : "")}" : "Tap to Set..." }
+def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl() || getQModesLbl()) ? "${(getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}\n" : ""}${(quietDays ? "${getQDayLbl()}" : "")}${getQModesLbl()}" : "")}" : "Tap to Set..." }
 
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
@@ -2126,13 +2128,16 @@ def getDtNow() {
     return formatDt(now)
 }
 
-def notifValEnum() {
-    def vals = [
-        300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 
-        1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 
-        43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
+def notifValEnum(allowCust = true) {
+    def valsC = [
+        60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes", 
+        3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
     ]
-    return vals
+    def vals = [
+        60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 
+        1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
+    ]
+    return allowCust ? valsC : vals
 }
 
 def pollValEnum() {
@@ -2152,6 +2157,18 @@ def waitValEnum() {
     return vals
 }
 
+def getInputEnumLabel(inputName, enumName) {
+    def result = "unknown"
+    if(input && enumName) {
+        enumName.each { item ->
+            if(item?.key.toString() == inputName?.toString()) { 
+                result = item?.value
+            }
+        }
+    } 
+    return result
+}
+
 def appIcon(url) {
     return !disAppIcons ? url.toString() : ""
 }
@@ -2169,18 +2186,29 @@ def pollPrefPage() {
         }
         section("Device Polling:") {
             def pollValDesc = !pollValue ? "Default: 3 Minutes" : pollValue
-            input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], description: pollValDesc, submitOnChange: true)
+            input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], 
+                    description: pollValDesc, submitOnChange: true)
         }
         section("Location Polling:") {   
             def pollStrValDesc = !pollStrValue ? "Default: 3 Minutes" : pollStrValue
-            input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], description: pollStrValDesc, submitOnChange: true)
+            input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()], 
+                    description: pollStrValDesc, submitOnChange: true)
+        }
+        if(atomicState?.weatherDevice) {
+            section("Weather Polling:") {   
+                def pollWeatherValDesc = !pollWeatherValue ? "Default: 3 Minutes" : pollWeatherValue
+                input ("pollWeatherValue", "enum", title: "Weather Refresh Rate\nDefault is (15 Minutes)", required: false, defaultValue: 900, metadata: [values:notifValEnum(false)], 
+                        description: pollWeatherValDesc, submitOnChange: true)
+            }
         }
         section("Wait Values:") {
             def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
-            input ("pollWaitVal", "enum", title: "Forced Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()], description: pollWaitValDesc,submitOnChange: true)
+            input ("pollWaitVal", "enum", title: "Forced Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()], 
+                    description: pollWaitValDesc,submitOnChange: true)
             
             def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
-            input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()], description: tempChgWaitValDesc, submitOnChange: true)
+            input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()], 
+                    description: tempChgWaitValDesc, submitOnChange: true)
         }
         section("Other Options:") {
             input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", required: false, defaultValue: true, submitOnChange: true
