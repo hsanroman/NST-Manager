@@ -288,7 +288,8 @@ def initialize() {
     atomicState.pollingOn = false
     atomicState.lastChildUpdDt = null // force child update on next poll
     atomicState.lastForcePoll = null
-    if (!atomicState?.altNames) { atomicState.altNames = false } // THIS SHOULD BE A SETTINGS WITH DEFAULT FALSE
+    if (!atomicState?.altNames) { atomicState.altNames = false } // THIS COULD BE A SETTINGS WITH DEFAULT FALSE
+    // atomicState.locstr = "string"  // variable to override location for getWeatherFeature   // THIS COULD BE A SETTING,  if not used, it should be NULL
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
     }
@@ -338,7 +339,7 @@ def setPollingState() {
             def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
             def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
             def weatherTimer = pollTime
-            if(atomicState?.weatherDevice) { weatherTimer = 900 }
+            if(atomicState?.weatherDevice) { weatherTimer = (pollWeatherValue ? pollWeatherValue.toInteger() : 900) }
             def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
             def random = new Random()
             def random_int = random.nextInt(60)
@@ -1130,8 +1131,17 @@ def getWeatherConditions(force = false) {
     if(atomicState?.weatherDevice) {
         try {
             LogAction("Retrieving Latest Local Weather Conditions", "info", true)
-            def curWeather = getWeatherFeature("conditions")
-            def curForecast = getWeatherFeature("forecast")
+    	    def loc = ""
+            def curWeather = ""
+            def curForecast = ""
+            if (atomicState?.locstr) {
+                loc = atomicState.locstr 
+                curWeather = getWeatherFeature("conditions", loc)
+                curForecast = getWeatherFeature("forecast", loc)
+            } else {
+                curWeather = getWeatherFeature("conditions")
+                curForecast = getWeatherFeature("forecast")
+            }
             if(curWeather && curForecast) { 
                 atomicState?.curWeather = curWeather 
                 atomicState?.curForecast = curForecast 
@@ -2196,7 +2206,7 @@ def pollPrefPage() {
         }
         if(atomicState?.weatherDevice) {
             section("Weather Polling:") {   
-                def pollWeatherValDesc = !pollWeatherValue ? "Default: 3 Minutes" : pollWeatherValue
+                def pollWeatherValDesc = !pollWeatherValue ? "Default: 15 Minutes" : pollWeatherValue
                 input ("pollWeatherValue", "enum", title: "Weather Refresh Rate\nDefault is (15 Minutes)", required: false, defaultValue: 900, metadata: [values:notifValEnum(false)], 
                         description: pollWeatherValDesc, submitOnChange: true)
             }
