@@ -13,7 +13,7 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 * @tonesto7
 
 ## Contributors 
-* @desertBlade
+* @desertblade
 * @E_sch
 
 ## Version Info
