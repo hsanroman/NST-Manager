@@ -474,10 +474,10 @@ def temperatureEvent(Double tempVal) {
 }
 
 def heatingSetpointEvent(Double tempVal) {
+    def temp = device.currentState("heatingSetpoint")?.value.toString()
     if(!state?.can_heat || (getHeatTemp() == 0) || (getHvacMode == "off")) { 
-        clearHeatingSetpoint() 
+        if(temp != "") { clearHeatingSetpoint() }
     } else {
-        def temp = device.currentState("heatingSetpoint")?.value.toString()
         def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
         if(!temp.equals(rTempVal.toString())) {
             log.debug("UPDATED | HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
@@ -490,10 +490,10 @@ def heatingSetpointEvent(Double tempVal) {
 }
 
 def coolingSetpointEvent(Double tempVal) {
+    def temp = device.currentState("coolingSetpoint")?.value.toString()
     if(!state?.can_cool || (getCoolTemp() == 0) || (getHvacMode == "off")) { 
-        clearCoolingSetpoint() 
+        if(temp != "") { clearCoolingSetpoint() }
     } else {
-        def temp = device.currentState("coolingSetpoint")?.value.toString()
         def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
         if(!temp.equals(rTempVal.toString())) {
             log.debug("UPDATED | CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
@@ -601,12 +601,12 @@ def isEmergencyHeat(val) {
 }
 
 def clearHeatingSetpoint() {
-    sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true, isStateChange: true)
+    sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true )
     state?.heating_setpoint = ""
 }
 
 def clearCoolingSetpoint() {
-    sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true, isStateChange: true)
+    sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true)
     state?.cooling_setpoint = ""
 }
 
