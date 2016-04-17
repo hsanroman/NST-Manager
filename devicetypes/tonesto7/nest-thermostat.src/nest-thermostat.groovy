@@ -29,7 +29,7 @@ def devVer() { return "2.0.0"}
 
 // for the UI
 metadata {
-    definition (name: "Nest Thermostat", namespace: "tonesto7", author: "Anthony S.") {
+    definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
         capability "Actuator"
         //capability "Polling"
         capability "Relative Humidity Measurement"
@@ -1401,3 +1401,7 @@ def getInfoHtml() {
         }
     }
 }
+
+private def textDevName()   { "Nest Thermostat${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
