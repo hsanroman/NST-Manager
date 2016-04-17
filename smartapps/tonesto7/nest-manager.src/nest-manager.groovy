@@ -77,16 +77,16 @@ mappings {
     }
 }
 
-def childAutoAppName() { return "Nest Automations" }
-
 def authPage() {
     //log.trace "authPage()"
+
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
-    if(!atomicState.accessToken) { getAccessToken() } 
+
+    if(!atomicState?.accessToken) { getAccessToken() } 
     if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
     if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
         
-    if (!atomicState.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
+    if (!atomicState?.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
                 def desc
@@ -153,7 +153,7 @@ def authPage() {
             }
             
             if (structures) {
-                atomicState?.structures = structures ? structures : null
+                atomicState.structures = structures ? structures : null
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats" 
                 LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
@@ -166,38 +166,38 @@ def authPage() {
                     if (stats?.size() > 0) { 
                         input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
                                 image: getAppImg("thermostat_icon.png")) 
-                        atomicState?.thermostats = thermostats ? (atomicState?.custLabelUsed ? custStatState(thermostats) : statState(thermostats)) : null }
+                        atomicState.thermostats = thermostats ? (atomicState?.custLabelUsed ? custStatState(thermostats) : statState(thermostats)) : null }
                     
                     if (coSmokes.size() > 0) { 
                         input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes], 
                                 image: getAppImg("protect_icon.png")) 
                     }
-                    atomicState?.protects = protects ? (atomicState?.custLabelUsed ? custCoState(protects) : coState(protects)) : null
+                    atomicState.protects = protects ? (atomicState?.custLabelUsed ? custCoState(protects) : coState(protects)) : null
                     input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
                                 image: getAppImg("presence_icon.png")) 
-                    atomicState?.presDevice = presDevice ? true : false
+                    atomicState.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
                                 image: getAppImg("weather_icon.png")) 
-                    atomicState?.weatherDevice = weatherDevice ? true : false
+                    atomicState.weatherDevice = weatherDevice ? true : false
                     
-                    if((!atomicState?.isInstalled || atomicState?.isInstalled) && (thermostats || protects || presDevice || weatherDevice)) { //This will be changed to !atomicState.isInstalled on completion of testing
+                    if( (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
                     }
                 }
                 
-                if(atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) {
-                    if (!atomicState.autoAppInstalled) { atomicState.autoAppInstalled = false } 
-                    def autoApp = findChildAppByName( childAutoAppName() )
+                if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
+                    if (!atomicState?.autoAppInstalled) { atomicState.autoAppInstalled = false } 
+                    def autoApp = findChildAppByName( getAutoAppChildName() )
                     section("Automations Child App:") {
-                        app(name: "autoApp", appName: childAutoAppName(), namespace: "tonesto7", multiple: false, title: "${childAutoAppName()}...${getChildAppVer(autoApp)}", 
+                        app(name: "autoApp", appName: getAutoAppChildName(), namespace: "tonesto7", multiple: false, title: "${getAutoAppChildName()}...${getChildAppVer(autoApp)}", 
                             description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
                     }
                 }
                    
-                if((atomicState?.isInstalled && atomicState.structures && (atomicState.thermostats || atomicState.protects)) || diagLogs) {
+                if((atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) || diagLogs) {
                     def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
                     section(diagInfoDesc) {
-                        if(atomicState.structures && (atomicState.thermostats ||atomicState.protects) && atomicState?.isInstalled) {
+                        if(atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice) && atomicState?.isInstalled) {
                             href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
                         }
                         if(diagLogs) {
@@ -263,7 +263,7 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    atomicState?.isInstalled = true
+    atomicState.isInstalled = true
 }
 
 def updated() {
@@ -274,6 +274,7 @@ def updated() {
 }
 
 def uninstalled() {
+    //log.debug "uninstalled..."
     if(addRemoveDevices(true)) {
         //Revokes Smartthings endpoint token...
         revokeAccessToken()
@@ -285,13 +286,13 @@ def uninstalled() {
 }
 
 def initialize() {
+    //log.debug "initialize..."
     setStateVar()
     unschedule()
     unsubscribe()
     atomicState.pollingOn = false
     atomicState.lastChildUpdDt = null // force child update on next poll
     atomicState.lastForcePoll = null
-    if (!atomicState?.useAltNames) { atomicState.useAltNames = false } // THIS COULD BE A SETTINGS WITH DEFAULT FALSE
     // atomicState.locstr = "string"  // variable to override location for getWeatherFeature   // THIS COULD BE A SETTING,  if not used, it should be NULL
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
@@ -314,7 +315,7 @@ def automationsActive(active, desc = null) {
 }
 
 def autoAppInst(Boolean val) { 
-    log.debug "${childAutoAppName()} is Installed?: ${val}"
+    log.debug "${getAutoAppChildName()} is Installed?: ${val}"
     atomicState.autoAppInstalled = val 
 }
 
@@ -336,7 +337,7 @@ def setPollingState() {
         unschedule()
         atomicState.pollingOn = false 
     } else { 
-        if(!atomicState.pollingOn) { 
+        if(!atomicState?.pollingOn) { 
             LogAction("Polling is Now ACTIVE!!!", "info", true)
             atomicState.pollingOn = true
             def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
@@ -352,7 +353,7 @@ def setPollingState() {
             schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)  // this runs every timgcd minutes
             poll(true)
         }
-        if(!atomicState.isInstalled) { poll(true) }
+//        if(!atomicState?.isInstalled) { poll(true) }
     }
 }
 
@@ -452,6 +453,7 @@ def postCmd() {
 }
     
 def getApiData(type = null) {
+    //log.trace "getApiData($type)"
     LogAction("getApiData($type)", "info", false)
     def result = false
     if(!type) { return result } 
@@ -1113,6 +1115,7 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
 def updateWebStuff(now = false) {
+    //log.trace "updateWebStuff..."
     if (getLastWebUpdSec() > (1800)) {
         if(now) {
             getWebFileData()
@@ -1185,6 +1188,8 @@ def getWForecastData() {
 }
 
 def getWebFileData() {
+    //log.trace "getWebFileData..."
+
     def params = [ 
         uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
            contentType: 'application/json'
@@ -1290,7 +1295,7 @@ def getNestStructures() {
                     thisstruct[dni] = strucData?.name.toString()
                 }
             }
-            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice) {  // if devices are configured, you cannot change the structure until they are removed
+            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice) {  // if devices are configured, you cannot change the structure until they are removed
                 struct = thisstruct
             }
             if (ok2PollDevice()) { getApiData("dev") }
@@ -1413,84 +1418,111 @@ def getProtectDisplayName(prot) {
 
 def getNestTstatDni(dni) {
     log.debug "getNestTstatDni: $dni"
-    def d3 = getChildDevice(dni?.key.toString())
-    if(d3) { return dni?.key.toString() }
-    else { return "NestThermostat-${dni?.value.toString()} | ${dni?.key.toString()}" }
+    def d1 = getChildDevice(dni?.key.toString())
+    if(d1) { return dni?.key.toString() }
+    else {
+        def devt =  appDevName()
+        return "NestThermostat-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
+    }
     LogAction("getNestTstatDni Issue...", "warn", true)
 }
 
 def getNestProtDni(dni) {
-    def d3 = getChildDevice(dni?.key.toString())
-    if(d3) { return dni?.key.toString() }
-    else { return "NestProtect-${dni?.value.toString()} | ${dni?.key.toString()}" }
+    def d2 = getChildDevice(dni?.key.toString())
+    if(d2) { return dni?.key.toString() }
+    else {
+        def devt =  appDevName()
+        return "NestProtect-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
+    }
     LogAction("getNestProtDni Issue...", "warn", true)
 }
 
 def getNestPresId() {
-    def dni = "Nest Presence Device"
+    def dni = "Nest Presence Device" // old name 1
     def d3 = getChildDevice(dni)
     if(d3) { return dni }
     else { 
-        if(settings?.structures) { return "NestPres | ${settings?.structures}" }
-        else if(atomicState?.structures) { return "NestPres | ${atomicState?.structures}" }
+        if(atomicState?.structure) {
+            dni = "NestPres${atomicState.structure}" // old name 2
+            d3 = getChildDevice(dni)
+            if(d3) { return dni }
+        }
+        def retVal = ""
+        def devt =  appDevName()
+        if(settings?.structures) { retVal = "NestPres${devt} | ${settings?.structures}" }
+        else if(atomicState?.structures) { retVal = "NestPres${devt} | ${atomicState?.structures}" }
         else {
             LogAction("getNestPresID No structures ${atomicState?.structures}", "warn", true)
             return ""
         }
+        return retVal
     }
 }
 
 def getNestWeatherId() {
-    def dni = "Nest Weather Device (${location?.zipCode})"
+    def dni = "Nest Weather Device (${location?.zipCode})" // old name 1
     def d4 = getChildDevice(dni)
     if(d4) { return dni }
     else { 
-        if(settings?.structures) { return "NestWeather | ${settings?.structures}" }
-        else if(atomicState?.structures) { return "NestWeather | ${atomicState?.structures}" }
+        if(atomicState?.structure) {
+            dni = "NestWeather${atomicState.structure}" // old name 2
+            d4 = getChildDevice(dni)
+            if(d4) { return dni }
+        }
+        def retVal = ""
+        def devt =  appDevName()
+        if(settings?.structures) { retVal = "NestWeather${devt} | ${settings?.structures}" }
+        else if(atomicState?.structures) { retVal = "NestWeather${devt} | ${atomicState?.structures}" }
         else {
             LogAction("getNestWeatherId No structures ${atomicState?.structures}", "warn", true)
             return ""
         }
+        return retVal
     }
 }
 
 def getNestTstatLabel(name) {
-    def defName = "Nest Thermostat - ${name}"
-    if (atomicState?.useAltNames) { return "${location.name} - ${name}" }
+    def devt =  appDevName()
+    def defName = "Nest Thermostat${devt} - ${name}"
+    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
     else if(atomicState?.custLabelUsed) {
-        return settings?."tstat_${name}_lbl" ? settings?."tstat_${name}_lbl" : defName
+        defName = settings?."tstat_${name}_lbl" ? settings?."tstat_${name}_lbl" : defName
     }
     return defName
 }
 
 def getNestProtLabel(name) {
-    def defName = "Nest Protect - ${name}"
-    if (atomicState?.useAltNames) { return "${location.name} - ${name}" }
+    def devt =  appDevName()
+    def defName = "Nest Protect${devt} - ${name}"
+    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
     else if(atomicState?.custLabelUsed) {
-        return settings?."prot_${name}_lbl" ? settings?."prot_${name}_lbl" : defName
+        defName = settings?."prot_${name}_lbl" ? settings?."prot_${name}_lbl" : defName
     }
     return defName
 }
 
 def getNestPresLabel() {
-    def defName = "Nest Presence Device"
-    if (atomicState?.useAltNames) { return "${location.name} - Nest Presence Device" }
+    def devt =  appDevName()
+    def defName = "Nest Presence Device${devt}"
+    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Presence Device" }
     else if(atomicState?.custLabelUsed) {
-        return settings?.presDev_lbl ? settings?.presDev_lbl.toString() : defName
+        defName = settings?.presDev_lbl ? settings?.presDev_lbl.toString() : defName
     }
     return defName
 }
 
 def getNestWeatherLabel() {
-    def defName = "Nest Weather (${location?.zipCode})"  
-    if (atomicState?.useAltNames) { return "${location.name} - Nest Weather Device" }
+    def devt =  appDevName()
+    def defName = "Nest Weather${devt} (${location?.zipCode})"  
+    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
     else if(atomicState?.custLabelUsed) {
-        return settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
+        defName = settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
     }
     return defName
 }
 
 def addRemoveDevices(uninst = null) {
+    //log.trace "addRemoveDevices..."
     def retVal = false
     try {
         def tstats
@@ -1587,7 +1619,7 @@ def addRemoveDevices(uninst = null) {
         }
         
         def delete 
-        if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState.weatherDevice) {
+        if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) {
             delete = getAllChildDevices()
         } else {
             if (!atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) {
@@ -1634,9 +1666,10 @@ def addRemoveDevices(uninst = null) {
 def devNamePage() {
     dynamicPage(name: "devNamePage", install: false) {
         section("") {
+            paragraph "Changes on this page only take affect as devices are added..." 
             input (name: "useAltNames", type: "bool", title: "Use Location Name Prefix?", required: false, defaultValue: false, submitOnChange: true, image: "" )
         }
-        if(useAltNames) { atomicState?.custLabelUsed = false }
+        if(useAltNames) { atomicState.useAltNames = true; atomicState?.custLabelUsed = false }
         else if(!useAltNames) {
         	def custDevCnt = 0
             if(atomicState?.thermostats) {
@@ -1682,7 +1715,9 @@ def devNamePage() {
 }
 
 def deviceHandlerTest() {
-    if (atomicState.devHandlersTested) { return true }
+    //log.trace "deviceHandlerTest()"
+    if (atomicState?.devHandlersTested) { return true }
+    if(atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice) { return true }
     try {  
         def d1 = addChildDevice(app.namespace, getThermostatChildName(), "testNestThermostat-Install123", null, [label:"Nest Thermostat:InstallTest"])
         def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
@@ -1691,7 +1726,7 @@ def deviceHandlerTest() {
         def testDevs = getAllChildDevices()
         log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} || devCnt: ${testDevs.size()}"
         if(testDevs.size() == 4) {
-            atomicState?.devHandlersTested = true
+            atomicState.devHandlersTested = true
             testDevs?.each { 
                 deleteChildDevice(it.deviceNetworkId)
                 LogAction("${it?.label} Test Device Deleted...", "info", false)
@@ -1703,12 +1738,13 @@ def deviceHandlerTest() {
         if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
             LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true, true)
         } else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
-        atomicState?.devHandlersTested = false
+        atomicState.devHandlersTested = false
         return false
     }
 }
 
 def preReqCheck() {
+    //log.trace "preReqCheckTest()"
     if(atomicState?.preReqTested) { return true }
     if(!location?.timeZone || !location?.zipCode) { 
         atomicState.preReqTested = false
@@ -1739,7 +1775,7 @@ def getEndpointUrl() {
 def getAccessToken() {
     try {
         if(!atomicState?.accessToken) { atomicState?.accessToken = createAccessToken() }
-        return true
+        else { return true }
     }
     catch (ex) { 
         def msg = "Error: OAuth is not Enabled for the Nest Manager application!!!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE..."
@@ -2061,6 +2097,7 @@ def getExLogSize() {
 }
 
 def setStateVar(frc = false) {
+    //log.trace "setStateVar..."
     try {
         //If the developer changes the version in the web appParams JSON it will trigger 
         //the app to create any new state values that might not exist or reset those that do to prevent errors 
@@ -2072,6 +2109,7 @@ def setStateVar(frc = false) {
             if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
             if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
             if(!atomicState?.custLabelUsed)             { atomicState?.custLabelUsed = false }
+            if(!atomicState?.useAltNames)               { atomicState.useAltNames = false }
             atomicState?.stateVarUpd = true
             atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
         }
@@ -2079,7 +2117,7 @@ def setStateVar(frc = false) {
 }
 
 def stateCleanup() {
-log.trace "stateCleanup..."
+    log.trace "stateCleanup..."
     //Things that I need to clear up on updates go here
     // this must be run standalone, and exit after running as the cleanup occurs on exit
     state.remove("pollValue")
@@ -2097,6 +2135,7 @@ log.trace "stateCleanup..."
     state.remove("cmdQ")
     state.remove("recentSendCmd")
     state.remove("currentWeather")
+    state.remove("altNames")
     if (!atomicState?.cmdQlist) {
         state.remove("cmdQ2")
         state.remove("cmdQ3")
@@ -2147,10 +2186,14 @@ log.trace "stateCleanup..."
 /******************************************************************************  
 *                			Keep These Methods				                  *
 *******************************************************************************/
-def getThermostatChildName(){ return "Nest Thermostat" }
-def getProtectChildName()   { return "Nest Protect" }
-def getPresenceChildName() 	{ return "Nest Presence" }
-def getWeatherChildName()   { return "Nest Weather" }
+def getThermostatChildName() { return getChildDevName("Nest Thermostat") }
+def getProtectChildName()    { return getChildDevName("Nest Protect") }
+def getPresenceChildName()   { return getChildDevName("Nest Presence") }
+def getWeatherChildName()    { return getChildDevName("Nest Weather") }
+def getAutoAppChildName()    { return getChildDevName("Nest Automations") }
+
+def getChildDevName(str)     { return "${str}${appDevName()}" }
+
 def getServerUrl()          { return "https://graph.api.smartthings.com" }
 def getShardUrl()           { return getApiServerUrl() }
 def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback" }
@@ -2426,7 +2469,7 @@ def devPrefPage() {
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
                 paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
-                input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: true, submitOnChange: true, 
+                input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: false, submitOnChange: true, 
                         image: getAppImg("list_icon.png")
             }        
         }
