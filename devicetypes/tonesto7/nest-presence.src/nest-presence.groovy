@@ -4,7 +4,6 @@
  *	Author: Anthony S. (@tonesto7)
  *  
  *
- 
  * Copyright (C) 2016 Ben W, Anthony S.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -32,7 +31,7 @@ def devVer() { return "1.1.1" }
 
 // for the UI
 metadata {
-	definition (name: "Nest Presence", namespace: "tonesto7", author: "DesertBlade") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "DesertBlade") {
 
         capability "Presence Sensor"
         capability "Sensor"
@@ -262,3 +261,7 @@ def log(message, level = "trace") {
     }            
     return null // always child interface call with a return value
 }
+
+private def textDevName()   { "Nest Presence${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
