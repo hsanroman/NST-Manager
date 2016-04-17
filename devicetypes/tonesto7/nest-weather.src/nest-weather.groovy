@@ -31,7 +31,7 @@ def devVer() { return "1.0.0" }
 
 // for the UI
 metadata {
-	definition (name: "Nest Weather", namespace: "tonesto7", author: "Anthony S.") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
 
         capability "Illuminance Measurement"
         capability "Sensor"
@@ -560,3 +560,6 @@ def getWeatherHtml2() {
         }
     }
 }
+private def textDevName()   { "Nest Weather${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
