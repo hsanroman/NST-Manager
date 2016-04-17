@@ -58,8 +58,9 @@ def mainPage() {
             def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
             def senRuleType = extSenRuleType ? "\nRule-Type: ${extSenRuleName()}" : ""
-            def extSenDesc = ((extSensorDay || extSensorNight) && extSenHeatTemp && extSenCoolTemp && extSenTstat) ? 
-                "${senEnabDesc}Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}\n${senDayDesc}${senNightDesc}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
+            def senTypeUsed = getIsNightSensor() ? senNightDesc : senDayDesc
+            def extSenDesc = isExtSenConfigured() ? 
+                "${senEnabDesc}Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}\n${senTypeUsed}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
             href "extSensorPage", title: "Use Remote Sensors...", description: extSenDesc, state: extSenDesc, image: imgIcon("remote_sensor_icon.png")
         }
         section("Turn a Thermostat Off when a Window or Door is Open:") {
@@ -175,24 +176,30 @@ def extSensorPage() {
             input "extSensorDay", "capability.temperatureMeasurement", title: "Daytime Temp Sensors...", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false),
                     multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorDay) {
-                input "extSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: (extSensorDay ? true : false),
-                        image: imgIcon("mode_icon.png")
+            	if(extSenModeDuplication()) {
+                	paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct...", image: imgIcon("error_icon.png")
+                }
+                input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: (extSensorDay ? true : false),
+                		image: imgIcon("mode_icon.png")
                 def tmpVal = "Day Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                 if(extSensorDay.size() > 1) {
                     href "extSenShowTempsPage", title: "View Day Sensor Temps...", description: tmpVal, image: " "
-                    paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
-                } else { paragraph "${tmpVal}", image: " " }
-            }
+                	paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
+               	} else { paragraph "${tmpVal}", image: " " }
+             }
          }
          section("Choose NightTime Temperature Sensor(s) to use instead of the Thermostat's...") {
             input "extSensorNight", "capability.temperatureMeasurement", title: "NightTime Temp Sensors", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false), 
                     multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorNight) {
+            	if(extSenModeDuplication()) {
+                	paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct", image: imgIcon("error_icon.png")
+                }
                 input "extSensorNightModes", "mode", title: "NightTime Modes...", multiple: true, submitOnChange: true, required: (extSensorNight ? true : false),
-                        image: imgIcon("mode_icon.png")
+                		image: imgIcon("mode_icon.png")
                 def tmpVal = "Night Sensor Temp${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
                 if(extSensorNight.size() > 1) {
-                    href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
+                	href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
                     paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                 } else { paragraph "${tmpVal}", image: " " }
             }
@@ -211,24 +218,28 @@ def extSensorPage() {
                 input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
                         image: imgIcon("motion_icon.png")
                 if(extMotionSensors) {
-                	input "extMotionSensorModes", "mode", title: "Only in These Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
+                	input "extMotionSensorModes", "mode", title: "Only Act on Motion in These Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
                     input "extMotionDelayVal", "number", title: "Wait Before Evaluating (In Minutes)", required: true, defaultValue: 5, submitOnChange: true
                 }
             }
             section ("Options") {
-                input "extSenModes", "mode", title: "Only in These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
+                input "extSenModes", "mode", title: "Restrict Actions to Only These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
                 input "extTimeBetweenRuns", "number", title: "Time Between Fan Runs (In Minutes)", required: true, defaultValue: 60, submitOnChange: true
                 input "extTempChgDegrees", "number", title: "Temp Change Increments +/- (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true
                 input "extTempDiffDegrees", "number", title: "Temp Threshold to Trigger Fan Run (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true
             }
         }
-        if (((extSensorDay && extSensorDayModes) || (extSensorNight && extSensorNightModes)) && extSenTstat && extSenHeatTemp && extSenCoolTemp) {
+        if (isExtSenConfigured()) {
             section("Enable or Disable Remote Sensor Once Configured...") {
                 input (name: "extSenEnabled", type: "bool", title: "Enable Remote Sensor Automation?", required: false, defaultValue: true, submitOnChange: true, image: imgIcon("switch_icon.png"))
                 state?.extSenEnabled = extSenEnabled ? true : false
             }
         } else { state?.extSenEnabled = false }
     }
+}
+
+def isExtSenConfigured() {
+	return ((extSensorDay || extSensorNight) && extSenTstat && ((extSenRuleType == "Circ" && !extSenHeatTemp && !extSenCoolTemp) || (extSenHeatTemp && extSenCoolTemp))) ? true : false
 }
 
 def extSenMotionEvt(evt) {
@@ -424,15 +435,35 @@ def getDeviceTemp(dev) {
 }
 
 def getRemoteSenTemp() {
-    if(extSensorDay) {
+    if(!getIsNightSensor() && extSensorDay) {
         return getDeviceTempAvg(extSensorDay)
     }
-    else if(extSensorNight) {
+    else if(getIsNightSensor() && extSensorNight) {
         return getDeviceTempAvg(extSensorNight)        
     }
     else {
         return 0
     }
+}
+
+def extSenModeDuplication() {
+	def result = false
+    if(extSensorDayModes && extSensorNightModes) {
+     	extSensorDayModes?.each { dm ->
+			if(dm in extSensorNightModes) {
+            	result = true
+            }
+    	}
+    }
+    return result
+}
+
+def getIsNightSensor() {
+    def day = !extSensorDayModes ? false : isInMode(extSensorDayModes)
+    def night = !extSensorNightModes ? false : isInMode(extSensorNightModes)
+    if(night && !day) { return true }
+    else if (day && !night) { return false }
+    else { return null }
 }
 
 def getDeviceTempAvg(items) {
@@ -446,7 +477,7 @@ def getDeviceTempAvg(items) {
         }
     } 
     else { tempVal = getDeviceTemp(items) }
-    return tempVal.toInteger()
+    return tempVal.toDouble()
 }
 
 def longTimeEnum() {
