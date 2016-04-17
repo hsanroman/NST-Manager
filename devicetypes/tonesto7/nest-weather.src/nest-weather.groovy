@@ -24,9 +24,6 @@
 // TODO: Need to update Copyright
 
 import java.text.SimpleDateFormat
-import org.apache.commons.codec.binary.Base64
-import java.io.FileInputStream
-import java.io.ByteArrayOutputStream
 
 preferences {  }
 
