@@ -53,13 +53,11 @@ metadata {
     }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml2", width: 6, height: 6)
-        
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 6)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
         }
-        
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
             state("default", label: 'Data Last Received:\n${currentValue}')
         }
