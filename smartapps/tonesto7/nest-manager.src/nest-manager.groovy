@@ -65,6 +65,7 @@ preferences {
     page(name: "nestLoginPrefPage")
     page(name: "nestTokenResetPage")
     page(name: "uninstallPage")
+    page(name: "automationsPage")
 }
 
 mappings {
@@ -186,11 +187,9 @@ def authPage() {
                 }
                 
                 if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
-                    if (!atomicState?.autoAppInstalled) { atomicState.autoAppInstalled = false } 
-                    def autoApp = findChildAppByName( getAutoAppChildName() )
-                    section("Automations Child App:") {
-                        app(name: "autoApp", appName: getAutoAppChildName(), namespace: "tonesto7", multiple: false, title: "${getAutoAppChildName()}...${getChildAppVer(autoApp)}", 
-                            description: appBtnDesc(atomicState.autoAppInstalled), image: getAppImg("automation_icon.png"))
+                    def autoDesc = isAutoAppInst() ? "Automations are Active...\nTap to Modify..." : "Tap to Configure..."
+                    section("Automations:") {
+                        href "automationsPage", title: "Automations...", description: autoDesc, image: getAppImg("automation_icon.png")
                     }
                 }
                    
@@ -213,6 +212,22 @@ def authPage() {
             section(" ") { 
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
             }
+        }
+    }
+}
+
+def automationsPage() {
+    dynamicPage(name: "automationsPage", title: "", nextPage: "", install: false) {
+        def autoApp = findChildAppByName( getAutoAppChildName() )
+        if(!autoApp) {
+            section("") {
+                paragraph "You haven't created any Automations yet!!!\nTap Create New Automation to get Started..."
+            }
+        }
+        section("Add a new Automation:") {
+            paragraph "Automation App Version: ${getChildAppVer(autoApp)}"
+            app(name: "autoApp", appName: getAutoAppChildName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", 
+                     image: getAppImg("automation_icon.png"))
         }
     }
 }
@@ -303,7 +318,7 @@ def initialize() {
 }
 
 def getChildAppVer(appName) { return appName?.appVersion() ? "(v${appName?.appVersion()})" : "" }
-def appBtnDesc(val) { 
+def appBtnDesc(val) {
     return atomicState?.automationsActive ? (atomicState?.automationsActiveDesc ? "${atomicState?.automationsActiveDesc}\nTap to Modify..." : "Tap to Modify...") :  "Tap to Install..."
 }
 
@@ -312,6 +327,11 @@ def automationsActive(active, desc = null) {
     if(desc) {
         atomicState?.automationsActiveDesc = desc
     }
+}
+
+def isAutoAppInst() {
+    def autoApp = childApps.size()
+    return (autoApp > 0) ? true : false
 }
 
 def autoAppInst(Boolean val) { 
@@ -353,7 +373,7 @@ def setPollingState() {
             schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)  // this runs every timgcd minutes
             poll(true)
         }
-//        if(!atomicState?.isInstalled) { poll(true) }
+        //if(!atomicState?.isInstalled) { poll(true) }
     }
 }
 
