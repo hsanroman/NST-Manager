@@ -297,7 +297,7 @@ img {
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. </p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_thermostat_2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/develop/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
 <h2>Author</h2>
 <ul>
 <li>@tonesto7</li>
@@ -321,7 +321,15 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Nest Weather Device - <strong><em>v1.0.0</em></strong></li>
 </ul>
 <h2>What's New</h2>
-<h3>New Child Automation</h3>
+<ul>
+<li>In-app HTML help pages </li>
+<li>Much more transparent install process.  It performs tests to verify Oauth is enabled, that device handlers are installed and that your ST account has proper zipCode associated with it.  It will also alert you in the app with a push notification when the above are found as well as when you try uninstalling it will tell you if it can't remove the devices because they are being used by other apps/routines. </li>
+<li>All new polling logic (Also switched to Cron scheduling)</li>
+<li>Support for sending commands from multiple devices by using Queuing of commands to also help prevent being rate-limited by Nest.</li>
+<li>Fresh nest device tile designs :smile: (These may cause some controversy and be asked to be reverted back)</li>
+<li>New Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary.</li>
+<li>Added an Nest Automation Child app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and available shortly after release support for a customiziable remote sensor support. </li>
+</ul>
 <h2>Links</h2>
 <h4><a href="https://github.com/tonesto7/nest-manager/issues">GitHub Project Issues Link</a></h4>
 <h4><a href="https://community.smartthings.com/t/release-nest-manager/">SmartThings Community Forum Link</a></h4>
@@ -348,21 +356,18 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <ul>
 <li>The level of info available through the Official API is very limited compared to the hacked version currently available.</li>
 </ul>
-<h2>Works With</h2>
+<h2>3rd-Party SmartApp Compatibility (Confirmed)</h2>
 <ul>
+<li>Keep Me Cozy (I &amp; II) (link)</li>
+<li><a href="https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119">Keenect</a></li>
 <li>Routines</li>
-<li>Rule Machine (Rules)</li>
-<li>Rule Machine (Custom Commands)</li>
-</ul>
-<h2>Future Items</h2>
-<ul>
-<li>Switching app to parent-child app to support multiple locations and allow creation of other child apps that perform various automation tasks.</li>
+<li><a href="https://community.smartthings.com/t/rule-machine-version-1-9-released/43204">Rule Machine (Rules and Custom Commands)</a></li>
 </ul>
 <h2>Installation</h2>
 <h3>Method 1: (Recommended)</h3>
 <p><em>Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices.</em></p>
 <p>If you don't already have Git Integration setup please visit <strong><em><a href="http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html">GitHub Integration Instructions</a></em></strong></p>
-<h4>The Nest Manager and Nest Automation Apps</h4>
+<h4>The Nest Manager and Nest Automations Apps</h4>
 <ul>
 <li>Go to &quot;<strong>My SmartApps</strong>&quot; in the IDE</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
@@ -372,7 +377,7 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Check the box next to <strong><em>nest-manager</em></strong> and <strong><em>nest-automations</em></strong> then click &quot;<strong>Execute Update</strong>&quot;</li>
 <li>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </li>
 <li>
-<p>Click on the <strong><em>Nest Automation</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
+<p>Click on the <strong><em>Nest Automations</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
 <h3><em>You will also need to Enable OAuth under the Nest Manager app preferences in the IDE</em></h3>
 </li>
 </ul>
@@ -431,8 +436,9 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>Choose <strong>Structure</strong></li>
 <li>Choose <strong>Thermostats</strong></li>
 <li>Choose <strong>Protects</strong></li>
-<li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
-<li>Choose <em>Use Nest as Presence Device</em> (Optional)</li>
+<li>Choose <em>Add Presence Device</em> (Optional)</li>
+<li>Choose <em>Add Weather Device</em> (Optional)</li>
+<li>Modify any preferences you would like (Optional)</li>
 <li>Tap on &quot;<strong>Done</strong>&quot;</li>
 </ul>
 <h2>Issues and Troubleshooting</h2>
