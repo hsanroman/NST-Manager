@@ -166,8 +166,8 @@ def authPage() {
                     if (stats?.size() > 0) { 
                         input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats], 
                                 image: getAppImg("thermostat_icon.png")) 
-                        atomicState.thermostats = thermostats ? (atomicState?.custLabelUsed ? custStatState(thermostats) : statState(thermostats)) : null }
-                    
+                        atomicState.thermostats = thermostats ? (atomicState?.custLabelUsed ? custStatState(thermostats) : statState(thermostats)) : null 
+                    }
                     if (coSmokes.size() > 0) { 
                         input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes], 
                                 image: getAppImg("protect_icon.png")) 
@@ -180,9 +180,9 @@ def authPage() {
                                 image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
-                    if( (thermostats || protects || presDevice || weatherDevice)) {
+                    /*if( !atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
-                    }
+                    }*/
                 }
                 
                 if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
@@ -1353,44 +1353,7 @@ def statState(val) {
             }
         }
     }
-    log.debug "statState: $stats"
     return stats
-}
-
-def custStatState(val) {
-    def stats = [:]
-    def tstats = statState(thermostats)
-    log.debug "tstats: $tstats"
-    tstats.each { stat ->
-        log.debug "stat: $stat"
-        def statId = getNestTstatDni(stat)
-        def statData = getNestTstatLabel(stat?.value)
-        log.debug "stat: $statId | data: $statData"
-        val.each { st ->
-            log.debug "st: $st"
-            if(statId == st) {
-                def adni = [statId].join('.')
-                stats[adni] = statData
-            }
-        }
-    }
-    log.debug "custStatState: $stats"
-    return stats
-}
-
-def custCoState(val) {
-    def protects = [:]
-    def nProtects = getNestProtects()
-    nProtects.each { dev ->
-        val.each { pt ->
-        if(dev?.key == pt) {             
-            def bdni = [dev?.key].join('.')
-                protects[bdni] = dev?.value
-            }
-        }
-    }
-    log.debug "custCoState: $protects"
-    return protects
 }
 
 def coState(val) {
@@ -1404,9 +1367,60 @@ def coState(val) {
             }
         }
     }
-    log.debug "coState: $protects"
     return protects
 }
+
+def custStatState(val) {
+    def stats = [:]
+    def tstats = getNestThermostats()
+    tstats.each { stat ->
+        def statId = getNestTstatDni(stat)
+        def statData = getNestTstatLabel(stat?.value)
+        //log.debug "stat: $statId | data: $statData"
+        val.each { st ->
+            if(statId == st) {
+                def adni = [statId].join('.')
+                stats[adni] = statData
+            }
+        }
+    }
+    log.debug "custStatState: $stats"
+    return stats
+}
+
+def custCoState(val) {
+    def prots = [:]
+    def nProts = getNestProtects()
+    nProts.each { prot ->
+        def protId = getNestProtDni(prot)
+        def protData = getNestProtLabel(prot?.value)
+        log.debug "stat: $protId | data: $protData"
+        val.each { pt ->
+            if(protId == pt) {
+                def adni = [protId].join('.')
+                prots[adni] = protData
+            }
+        }
+    }
+    log.debug "custCoState: $prots"
+    return prots
+}
+
+/*def custCoState(val) {
+    def protects = [:]
+    def nProtects = coState(protects)
+    nProtects.each { dev ->
+        log.debug "custCoState: dev: $dev"
+        val.each { pt ->
+        if(dev?.key == pt) {             
+            def bdni = [dev?.key].join('.')
+                protects[bdni] = dev?.value
+            }
+        }
+    }
+    log.debug "custCoState: $protects"
+    return protects
+}*/
 
 def getThermostatDisplayName(stat) {
     if(stat?.name) { return stat.name.toString() }
@@ -1484,41 +1498,41 @@ def getNestWeatherId() {
 def getNestTstatLabel(name) {
     def devt =  appDevName()
     def defName = "Nest Thermostat${devt} - ${name}"
-    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+    if (atomicState?.useAltNames) { return "${location.name}${devt} - ${name}" }
     else if(atomicState?.custLabelUsed) {
-        defName = settings?."tstat_${name}_lbl" ? settings?."tstat_${name}_lbl" : defName
+        return settings?."tstat_${name}_lbl" ? settings?."tstat_${name}_lbl" : defName
     }
-    return defName
+    else { return defName }
 }
 
 def getNestProtLabel(name) {
     def devt =  appDevName()
     def defName = "Nest Protect${devt} - ${name}"
-    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+    if (atomicState?.useAltNames) { return "${location.name}${devt} - ${name}" }
     else if(atomicState?.custLabelUsed) {
-        defName = settings?."prot_${name}_lbl" ? settings?."prot_${name}_lbl" : defName
+        return settings?."prot_${name}_lbl" ? settings?."prot_${name}_lbl" : defName
     }
-    return defName
+    else { return defName }
 }
 
 def getNestPresLabel() {
     def devt =  appDevName()
     def defName = "Nest Presence Device${devt}"
-    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Presence Device" }
+    if (atomicState?.useAltNames) { return "${location.name}${devt} - Nest Presence Device" }
     else if(atomicState?.custLabelUsed) {
-        defName = settings?.presDev_lbl ? settings?.presDev_lbl.toString() : defName
+        return settings?.presDev_lbl ? settings?.presDev_lbl.toString() : defName
     }
-    return defName
+    else { return defName }
 }
 
 def getNestWeatherLabel() {
     def devt =  appDevName()
     def defName = "Nest Weather${devt} (${location?.zipCode})"  
-    if (atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
+    if (atomicState?.useAltNames) { return "${location.name}${devt} - Nest Weather Device" }
     else if(atomicState?.custLabelUsed) {
-        defName = settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
+        return settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
     }
-    return defName
+    else { return defName }
 }
 
 def addRemoveDevices(uninst = null) {
@@ -1667,46 +1681,60 @@ def devNamePage() {
     dynamicPage(name: "devNamePage", install: false) {
         section("") {
             paragraph "Changes on this page only take affect as devices are added..." 
-            input (name: "useAltNames", type: "bool", title: "Use Location Name Prefix?", required: false, defaultValue: false, submitOnChange: true, image: "" )
+            def altNameDef = (useCustDevNames || (!useCustDevNames && !useAltNames)) ? false : true
+            def custNameDef = (useAltNames || (!useCustDevNames && !useAltNames)) ? false : true
+            if(!useCustDevNames) {
+                input (name: "useAltNames", type: "bool", title: "Use Location Name Prefix instead of Nest?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
+            }
+            if(!useAltNames) {
+                input (name: "useCustDevNames", type: "bool", title: "Use Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
+            }
         }
-        if(useAltNames) { atomicState.useAltNames = true; atomicState?.custLabelUsed = false }
-        else if(!useAltNames) {
-        	def custDevCnt = 0
+        if(useAltNames) { atomicState?.useAltNames = true; atomicState?.custLabelUsed = false }
+        if(useCustDevNames) { atomicState?.useAltNames = false; atomicState?.custLabelUsed = true }
+        else { atomicState?.useAltNames = false; atomicState?.custLabelUsed = false }
+        
+        if(!useAltNames && useCustDevNames) { 
+            def custDevCnt = 0
             if(atomicState?.thermostats) {
                 section ("Thermostat Device Names:") {
                     atomicState?.thermostats?.each { t ->
-                        input "tstat_${t.value}_lbl", "text", title: "${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true
-                        if("${settings?."tstat_${t.value}_lbl"}" != getNestTstatLabel("${t.value}")) { custDevCnt = custDevCnt + 1 }
+                        input "tstat_${t.value}_lbl", "text", title: "${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
+                               image: getAppImg("thermostat_icon.png")
+                        //if("${settings?."tstat_${t.value}_lbl"}" != getNestTstatLabel("${t.value}")) { custDevCnt = custDevCnt + 1 }
                     }
                 }
             }
             if(atomicState?.protects) {
                 section ("Protect Device Names:") {
-                    atomicState?.protects?.each { p ->
-                        input "prot_${p.value}_lbl", "text", title: "${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true
-                        if("${settings?."prot_${p.value}_lbl"}" != getNestProtLabel("${p.value}")) { custDevCnt = custDevCnt + 1 }
+                    protects?.each { p ->
+                        input "prot_${p.value}_lbl", "text", title: "${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
+                                image: getAppImg("protect_icon.png")
+                        //if("${settings?."prot_${p.value}_lbl"}" != getNestProtLabel("${p.value}")) { custDevCnt = custDevCnt + 1 }
                     }
                 }
             }
             if(atomicState?.presDevice) {
                 section ("Presence Device Name:") {
                     def p = getNestPresLabel()
-                    input "presDev_lbl", "text", title: "${p}", defaultValue: p, submitOnChange: true
-                    if(!presDev_lbl == p) { custDevCnt = custDevCnt + 1 }
+                    input "presDev_lbl", "text", title: "${p}", defaultValue: p, submitOnChange: true,
+                           image: getAppImg("presence_icon.png")
+                    //if(!presDev_lbl == p) { custDevCnt = custDevCnt + 1 }
                 }
             }
             if(atomicState?.weatherDevice) {
                 section ("Weather Device Name:") {
                     def p = getNestWeatherLabel()
-                    input "weathDev_lbl", "text", title: "${p}", defaultValue: p, submitOnChange: true
-                    if(!presDev_lbl == p) { custDevCnt = custDevCnt + 1 }
+                    input "weathDev_lbl", "text", title: "${p}", defaultValue: p, submitOnChange: true,
+                            image: getAppImg("weather_icon.png")
+                    //if(!presDev_lbl == p) { custDevCnt = custDevCnt + 1 }
                 }
             }
             
-            atomicState?.custLabelUsed = (custDevCnt > 0) ? true : false
+            //atomicState?.custLabelUsed = (custDevCnt > 0) ? true : false
             if(atomicState?.custLabelUsed) {
                 section("") {
-                    paragraph "Custom Label State is Active..." 
+                    paragraph "Custom Label's Are Active..." 
                 }
             }
         } 
@@ -1716,9 +1744,11 @@ def devNamePage() {
 
 def deviceHandlerTest() {
     //log.trace "deviceHandlerTest()"
-    if (atomicState?.devHandlersTested) { return true }
-    if(atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice) { return true }
-    try {  
+    if(atomicState?.devHandlersTested || (atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice)) { 
+        atomicState.devHandlersTested = true
+        return true 
+    }
+    try {
         def d1 = addChildDevice(app.namespace, getThermostatChildName(), "testNestThermostat-Install123", null, [label:"Nest Thermostat:InstallTest"])
         def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
         def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
@@ -1731,6 +1761,7 @@ def deviceHandlerTest() {
                 deleteChildDevice(it.deviceNetworkId)
                 LogAction("${it?.label} Test Device Deleted...", "info", false)
             }
+            atomicState.devHandlersTested = true
             return true
         }
     } 
