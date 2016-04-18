@@ -82,10 +82,9 @@ def authPage() {
     //log.trace "authPage()"
 
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
-
-    if(!atomicState?.accessToken) { getAccessToken() } 
-    if(!atomicState?.preReqTested && !atomicState?.isInstalled) { preReqCheck() }
-    if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
+    getAccessToken()
+    preReqCheck()
+    deviceHandlerTest()
         
     if (!atomicState?.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
@@ -1136,7 +1135,7 @@ def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
-    if (getLastWebUpdSec() > (1800)) {
+    if (!atomicState?.appData || getLastWebUpdSec() > (1800)) {
         if(now) {
             getWebFileData()
         } else {
@@ -1426,22 +1425,6 @@ def custCoState(val) {
     return prots
 }
 
-/*def custCoState(val) {
-    def protects = [:]
-    def nProtects = coState(protects)
-    nProtects.each { dev ->
-        log.debug "custCoState: dev: $dev"
-        val.each { pt ->
-        if(dev?.key == pt) {             
-            def bdni = [dev?.key].join('.')
-                protects[bdni] = dev?.value
-            }
-        }
-    }
-    log.debug "custCoState: $protects"
-    return protects
-}*/
-
 def getThermostatDisplayName(stat) {
     if(stat?.name) { return stat.name.toString() }
 }
@@ -1476,8 +1459,8 @@ def getNestPresId() {
     def d3 = getChildDevice(dni)
     if(d3) { return dni }
     else { 
-        if(atomicState?.structure) {
-            dni = "NestPres${atomicState.structure}" // old name 2
+        if(atomicState?.structures) {
+            dni = "NestPres${atomicState.structures}" // old name 2
             d3 = getChildDevice(dni)
             if(d3) { return dni }
         }
@@ -1494,12 +1477,12 @@ def getNestPresId() {
 }
 
 def getNestWeatherId() {
-    def dni = "Nest Weather Device (${location?.zipCode})" // old name 1
+    def dni = "Nest Weather Device (${location?.zipCode})"
     def d4 = getChildDevice(dni)
     if(d4) { return dni }
     else { 
-        if(atomicState?.structure) {
-            dni = "NestWeather${atomicState.structure}" // old name 2
+        if(atomicState?.structures) {
+            dni = "NestWeather${atomicState.structures}"
             d4 = getChildDevice(dni)
             if(d4) { return dni }
         }
@@ -1796,7 +1779,7 @@ def deviceHandlerTest() {
 
 def preReqCheck() {
     //log.trace "preReqCheckTest()"
-    if(atomicState?.preReqTested) { return true }
+    //if(atomicState?.preReqTested) { return true }
     if(!location?.timeZone || !location?.zipCode) { 
         atomicState.preReqTested = false
         LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true) 
