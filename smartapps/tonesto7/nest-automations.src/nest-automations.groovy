@@ -35,7 +35,7 @@ def appVerInfo() {
 }
 
 preferences {
-    page(name: "mainPage", title: "Nest Automations", nextPage:"", content:"mainPage", uninstall: true, install:true)
+    page(name: "mainPage", title: "Nest Automations", content:"mainPage", uninstall: true, install: false, nextPage: "namePage")
     page(name: "prefsPage")
     page(name: "debugPrefPage")
     page(name: "automationsPage")
@@ -44,6 +44,7 @@ preferences {
     page(name: "modePresPage")
     page(name: "extTempsPage")
     page(name: "extSenShowTempsPage")
+    page(name: "namePage", install: true, uninstall: true)
 }
 
 def mainPage() {
@@ -77,6 +78,14 @@ def mainPage() {
             def presDesc = (awayModes || homeModes) ? "${homeModes ? "Home: $homeModes" : ""}${awayModes ? "\n\nAway: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
             href "modePresPage", title: "Mode Automations", description: presDesc, image: imgIcon("mode_automation_icon.png")
         }
+ 	}
+}
+
+def namePage() {
+    dynamicPage(name: "namePage") {
+        section("Automation name") {
+                label title: "Give this Automation a Name", defaultValue: app.label, required: true
+        } 
     }
 }
 
@@ -84,21 +93,21 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    parent?.autoAppInst(true)
+    //parent?.autoAppInst(true)
 }
 
 def updated() {
     log.debug "Updated with settings: ${settings}"
     initialize()
-    getAutomationsActive()
-    parent?.autoAppInst(true)
+    //getAutomationsActive()
+    //parent?.autoAppInst(true)
     sendNotificationEvent("${textAppName()} has updated settings...")
 }
 
 def uninstalled() {
     //sends notification of uninstall
     sendNotificationEvent("${textAppName()} is uninstalled...")
-    parent?.autoAppInst(false)
+    //parent?.autoAppInst(false)
 }
 
 def initialize() {
@@ -176,30 +185,30 @@ def extSensorPage() {
             input "extSensorDay", "capability.temperatureMeasurement", title: "Daytime Temp Sensors...", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false),
                     multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorDay) {
-            	if(extSenModeDuplication()) {
-                	paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct...", image: imgIcon("error_icon.png")
+                if(extSenModeDuplication()) {
+                    paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct...", image: imgIcon("error_icon.png")
                 }
                 input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: (extSensorDay ? true : false),
-                		image: imgIcon("mode_icon.png")
+                        image: imgIcon("mode_icon.png")
                 def tmpVal = "Day Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                 if(extSensorDay.size() > 1) {
                     href "extSenShowTempsPage", title: "View Day Sensor Temps...", description: tmpVal, image: " "
-                	paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
-               	} else { paragraph "${tmpVal}", image: " " }
+                    paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
+                   } else { paragraph "${tmpVal}", image: " " }
              }
          }
          section("Choose NightTime Temperature Sensor(s) to use instead of the Thermostat's...") {
             input "extSensorNight", "capability.temperatureMeasurement", title: "NightTime Temp Sensors", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false), 
                     multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorNight) {
-            	if(extSenModeDuplication()) {
-                	paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct", image: imgIcon("error_icon.png")
+                if(extSenModeDuplication()) {
+                    paragraph "Duplicate Mode(s) found in Either Day or Night Sensor.  Please Correct", image: imgIcon("error_icon.png")
                 }
                 input "extSensorNightModes", "mode", title: "NightTime Modes...", multiple: true, submitOnChange: true, required: (extSensorNight ? true : false),
-                		image: imgIcon("mode_icon.png")
+                        image: imgIcon("mode_icon.png")
                 def tmpVal = "Night Sensor Temp${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
                 if(extSensorNight.size() > 1) {
-                	href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
+                    href "extSenShowTempsPage", title: "View Night Sensor Temps...", description: tmpVal, image: " "
                     paragraph "When multiple Sensors are selected the Temp will become the average of those sensors."
                 } else { paragraph "${tmpVal}", image: " " }
             }
@@ -218,7 +227,7 @@ def extSensorPage() {
                 input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
                         image: imgIcon("motion_icon.png")
                 if(extMotionSensors) {
-                	input "extMotionSensorModes", "mode", title: "Only Act on Motion in These Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
+                    input "extMotionSensorModes", "mode", title: "Only Act on Motion in These Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
                     input "extMotionDelayVal", "number", title: "Wait Before Evaluating (In Minutes)", required: true, defaultValue: 5, submitOnChange: true
                 }
             }
@@ -239,7 +248,7 @@ def extSensorPage() {
 }
 
 def isExtSenConfigured() {
-	return ((extSensorDay || extSensorNight) && extSenTstat && ((extSenRuleType == "Circ" && !extSenHeatTemp && !extSenCoolTemp) || (extSenHeatTemp && extSenCoolTemp))) ? true : false
+    return ((extSensorDay || extSensorNight) && extSenTstat && ((extSenRuleType == "Circ" && !extSenHeatTemp && !extSenCoolTemp) || (extSenHeatTemp && extSenCoolTemp))) ? true : false
 }
 
 def extSenMotionEvt(evt) {
@@ -447,13 +456,13 @@ def getRemoteSenTemp() {
 }
 
 def extSenModeDuplication() {
-	def result = false
+    def result = false
     if(extSensorDayModes && extSensorNightModes) {
-     	extSensorDayModes?.each { dm ->
-			if(dm in extSensorNightModes) {
-            	result = true
+         extSensorDayModes?.each { dm ->
+            if(dm in extSensorNightModes) {
+                result = true
             }
-    	}
+        }
     }
     return result
 }
