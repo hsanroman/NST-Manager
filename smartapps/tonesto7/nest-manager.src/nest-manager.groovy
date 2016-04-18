@@ -2495,7 +2495,7 @@ def devPrefPage() {
     dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
         section("") {
             paragraph "\nDevice Preferences\n", image: getAppImg("device_pref_icon.png")
-            href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
+            //href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
