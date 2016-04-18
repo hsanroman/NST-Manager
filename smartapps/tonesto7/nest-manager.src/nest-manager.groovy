@@ -218,8 +218,10 @@ def authPage() {
 def automationsPage() {
     dynamicPage(name: "automationsPage", title: "", nextPage: "", install: false) {
         def autoApp = findChildAppByName( getAutoAppChildName() )
-        if(!autoApp) {
-            section("") {
+        if(autoApp) {
+            section("Installed Automations...") { }
+        } else {
+            section(" ") {
                 paragraph "You haven't created any Automations yet!!!\nTap Create New Automation to get Started..."
             }
         }
