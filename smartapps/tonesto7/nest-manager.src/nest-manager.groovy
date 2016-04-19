@@ -1232,7 +1232,7 @@ def getWebFileData() {
     //log.trace "getWebFileData..."
 
     def params = [ 
-        uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Data/appParams.json",
+        uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Data/appParams.json",
            contentType: 'application/json'
     ]
     def result = false
@@ -2251,7 +2251,7 @@ def getShardUrl()           { return getApiServerUrl() }
 def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback" }
 def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
-def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/$imgName" : "" }
+def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
                             
 def latestTstatVer()    { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
 def latestProtVer()     { return atomicState?.appData?.versions?.protect ?: "unknown" }
@@ -2601,9 +2601,9 @@ def infoPage () {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
         }
         section("Help and Instructions:") {
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/develop/README.html", style:"embedded", required:false, title:"Readme File", 
+            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html", style:"embedded", required:false, title:"Readme File", 
                 description:"View the Projects Readme File...", image: getAppImg("readme_icon.png")
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/develop/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
                 description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
         section("Created by:") {
@@ -2785,6 +2785,7 @@ def protInfoPage () {
 private def appName() 		{ "Nest Manager${appDevName()}" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
+private def gitBranch()     { "develop" }
 private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ 
