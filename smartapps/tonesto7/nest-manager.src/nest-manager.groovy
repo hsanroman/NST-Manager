@@ -616,14 +616,6 @@ def apiIssues() {
     LogAction("API Issues: ${atomicState.apiIssues}", "debug", false) 
 }
 
-def sunrise() {
-    return location.currentState("sunriseTime")?.dateValue
-}
-
-def sunset() {
-    return location.currentState("sunsetTime")?.dateValue
-}
-
 def ok2PollDevice() {
     if (atomicState?.pollBlocked) { return false }
     if (atomicState?.needDevPoll) { return true }
@@ -649,6 +641,7 @@ def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTime
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
 def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
 def getLastWeatherUpdSec() { return !atomicState?.lastWeatherUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWeatherUpdDt).toInteger() }
+def getLastForecastUpdSec() { return !atomicState?.lastForecastUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastForecastUpdDt).toInteger() }
 /************************************************************************************************
 |										Nest API Commands										|
 *************************************************************************************************/
@@ -1161,24 +1154,41 @@ def getWeatherConditions(force = false) {
             def loc = ""
             def curWeather = ""
             def curForecast = ""
+            def curAstronomy = ""
             if (atomicState?.locstr) {
                 loc = atomicState.locstr 
                 curWeather = getWeatherFeature("conditions", loc)
-                curForecast = getWeatherFeature("forecast", loc)
             } else {
                 curWeather = getWeatherFeature("conditions")
-                curForecast = getWeatherFeature("forecast")
             }
-            if(curWeather && curForecast) { 
+            if(getLastForecastUpdSec() > (1800)) {
+                if (atomicState?.locstr) {
+                    loc = atomicState.locstr 
+                    curForecast = getWeatherFeature("forecast", loc)
+                    curAstronomy = getWeatherFeature("astronomy", loc)
+                } else {
+                    curForecast = getWeatherFeature("forecast")
+                    curAstronomy = getWeatherFeature("astronomy")
+                }
+                if(curForecast && curAstronomy) { 
+                    atomicState?.curForecast = curForecast 
+                    atomicState?.curAstronomy = curAstronomy 
+                    atomicState?.lastForecastUpdDt = getDtNow()
+                } else {
+                    LogAction("Could Not Retrieve Latest Local Forecast and astronomy Conditions", "warn", true)
+                }
+            }
+            if(curWeather) { 
                 atomicState?.curWeather = curWeather 
-                atomicState?.curForecast = curForecast 
                 atomicState?.lastWeatherUpdDt = getDtNow()
-                atomicState.needChildUpd = true
-                if (!force) { runIn(30, "postCmd", [overwrite: true]) }
-                return true
             } else {
                 LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
                 return false
+            }
+            if(curWeather || curAstronomy || curForecast) { 
+                atomicState.needChildUpd = true
+                if (!force) { runIn(30, "postCmd", [overwrite: true]) }
+                return true
             }
         }
         catch (ex) {
@@ -1204,6 +1214,16 @@ def getWForecastData() {
     } else {
         if(getWeatherConditions(true)) {
             return atomicState?.curForecast
+        }
+    }
+}
+
+def getWAstronomyData() {
+    if(atomicState?.curAstronomy) {
+        return atomicState?.curAstronomy
+    } else {
+        if(getWeatherConditions(true)) {
+            return atomicState?.curAstronomy
         }
     }
 }
@@ -1653,6 +1673,7 @@ def addRemoveDevices(uninst = null) {
             else if (!atomicState?.weatherDevice) {
                 atomicState?.curWeather = null 
                 atomicState?.curForecast = null 
+                atomicState?.curAstronomy = null
                 delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
             }            
             else {
