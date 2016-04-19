@@ -109,6 +109,7 @@ def authPage() {
     }
     
     updateWebStuff(true)
+    setStateVar(true)
     
     def description
     def uninstallAllowed = false
@@ -118,7 +119,6 @@ def authPage() {
         description = "You are connected."
         oauthTokenProvided = true
         uninstallAllowed = true
-        setStateVar(true)
     } else { description = "Click to enter Nest Credentials" }
     
     def redirectUrl = buildRedirectUrl
@@ -1456,7 +1456,7 @@ def getProtectDisplayName(prot) {
 }
 
 def getNestTstatDni(dni) {
-    log.debug "getNestTstatDni: $dni"
+    //log.debug "getNestTstatDni: $dni"
     def d1 = getChildDevice(dni?.key.toString())
     if(d1) { return dni?.key.toString() }
     else {
@@ -1706,21 +1706,17 @@ def addRemoveDevices(uninst = null) {
 def devNamePage() {
     dynamicPage(name: "devNamePage", install: false) {
         section("") {
-            paragraph "Changes on this page only take affect as devices are added..." 
-            def altNameDef = (useCustDevNames || (!useCustDevNames && !useAltNames)) ? false : true
-            def custNameDef = (useAltNames || (!useCustDevNames && !useAltNames)) ? false : true
-            if(!useCustDevNames) {
-                input (name: "useAltNames", type: "bool", title: "Use Location Name Prefix instead of Nest?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
-            }
-            if(!useAltNames) {
-                input (name: "useCustDevNames", type: "bool", title: "Use Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
-            }
+            paragraph "Changes to device label names  on this page only take affect as devices are added..." 
+            def altNameDef = (atomicState?.useAltNames) ? true : false
+            def custNameDef = (!altNameDef && atomicState?.custLabelUsed) ? true : false
+            input (name: "useAltNames", type: "bool", title: "Use Location Name Prefix instead of Nest Thermostat - xxxxx?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
+            input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
         }
         if(useAltNames) { atomicState?.useAltNames = true; atomicState?.custLabelUsed = false }
-        if(useCustDevNames) { atomicState?.useAltNames = false; atomicState?.custLabelUsed = true }
-        else { atomicState?.useAltNames = false; atomicState?.custLabelUsed = false }
+        else if(useCustDevNames) { atomicState?.useAltNames = false; atomicState?.custLabelUsed = true }
+            else { atomicState?.useAltNames = false; atomicState?.custLabelUsed = false }
         
-        if(!useAltNames && useCustDevNames) { 
+        if(!atomicState.useAltNames && atomicState.custLabelUsed) { 
             def custDevCnt = 0
             if(atomicState?.thermostats) {
                 section ("Thermostat Device Names:") {
@@ -1764,7 +1760,6 @@ def devNamePage() {
                 }
             }
         } 
-        
     }
 }
 
