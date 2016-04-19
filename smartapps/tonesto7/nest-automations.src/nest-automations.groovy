@@ -351,8 +351,8 @@ private extSenEvtEval() {
         def curTstatTemp = getDeviceTemp(extSenTstat).toDouble()
         def curTstatOperState = extSenTstat?.currentThermostatOperatingState.toString()
         def curTstatFanMode = extSenTstat?.currentThermostatFanMode
-        def curCoolSetpoint = extSenTstat?.currentCoolingSetpoint.toDouble()
-        def curHeatSetpoint = extSenTstat?.currentHeatingSetpoint.toDouble()
+        def curCoolSetpoint = !extSenTstat?.currentCoolingSetpoint ? 0 : extSenTstat?.currentCoolingSetpoint.toDouble()
+        def curHeatSetpoint = !extSenTstat?.currentHeatingSetpoint ? 0 : extSenTstat?.currentHeatingSetpoint.toDouble()
         def curSenTemp = (extSensorDay || extSensorNight) ? getRemoteSenTemp().toDouble() : null
         log.trace "Remote Sensor Rule Type: ${extSenRuleType}"
         log.trace "Remote Sensor Temp: ${curSenTemp}"
