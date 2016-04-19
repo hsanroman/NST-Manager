@@ -230,14 +230,17 @@ def extSensorPage() {
                 input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
                         image: imgIcon("motion_icon.png")
                 if(extMotionSensors) {
+                	paragraph "Motion State: (${isMotionActive(extMotionSensors) ? "Active" : "Not Active"})", image: " "
                     input "extMotionSensorModes", "mode", title: "Only Act on Motion in These Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
-                    input "extMotionDelayVal", "enum", title: "Delay before Evaluating", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true
+                    input "extMotionDelayVal", "enum", title: "Delay before Evaluating", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true,
+                    		image: " "
                 }
             }
             section ("Settings:") {
                 input "extSenModes", "mode", title: "Only Run Actions in These Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
                 if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
-                    input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true
+                    input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true,
+                    		image: " "
                 }
                 if(!extSenRuleType == "Circ") {
                     input "extTempChgDegrees", "decimal", title: "Temp Change Increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true
@@ -271,9 +274,13 @@ def extSenMotionEvt(evt) {
         }
     }
 }
+
+def isMotionActive(sensors) {
+    return sensors?.currentState("motion")?.value.contains("active") ? true : false
+}
+
 def extCheckMotion() {
-    def isMotion = extMotionSensors?.currentState("motion")?.value.equals("active") ? true : false
-    if(isMotion) {
+    if(isMotionActive(extMotionSensors)) {
         extSenEvtEval()
     }
 }

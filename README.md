@@ -104,7 +104,7 @@ If you don't already have Git Integration setup please visit __*[GitHub Integrat
 
 #### The Presence, Protect, Thermostat and Weather Device Handlers
  
- * Go to My Device Types in the IDE (Not necessary if you added repository for the app)
+ * Go to "**My Device Handlers**" in the IDE (Not necessary if you added repository for the app)
  * Click on "**Settings**"
  * Click on **Add new repository**
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
