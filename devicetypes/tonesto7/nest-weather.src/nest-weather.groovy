@@ -140,9 +140,10 @@ def generateEvent(Map results) {
         deviceVerEvent()
     }
     lastUpdatedEvent()
+    getWeatherAstronomy()
     getWeatherConditions()
     getWeatherForecast()
-     return null
+    return null
 }
 
 def getDataByName(String name) {
@@ -274,56 +275,64 @@ def getWeatherForecast() {
     }
 }
 
+def getWeatherAstronomy() {
+    def cur = parent?.getWAstronomyData()
+    if(cur) {
+        state.curAstronomy = cur
+        //log.debug "cur: $cur"
+        getSunriseSunset()
+    }
+}
+
 private estimateLux(weatherIcon) {
-        //log.trace "estimateLux ( ${weatherIcon} )"
-        def sunriseDate = null
-        def sunsetDate = null
-        sunriseDate = parent.sunrise()
-        sunsetDate = parent.sunset()
-        def lux = 0
-        def now = new Date().time
-        //log.trace "sunrise: ${sunriseDate.time}  now: ${now} sunset: ${sunsetDate.time}"
-        if (now < sunsetDate.time && sunriseDate.time > sunsetDate.time) {
-            //day
-            switch(weatherIcon) {
-                case 'tstorms':
-                    lux = 200
-                    break
-                case ['cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
-                    'chanceflurries', 'chancerain', 'chancesleet',
-                    'chancesnow', 'chancetstorms']:
-                    lux = 1000
-                    break
-                case 'mostlycloudy':
-                    lux = 2500
-                    break
-                case ['partlysunny', 'partlycloudy', 'hazy']:
-                    lux = 7500
-                    break
-                default:
-                    //sunny, clear
-                    lux = 10000
-           }
+    //log.trace "estimateLux ( ${weatherIcon} )"
+    def lux = 0
+    def twilight = 20 * 60 * 1000 // 20 minutes
+    def now = new Date().time
+    def sunriseDate = state?.sunriseDate.time
+    def sunsetDate = state?.sunsetDate.time
+    sunriseDate -= twilight
+    sunsetDate += twilight
+    if (now > sunriseDate && now < sunsetDate) {
+        //day
+        switch(weatherIcon) {
+            case 'tstorms':
+                lux = 200
+                break
+            case ['cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
+                'chanceflurries', 'chancerain', 'chancesleet',
+                'chancesnow', 'chancetstorms']:
+                lux = 1000
+                break
+            case 'mostlycloudy':
+                lux = 2500
+                break
+            case ['partlysunny', 'partlycloudy', 'hazy']:
+                lux = 7500
+                break
+            default:
+                //sunny, clear
+                lux = 10000
+       }
 
-           //adjust for dusk/dawn
-           //def afterSunrise = now - sunriseDate.time
-           def afterSunrise = now - (sunriseDate.time - (1000*60*60*24) - 60*100*3)
-           def beforeSunset = sunsetDate.time - now
-           def oneHour = 1000 * 60 * 60
+       //adjust for dusk/dawn
+       def afterSunrise = now - sunriseDate
+       def beforeSunset = sunsetDate - now
+       def oneHour = 1000 * 60 * 60
 
-           if(afterSunrise < oneHour) {
-               //dawn
-               lux = (long)(lux * (afterSunrise/oneHour))
-           } else if (beforeSunset < oneHour) {
-               //dusk
-               lux = (long)(lux * (beforeSunset/oneHour))
-           }
-        } else {
-            //night - always set to 10 for now
-            //could do calculations for dusk/dawn too
-            lux = 10
-        }
-       return lux
+       if(afterSunrise < oneHour) {
+           //dawn
+           lux = (long)(lux * (afterSunrise/oneHour))
+       } else if (beforeSunset < oneHour) {
+           //dusk
+           lux = (long)(lux * (beforeSunset/oneHour))
+       }
+    } else {
+        //night - always set to 10 for now
+        //could do calculations for dusk/dawn too
+        lux = 10
+    }
+   return lux
 }
 
 
@@ -415,8 +424,17 @@ def getFeelslike() {
     }
 }
 
+def getVisibility() {
+    if ( state?.tempUnit == "C" ) {
+        return "${state.curWeather?.current_observation?.visibility_km} km"
+    } else {
+        return "${state.curWeather?.current_observation?.visibility_mi} Miles"
+    }
+}
+
 def getLux() {
-    return estimateLux(state?.curWeather?.current_observation?.icon)
+    def cur = device.currentState("illuminance")?.value.toString()
+    return cur
 }
 
 private localDate(timeZone) {
@@ -425,13 +443,9 @@ private localDate(timeZone) {
     df.format(new Date())
 }
 
-private get(feature) {
-    getWeatherFeature(feature, "${ state?.curWeather?.current_observation.display_location.zip}")
-}
-
 def getSunriseSunset() {
     // Sunrise / sunset
-    def a = get("astronomy")?.moon_phase
+    def a = state?.curAstronomy?.moon_phase
     def today = localDate("GMT${state.curWeather?.current_observation?.local_tz_offset}")
 
     def ltf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
@@ -443,15 +457,15 @@ def getSunriseSunset() {
 
     def sunriseDate = ltf.parse("${today} ${a.sunrise.hour}:${a.sunrise.minute}")
     def sunsetDate = ltf.parse("${today} ${a.sunset.hour}:${a.sunset.minute}")
+    state.sunriseDate = sunriseDate
+    state.sunsetDate = sunsetDate
  
     def tf = new java.text.SimpleDateFormat("h:mm a")
     tf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
     def localSunrise = "${tf.format(sunriseDate)}"
     def localSunset = "${tf.format(sunsetDate)}"
-
-    def sunriseSunset = "<b>Sunrise:</b> ${localSunrise} <br> <b>Sunset: </b> ${localSunset} <br>"
-       
-    return sunriseSunset
+    state.localSunrise = localSunrise
+    state.localSunset = localSunset
 }
 
 def getWeatherHtml() { 
@@ -532,9 +546,9 @@ def getWeatherHtml() {
                   <b>Feels Like:</b> ${getFeelslike()} <br>
                   <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
                   <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-                  <b>Visibility:</b> ${state.curWeather?.current_observation?.visibility_mi} Miles<br>
+                  <b>Visibility:</b> ${getVisibility()} <br>
                   <b>Lux:</b> ${getLux()}<br>
-                   ${getSunriseSunset()}
+                  <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
                   <b>Wind:</b> ${state?.curWeather?.current_observation?.wind_string} <br>
                 </div>
               </div>
