@@ -59,7 +59,7 @@ def mainPage() {
             def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
             def senRuleType = extSenRuleType ? "\nRule-Type: ${extSenRuleName()}" : ""
-            def extTstatStatus = extSenTstat ? "\nThermostat: ${extSenTstat?.currentThermostatOperatingState.toString()}/${extSenTstat?.currentThermostatMode.toString()}" : ""
+            def extTstatStatus = extSenTstat ? "\nThermostat Mode: ${extSenTstat?.currentThermostatOperatingState.toString()}/${extSenTstat?.currentThermostatMode.toString()}" : ""
             def senTypeUsed = getIsNightSensor() ? senNightDesc : senDayDesc
             def extSenDesc = isExtSenConfigured() ? 
                 "${senEnabDesc}Thermostat Temp: ${getDeviceTemp(extSenTstat)}°${state?.tempUnit}${extTstatStatus}\n${senTypeUsed}${senSetTemps}${senRuleType}${motInUse}${senModes}\nTap to Modify..." : "Tap to Configure..."
@@ -219,17 +219,18 @@ def extSensorPage() {
         if(extSenTstat && (extSensorDay || extSensorNight)) {
             section("Select the Allowed (Rule) Action Type:") {
                 input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true,
-                            image: imgIcon("rule_icon.png"))
+                        image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
                 def tempReq = (extSenRuleType == "Circ") ? false : true
                 def heatSp = getTstatSetpoint(extSenTstat, "heat")
                 def coolSp = getTstatSetpoint(extSenTstat, "cool")
-                input "extSenHeatTemp", "decimal", title: "Desired Heat Temp (°${state?.tempUnit})", submitOnChange: true, defaultValue: heatSp, required: tempReq, image: imgIcon("heat_icon.png")
-                input "extSenCoolTemp", "decimal", title: "Desired Cool Temp (°${state?.tempUnit})", submitOnChange: true, defaultValue: coolSp, required: tempReq, image: imgIcon("cool_icon.png")
+                input "extSenHeatTemp", "decimal", title: "Desired Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("heat_icon.png")
+                input "extSenCoolTemp", "decimal", title: "Desired Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("cool_icon.png")
+                paragraph "Thermostat Cool Setpoint: ${coolSp}°${state?.tempUnit}\nThermostat Heat Setpoint: ${heatSp}°${state?.tempUnit}", image: " "
             }
             if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
-            	section("Fan Settings:") {
+                section("Fan Settings:") {
                     paragraph "The Fan Runtime can be adjusted under your nest account.  The Default Time is 15 minutes.", image: " "
                     input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true,
                              image: imgIcon("delay_time_icon.png")
@@ -250,7 +251,7 @@ def extSensorPage() {
                         image: imgIcon("temp_icon.png")
                 if(extSenRuleType != "Circ") {
                     input "extTempChgDegrees", "decimal", title: "Temp change increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true,
-                    	image: imgIcon("temp_icon.png")
+                        image: imgIcon("temp_icon.png")
                 }
                 input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
             }
