@@ -353,13 +353,17 @@ private extSenEvtEval() {
         def curTstatFanMode = extSenTstat?.currentThermostatFanMode
         def curCoolSetpoint = !extSenTstat?.currentCoolingSetpoint ? 0 : extSenTstat?.currentCoolingSetpoint.toDouble()
         def curHeatSetpoint = !extSenTstat?.currentHeatingSetpoint ? 0 : extSenTstat?.currentHeatingSetpoint.toDouble()
+        def extHtemp = extSenHeatTemp ? extSenHeatTemp.toDouble() : 0
+        def extCtemp = extSenCoolTemp ? extSenCoolTemp.toDouble() : 0
         def curSenTemp = (extSensorDay || extSensorNight) ? getRemoteSenTemp().toDouble() : null
+        
         log.trace "Remote Sensor Rule Type: ${extSenRuleType}"
         log.trace "Remote Sensor Temp: ${curSenTemp}"
         log.trace "Thermostat Info - Temperature: $curTstatTemp | HeatSetpoint: $curHeatSetpoint | CoolSetpoint: $curCoolSetpoint | HvacMode: $hvacMode | OperatingState: $curTstatOperState | FanMode: $curTstatFanMode" 
-        log.trace "Desired Temps - Heat: $extSenHeatTemp | Cool: $extSenCoolTemp"
+        log.trace "Desired Temps - Heat: $extHtemp | Cool: $extCtemp"
+        
         if (hvacMode in ["cool","auto"]) {
-            if ((curSenTemp - extSenCoolTemp.toDouble()) > threshold) {
+            if ((curSenTemp - extCtemp) > threshold) {
                 if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
                     log.debug "COOL - Setting Cool Setpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setCoolingSetpoint(curTstatTemp - chgTempVal)
@@ -367,7 +371,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
                 }
             }
-            else if (((extSenCoolTemp.toDouble() - curSenTemp) > threshold) && (curTstatTemp - curCoolSetpoint) > threshold) {
+            else if (((extCtemp - curSenTemp) > threshold) && (curTstatTemp - curCoolSetpoint) > threshold) {
                 if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
                 	log.debug "COOL - Setting Cool Setpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
@@ -375,9 +379,9 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + chgTempVal}), OFF"
                 }
             } else {
-            	log.debug "FAN-COOL: ${Math.abs(curSenTemp - extSenCoolTemp.toDouble()).round(1)}"
-                log.debug "FAN(COOL): $extSenRuleType | temp diff: (${Math.abs(curSenTemp - extSenCoolTemp.toDouble()).round(1)}) Threshold: ${threshold}"
-                if((extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - curTstatTemp.toDouble()).round(1) <= threshold)) {
+            	log.debug "FAN-COOL: ${Math.abs(curSenTemp - extCtemp).round(1)}"
+                log.debug "FAN(COOL): $extSenRuleType(${extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]}) | temp diff: (${Math.abs(curSenTemp - extCtemp).round(1)}) Threshold: ${threshold}"
+                if((extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - curTstatTemp.toDouble()).round(1) <= threshold)) {
                     if(getFanRunOk(curTstatOperState, curTstatFanMode)) {
                         log.debug "Running Fan for Circulation on $extSenTstat"
                         extSenTstat?.fanOn()
@@ -394,7 +398,7 @@ private extSenEvtEval() {
         }
         
         if (hvacMode in ["heat", "emergency heat", "auto"]) {
-            if ((extSenHeatTemp.toDouble() - curSenTemp) > threshold) {
+            if ((extHtemp - curSenTemp) > threshold) {
                 if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
                 	log.debug "HEAT - Setting Heat Setpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setHeatingSetpoint(curTstatTemp + chgTempVal)
@@ -402,7 +406,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
                 }
             }
-            else if (((curSenTemp - extSenHeatTemp.toDouble()) > threshold) && (curHeatSetpoint - curTstatTemp) > threshold) {
+            else if (((curSenTemp - extHtemp) > threshold) && (curHeatSetpoint - curTstatTemp) > threshold) {
                 if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
                 	log.debug "HEAT - Setting Heat Setpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
@@ -410,9 +414,10 @@ private extSenEvtEval() {
                     log.debug "extSenTstatermostat.setHeatingSetpoint(${curTstatTemp - chgTempVal}), OFF"
                 }
             } else { 
-                log.debug "FAN-HEAT: ${Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1)}"
-                log.debug "FAN(HEAT): $extSenRuleType | temp diff:(${Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1)}) Threshold: ${threshold}"
-                if ((extSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1) <= threshold)) {
+                log.debug "FAN-HEAT: ${Math.abs(curSenTemp - extHtemp).round(1)}"
+                log.debug "FAN(HEAT): $extSenRuleType(${extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]}) | temp diff:(${Math.abs(curSenTemp - extHtemp).round(1)}) Threshold: ${threshold}"
+                log.debug "FAN(HEAT): Diff is OK (${Math.abs(curSenTemp - extHtemp?.round(1)) <= threshold})"
+                if ((extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - extHtemp).round(1) <= threshold)) {
                     if(getFanRunOk(curTstatOperState, curTstatFanMode)) {
                         log.debug "Running Fan for Circulation on $extSenTstat"
                         extSenTstat?.fanOn()
@@ -454,8 +459,9 @@ def getExtModeOk() {
     }
 }
 def getFanRunOk(operState, fanState) { 
+	log.trace "getFanRunOk($operState, $fanState)"
     def val = extTimeBetweenRuns ? extTimeBetweenRuns.toInteger() : 3600
-    def cond = ((extSenRuleType in ["Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && operState == "idle" && fanState == "auto") ? true : false
+    def cond = ((extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && operState == "idle" && fanState == "auto") ? true : false
     def timeSince = (getLastFanRunDtSec() > val)
     def result = (timeSince && cond) ? true : false
     log.debug "getFanRunOk(): cond: $cond | timeSince: $timeSince | val: $val | $result"
