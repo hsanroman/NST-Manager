@@ -85,7 +85,8 @@ def mainPage() {
 def namePage() {
     dynamicPage(name: "namePage") {
         section("Automation name") {
-                label title: "Name this Automation", defaultValue: app.label, required: true
+            label title: "Name this Automation", defaultValue: app.label, required: true
+            paragraph "Make sure to name it something that will help easily recognize it later."
         } 
     }
 }
@@ -183,13 +184,13 @@ def extSensorPage() {
             }
         }
         section("Choose Temperature Sensor(s) to use instead of the Thermostat's...") {
-            input "extSensorDay", "capability.temperatureMeasurement", title: "Default (Daytime) Temp Sensors...", submitOnChange: true, required: ((!extSensorNight && !extSensorDay && extSenTstat) ? true : false),
+            input "extSensorDay", "capability.temperatureMeasurement", title: "Default (Daytime) Temp Sensors...", submitOnChange: true, required: ((extSensorNight && !extSensorDay && extSenTstat) ? true : false),
                     multiple: true, image: imgIcon("temperature_icon.png")
             if(extSensorDay) {
                 if(extSenModeDuplication()) {
                     paragraph "Duplicate Mode(s) found in Either Day or Night Sensor!!!.  Please Correct...", image: imgIcon("error_icon.png")
                 }
-                input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: (extSensorDay ? true : false),
+                input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: ((extSensorNight && extSensorNightModes) ? true : false),
                         image: imgIcon("mode_icon.png")
                 def tmpVal = "Day Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                 def tmpMode = "Current Mode: ${location?.mode}"
@@ -219,7 +220,7 @@ def extSensorPage() {
         if(extSenTstat && (extSensorDay || extSensorNight)) {
             section("Select the Allowed (Rule) Action Type:") {
                 input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true,
-                        image: imgIcon("rule_icon.png"))
+                            image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
                 def tempReq = (extSenRuleType == "Circ") ? false : true
@@ -230,7 +231,7 @@ def extSensorPage() {
                 paragraph "Thermostat Cool Setpoint: ${coolSp}°${state?.tempUnit}\nThermostat Heat Setpoint: ${heatSp}°${state?.tempUnit}", image: " "
             }
             if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
-                section("Fan Settings:") {
+            	section("Fan Settings:") {
                     paragraph "The Fan Runtime can be adjusted under your nest account.  The Default Time is 15 minutes.", image: " "
                     input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true,
                              image: imgIcon("delay_time_icon.png")
@@ -247,11 +248,11 @@ def extSensorPage() {
                 }
             }
             section ("Settings:") {
-                input "extTempDiffDegrees", "decimal", title: "Action threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true,
+                input "extTempDiffDegrees", "decimal", title: "Action threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true,
                         image: imgIcon("temp_icon.png")
                 if(extSenRuleType != "Circ") {
-                    input "extTempChgDegrees", "decimal", title: "Temp change increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true,
-                        image: imgIcon("temp_icon.png")
+                    input "extTempChgDegrees", "decimal", title: "Temp change increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true,
+                    	image: imgIcon("temp_icon.png")
                 }
                 input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
             }
@@ -355,7 +356,7 @@ private extSenEvtEval() {
         def threshold = !extTempDiffDegrees ? 0 : extTempDiffDegrees.toDouble()
         def chgTempVal = !extTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
         def hvacMode = extSenTstat ? extSenTstat?.currentThermostatMode.toString() : null
-        def curstatTemp = getDeviceTemp(extSenTstat).toDouble()
+        def curTstatTemp = getDeviceTemp(extSenTstat).toDouble()
         def curTstatOperState = extSenTstat?.currentThermostatOperatingState.toString()
         def curTstatFanMode = extSenTstat?.currentThermostatFanMode
         def curCoolSetpoint = getTstatSetpoint(extSenTstat, "cool")
@@ -380,7 +381,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
                 }
             }
-            else if (((extCtemp - curSenTemp) >= threshold) && (curTstatTemp - curCoolSetpoint) >= threshold) {
+            else if (((extCtemp - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
                 if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
                     log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
@@ -415,7 +416,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
                 }
             }
-            else if (((curSenTemp - extHtemp) >= threshold) && (curHeatSetpoint - curTstatTemp) >= threshold) {
+            else if (((curSenTemp - extHtemp) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
                 if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
                     log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
@@ -467,12 +468,17 @@ def heatingSetpointHandler(evt) {
 }
 
 def getExtModeOk() {
-    if(extSensorDayModes || extSensorNightModes) {
+    if (extSensorDay && (!extSensorDayModes && !extSensorNight && !extSensorNightModes)) {
+        return true
+    }
+    else if (extSensorDayModes || extSensorNightModes) {
         return (isInMode(extSensorDayModes) || isInMode(extSensorNightModes)) ? true : false
-    } else {
+    } 
+    else {
         return false
     }
 }
+
 def getFanRunOk(operState, fanState) { 
     log.trace "getFanRunOk($operState, $fanState)"
     def val = extTimeBetweenRuns ? extTimeBetweenRuns.toInteger() : 3600
@@ -484,6 +490,7 @@ def getFanRunOk(operState, fanState) {
 }
 
 def getLastFanRunDtSec() { return !state?.lastFanRunDt ? 100000 : GetTimeDiffSeconds(state?.lastFanRunDt).toInteger() }
+
 def getDeviceTemp(dev) {
     return dev ? dev?.currentValue("temperature").toString().replaceAll("\\[|\\]", "").toDouble() : null
 }
