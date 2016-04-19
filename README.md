@@ -30,14 +30,20 @@ __Latest Device Versions:__
 * Nest Weather Device - __*v1.0.0*__
 
 ## What's New
- * In-app HTML help pages 
- * Much more transparent install process.  It performs tests to verify Oauth is enabled, that device handlers are installed and that your ST account has proper zipCode associated with it.  It will also alert you in the app with a push notification when the above are found as well as when you try uninstalling it will tell you if it can't remove the devices because they are being used by other apps/routines. 
+ * In-app HTML help pages
  * All new polling logic (Also switched to Cron scheduling)
- * Support for sending commands from multiple devices by using Queuing of commands to also help prevent being rate-limited by Nest.
+ * Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest.
  * Fresh nest device tile designs :smile: (These may cause some controversy and be asked to be reverted back)
  * New Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary.
- * Added an Nest Automation Child app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and available shortly after release support for a customiziable remote sensor support. 
-
+ * Added an Nest Automation Child app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and available shortly after release support for customized remote sensor support.   
+ * Much more transparent install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.  
+ *It performs tests on the following:* 
+ 
+	 * Verify OAuth is enabled
+	 * That the device handlers are installed and published
+	 * That your ST account has proper Zip-Code associated with it.
+	 * It also notifies you when you are uninstalling that it can't remove the devices because they are being used by other apps/routines  
+ 
 
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
@@ -46,12 +52,15 @@ __Latest Device Versions:__
 
 #### [Projects Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)
 
+#### [SmartThings IDE GitHub Integration Instructions](http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html)
+
 ## Things to Know
  * __This is still technically in BETA so you may experience issues!!!__
  * This app **DOES NOT** support Nest Cams and I don't have any to test
  * At this moment the app will only support **One** location and the Thermostats and Protects within
  * _The token used with this application is using my 'Works for Nest' distribution *appId* and *secret*.  It's an older one which allows 1000 user before I will need to certify with Nest._
 __I do not have the ability to see any of your data or who is even using the token__
+
 
 ## Advantages
  * Able to add/remove multiples devices from a single SmartApp
@@ -62,6 +71,7 @@ __I do not have the ability to see any of your data or who is even using the tok
  * Since there is only a single poll for all devices, updates are more often
  * The devices look great :smile:
 
+
 ## Disadvantages
  * The level of info available through the Official API is very limited compared to the hacked version currently available.
 
@@ -69,7 +79,7 @@ __I do not have the ability to see any of your data or who is even using the tok
 ## 3rd-Party SmartApp Compatibility (Confirmed)
  * Keep Me Cozy (I & II) (link)
  * [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119)
- * Routines
+ * SmartThings Routines
  * [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204)
  
 ## Installation
