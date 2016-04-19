@@ -245,7 +245,8 @@ def extSensorPage() {
                 if(!extSenRuleType == "Circ") {
                     input "extTempChgDegrees", "decimal", title: "Temp Change Increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true
                 }
-                input "extTempDiffDegrees", "decimal", title: "Temperature Threshold for Actions (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true
+                input "extTempDiffDegrees", "decimal", title: "Temp Threshold for Actions (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true,
+                        image: " "
             }
         }
         if (isExtSenConfigured()) {
@@ -358,7 +359,7 @@ private extSenEvtEval() {
         log.trace "Thermostat Info - Temperature: $curTstatTemp | HeatSetpoint: $curHeatSetpoint | CoolSetpoint: $curCoolSetpoint | HvacMode: $hvacMode | OperatingState: $curTstatOperState | FanMode: $curTstatFanMode" 
         log.trace "Desired Temps - Heat: $extSenHeatTemp | Cool: $extSenCoolTemp"
         if (hvacMode in ["cool","auto"]) {
-            if ((curSenTemp - extSenCoolTemp.toInteger()) > threshold) {
+            if ((curSenTemp - extSenCoolTemp.toDouble()) > threshold) {
                 if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
                     log.debug "COOL - Setting Cool Setpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setCoolingSetpoint(curTstatTemp - chgTempVal)
@@ -366,7 +367,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
                 }
             }
-            else if (((extSenCoolTemp.toInteger() - curSenTemp) > threshold) && (curTstatTemp - curCoolSetpoint) > threshold) {
+            else if (((extSenCoolTemp.toDouble() - curSenTemp) > threshold) && (curTstatTemp - curCoolSetpoint) > threshold) {
                 if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
                 	log.debug "COOL - Setting Cool Setpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
@@ -374,7 +375,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + chgTempVal}), OFF"
                 }
             } else {
-            	log.debug "FAN-COOL: ${Math.abs(curSenTemp - extSenCoolTemp).round(1)}"
+            	log.debug "FAN-COOL: ${Math.abs(curSenTemp - extSenCoolTemp.toDouble()).round(1)}"
                 log.debug "FAN(COOL): $extSenRuleType | temp diff: (${Math.abs(curSenTemp - extSenCoolTemp.toDouble()).round(1)}) Threshold: ${threshold}"
                 if((extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - curTstatTemp.toDouble()).round(1) <= threshold)) {
                     if(getFanRunOk(curTstatOperState, curTstatFanMode)) {
@@ -393,7 +394,7 @@ private extSenEvtEval() {
         }
         
         if (hvacMode in ["heat", "emergency heat", "auto"]) {
-            if ((extSenHeatTemp.toInteger() - curSenTemp) > threshold) {
+            if ((extSenHeatTemp.toDouble() - curSenTemp) > threshold) {
                 if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
                 	log.debug "HEAT - Setting Heat Setpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setHeatingSetpoint(curTstatTemp + chgTempVal)
@@ -401,7 +402,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
                 }
             }
-            else if (((curSenTemp - extSenHeatTemp) > threshold) && (curHeatSetpoint - curTstatTemp) > threshold) {
+            else if (((curSenTemp - extSenHeatTemp.toDouble()) > threshold) && (curHeatSetpoint - curTstatTemp) > threshold) {
                 if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
                 	log.debug "HEAT - Setting Heat Setpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
                     extSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
@@ -409,7 +410,7 @@ private extSenEvtEval() {
                     log.debug "extSenTstatermostat.setHeatingSetpoint(${curTstatTemp - chgTempVal}), OFF"
                 }
             } else { 
-                log.debug "FAN-HEAT: ${Math.abs(curSenTemp - extSenHeatTemp).round(1)}"
+                log.debug "FAN-HEAT: ${Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1)}"
                 log.debug "FAN(HEAT): $extSenRuleType | temp diff:(${Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1)}) Threshold: ${threshold}"
                 if ((extSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) && (Math.abs(curSenTemp - extSenHeatTemp.toDouble()).round(1) <= threshold)) {
                     if(getFanRunOk(curTstatOperState, curTstatFanMode)) {
