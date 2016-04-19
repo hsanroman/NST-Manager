@@ -2548,8 +2548,6 @@ def devPrefPage() {
 |            			DEVICE NAME CUSTOMIZATION CODE	     					|
 *********************************************************************************/
 
-
-
 def quietTimePage() {
     dynamicPage(name: "quietTimePage", title: "Quiet during certain times", uninstall: false) {
         section() {
@@ -2603,9 +2601,9 @@ def infoPage () {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
         }
         section("Help and Instructions:") {
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/README.html", style:"embedded", required:false, title:"Readme File", 
+            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/develop/README.html", style:"embedded", required:false, title:"Readme File", 
                 description:"View the Projects Readme File...", image: getAppImg("readme_icon.png")
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/develop/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
                 description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
         section("Created by:") {
