@@ -180,7 +180,7 @@ def authPage() {
                                 image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
-                    if( (thermostats || protects || presDevice || weatherDevice)) {
+                    if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
                     }
                 }
@@ -1801,7 +1801,7 @@ def devNamePage() {
             section("clear names") {
                 if(atomicState?.thermostats) {
                     atomicState?.thermostats.each { t ->
-//          log.trace ("settings.tstat:   ${settings?."""tstat_${t.value}_lbl"""} done ")
+                    //log.trace ("settings.tstat:   ${settings?."""tstat_${t.value}_lbl"""} done ")
                         if("${settings?."tstat_${t.value}_lbl"}" != getNestTstatLabel("${t.value}")) {
                             input("tstat_${t.value}_lbl", "text", title: "${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true)
                         }
