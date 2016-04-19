@@ -240,9 +240,9 @@ def extSensorPage() {
                     input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true
                 }
                 if(!extSenRuleType == "Circ") {
-                    input "extTempChgDegrees", "number", title: "Temp Change Increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true
+                    input "extTempChgDegrees", "decimal", title: "Temp Change Increments (°${state?.tempUnit})", required: true, defaultValue: 2, submitOnChange: true
                 }
-                input "extTempDiffDegrees", "number", title: "Temperature Threshold for Actions (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true
+                input "extTempDiffDegrees", "decimal", title: "Temperature Threshold for Actions (°${state?.tempUnit})", required: true, defaultValue: 3, submitOnChange: true
             }
         }
         if (isExtSenConfigured()) {
