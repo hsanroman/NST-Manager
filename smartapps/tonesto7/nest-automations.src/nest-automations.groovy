@@ -189,14 +189,13 @@ def extSensorPage() {
                     image: imgIcon("rule_icon.png"))
         }
         if(extSenRuleType) {
-            
-            setTstatCapabilities()
             section("Choose a Thermostat... ") {
                 input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("thermostat_icon.png")
                 if(dupTstat) {
                     paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: imgIcon("error_icon.png")
                 }
                 if(extSenTstat) { 
+                	setTstatCapabilities()
                     paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}", image: " "
                     input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false,
                             image: imgIcon("thermostat_icon.png")
@@ -333,10 +332,6 @@ def extSenTempEvt(evt) {
 def sunEvtHandler(evt) {
     if(extSenUseSunAsMode) { extSenEvtEval() }
     else { return }
-}
-
-def extSenRuleEnum() {
-    return [ "Heat_Cool":"Auto", "Heat":"Heat", "Cool":"Cool", "Heat_Cool_Circ":"Auto/Circulate(Fan)", "Heat_Circ":"Heat/Circulate(Fan)", "Cool_Circ":"Cool/Circulate(Fan)", "Circ":"Circulate(Fan)" ]
 }
 
 def extSenTstatDuplication() {
@@ -662,38 +657,37 @@ def setTstatCapabilities() {
     	def canHeat = true
     	def hasFan = true
     	if(extSenTstat) { 
-            canCool = extSenTstat?.currentState("canCool").toString() == "true" ? true : false
-            canHeat = extSenTstat?.currentState("canHeat").toString() == "true" ? true : false
-            hasFan = extSenTstat?.currentState("hasFan").toString() == "true" ? true : false
-            log.debug "extSenRuleEnum: Thermostat has - Fan: $hasFan (${extSenTstat?.currentState("hasFan").toString()}) - Heat: $canHeat (${extSenTstat?.currentState("canHeat").toString()})- Cool: $canCool (${extSenTstat?.currentState("canCool").toString()})"
+            canCool = (extSenTstat?.currentCanCool == "true") ? true : false
+            canHeat = (extSenTstat?.currentCanHeat == "true") ? true : false
+            hasFan = (extSenTstat?.currentHasFan == "true") ? true : false
     	}
+        atomicState?.extSenTstatCanCool = canCool
+    	atomicState?.extSenTstatCanHeat = canHeat
+    	atomicState?.extSenTstatHasFan = hasFan
+        //log.debug "hasFan: $hasFan | canCool: $canCool | canHeat: $canHeat"
    	} catch (e) { 
-        log.debug "extSenRuleEnum Exception: $e"
+        //log.debug "extSenRuleEnum Exception: $e"
    	}
-    atomicState?.extSenTstatCanCool = canCool
-    atomicState?.extSenTstatCanHeat = canHeat
-    atomicState?.extSenTstatCanHast = hasFan
 }
 
-/*def extSenRuleEnum() {
+def extSenRuleEnum() {
+    def canCool = atomicState?.extSenTstatCanCool ? true : false
+    def canHeat = atomicState?.extSenTstatCanHeat ? true : false
+    def hasFan = atomicState?.extSenTstatHasFan ? true : false
+	def vals = []
     
-    def vals = []
-   
-        
-        if (canCool && !canHeat && hasFan) { vals = [ "Circ":"Circulate", "Cool":"Cool", "Cool_Circ":"Cool/Circulate" ] }
-        else if (canCool && !canHeat && !hasFan) { vals = [ "Cool":"Cool" ] }
-        else if (!canCool && canHeat && hasFan) { vals = [ "Circ":"Circulate", "Heat":"Heat", "Heat_Circ":"Heat/Circulate" ] }
-        else if (!canCool && canHeat && !hasFan) { vals = [ "Heat":"Heat" ] }
-        else if (!canCool && !canHeat && hasFan) { vals = [ "Circ":"Circulate" ] }
-        else { vals = [ "Circ":"Circulate", "Heat":"Heat", "Cool":"Cool", "Heat_Cool":"Auto", "Heat_Circ":"Heat/Circulate", "Cool_Circ":"Cool/Circulate", "Heat_Cool_Circ":"Auto/Circulate" ] }
-        
-        return vals
-        
-    } catch (e) { 
-        log.debug "extSenRuleEnum Exception: $e"
-        [ "Circ":"Circulate", "Heat":"Heat", "Cool":"Cool", "Heat_Cool":"Auto", "Heat_Circ":"Heat/Circulate", "Cool_Circ":"Cool/Circulate", "Heat_Cool_Circ":"Auto/Circulate" ]
-    }
-}*/
+	//log.debug "extSenRuleEnum -- hasFan: $hasFan (${atomicState?.extSenTstatHasFan} | canCool: $canCool (${atomicState?.extSenTstatCanCool} | canHeat: $canHeat (${atomicState?.extSenTstatCanHeat}"
+	
+    if (canCool && !canHeat && hasFan) { vals = ["Cool":"Cool", "Circ":"Circulate(Fan)", "Cool_Circ":"Cool/Circulate(Fan)"] }
+    else if (canCool && !canHeat && !hasFan) { vals = ["Cool":"Cool"] }
+    else if (!canCool && canHeat && hasFan) { vals = ["Circ":"Circulate(Fan)", "Heat":"Heat", "Heat_Circ":"Heat/Circulate(Fan)"] }
+    else if (!canCool && canHeat && !hasFan) { vals = ["Heat":"Heat"] }
+    else if (!canCool && !canHeat && hasFan) { vals = ["Circ":"Circulate(Fan)"] }
+    else if (canCool && canHeat && !hasFan) { vals = ["Heat_Cool":"Auto", "Heat":"Heat", "Cool":"Cool"] }
+    else { vals = [ "Heat_Cool":"Auto", "Heat":"Heat", "Cool":"Cool", "Circ":"Circulate(Fan)", "Heat_Cool_Circ":"Auto/Circulate(Fan)", "Heat_Circ":"Heat/Circulate(Fan)", "Cool_Circ":"Cool/Circulate(Fan)" ] }
+    //log.debug "extSenRuleEnum vals: $vals"
+    return vals
+}
 
 
 /******************************************************************************  
