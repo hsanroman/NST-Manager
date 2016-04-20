@@ -462,13 +462,11 @@ def getFanTempOk(senTemp, userTemp, curTemp, threshold) {
     log.debug "getFanTempOk: Diff2: $diff2 (${Math.abs(userTemp - curTemp).round(1)} < threshold: ${threshold})"
     return (diff1 && diff2) ? true : false
 }
+
 // for backward compatibility with existing subscriptions
-def coolingSetpointHandler(evt) {
-    log.debug "coolingSetpointHandler()"
-}
-def heatingSetpointHandler(evt) {
-    log.debug "heatingSetpointHandler()"
-}
+def coolingSetpointHandler(evt) { log.debug "coolingSetpointHandler()" }
+
+def heatingSetpointHandler(evt) { log.debug "heatingSetpointHandler()" }
 
 def getExtModeOk() {
     if (extSensorDay && (!extSensorDayModes && !extSensorNight && !extSensorNightModes)) {
@@ -518,6 +516,7 @@ def getRemoteSenTemp() {
         return 0.0
     }
 }
+
 def tstatDuplication(tstat1, tstat2) {
 	def result = false
     if(tstat1 && tstat2) {
@@ -527,6 +526,7 @@ def tstatDuplication(tstat1, tstat2) {
     }
     return result
 }
+
 def extSenModeDuplication() {
     def result = false
     if(extSensorDayModes && extSensorNightModes) {
@@ -574,6 +574,7 @@ def shortTimeEnum() {
     ]
     return vals
 }
+
 def smallTempEnum() {
     def vals = [
         1:"1°${state?.tempUnit}", 2:"2°${state?.tempUnit}", 3:"3°${state?.tempUnit}", 4:"4°${state?.tempUnit}", 5:"5°${state?.tempUnit}", 6:"6°${state?.tempUnit}", 7:"7°${state?.tempUnit}",
