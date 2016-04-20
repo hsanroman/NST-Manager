@@ -190,7 +190,7 @@ def extSensorPage() {
         }
         if(extSenRuleType) {
             
-            getTimeAfterSunset()
+            setTstatCapabilities()
             section("Choose a Thermostat... ") {
                 input "extSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: imgIcon("thermostat_icon.png")
                 if(dupTstat) {
@@ -656,18 +656,30 @@ def getSenHeatSetpointTemp() {
     }
 }
 
+def setTstatCapabilities() {
+	try {
+    	def canCool = true
+    	def canHeat = true
+    	def hasFan = true
+    	if(extSenTstat) { 
+            canCool = extSenTstat?.currentState("canCool").toString() == "true" ? true : false
+            canHeat = extSenTstat?.currentState("canHeat").toString() == "true" ? true : false
+            hasFan = extSenTstat?.currentState("hasFan").toString() == "true" ? true : false
+            log.debug "extSenRuleEnum: Thermostat has - Fan: $hasFan (${extSenTstat?.currentState("hasFan").toString()}) - Heat: $canHeat (${extSenTstat?.currentState("canHeat").toString()})- Cool: $canCool (${extSenTstat?.currentState("canCool").toString()})"
+    	}
+   	} catch (e) { 
+        log.debug "extSenRuleEnum Exception: $e"
+   	}
+    atomicState?.extSenTstatCanCool = canCool
+    atomicState?.extSenTstatCanHeat = canHeat
+    atomicState?.extSenTstatCanHast = hasFan
+}
+
 /*def extSenRuleEnum() {
-    def canCool = true
-    def canHeat = true
-    def hasFan = true
+    
     def vals = []
-    try {
-        if(extSenTstat) { 
-            canCool = extSenTstat?.getCanCool() == "true" ? true : false
-            canHeat = extSenTstat?.getCanHeat() == "true" ? true : false
-            hasFan = extSenTstat?.getHasFan() == "true" ? true : false
-            log.debug "extSenRuleEnum: Thermostat has - Fan: $hasFan (${extSenTstat?.getHasFan()}) - Heat: $canHeat (${extSenTstat?.getCanHeat()})- Cool: $canCool (${extSenTstat?.getCanCool()})"
-        }
+   
+        
         if (canCool && !canHeat && hasFan) { vals = [ "Circ":"Circulate", "Cool":"Cool", "Cool_Circ":"Cool/Circulate" ] }
         else if (canCool && !canHeat && !hasFan) { vals = [ "Cool":"Cool" ] }
         else if (!canCool && canHeat && hasFan) { vals = [ "Circ":"Circulate", "Heat":"Heat", "Heat_Circ":"Heat/Circulate" ] }
