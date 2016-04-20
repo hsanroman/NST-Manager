@@ -88,9 +88,7 @@ def parse(String description) {
     log.debug "Parsing '${description}'"
 }
 
-def configure() {
-    
-}
+def configure() { }
 
 def getTempColors() {
     def colorMap
@@ -130,7 +128,7 @@ def refresh() {
 
 def generateEvent(Map results) {
     //Logger("generateEvents Parsing data ${results}")
-      Logger("-------------------------------------------------------------------", "warn")
+    Logger("-------------------------------------------------------------------", "warn")
     if(!results) {
         state.results = results
         state.tempUnit = getTemperatureScale()
@@ -177,7 +175,7 @@ def lastUpdatedEvent() {
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
         tf.setTimeZone(location?.timeZone)
-       def lastDt = "${tf?.format(now)}"
+        def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     state?.lastUpdatedDt = lastDt?.toString()
     if(!lastUpd.equals(lastDt?.toString())) {
@@ -192,7 +190,7 @@ def apiStatusEvent(issue) {
     state?.apiStatus = val
     if(!appStat.equals(val)) { 
         log.debug("UPDATED | API Status is: (${val}) | Original State: (${appStat})")
-           sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
+        sendEvent(name: "apiStatus", value: val, descriptionText: "API Status is: ${val}", displayed: true, isStateChange: true, state: val)
     } else { Logger("API Status is: (${val}) | Original State: (${appStat})") }
 }
 
@@ -231,7 +229,6 @@ def getCurWeather() {
     catch (e) { return 0 }
 }
 
-
 def getHumidity() { 
     try { return device.currentValue("humidity") } 
     catch (e) { return 0 }
@@ -254,8 +251,6 @@ def getWeatherConditions() {
         state.curWeatherCond = cur?.current_observation?.weather.toString()
         state.curWeatherIcon = cur?.current_observation?.icon.toString()
         state.zipCode = cur?.current_observation?.display_location.zip.toString()
-      
-        
         def curTemp = (state?.tempUnit == "C") ? cur?.current_observation?.temp_c.toDouble() : cur?.current_observation?.temp_f.toDouble()
         def curWeatherTemp = (state?.tempUnit == "C") ? "${state?.curWeatherTemp_c}°C": "${state?.curWeatherTemp_f}°F"
         state.curWeatherTemp = curWeatherTemp

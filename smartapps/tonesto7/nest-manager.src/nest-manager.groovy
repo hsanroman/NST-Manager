@@ -230,6 +230,10 @@ def automationsPage() {
                      image: getAppImg("automation_icon.png"))
             def cAppVer = getChildAppVer(autoApp) ? getChildAppVer(autoApp) : null        
             !cAppVer ? " " : paragraph("Automations Version: ${cAppVer}")
+            def rText = "Reminder: Automations is still in Beta form and may contain bugs or cause unforseen side effects. " + 
+                        "We are not responsible for any damages caused by using our SmartApp and Device Handlers. Use at your " +
+                        "own risk"
+            paragraph "$rText"
         }
     }
 }
@@ -2635,6 +2639,10 @@ def infoPage () {
         section("App Revision History:") {
             paragraph appVerInfo()
         }
+        section("Donations:") {
+            href url: textDonateLink(), style:"external", required: false, title:"Donations", 
+                description:"Tap to Open in Mobile Browser...", image: getAppImg("donate_icon.png")
+        }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
         }
@@ -2819,6 +2827,7 @@ private def textModified()  { return "Updated: ${appVerDate()}" }
 private def textAuthor()    { return "${appAuthor()}" }
 private def textNamespace() { return "${appNamespace()}" }
 private def textVerInfo()   { return "${appVerInfo()}" }
+private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 private def textCopyright() { return "Copyright© 2016 - Anthony S." }
 private def textDesc()      { return "This this app adds, updates your Nest devices..." }
 private def textHelp()      { return "" }

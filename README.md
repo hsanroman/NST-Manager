@@ -189,6 +189,10 @@ _______
  * There is a Google Form that will allow you to vote for the newest features. ***[Voting Form](https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform)***
 
 _______
+### Donations
+ * While donations are very much appreciated they are not expected or required.  If you feel the need to do so :smile: here is the ***[donation link](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS)***
+
+_______
 ### Nest API Documentation
  [Nest Developer Documents](https://developer.nest.com/documentation/cloud/get-started)
 
