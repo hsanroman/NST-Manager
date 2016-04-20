@@ -1675,7 +1675,7 @@ def devNamePage() {
         section("Settings:") {
             def altNameDef = (atomicState?.useAltNames) ? true : false
             def custNameDef = (atomicState?.custLabelUsed) ? true : false
-            if(!atomicState?.isInstalled)
+            if(!atomicState?.isInstalled) {
                 input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
                 input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
             } else {
