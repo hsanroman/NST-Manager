@@ -54,9 +54,6 @@ metadata {
         command "setPresence"
         //command "setFanMode"
         //command "setTemperature"
-        command "getCanCool"
-        command "getCanHeat"
-        command "getHasFan"
         command "setThermostatMode"
         command "levelUpDown"
         command "levelUp"
@@ -79,6 +76,9 @@ metadata {
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
         attribute "nestPresence", "string"
+        attribute "canHeat", "string"
+        attribute "canCool", "string"
+        attribute "hasFan", "string"
     }
 
     simulator {
@@ -592,11 +592,14 @@ def apiStatusEvent(issue) {
 def canHeatCool(canHeat, canCool) {
     state?.can_heat = !canHeat ? false : true
     state?.can_cool = !canCool ? false : true
+    sendEvent(name: "canHeat", value: state?.can_heat)
+    sendEvent(name: "canCool", value: state?.can_cool)
 }
 
 def hasFan(hasFan) {
     def val = (hasFan == "true") ? true : false
     state?.has_fan = val
+    sendEvent(name: "hasFan", value: val)
 }
 
 def getHasFan() {
