@@ -230,8 +230,8 @@ def extSensorPage() {
                 }
             }
             if(extSensorDay && extSensorNight) {
-                section("") {
-                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to determine Day/Evening Sensors?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("sunrise_icon.png")
+                section("Use Sunrise/Sunset Instead of Modes to Determine Day/Night Sensors:") {
+                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("sunrise_icon.png")
                 }
             }
             if(extSensorDay && (!setTempsReq || (setTempsReq && extSenHeatTempDay && extSenCoolTempDay))) {
@@ -295,7 +295,11 @@ def extSensorPage() {
 }
 
 def isExtSenConfigured() {
-    return ((extSensorDay || extSensorNight) && extSenTstat && ((extSenRuleType == "Circ" && !extSenHeatTemp && !extSenCoolTemp) || (extSenHeatTemp && extSenCoolTemp))) ? true : false
+	def devOk = ((extSensorDay || extSensorNight) && extSenTstat) ? true : false
+    def nightOk = (!extSensorNight && extSensorDay) || (extSensorNight && (extSenRuleType == "Circ" && ((!extSenHeatTempNight || !extSenCoolTempNight) || (extSenHeatTempNight && extSenCoolTempNight)))) ? true : false
+    def dayOk = (extSensorDay && (extSensorDay && !extSensorNight) || (extSensorDay && (extSenRuleType == "Circ" && ((!extSenHeatTempDay || !extSenCoolTempDay) || (extSenHeatTempDay && extSenCoolTempDay))))) ? true : false
+    //log.debug "devOk: $devOk | nightOk: $nightOk | dayOk: $dayOk"
+    return (devOk && nightOk && dayOk) ? true : false
 }
 
 def extSenMotionEvt(evt) {
