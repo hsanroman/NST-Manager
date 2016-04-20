@@ -180,8 +180,7 @@ def extSensorPage() {
                 paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: imgIcon("error_icon.png")
             }
             if(extSenTstat) { 
-                
-                paragraph "Temperature: ${tStatTemp}\nCool Setpoint: ${tStatCoolSp}°${state?.tempUnit}\nHeat Setpoint: ${tStatHeatSp}°${state?.tempUnit}", image: " "
+                paragraph "Temperature: ${tStatTemp}\nCool/Heat: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}", image: " "
                 input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false,
                         image: imgIcon("thermostat_icon.png")
                 if(extSenTstatsMirror && !dupTstat) { 
@@ -795,14 +794,6 @@ def modePresPage() {
             input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
                     image: imgIcon("mode_away_icon.png")
         }
-        /*section("Nest Presence Set's SmartThings Mode:") {
-            input "homeStMode", "mode", title: "Set this Mode When Nest 'Home'...", multiple: false, submitOnChange: true, required: false,
-                    image: imgIcon("app_pres_home_Icon.png")
-            input "awayStMode", "mode", title: "Set this Mode When Nest 'Away'...", multiple: false, submitOnChange: true, required: false,
-                    image: imgIcon("app_pres_away_Icon.png")
-            input name: "nestToStModeDelay", type: "decimal", title: "Delay this Number of minutes?", defaultValue: 1, required: false,
-                    image: imgIcon("delay_time_icon.png")
-        }*/
     }
 }
 
