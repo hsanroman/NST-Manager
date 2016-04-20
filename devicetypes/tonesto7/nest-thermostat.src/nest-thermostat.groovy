@@ -592,26 +592,13 @@ def apiStatusEvent(issue) {
 def canHeatCool(canHeat, canCool) {
     state?.can_heat = !canHeat ? false : true
     state?.can_cool = !canCool ? false : true
-    sendEvent(name: "canHeat", value: state?.can_heat)
-    sendEvent(name: "canCool", value: state?.can_cool)
+    sendEvent(name: "canHeat", value: state?.can_heat.toString())
+    sendEvent(name: "canCool", value: state?.can_cool.toString())
 }
 
 def hasFan(hasFan) {
-    def val = (hasFan == "true") ? true : false
-    state?.has_fan = val
-    sendEvent(name: "hasFan", value: val)
-}
-
-def getHasFan() {
-    return !state?.has_fan ? false : true
-}
-
-def getCanCool() {
-    return !state?.can_cool ? false : true
-}
-
-def getCanHeat() {
-    return !state?.can_heat ? false : true
+    state?.has_fan = (hasFan == "true") ? true : false
+    sendEvent(name: "hasFan", value: hasFan.toString())
 }
 
 def isEmergencyHeat(val) {
