@@ -174,9 +174,13 @@ def extSensorPage() {
             if(extSenTstat) { 
                 def tmpVal = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"    
                 paragraph "Thermostat Room Temp: ${tmpVal}", image: " "
+                
                 input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false,
                         image: imgIcon("thermostat_icon.png")
                 if(extSenTstatsMirror) { 
+                	if(tstatDuplication(extSenTstat, extSenTstatMirror)) {
+                    	paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: imgIcon("error_icon.png")
+                	}
                     extSenTstatsMirror.each { t ->
                         paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
                     }
@@ -197,7 +201,7 @@ def extSensorPage() {
                 if(extSensorDay.size() > 1) {
                     href "extSenShowTempsPage", title: "View Daytime Sensor Temps...", description: "${tmpVal}\n${tmpMode}", image: " "
                     paragraph "When multiple Sensors are selected the Temp will be returned as the average of those sensors combined.", image: imgIcon("i_icon.png")
-                   } else { paragraph "${tmpVal}\n${tmpMode}", image: " " }
+                } else { paragraph "${tmpVal}\n${tmpMode}", image: " " }
              }
          }
          section("(Optional) Choose NightTime Temperature Sensor(s) to use instead of the Thermostat's...") {
@@ -223,11 +227,10 @@ def extSensorPage() {
                             image: imgIcon("rule_icon.png"))
             }
             section("Desired Temperatures..." ) {
-                def tempReq = (extSenRuleType == "Circ") ? false : true
                 def heatSp = getTstatSetpoint(extSenTstat, "heat")
                 def coolSp = getTstatSetpoint(extSenTstat, "cool")
-                input "extSenHeatTemp", "decimal", title: "Desired Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("heat_icon.png")
-                input "extSenCoolTemp", "decimal", title: "Desired Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: tempReq, image: imgIcon("cool_icon.png")
+                input "extSenHeatTemp", "decimal", title: "Desired Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: true, image: imgIcon("heat_icon.png")
+                input "extSenCoolTemp", "decimal", title: "Desired Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: true, image: imgIcon("cool_icon.png")
                 paragraph "Thermostat Cool Setpoint: ${coolSp}°${state?.tempUnit}\nThermostat Heat Setpoint: ${heatSp}°${state?.tempUnit}", image: " "
             }
             if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
@@ -515,7 +518,15 @@ def getRemoteSenTemp() {
         return 0.0
     }
 }
-
+def tstatDuplication(tstat1, tstat2) {
+	def result = false
+    if(tstat1 && tstat2) {
+    	tstat1?.each { ts ->
+        	if(ts in tstat2) { result = true }
+        }
+    }
+    return result
+}
 def extSenModeDuplication() {
     def result = false
     if(extSensorDayModes && extSensorNightModes) {
