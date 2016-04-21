@@ -463,7 +463,7 @@ def getWeatherHtml() {
         head {
             """ <style type="text/css">
                 body {
-                  font-family: 'Lato', Calibri, Arial, sans-serif;
+                  font-family: 'San Francisco', 'Roboto', 'Arial';
                 }
 
                 #header {
