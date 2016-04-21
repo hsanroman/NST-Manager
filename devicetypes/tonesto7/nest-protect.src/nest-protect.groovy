@@ -690,6 +690,7 @@ def getInfoHtml() {
         }
     }
 }
+
 private def textDevName()   { "Nest Protect${appDevName()}" }
 private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }

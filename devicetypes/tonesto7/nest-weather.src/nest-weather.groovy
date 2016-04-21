@@ -2,7 +2,7 @@
  *  Nest Weather
  *	Author: Anthony S. (@tonesto7)
  *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
- *	
+ *
  *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -21,15 +21,12 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// TODO: Need to update Copyright
-
 import java.text.SimpleDateFormat
 
 preferences {  }
 
 def devVer() { return "1.0.0" }
 
-// for the UI
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
 
@@ -48,9 +45,7 @@ metadata {
         attribute "devTypeVer", "string"
     }
 
-    simulator {
-        
-    }
+    simulator { }
 
     tiles(scale: 2) {
         htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 6)

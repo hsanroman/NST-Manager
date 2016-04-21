@@ -227,7 +227,6 @@ def tileSelect() {
                     "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
                     "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
             break
-        
         case 2:
             return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
                     "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
@@ -1258,7 +1257,7 @@ def log(message, level = "trace") {
 def getImgBase64(url,type) {
     def params = [ 
         uri: url,
-           contentType: 'image/$type'
+        contentType: 'image/$type'
     ]
     try {
         httpGet(params) { resp ->
@@ -1276,7 +1275,7 @@ def getImgBase64(url,type) {
                 //log.debug "resp: ${s}"
                 return s ? "data:image/${type};base64,${s.toString()}" : null
             }
-        }	
+        }
     }
     catch (ex) {
         log.error "getImageBytes Exception: $ex"
