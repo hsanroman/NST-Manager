@@ -4,7 +4,6 @@
  *	Author: Anthony S. (@tonesto7)
  *  
  *
- 
  * Copyright (C) 2016 Ben W, Anthony S.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -28,23 +27,19 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.0" }
+def devVer() { return "2.0.0" }
 
 // for the UI
 metadata {
-	definition (name: "Nest Presence", namespace: "tonesto7", author: "DesertBlade") {
+	definition (name: "${textDevName()}", namespace: "tonesto7", author: "DesertBlade") {
 
         capability "Presence Sensor"
         capability "Sensor"
-  		capability "Refresh"
+        capability "Refresh"
         
-        command "away"
-        command "present"
-		//command "setAway"
-        //command "setHome"
-		command "setPresence"
+        command "setPresence"
         command "refresh"
-		command "log"
+        command "log"
         
         attribute "lastConnection", "string"
         attribute "apiStatus", "string"
@@ -64,7 +59,7 @@ metadata {
 			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
-			state "present",	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
+			state "home",	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
             state "away", 		action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_away_icon.png"
             state "auto-away", 	action: "setPresence", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_autoaway_icon.png"
         	state "unknown", 	action: "setPresence", 	icon: "st.unknown.unknown.unknown"
@@ -95,17 +90,15 @@ def parse(String description) {
 	log.debug "Parsing '${description}'"
 }
 
-def configure() {
-	
-}
+def configure() { }
 
 def poll() {
 	log.debug "Polling parent..."
-    parent.refresh()
+    parent.refresh(this)
 }
 
 def refresh() {
-	parent.refresh()
+	poll()
 }
 
 def generateEvent(Map results) {
@@ -128,7 +121,7 @@ def getDataByName(String name) {
 
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestProtVer().ver.toString()
+    def pubVer = parent?.latestPresVer().ver.toString()
 	def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     if(curData != newData) {
@@ -163,12 +156,12 @@ def presenceEvent(presence) {
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
     def nestPres = getNestPresence()
-    def newNestPres = (presence == "home") ? "present" : ((presence == "auto-away") ? "auto-away" : "away")
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
         log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${state?.present}")
    		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
+		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
    		state?.present = (pres == "present") ? true : false
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
@@ -189,7 +182,7 @@ def getHvacMode() {
 
 def getNestPresence() { 
 	try { return device.currentState("nestPresence").value.toString() } 
-	catch (e) { return "present" }
+	catch (e) { return "home" }
 }
 
 def getPresence() { 
@@ -200,30 +193,12 @@ def getPresence() {
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
-def setPresence() {
+void setPresence() {
 	log.trace "setPresence()..."
     def pres = getNestPresence()
     log.trace "Current Nest Presence: ${pres}"
-    if(pres == "auto-away" || pres == "away") {
-		parent.setStructureAway(this, "false")
-        presenceEvent("home") 
-    }
-    else if (pres == "present") {
-        parent.setStructureAway(this, "true")
-        presenceEvent("away")
-    }
-}
-
-// backward compatibility for previous nest thermostat (and rule machine)
-def away() {
-    log.trace "away()..."
-    setAway()
-}
-
-// backward compatibility for previous nest thermostat (and rule machine)
-def present() {
-    log.trace "present()..."
-    setHome()
+    if(pres == "auto-away" || pres == "away") { setHome() }
+    else if (pres == "home") { setAway() }
 }
 
 def setAway() {
@@ -286,3 +261,7 @@ def log(message, level = "trace") {
     }            
     return null // always child interface call with a return value
 }
+
+private def textDevName()   { "Nest Presence${appDevName()}" }
+private def appDevType()    { false }
+private def appDevName()    { return appDevType() ? " (Dev)" : "" }
