@@ -1682,7 +1682,7 @@ def devNamePage() {
         def altName = (atomicState?.useAltNames) ? true : false
         def custName = (atomicState?.custLabelUsed) ? true : false
         section("Settings:") {
-            if(!atomicState?.isInstalled) {
+            if(atomicState?.isInstalled) {
                 paragraph "Changes to device names can only take affect as devices are added.  Existing devices can be edited in the device settings page for the device." 
             } else {
                 if(!useCustDevNames) { 
