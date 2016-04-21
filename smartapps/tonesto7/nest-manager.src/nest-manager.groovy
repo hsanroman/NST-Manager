@@ -2847,7 +2847,7 @@ def protInfoPage () {
 private def appName() 		{ "Nest Manager${appDevName()}" }
 private def appAuthor() 	{ "Anthony S." }
 private def appNamespace() 	{ "tonesto7" }
-private def gitBranch()     { "develop" }
+private def gitBranch()     { "master" }
 private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ 

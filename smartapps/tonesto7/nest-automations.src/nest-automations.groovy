@@ -274,6 +274,7 @@ def extSensorPage() {
                         input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: imgIcon("temp_icon.png")
                     }
                     input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
+                    input "extSenEvalWait", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: imgIcon("delay_time_icon.png")
                 }
             }
         }
@@ -390,9 +391,10 @@ def shortTimeEnum() {
 }
 
 def smallTempEnum() {
+    def tempUnit = state?.tempUnit
     def vals = [
-        1:"1°${state?.tempUnit}", 2:"2°${state?.tempUnit}", 3:"3°${state?.tempUnit}", 4:"4°${state?.tempUnit}", 5:"5°${state?.tempUnit}", 6:"6°${state?.tempUnit}", 7:"7°${state?.tempUnit}",
-        8:"8°${state?.tempUnit}", 9:"9°${state?.tempUnit}", 10:"10°${state?.tempUnit}"
+        1:"1°${tempUnit}", 2:"2°${tempUnit}", 3:"3°${tempUnit}", 4:"4°${tempUnit}", 5:"5°${tempUnit}", 6:"6°${tempUnit}", 7:"7°${tempUnit}",
+        8:"8°${tempUnit}", 9:"9°${tempUnit}", 10:"10°${tempUnit}"
     ]
     return vals
 }
@@ -452,108 +454,117 @@ def locationChgEvt(evt) {
     extSenEvtEval()
 }
 
+def getLastExtSenEvalDtSec() { return !atomicState?.lastExtSenEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastExtSenEval).toInteger() }
+
 // Based off of Keep Me Cozy II
 private extSenEvtEval() {
     log.trace "extSenEvtEval....."
-    log.debug "Remote Sensor Enabled: ${state?.extSenEnabled} | extSenModesOk: ${modesOk(extSenModes)} | ext Sensor: ${(extSensorDay || extSensorNight)} | Thermostat: ${extSenTstat} | getExtModeOk(): ${getExtModeOk()}"
-    if (state?.extSenEnabled && modesOk(extSenModes) && (extSensorDay || extSensorNight) && extSenTstat && getExtModeOk()) {
-        def threshold = !extTempDiffDegrees ? 0 : extTempDiffDegrees.toDouble()
-        def chgTempVal = !extTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
-        def hvacMode = extSenTstat ? extSenTstat?.currentThermostatMode.toString() : null
-        def curTstatTemp = getDeviceTemp(extSenTstat).toDouble()
-        def curTstatOperState = extSenTstat?.currentThermostatOperatingState.toString()
-        def curTstatFanMode = extSenTstat?.currentThermostatFanMode
-        def curCoolSetpoint = getTstatSetpoint(extSenTstat, "cool")
-        def curHeatSetpoint = getTstatSetpoint(extSenTstat, "heat")
-        def extHtemp = getSenHeatSetpointTemp()
-        def extCtemp = getSenCoolSetpointTemp()
-        def curSenTemp = (extSensorDay || extSensorNight) ? getRemoteSenTemp().toDouble() : null
-        
-        log.trace "Remote Sensor Rule Type: ${extSenRuleType}"
-        log.trace "Remote Sensor Temp: ${curSenTemp}"
-        log.trace "Thermostat Info - Temperature: ($curTstatTemp) | HeatSetpoint: ($curHeatSetpoint) | CoolSetpoint: ($curCoolSetpoint) | HvacMode: ($hvacMode) | OperatingState: ($curTstatOperState) | FanMode: ($curTstatFanMode)" 
-        log.trace "Desired Temps - Heat: $extHtemp | Cool: $extCtemp"
-        
-        if(hvacMode == "off") { return }
-        
-        else if (hvacMode in ["cool","auto"]) {
-            if ((curSenTemp - extCtemp) >= threshold) {
-                if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
-                    extSenTstat?.setCoolingSetpoint(curTstatTemp - chgTempVal)
-                    if(extSenTstatsMirror) { extSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
-                    log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
+    //log.debug "Remote Sensor Enabled: ${state?.extSenEnabled} | extSenModesOk: ${modesOk(extSenModes)} | ext Sensor: ${(extSensorDay || extSensorNight)} | Thermostat: ${extSenTstat} | getExtModeOk(): ${getExtModeOk()}"
+    if(getLastExtSenEvalDtSec() < (extSenEvalWait ? extSenEvalWait?.toInteger() : 60)) { 
+        log.debug "Too Soon to Evaluate..."
+        return 
+    } 
+    else { 
+    	atomicState?.lastExtSenEval = getDtNow()
+        if (state?.extSenEnabled && modesOk(extSenModes) && (extSensorDay || extSensorNight) && extSenTstat && getExtModeOk()) {
+            def threshold = !extTempDiffDegrees ? 0 : extTempDiffDegrees.toDouble()
+            def chgTempVal = !extTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
+            def hvacMode = extSenTstat ? extSenTstat?.currentThermostatMode.toString() : null
+            def curTstatTemp = getDeviceTemp(extSenTstat).toDouble()
+            def curTstatOperState = extSenTstat?.currentThermostatOperatingState.toString()
+            def curTstatFanMode = extSenTstat?.currentThermostatFanMode
+            def curCoolSetpoint = getTstatSetpoint(extSenTstat, "cool")
+            def curHeatSetpoint = getTstatSetpoint(extSenTstat, "heat")
+            def extHtemp = getSenHeatSetpointTemp()
+            def extCtemp = getSenCoolSetpointTemp()
+            def curSenTemp = (extSensorDay || extSensorNight) ? getRemoteSenTemp().toDouble() : null
+            
+            log.trace "Remote Sensor Rule Type: ${extSenRuleType}"
+            log.trace "Remote Sensor Temp: ${curSenTemp}"
+            log.trace "Thermostat Info - ( Temperature: ($curTstatTemp) | HeatSetpoint: ($curHeatSetpoint) | CoolSetpoint: ($curCoolSetpoint) | HvacMode: ($hvacMode) | OperatingState: ($curTstatOperState) | FanMode: ($curTstatFanMode) )" 
+            log.trace "Desired Temps - Heat: $extHtemp | Cool: $extCtemp"
+            
+            if(hvacMode == "off") { return }
+            
+            else if (hvacMode in ["cool","auto"]) {
+                if ((curSenTemp - extCtemp) >= threshold) {
+                    if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
+                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
+                        extSenTstat?.setCoolingSetpoint(curTstatTemp - chgTempVal)
+                        if(extSenTstatsMirror) { extSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
+                        log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
+                    }
                 }
-            }
-            else if (((extCtemp - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
-                if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
-                    extSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
-                    if(extSenTstatsMirror) { extSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
-                    log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + chgTempVal}), OFF"
-                }
-            } else {
-                log.debug "FAN(COOL): $extSenRuleType | RuleOk: (${extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})"
-                log.debug "FAN(COOL): DiffOK (${getFanTempOk(curSenTemp, extCtemp, curCoolSetpoint, threshold)})"
-                if(extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
-                    if( getFanTempOk(curSenTemp, extCtemp, curCoolSetpoint, threshold) && getFanRunOk(curTstatOperState, curTstatFanMode) ) {
-                        log.debug "Running $extSenTstat Fan for COOL Circulation..."
-                        extSenTstat?.fanOn()
-                        if(extSenTstatsMirror) { 
-                            extSenTstatsMirror.each { mt -> 
-                                log.debug "Mirroring $mt Fan Run for COOL Circulation..."
-                                mt?.fanOn() 
+                else if (((extCtemp - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
+                    if(extSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
+                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
+                        extSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
+                        if(extSenTstatsMirror) { extSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
+                        log.debug "extSenTstat.setCoolingSetpoint(${curTstatTemp + chgTempVal}), OFF"
+                    }
+                } else {
+                    //log.debug "FAN(COOL): $extSenRuleType | RuleOk: (${extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})"
+                    //log.debug "FAN(COOL): DiffOK (${getFanTempOk(curSenTemp, extCtemp, curCoolSetpoint, threshold)})"
+                    if(extSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
+                        if( getFanTempOk(curSenTemp, extCtemp, curCoolSetpoint, threshold) && getFanRunOk(curTstatOperState, curTstatFanMode) ) {
+                            log.debug "Running $extSenTstat Fan for COOL Circulation..."
+                            extSenTstat?.fanOn()
+                            if(extSenTstatsMirror) { 
+                                extSenTstatsMirror.each { mt -> 
+                                    log.debug "Mirroring $mt Fan Run for COOL Circulation..."
+                                    mt?.fanOn() 
+                                }
                             }
+                            atomicState?.lastFanRunDt = getDtNow()
                         }
-                        atomicState?.lastFanRunDt = getDtNow()
                     }
                 }
             }
+            //Heat Functions....
+            else if (hvacMode in ["heat", "emergency heat", "auto"]) {
+                if ((extHtemp - curSenTemp) >= threshold) {
+                    if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
+                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
+                        extSenTstat?.setHeatingSetpoint(curTstatTemp + chgTempVal)
+                        if(extSenTstatsMirror) { extSenTstatsMirror*.setHeatingSetpoint(curTstatTemp + chgTempVal) }
+                        log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
+                    }
+                }
+                else if (((curSenTemp - extHtemp) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
+                    if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
+                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
+                        extSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
+                        if(extSenTstatsMirror) { extSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - chgTempVal) }
+                        log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp - chgTempVal}), OFF"
+                    }
+                } else { 
+                    //log.debug "FAN(HEAT): $extSenRuleType | RuleOk: (${extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})"
+                    //log.debug "FAN(HEAT): DiffOK (${getFanTempOk(curSenTemp, extHtemp, curHeatSetpoint, threshold)})"
+                    if (extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
+                        if( getFanTempOk(curSenTemp, extHtemp, curHeatSetpoint, threshold) && getFanRunOk(curTstatOperState, curTstatFanMode) ) {
+                            log.debug "Running $extSenTstat Fan for HEAT Circulation..."
+                            extSenTstat?.fanOn()
+                            if(extSenTstatsMirror) { 
+                                extSenTstatsMirror.each { mt -> 
+                                    log.debug "Mirroring $mt Fan Run for HEAT Circulation..."
+                                    mt?.fanOn() 
+                                }
+                            }
+                            atomicState?.lastFanRunDt = getDtNow()
+                        }
+                    }
+                }
+            } else { log.warn "extSenEvtEval: Did not receive a valid Thermostat Mode..." }
         }
-        //Heat Functions....
-        else if (hvacMode in ["heat", "emergency heat", "auto"]) {
-            if ((extHtemp - curSenTemp) >= threshold) {
-                if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
-                    log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
-                    extSenTstat?.setHeatingSetpoint(curTstatTemp + chgTempVal)
-                    if(extSenTstatsMirror) { extSenTstatsMirror*.setHeatingSetpoint(curTstatTemp + chgTempVal) }
-                    log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
-                }
+        else {
+            def extHtemp = getSenHeatSetpointTemp()
+            def extCtemp = getSenCoolSetpointTemp()
+            extSenTstat?.setHeatingSetpoint(extHtemp)
+            extSenTstat?.setCoolingSetpoint(extCtemp)
+            if(extSenTstatsMirror) {
+                extSenTstatsMirror*.setHeatingSetpoint(extHtemp)
+                extSenTstatsMirror*.setCoolingSetpoint(extCtemp)
             }
-            else if (((curSenTemp - extHtemp) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
-                if(extSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
-                    extSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
-                    if(extSenTstatsMirror) { extSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - chgTempVal) }
-                    log.debug "extSenTstat.setHeatingSetpoint(${curTstatTemp - chgTempVal}), OFF"
-                }
-            } else { 
-                log.debug "FAN(HEAT): $extSenRuleType | RuleOk: (${extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})"
-                log.debug "FAN(HEAT): DiffOK (${getFanTempOk(curSenTemp, extHtemp, curHeatSetpoint, threshold)})"
-                if (extSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
-                    if( getFanTempOk(curSenTemp, extHtemp, curHeatSetpoint, threshold) && getFanRunOk(curTstatOperState, curTstatFanMode) ) {
-                        log.debug "Running $extSenTstat Fan for HEAT Circulation..."
-                        extSenTstat?.fanOn()
-                        if(extSenTstatsMirror) { 
-                            extSenTstatsMirror.each { mt -> 
-                                log.debug "Mirroring $mt Fan Run for HEAT Circulation..."
-                                mt?.fanOn() 
-                            }
-                        }
-                        atomicState?.lastFanRunDt = getDtNow()
-                    }
-                }
-            }
-        } else { log.warn "extSenEvtEval: Did not receive a valid Thermostat Mode..." }
-    }
-    else {
-        def extHtemp = getSenHeatSetpointTemp()
-        def extCtemp = getSenCoolSetpointTemp()
-        extSenTstat?.setHeatingSetpoint(extHtemp)
-        extSenTstat?.setCoolingSetpoint(extCtemp)
-        if(extSenTstatsMirror) {
-            extSenTstatsMirror*.setHeatingSetpoint(extHtemp)
-            extSenTstatsMirror*.setCoolingSetpoint(extCtemp)
         }
     }
 }
@@ -561,8 +572,8 @@ private extSenEvtEval() {
 def getFanTempOk(senTemp, userTemp, curTemp, threshold) {
     def diff1 = (Math.abs(senTemp - userTemp)?.round(1) < threshold)
     def diff2 = (Math.abs(userTemp - curTemp)?.round(1) < threshold)
-    log.debug "getFanTempOk: Diff1: $diff1 (${Math.abs(senTemp - userTemp).round(1)} < threshold: ${threshold})"
-    log.debug "getFanTempOk: Diff2: $diff2 (${Math.abs(userTemp - curTemp).round(1)} < threshold: ${threshold})"
+    log.debug "getFanTempOk: ((Sensor Temp - Set Temp): ${Math.abs(senTemp - userTemp).round(1)} < Threshold Temp: ${threshold})) - ($diff1)"
+    log.debug "getFanTempOk: ((Set Temp - Current Temp): (${Math.abs(userTemp - curTemp).round(1)}) < Threshold Temp: ${threshold})) - ($diff2)"
     return (diff1 && diff2) ? true : false
 }
 
@@ -593,7 +604,7 @@ def getFanRunOk(operState, fanState) {
     return result
 }
 
-def getLastFanRunDtSec() { return !state?.lastFanRunDt ? 100000 : GetTimeDiffSeconds(state?.lastFanRunDt).toInteger() }
+def getLastFanRunDtSec() { return !atomicState?.lastFanRunDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastFanRunDt).toInteger() }
 
 def getDeviceTemp(dev) {
     return dev ? dev?.currentValue("temperature").toString().replaceAll("\\[|\\]", "").toDouble() : null
@@ -654,16 +665,16 @@ def setTstatCapabilities() {
             canHeat = (extSenTstat?.currentCanHeat == "true") ? true : false
             hasFan = (extSenTstat?.currentHasFan == "true") ? true : false
         }
-        atomicState?.extSenTstatCanCool = canCool
-        atomicState?.extSenTstatCanHeat = canHeat
-        atomicState?.extSenTstatHasFan = hasFan
+        state?.extSenTstatCanCool = canCool
+        state?.extSenTstatCanHeat = canHeat
+        state?.extSenTstatHasFan = hasFan
     } catch (e) { }
 }
 
 def extSenRuleEnum() {
-    def canCool = atomicState?.extSenTstatCanCool ? true : false
-    def canHeat = atomicState?.extSenTstatCanHeat ? true : false
-    def hasFan = atomicState?.extSenTstatHasFan ? true : false
+    def canCool = state?.extSenTstatCanCool ? true : false
+    def canHeat = state?.extSenTstatCanHeat ? true : false
+    def hasFan = state?.extSenTstatHasFan ? true : false
     def vals = []
     
     //log.debug "extSenRuleEnum -- hasFan: $hasFan (${atomicState?.extSenTstatHasFan} | canCool: $canCool (${atomicState?.extSenTstatCanCool} | canHeat: $canHeat (${atomicState?.extSenTstatCanHeat}"
@@ -1156,7 +1167,6 @@ def formatDt(dt) {
 //Returns time differences is seconds 
 def GetTimeDiffSeconds(lastDate) {
     try {
-        if(lastDate?.contains("dtNow")) { return 10000 }
         def now = new Date()
         def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
         def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()

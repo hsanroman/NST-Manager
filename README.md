@@ -30,19 +30,22 @@ __Latest Device Versions:__
 * Nest Weather Device - __*v1.0.0*__
 
 ## What's New
- * In-app HTML help pages
- * All new polling logic (Also switched to Cron scheduling)
- * Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest.
- * Fresh nest device tile designs :smile: (These may cause some controversy and be asked to be reverted back)
- * New Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary.
- * Added an Nest Automation Child app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and available shortly after release support for customized remote sensor support.   
- * Much more transparent install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.  
+ * **NEW**: In-app HTML help pages
+ * **NEW**: All new polling logic (Also switched to Cron scheduling)
+ * **NEW**: Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest.
+ * **NEW**: Custom device naming during new device installs. 
+ * **UPDATED**:Fresh nest device tile designs :smile: (These may cause some controversy and be asked to be reverted back)
+ * **NEW**: Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary.
+ * **NEW**: Nest Automation Child (BETA) app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and remote sensor support.   
+ * **UPDATED**: Much more transparent install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.  
  *It performs tests on the following:* 
  
 	 * Verify OAuth is enabled
 	 * That the device handlers are installed and published
 	 * That your ST account has proper Zip-Code associated with it.
 	 * It also notifies you when you are uninstalling that it can't remove the devices because they are being used by other apps/routines  
+ 
+ * There are way to many subtle changes to list.
  
 
 ## Links
