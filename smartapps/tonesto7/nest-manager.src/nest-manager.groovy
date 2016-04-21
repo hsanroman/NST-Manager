@@ -87,7 +87,7 @@ def authPage() {
     preReqCheck()
     if(!atomicState?.isInstalled) { deviceHandlerTest() }
         
-    if (!atomicState?.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
+    if (!atomicState?.accessToken || !atomicState?.preReqTested || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
                 def desc
