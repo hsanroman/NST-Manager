@@ -1,5 +1,7 @@
 # Nest Manager (Unofficial)
 
+***There were a ton of changes to the core code so we can't guarantee that their won't be an issue updating the code directly from v1.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.***
+
 ### Nest Manager App
 This is the "***unofficial***" SmartThings user created SmartApp and Device handlers.
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. 

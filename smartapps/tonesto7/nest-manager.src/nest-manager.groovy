@@ -2110,8 +2110,8 @@ def clientId() {
 }
 
 def clientSecret() { 
-    //if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" }
-    if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" } //token with cam support
+    //if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" } 
+    if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" } //token with cam support
     else { return appSettings.clientSecret }
 }
 
