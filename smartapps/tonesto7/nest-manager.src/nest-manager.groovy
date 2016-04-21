@@ -38,10 +38,10 @@ definition(
 }
 
 def appVersion() { "2.0.0" }
-def appVerDate() { "4-15-2016" }
+def appVerDate() { "4-21-2016" }
 def appVerInfo() {
     
-    "V2.0.0 (Apr 15th, 2016)\n" +
+    "V2.0.0 (Apr 21th, 2016)\n" +
     "Fixed: Alot\n\n" +
     "------------------------------------------------"
 }
@@ -59,6 +59,7 @@ preferences {
     page(name: "notifPrefPage")
     page(name: "diagPage")
     page(name: "devNamePage")
+    page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "quietTimePage")
     page(name: "devPrefPage")
@@ -180,9 +181,9 @@ def authPage() {
                                 image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
-                    //if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
-                    if((thermostats || protects || presDevice || weatherDevice)) {
-                        href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
+                    if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
+                    //if((thermostats || protects || presDevice || weatherDevice)) {
+                        href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                     }
                 }
                 
@@ -1020,7 +1021,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         }
         setLastCmdSentSeconds(qnum, getDtNow())
 
-//log.trace "procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
+        //log.trace "procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
 
         httpPutJson(params) { resp ->
             if (resp.status == 307) {
@@ -1283,36 +1284,36 @@ def isUpdateAvail(newVer, curVer) {
 
 def isAppUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.app.ver, appVersion())) {
-           return true
+        return true
     } else { return false }
 }
 def isPresUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.presence.ver, atomicState?.presDevVer)) {
-           return true
+        return true
     } else { return false }
 }
 
 def isProtUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.protect.ver, atomicState?.pDevVer)) {
-           return true
+        return true
     } else { return false }
 }
 
 def isTstatUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.thermostat.ver, atomicState?.tDevVer)) {
-           return true
+        return true
     } else { return false }
 }
 
 def isAutoAppUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.autoapp.ver, atomicState?.autoAppVer)) {
-           return true
+        return true
     } else { return false }
 }
 
 def isWeathUpdateAvail() {
     if(isUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
-           return true
+        return true
     } else { return false }
 }
 
@@ -1676,40 +1677,49 @@ def addRemoveDevices(uninst = null) {
 }
 
 def devNamePage() {
-    dynamicPage(name: "devNamePage", title: "Customize Device Labels", nextPage: "", install: false) {
+    def pagelbl = atomicState?.isInstalled ? "Device Labels" : "Custom Device Labels"
+    dynamicPage(name: "devNamePage", title: pageLbl, nextPage: "", install: false) {
+        def altName = (atomicState?.useAltNames) ? true : false
+        def custName = (atomicState?.custLabelUsed) ? true : false
         section("Settings:") {
-            def altNameDef = (atomicState?.useAltNames) ? true : false
-            def custNameDef = (atomicState?.custLabelUsed) ? true : false
-            input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
-            input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
-            if(atomicState?.isInstalled) {
+            if(!atomicState?.isInstalled) {
                 paragraph "Changes to device names can only take affect as devices are added.  Existing devices can be edited in the device settings page for the device." 
+            } else {
+                if(!useCustDevNames) { 
+                    input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
+                }
+                if(!useAltNames) {
+                    input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
+                }
             }
             if(atomicState?.custLabelUsed) {
                 paragraph "Custom Labels Are Active" 
             }
-            paragraph title:"Current Device Handler Names", ""
+            //paragraph "Current Device Handler Names", image: ""
         }
-
+        def str1 = "\n\nName does not match whats expected.\nName Should be:"
+        def str2 = "\n\nName cannot be customized"
         atomicState.useAltNames = useAltNames ? true : false
         atomicState.custLabelUsed = useCustDevNames ? true : false
 
         def found = false
         if(atomicState?.thermostats) {
-            section ("Thermostat Device Names:") {
+            section ("Thermostat Device(s):") {
                 atomicState?.thermostats?.each { t ->
                     found = true
                     def d = getChildDevice(getNestTstatDni(t))
                     def dstr = ""
                     if(d) {
-                        dstr += "Found existing device named:\n   ${d.displayName}"
+                        dstr += "Found: ${d.displayName}"
                         if (d.displayName != getNestTstatLabel(t.value)) {
-                            dstr += "\nName does not match settings.\nSettings name would be:\n   ${getNestTstatLabel(t.value)}"
-                        } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
+                            dstr += "$str1 ${getNestTstatLabel(t.value)}"
+                        } 
+                        else if (atomicState?.custLabelUsed) { dstr += "$str2" } 
+                        //else { dstr += "\n      Matches settings" }
                     } else {
-                        dstr += "New Device Name:\n  ${getNestTstatLabel(t.value)}"
+                        dstr += "New Name: ${getNestTstatLabel(t.value)}"
                     }
-                    paragraph "${dstr}"
+                    paragraph "${dstr}", image: getAppImg("thermostat_icon.png")
                     if(atomicState.custLabelUsed && !d) { 
                         input "tstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
                                 image: getAppImg("thermostat_icon.png")
@@ -1724,14 +1734,16 @@ def devNamePage() {
                     def dstr = ""
                     def d1 = getChildDevice(getNestProtDni(p))
                     if(d1) {
-                        dstr += "Found existing device named:\n   ${d1.displayName}"
+                        dstr += "Found: ${d1.displayName}"
                         if (d1.displayName != getNestProtLabel(p.value)) {
-                            dstr += "\nName does not match settings.\nSettings name would be:\n   ${getNestProtLabel(p.value)}"
-                        } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
+                            dstr += "$str1 ${getNestProtLabel(p.value)}"
+                        } 
+                        else if (atomicState?.custLabelUsed) { dstr += "$str2" } 
+                        //else { dstr += "\n      Matches settings" }
                     } else {
-                        dstr += "New Device Name:\n  ${getNestProtLabel(p.value)}"
+                        dstr += "New Name: ${getNestProtLabel(p.value)}"
                     }
-                    paragraph "${dstr}"
+                    paragraph "${dstr}", image: getAppImg("protect_icon.png")
                     if(atomicState.custLabelUsed && !d1) {
                         input "prot_${p.value}_lbl", "text", title: "Custom name for ${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
                                 image: getAppImg("protect_icon.png")
@@ -1747,14 +1759,16 @@ def devNamePage() {
                 def d3 = getChildDevice(dni)
                 def dstr = ""
                 if(d3) {
-                    dstr += "Found existing device named:\n   ${d3.displayName}"
+                    dstr += "Found: ${d3.displayName}"
                     if (d3.displayName != p) {
-                        dstr += "\nName does not match settings.\nSettings name would be:\n   ${p}"
-                    } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
+                        dstr += "$str1 ${p}"
+                    } 
+                    else if (atomicState?.custLabelUsed) { dstr += "$str2" } 
+                    //else { dstr += "\n      Matches settings" }
                 } else {
-                    dstr += "New Device Name:\n  ${p}"
+                    dstr += "New Name: ${p}"
                 }
-                paragraph "${dstr}"
+                paragraph "${dstr}", image: getAppImg("presence_icon.png")
                 if(atomicState.custLabelUsed && !d3) {
                     input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: p, submitOnChange: true,
                             image: getAppImg("presence_icon.png")
@@ -1769,14 +1783,16 @@ def devNamePage() {
                 def d4 = getChildDevice(dni)
                 def dstr = ""
                 if(d4) {
-                    dstr += "Found existing device named:\n   ${d4.displayName}"
+                    dstr += "Found: ${d4.displayName}"
                     if (d4.displayName != w) {
-                        dstr += "\nName does not match settings.\nSettings name would be:\n   ${w}"
-                    } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
+                        dstr += "$str1 ${w}"
+                    } 
+                    else if (atomicState?.custLabelUsed) { dstr += "$str2" } 
+                    //else { dstr += "\n      Matches settings" }
                 } else {
-                    dstr += "New Device Name:\n  ${w}"
+                    dstr += "New Name: ${w}"
                 }
-                paragraph "${dstr}"
+                paragraph "${dstr}", image: getAppImg("weather_icon.png")
                 if(atomicState.custLabelUsed && !d4) {
                     input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: w, submitOnChange: true,
                             image: getAppImg("weather_icon.png")
@@ -1786,10 +1802,16 @@ def devNamePage() {
         if(!found) {
             paragraph "No Devices Selected"
         }
+        if(!atomicState?.isInstalled && atomicState?.custLabelUsed) {
+            section("Reset Device Names:") {
+                href "devNameResetPage", title: "Reset Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
+            }
+        }
+    }
+}
 
-// This portion below could be another page (it is advanced)
-// it should not be combined with above, as below is logically a clear function for previous settings that are not in use now.
-
+def devNameResetPage() {
+    dynamicPage(name: "devNameResetPage", title: "Customize Device Labels", nextPage: "", install: false) {
         if(!atomicState.custLabelUsed && found) {
             section ("Reset Custom Name Settings") {
                 paragraph "This section allows reset of previously used Custom names.  These settings are optional and will not change already created devices."
@@ -2082,12 +2104,14 @@ def toQueryString(Map m) {
 }
 
 def clientId() { 
-    if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" }
+    if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" } 
+    //if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
     else { return appSettings.clientId }
 }
 
 def clientSecret() { 
-    if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" }
+    if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" }
+    //if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" } //token with cam support
     else { return appSettings.clientSecret }
 }
 
@@ -2243,66 +2267,23 @@ def stateCleanup() {
     log.trace "stateCleanup..."
     //Things that I need to clear up on updates go here
     // this must be run standalone, and exit after running as the cleanup occurs on exit
-    state.remove("pollValue")
-    state.remove("pollStrValue")
-    state.remove("pollWaitVal")
-    state.remove("tempChgWaitVal")
-    state.remove("cmdDelayVal")
-    state.remove("testedDhInst")
-    state.remove("missedPollNotif")
-    state.remove("updNotif")
-    state.remove("updChildOnNewOnly")
-    state.remove("disAppIcons")
-    state.remove("showProtAlarmStateEvts")
-    state.remove("showAwayAsAuto")
-    state.remove("cmdQ")
-    state.remove("recentSendCmd")
-    state.remove("currentWeather")
-    state.remove("altNames")
+    def clnCnt = 0
+    def clnValues = ["pollValue", "pollStrValue","pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updNotif", "updChildOnNewOnly",
+                     "disAppIcons", "showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ" , "recentSendCmd"  , "currentWeather" , "altNames" ]
+    clnValues?.each { item ->
+        if(atomicState?."$item") { state.remove("$item"); clnCnt = clnCnt+1 }
+    }    
     if (!atomicState?.cmdQlist) {
-        state.remove("cmdQ2")
-        state.remove("cmdQ3")
-        state.remove("cmdQ4")
-        state.remove("cmdQ5")
-        state.remove("cmdQ6")
-        state.remove("cmdQ7")
-        state.remove("cmdQ8")
-        state.remove("cmdQ9")
-        state.remove("cmdQ10")
-        state.remove("cmdQ11")
-        state.remove("cmdQ12")
-        state.remove("cmdQ13")
-        state.remove("cmdQ14")
-        state.remove("cmdQ15")
-        state.remove("lastCmdSentDt2")
-        state.remove("lastCmdSentDt3")
-        state.remove("lastCmdSentDt4")
-        state.remove("lastCmdSentDt5")
-        state.remove("lastCmdSentDt6")
-        state.remove("lastCmdSentDt7")
-        state.remove("lastCmdSentDt8")
-        state.remove("lastCmdSentDt9")
-        state.remove("lastCmdSentDt10")
-        state.remove("lastCmdSentDt11")
-        state.remove("lastCmdSentDt12")
-        state.remove("lastCmdSentDt13")
-        state.remove("lastCmdSentDt14")
-        state.remove("lastCmdSentDt15")
-        state.remove("recentSendCmd2")
-        state.remove("recentSendCmd3")
-        state.remove("recentSendCmd4")
-        state.remove("recentSendCmd5")
-        state.remove("recentSendCmd6")
-        state.remove("recentSendCmd7")
-        state.remove("recentSendCmd8")
-        state.remove("recentSendCmd9")
-        state.remove("recentSendCmd10")
-        state.remove("recentSendCmd11")
-        state.remove("recentSendCmd12")
-        state.remove("recentSendCmd13")
-        state.remove("recentSendCmd14")
-        state.remove("recentSendCmd15")
+        def q = 15
+        def i = 1
+        while(i <= q) {
+            i = i + 1
+            if(atomicState?."cmdQ${i}"){ state.remove("cmdQ${i}"); clnCnt = clnCnt+1 }
+            if(atomicState?."lastCmdSentDt${i}"){ state.remove("lastCmdSentDt${i}"); clnCnt = clnCnt+1 }
+            if(atomicState?."recentSendCmd${i}"){ state.remove("recentSendCmd${i}"); clnCnt = clnCnt+1 }
+        }
     }
+    log.debug "stateCleanup Removed ($clnCnt) Variables..."
 }
 
 
@@ -2587,7 +2568,6 @@ def devPrefPage() {
     dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
         section("") {
             paragraph "\nDevice Preferences\n", image: getAppImg("device_pref_icon.png")
-            href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
@@ -2610,6 +2590,13 @@ def devPrefPage() {
         if(atomicState?.weatherDevice) {
             section("Weather Device:") {
                 paragraph "Nothing to see here yet!!!"
+            }
+        }
+        if((thermostats || protects || presDevice || weatherDevice)) {
+            section("Device Names:") {
+            	def devNameTitle = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\nTap to Modify..." : "Tap to Configure..."
+            	def devNameDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Customize Device Names?" : "Device Names..."
+                href "devNamePage", title: devNameTitle, description: devNameDesc, image: getAppImg("device_name_icon.png")
             }
         }
     }
@@ -2865,7 +2852,7 @@ private def appDevType()    { false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{ 
     def cur = atomicState?.appData?.versions?.app?.ver.toString()
-    def ver = (textVersion() != cur) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
+    def ver = (isAppUpdateAvail()) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
     return "Name: ${textAppName()}\n${ver}\n${textModified()}" 
 }
 private def textAppName()   { return "${appName()}" }    
