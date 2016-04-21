@@ -297,7 +297,7 @@ img {
 The SmartApp and Device Handlers work together to provide integration to the SmartThings ecosystem using Nest's Official API. </p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat_2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
 <h2>Author</h2>
 <ul>
 <li>@tonesto7</li>
@@ -355,9 +355,10 @@ It performs tests on the following:</p>
 <li>This app <strong><em>DOES NOT</em></strong> support Nest Cams <strong>currently</strong> mainly because I don't have any to test</li>
 <li>Each install of this SmartApp will only support <strong>One</strong> location/structure and the Thermostats and Protects within</li>
 <li>This version uses a new token which when we are ready to support it will allow access to Nest cams without needing to completely re-install everything. </li>
+<li><em>The token used with this application is using my 'Works for Nest' distribution <em>appId</em> and <em>secret</em>.  It's an older one which allows 1000 individual user logins before I will need to certify with Nest.</em>
+ <strong>I do not have the ability to see any of your data or who is even using the token</strong></li>
 <li>
-<p><em>The token used with this application is using my 'Works for Nest' distribution <em>appId</em> and <em>secret</em>.  It's an older one which allows 1000 individual user logins before I will need to certify with Nest.</em>
- <strong>I do not have the ability to see any of your data or who is even using the token</strong></p>
+<p>Devices that use html tile will not refresh with going out of the device and back in again.</p>
 </li>
 <li>
 <p><strong><em>There were a ton of changes to the core code so we can't guarantee there won't issue updating the code directly.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.</em></strong></p>
@@ -393,10 +394,22 @@ It performs tests on the following:</p>
 <li>Go to &quot;<strong>My SmartApps</strong>&quot; in the IDE</li>
 <li>Click on &quot;<strong>Settings</strong>&quot;</li>
 <li>Click on &quot;<strong>Add New Repository</strong>&quot;</li>
-<li>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></li>
-<li>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager</em></strong> </li>
-<li>Check the box next to <strong><em>nest-manager</em></strong> and <strong><em>nest-automations</em></strong> then click &quot;<strong>Execute Update</strong>&quot;</li>
-<li>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </li>
+<li>
+<p>Owner: <strong>tonesto7</strong>, Name: <strong>nest-manager</strong>, Branch: <strong>master</strong></p>
+<h5>Nest Manager</h5>
+</li>
+<li>
+<p>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager (master)</em></strong> </p>
+</li>
+<li>Check the box next to <strong><em>nest-manager</em></strong> and then check &quot;<strong>publish<strong>&quot; then click &quot;</strong>Execute Update</strong>&quot;</li>
+<li>
+<p>Click on the <strong><em>Nest Manager</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot; </p>
+<h5>Nest Automations</h5>
+</li>
+<li>
+<p>Under &quot;<strong>My SmartApps</strong>&quot; Click on &quot;<strong>Update from Repo</strong>&quot; and select <strong><em>nest-manager (master)</em></strong> </p>
+</li>
+<li>Check the box next to <strong><em>nest-automations</em></strong> and then check &quot;<strong>publish<strong>&quot; then click &quot;</strong>Execute Update</strong>&quot;</li>
 <li>
 <p>Click on the <strong><em>Nest Automations</em></strong> app link and select &quot;<strong>Publish<strong>&quot; and &quot;</strong>For me</strong>&quot;</p>
 <h3><em>You will also need to Enable OAuth under the Nest Manager app preferences in the IDE</em></h3>

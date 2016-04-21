@@ -7,7 +7,7 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat_2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/weather_device.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
@@ -62,6 +62,7 @@ __Latest Device Versions:__
  * This version uses a new token which when we are ready to support it will allow access to Nest cams without needing to completely re-install everything. 
  * _The token used with this application is using my 'Works for Nest' distribution *appId* and *secret*.  It's an older one which allows 1000 individual user logins before I will need to certify with Nest._
  __I do not have the ability to see any of your data or who is even using the token__
+ * Devices that use html tile will not refresh with going out of the device and back in again.
  
  *  ***There were a ton of changes to the core code so we can't guarantee there won't issue updating the code directly.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.***
 
@@ -99,12 +100,20 @@ If you don't already have Git Integration setup please visit __*[GitHub Integrat
  * Click on "**Settings**"
  * Click on "**Add New Repository**"
  * Owner: **tonesto7**, Name: **nest-manager**, Branch: **master**
- * Under "**My SmartApps**" Click on "**Update from Repo**" and select ***nest-manager*** 
- * Check the box next to ***nest-manager*** and ***nest-automations*** then click "**Execute Update**"
+ 
+	##### Nest Manager
+ 
+ * Under "**My SmartApps**" Click on "**Update from Repo**" and select ***nest-manager (master)*** 
+ * Check the box next to ***nest-manager*** and then check "**publish**" then click "**Execute Update**"
  * Click on the ***Nest Manager*** app link and select "**Publish**" and "**For me**" 
+ 
+    ##### Nest Automations
+ 
+ * Under "**My SmartApps**" Click on "**Update from Repo**" and select ***nest-manager (master)*** 
+ * Check the box next to ***nest-automations*** and then check "**publish**" then click "**Execute Update**"
  * Click on the ***Nest Automations*** app link and select "**Publish**" and "**For me**"
  
-	### *You will also need to Enable OAuth under the Nest Manager app preferences in the IDE*
+    ### *You will also need to Enable OAuth under the Nest Manager app preferences in the IDE*
 
 #### The Presence, Protect, Thermostat and Weather Device Handlers
  
