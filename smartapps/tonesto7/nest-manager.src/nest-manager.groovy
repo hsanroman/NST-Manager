@@ -1682,7 +1682,7 @@ def devNamePage() {
         def altName = (atomicState?.useAltNames) ? true : false
         def custName = (atomicState?.custLabelUsed) ? true : false
         section("Settings:") {
-            if(!atomicState?.isInstalled) {
+            if(atomicState?.isInstalled) {
                 paragraph "Changes to device names can only take affect as devices are added.  Existing devices can be edited in the device settings page for the device." 
             } else {
                 if(!useCustDevNames) { 
@@ -1719,7 +1719,7 @@ def devNamePage() {
                     } else {
                         dstr += "New Name: ${getNestTstatLabel(t.value)}"
                     }
-                    paragraph "${dstr}", image: getAppImg("thermostat_icon.png")
+                    paragraph "${dstr}", image: (atomicState?.custLabelUsed && !d) ? " " : getAppImg("thermostat_icon.png")
                     if(atomicState.custLabelUsed && !d) { 
                         input "tstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
                                 image: getAppImg("thermostat_icon.png")
@@ -1743,7 +1743,7 @@ def devNamePage() {
                     } else {
                         dstr += "New Name: ${getNestProtLabel(p.value)}"
                     }
-                    paragraph "${dstr}", image: getAppImg("protect_icon.png")
+                    paragraph "${dstr}", image: (atomicState.custLabelUsed && !d1) ? " " : getAppImg("protect_icon.png")
                     if(atomicState.custLabelUsed && !d1) {
                         input "prot_${p.value}_lbl", "text", title: "Custom name for ${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
                                 image: getAppImg("protect_icon.png")
@@ -1768,7 +1768,7 @@ def devNamePage() {
                 } else {
                     dstr += "New Name: ${p}"
                 }
-                paragraph "${dstr}", image: getAppImg("presence_icon.png")
+                paragraph "${dstr}", image: (atomicState.custLabelUsed && !d3) ? " " : getAppImg("presence_icon.png")
                 if(atomicState.custLabelUsed && !d3) {
                     input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: p, submitOnChange: true,
                             image: getAppImg("presence_icon.png")
@@ -1792,7 +1792,7 @@ def devNamePage() {
                 } else {
                     dstr += "New Name: ${w}"
                 }
-                paragraph "${dstr}", image: getAppImg("weather_icon.png")
+                paragraph "${dstr}", image: (atomicState.custLabelUsed && !d4) ? " " : getAppImg("weather_icon.png")
                 if(atomicState.custLabelUsed && !d4) {
                     input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: w, submitOnChange: true,
                             image: getAppImg("weather_icon.png")
