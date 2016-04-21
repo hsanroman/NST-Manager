@@ -85,7 +85,7 @@ def authPage() {
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     getAccessToken()
     preReqCheck()
-    deviceHandlerTest()
+    if(!atomicState?.isInstalled) { deviceHandlerTest() }
         
     if (!atomicState?.accessToken || !atomicState?.preReqTested || !atomicState?.devHandlersTested) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
