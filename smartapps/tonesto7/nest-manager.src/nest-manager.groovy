@@ -2104,14 +2104,14 @@ def toQueryString(Map m) {
 }
 
 def clientId() { 
-    if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" } 
-    //if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
+    //if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" } 
+    if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
     else { return appSettings.clientId }
 }
 
 def clientSecret() { 
-    if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" }
-    //if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" } //token with cam support
+    //if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" }
+    if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" } //token with cam support
     else { return appSettings.clientSecret }
 }
 
