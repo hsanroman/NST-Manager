@@ -1802,11 +1802,11 @@ def devNamePage() {
         if(!found) {
             paragraph "No Devices Selected"
         }
-        if(!atomicState?.isInstalled && atomicState?.custLabelUsed) {
+        /*if(!atomicState?.isInstalled && atomicState?.custLabelUsed) {
             section("Reset Device Names:") {
                 href "devNameResetPage", title: "Reset Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
             }
-        }
+        }*/
     }
 }
 
