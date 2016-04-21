@@ -572,8 +572,8 @@ private extSenEvtEval() {
 def getFanTempOk(senTemp, userTemp, curTemp, threshold) {
     def diff1 = (Math.abs(senTemp - userTemp)?.round(1) < threshold)
     def diff2 = (Math.abs(userTemp - curTemp)?.round(1) < threshold)
-    log.debug "getFanTempOk: ((Sensor Temp - Set Temp): ${Math.abs(senTemp - userTemp).round(1)} < Threshold Temp: ${threshold})) - ($diff1)"
-    log.debug "getFanTempOk: ((Set Temp - Current Temp): (${Math.abs(userTemp - curTemp).round(1)}) < Threshold Temp: ${threshold})) - ($diff2)"
+    log.debug "getFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - userTemp).round(1)}) < Threshold Temp: (${threshold}) ) - ($diff1)"
+    log.debug "getFanTempOk: ( Set Temp - Current Temp: (${Math.abs(userTemp - curTemp).round(1)}) < Threshold Temp: (${threshold}) ) - ($diff2)"
     return (diff1 && diff2) ? true : false
 }
 

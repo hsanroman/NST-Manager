@@ -32,21 +32,19 @@ __Latest Device Versions:__
 ## What's New
  * **NEW**: In-app HTML help pages
  * **NEW**: All new polling logic (Also switched to Cron scheduling)
- * **NEW**: Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest.
+ * **NEW**: Support for sending commands from multiple devices by using Queuing of commands to help prevent being rate-limited by Nest. (Thanks @E_sch)
  * **NEW**: Custom device naming during new device installs. 
- * **UPDATED**:Fresh nest device tile designs :smile: (These may cause some controversy and be asked to be reverted back)
- * **NEW**: Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary.
+ * **UPDATED**:Fresh device tile designs :smile: (These may cause some controversy and be asked to be reverted back) (On first load of the device it may take a few seconds to render the tiles)
+ * **NEW**: Weather Device that will be updated with the rest of the devices so using a polling app to update the weather is no longer necessary. (Thanks @desertblade)
  * **NEW**: Nest Automation Child (BETA) app as a place to turn thermostats off based on contacts open/closed, outside weather temps, and remote sensor support.   
- * **UPDATED**: Much more transparent install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.  
- *It performs tests on the following:* 
+ * **UPDATED**: Much more transparent error handling during the install process. The App will alert you in the app with a push notification and very clearly in the live logs in the IDE.  
+ 	It performs tests on the following:
+	 * Verify's that OAuth is enabled for the SmartApp
+	 * The Device Handlers are installed and published
+	 * That your SmartThings account contains a proper Zip-Code.
+	 * When uninstalling it will notify you that it can't remove the devices because they are being used by other apps/routines.  
  
-	 * Verify OAuth is enabled
-	 * That the device handlers are installed and published
-	 * That your ST account has proper Zip-Code associated with it.
-	 * It also notifies you when you are uninstalling that it can't remove the devices because they are being used by other apps/routines  
- 
- * There are way to many subtle changes to list.
- 
+ * There are also way to many subtle changes to list.
 
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
@@ -58,11 +56,14 @@ __Latest Device Versions:__
 #### [SmartThings IDE GitHub Integration Instructions](http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html)
 
 ## Things to Know
- * __This is still technically in BETA so you may experience issues!!!__
- * This app **DOES NOT** support Nest Cams and I don't have any to test
- * At this moment the app will only support **One** location and the Thermostats and Protects within
- * _The token used with this application is using my 'Works for Nest' distribution *appId* and *secret*.  It's an older one which allows 1000 user before I will need to certify with Nest._
-__I do not have the ability to see any of your data or who is even using the token__
+ * __This is still technically in still in post-BETA so you may experience issues!!!__
+ * This app ***DOES NOT*** support Nest Cams **currently** mainly because I don't have any to test
+ * Each install of this SmartApp will only support **One** location/structure and the Thermostats and Protects within
+ * This version uses a new token which when we are ready to support it will allow access to Nest cams without needing to completely re-install everything. 
+ * _The token used with this application is using my 'Works for Nest' distribution *appId* and *secret*.  It's an older one which allows 1000 individual user logins before I will need to certify with Nest._
+ __I do not have the ability to see any of your data or who is even using the token__
+ 
+ *  ***There were a ton of changes to the core code so we can't guarantee there won't issue updating the code directly.  Once you update it is important that you open the smart app and press done to clean up old variables and switch to the new Cron scheduler.  If you have any issues after that I suggest you remove the old devices from any apps or routines they are under. Then remove the nest manager smartapp and start over.***
 
 
 ## Advantages

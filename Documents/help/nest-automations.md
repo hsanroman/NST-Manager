@@ -4,7 +4,7 @@
 * Automation Allow you to create triggers that perform function for your heating and cooling comforts
 
 ## 1. Remote Sensors
-* Not Available Yet
+* No Documentation Available Yet.  I will update this once I finalize the app. 
 
 
 ## 2. Door/Window Contact Watcher
