@@ -1,7 +1,7 @@
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
-|    Author: Anthony S. (@tonesto7), 														|
-|	 Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                  				|
+|    Author: Anthony S. (@tonesto7),                                                        |
+|    Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                                 |
 |                                                                                           |
 |    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |*******************************************************************************************|
@@ -180,7 +180,8 @@ def authPage() {
                                 image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
-                    if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
+                    //if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
+                    if((thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
                     }
                 }
@@ -1679,35 +1680,39 @@ def devNamePage() {
         section("Settings:") {
             def altNameDef = (atomicState?.useAltNames) ? true : false
             def custNameDef = (atomicState?.custLabelUsed) ? true : false
-            if(!atomicState?.isInstalled) {
-                input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
-                input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
-            } else {
-                paragraph "Changes to device label names on this page only take affect as devices are added..." 
+            input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altNameDef, submitOnChange: true, image: "" )
+            input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custNameDef, submitOnChange: true, image: "" )
+            if(atomicState?.isInstalled) {
+                paragraph "Changes to device names can only take affect as devices are added.  Existing devices can be edited in the device settings page for the device." 
             }
-            paragraph "Current Device Handler Names"
+            if(atomicState?.custLabelUsed) {
+                paragraph "Custom Labels Are Active" 
+            }
+            paragraph title:"Current Device Handler Names", ""
         }
+
         atomicState.useAltNames = useAltNames ? true : false
         atomicState.custLabelUsed = useCustDevNames ? true : false
-        
-        // I created a method to return a list of the installed deviceIds  So we can use the following.
 
         def found = false
         if(atomicState?.thermostats) {
             section ("Thermostat Device Names:") {
                 atomicState?.thermostats?.each { t ->
-                    //if(atomicState.custLabelUsed && (!atomicState?.isInstalled || !newDeviceId in getInstalledDevIds())) {  <<<<<<<<<< I'm just not sure how we should flag a device as new
-                    if(atomicState.custLabelUsed && !atomicState?.isInstalled) { 
-                        input "tstat_${t.value}_lbl", "text", title: "${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
-                                image: getAppImg("thermostat_icon.png")
-                    } 
-                    else if(atomicState?.isInstalled) {
-                        paragraph "${getNestTstatLabel("${t.value}")}"
-                        found = true
+                    found = true
+                    def d = getChildDevice(getNestTstatDni(t))
+                    def dstr = ""
+                    if(d) {
+                        dstr += "Found existing device named:\n   ${d.displayName}"
+                        if (d.displayName != getNestTstatLabel(t.value)) {
+                            dstr += "\nName does not match settings.\nSettings name would be:\n   ${getNestTstatLabel(t.value)}"
+                        } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
                     } else {
-                        if("${settings?."tstat_${t.value}_lbl"}" != getNestTstatLabel("${t.value}")) {
-                            input("tstat_${t.value}_lbl", "text", title: "${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true)
-                        }
+                        dstr += "New Device Name:\n  ${getNestTstatLabel(t.value)}"
+                    }
+                    paragraph "${dstr}"
+                    if(atomicState.custLabelUsed && !d) { 
+                        input "tstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
+                                image: getAppImg("thermostat_icon.png")
                     }
                 }
             }
@@ -1715,61 +1720,116 @@ def devNamePage() {
         if(atomicState?.protects) {
             section ("Protect Device Names:") {
                 atomicState?.protects?.each { p ->
-                    if(atomicState.custLabelUsed && !atomicState?.isInstalled) {
-                        input "prot_${p.value}_lbl", "text", title: "${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
-                                image: getAppImg("protect_icon.png")
-                    }
-                    else if(atomicState?.isInstalled) {
-                        paragraph "${getNestProtLabel("${p.value}")}"
-                        found = true
+                    found = true
+                    def dstr = ""
+                    def d1 = getChildDevice(getNestProtDni(p))
+                    if(d1) {
+                        dstr += "Found existing device named:\n   ${d1.displayName}"
+                        if (d1.displayName != getNestProtLabel(p.value)) {
+                            dstr += "\nName does not match settings.\nSettings name would be:\n   ${getNestProtLabel(p.value)}"
+                        } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
                     } else {
-                        if("${settings?."prot_${p.value}_lbl"}" != getNestProtLabel("${p.value}")) {
-                            input("prot_${p.value}_lbl", "text", title: "${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true)
-                        }
+                        dstr += "New Device Name:\n  ${getNestProtLabel(p.value)}"
+                    }
+                    paragraph "${dstr}"
+                    if(atomicState.custLabelUsed && !d1) {
+                        input "prot_${p.value}_lbl", "text", title: "Custom name for ${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
+                                image: getAppImg("protect_icon.png")
                     }
                 }
             }
         }
         if(atomicState?.presDevice) {
             section ("Presence Device Name:") {
+                found = true
                 def p = getNestPresLabel()
-                if(atomicState.custLabelUsed && !atomicState?.isInstalled) {
-                    input "presDev_lbl", "text", title: "Nest Presence Device", defaultValue: p, submitOnChange: true,
-                            image: getAppImg("presence_icon.png")
-                }
-                else if(atomicState?.isInstalled) {
-                    paragraph "${p}"
-                    found = true
+                def dni = getNestPresId()
+                def d3 = getChildDevice(dni)
+                def dstr = ""
+                if(d3) {
+                    dstr += "Found existing device named:\n   ${d3.displayName}"
+                    if (d3.displayName != p) {
+                        dstr += "\nName does not match settings.\nSettings name would be:\n   ${p}"
+                    } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
                 } else {
-                    if (settings?.presDev_lbl != p ) {
-                        input(name:"presDev_lbl", type:"text", title: "Nest Presence Device", defaultValue: p, submitOnChange: true)
-                    }
+                    dstr += "New Device Name:\n  ${p}"
+                }
+                paragraph "${dstr}"
+                if(atomicState.custLabelUsed && !d3) {
+                    input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: p, submitOnChange: true,
+                            image: getAppImg("presence_icon.png")
                 }
             }
         }
         if(atomicState?.weatherDevice) {
             section ("Weather Device Name:") {
+                found = true
                 def w = getNestWeatherLabel()
-                if(atomicState.custLabelUsed && !atomicState?.isInstalled) {
-                    input "weathDev_lbl", "text", title: "Nest Weather Device", defaultValue: w, submitOnChange: true,
-                            image: getAppImg("weather_icon.png")
-                }
-                else if(atomicState?.isInstalled) {
-                    paragraph "${w}"
-                    found = true
+                def dni = getNestWeatherId()
+                def d4 = getChildDevice(dni)
+                def dstr = ""
+                if(d4) {
+                    dstr += "Found existing device named:\n   ${d4.displayName}"
+                    if (d4.displayName != w) {
+                        dstr += "\nName does not match settings.\nSettings name would be:\n   ${w}"
+                    } else if (atomicState?.custLabelUsed) { dstr += "\n   Existing device name cannot be customized" } else { dstr += "\n      Matches settings" }
                 } else {
-                    if (settings?.weathDev_lbl != w) {
-                        input(name:"weathDev_lbl", type:"text", title: "Nest Weather Device", defaultValue: w, submitOnChange: true)
-                    }
+                    dstr += "New Device Name:\n  ${w}"
+                }
+                paragraph "${dstr}"
+                if(atomicState.custLabelUsed && !d4) {
+                    input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: w, submitOnChange: true,
+                            image: getAppImg("weather_icon.png")
                 }
             }
         }
         if(!found) {
             paragraph "No Devices Selected"
         }
-        if(atomicState?.custLabelUsed) {
-            section("") {
-                paragraph "Custom Label's Are Active..." 
+
+// This portion below could be another page (it is advanced)
+// it should not be combined with above, as below is logically a clear function for previous settings that are not in use now.
+
+        if(!atomicState.custLabelUsed && found) {
+            section ("Reset Custom Name Settings") {
+                paragraph "This section allows reset of previously used Custom names.  These settings are optional and will not change already created devices."
+            }
+            if(atomicState?.thermostats) {
+                section ("Thermostat Device Names:") {
+                    atomicState?.thermostats?.each { t ->
+                        def ccc = settings?."tstat_${t.value}_lbl"
+                      //log.trace "t.value: ${t.value}  getNestTstatLabel: ${getNestTstatLabel(t.value)}  settings.tstat_${t.value}_lbl: ${ccc}"
+                        if(ccc && ccc != getNestTstatLabel(t.value) ) {
+                            input("tstat_${t.value}_lbl", "text", title: "Reset Custom Name for ${t.value}", required: false, defaultValue: getNestTstatLabel(t.value), submitOnChange: true)
+                        } else { paragraph "Device name matches custom settings:\n ${getNestTstatLabel(t.value)}" }
+                    }
+                }
+            }
+            if(atomicState?.protects) {
+                section ("Protect Device Names:") {
+                    atomicState?.protects?.each { p ->
+                        def bbb = settings?."prot_${p.value}_lbl"
+                        if(bbb && bbb != getNestProtLabel(p.value)) {
+                            input("prot_${p.value}_lbl", "text", title: "Reset Custom Name for ${p.value}", required: false, defaultValue: getNestProtLabel(p.value), submitOnChange: true)
+                        } else { paragraph "Device name matches custom settings:\n ${getNestProtLabel(p.value)}" }
+                    }
+                }
+            }
+            if(atomicState?.presDevice) {
+                section ("Presence Device Name:") {
+                    def p = getNestPresLabel()
+                    if (settings?.presDev_lbl && settings?.presDev_lbl != p ) {
+                        input(name:"presDev_lbl", type:"text", title: "Reset Custom Name for Nest Presence Device", required: false, defaultValue: p, submitOnChange: true)
+                    } else { paragraph "Device name matches custom settings:\n ${p}" }
+                }
+            }
+            if(atomicState?.weatherDevice) {
+                section ("Weather Device Name:") {
+                    def w = getNestWeatherLabel()
+                    if (settings?.weathDev_lbl && settings?.weathDev_lbl != w) {
+                        input(name:"weathDev_lbl", type:"text", title: "Reset Custom Name for Nest Weather Device", required: false, defaultValue: w, submitOnChange: true)
+                    } else { paragraph "Device name matches custom settings:\n ${w}" }
+                }
             }
         }
     }
@@ -1845,19 +1905,6 @@ def getAccessToken() {
         sendPush(msg)
         LogAction("getAccessToken Exception | $msg", "warn", true)
         return false 
-    }
-}
-
-def getInstalledDevIds() {
-    def devs = getAllChildDevices()
-    def vals = []
-    if(devs) {
-        devs?.each { d ->
-            vals << d?.deviceNetworkId.toString()
-        }
-        return vals
-    } else {
-        return null
     }
 }
 
