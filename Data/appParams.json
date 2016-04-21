@@ -5,7 +5,7 @@
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "2.0.0"
+      "ver": "1.1.2"
     },
     "autoapp": {
       "type": "rel",
@@ -13,15 +13,15 @@
     },
     "thermostat": {
       "type": "rel",
-      "ver": "2.0.0"
+      "ver": "1.1.4"
     },
     "protect": {
       "type": "rel",
-      "ver": "2.0.0"
+      "ver": "1.1.1"
     },
     "presence": {
       "type": "rel",
-      "ver": "2.0.0"
+      "ver": "1.1.1"
     },
     "weather": {
       "type": "rel",
