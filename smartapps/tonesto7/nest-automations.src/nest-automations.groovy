@@ -26,10 +26,10 @@ definition(
     singleInstance: true)
 
 def appVersion() { "1.0.0" }
-def appVerDate() { "4-11-2016" }
+def appVerDate() { "4-21-2016" }
 def appVerInfo() {
     
-    "V1.0.0 (Apr 11th, 2016)\n" +
+    "V1.0.0 (Apr 21st, 2016)\n" +
     "Added... Everything is new...\n\n" +
     "------------------------------------------------"
 }
@@ -54,7 +54,7 @@ def mainPage() {
         section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
             def senDayDesc = (extSensorDay) ? ("Day Sensor${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}") : ""
             def senNightDesc = (extSensorNight) ? ("\nNight Sensor${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}") : ""
-            def senEnabDesc = !state?.extSenEnabled ? "External Sensor Disabled...\n" : ""
+            def senEnabDesc = state?.extSenEnabled ? "" : "External Sensor Disabled...\n"
             def motInUse = extMotionSensors ? ("\nMotion Events: ${!extMotionSensorModes ? "Active" : (isInMode(extMotionSensorModes) ? "Active(Mode Ok)" : "Not Active(!Mode)")}") : ""
             def senModes = extSenModes ? "\nMode Filters Active" : ""
             def senSetTemps = (extSenHeatTemp && extSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
@@ -182,11 +182,10 @@ def extSensorPage() {
         def locMode = location?.mode
         def setTempsReq = (extSenRuleType in [ "Heat", "Cool", "Heat_Cool", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
         section("Select the Allowed (Rule) Action Type:") {
-            if(!extSenRuleType) { paragraph "Rule Actions will be used to determine what actions taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
+            if(!extSenRuleType) { paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
                         " out the temperatures in your home in an attempt to make it more comfortable..."
             }
-            input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true,
-                    image: imgIcon("rule_icon.png"))
+            input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true, image: imgIcon("rule_icon.png"))
         }
         if(extSenRuleType) {
             section("Choose a Thermostat... ") {
@@ -195,12 +194,11 @@ def extSensorPage() {
                     paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: imgIcon("error_icon.png")
                 }
                 if(extSenTstat) { 
-                	setTstatCapabilities()
+                    setTstatCapabilities()
                     paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}", image: " "
-                    input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false,
-                            image: imgIcon("thermostat_icon.png")
+                    input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: imgIcon("thermostat_icon.png")
                     if(extSenTstatsMirror && !dupTstat) { 
-                        extSenTstatsMirror.each { t ->
+                        extSenTstatsMirror?.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${state?.tempUnit}", image: " "
                         }
                     }
@@ -259,42 +257,37 @@ def extSensorPage() {
                 if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                     section("Fan Settings:") {
                         paragraph "The Fan Runtime can be adjusted under your nest account.  The Default Time is 15 minutes.", image: " "
-                        input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true,
-                                image: imgIcon("delay_time_icon.png")
+                        input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
                     }
                 }
                 section("(Optional) Use Motion Sensors to Evaluate Temps:") {
-                    input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true,
-                            image: imgIcon("motion_icon.png")
+                    input "extMotionSensors", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: imgIcon("motion_icon.png")
                     if(extMotionSensors) {
                         paragraph "Motion State: (${isMotionActive(extMotionSensors) ? "Active" : "Not Active"})", image: " "
                         input "extMotionSensorModes", "mode", title: "Only evaluate Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: imgIcon("mode_icon.png")
-                        input "extMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true,
-                                image: imgIcon("delay_time_icon.png")
+                        input "extMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
                     }
                 }
                 section ("Settings:") {
-                    input "extTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true,
-                            image: imgIcon("temp_icon.png")
+                    input "extTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: imgIcon("temp_icon.png")
                     if(extSenRuleType != "Circ") {
-                        input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true,
-                            image: imgIcon("temp_icon.png")
+                        input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: imgIcon("temp_icon.png")
                     }
                     input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
                 }
             }
-            if (isExtSenConfigured()) {
-                section("Enable or Disable Remote Sensor Once Configured...") {
-                    input (name: "extSenEnabled", type: "bool", title: "Enable Remote Sensor Automation?", required: false, defaultValue: true, submitOnChange: true, image: imgIcon("switch_icon.png"))
-                    state?.extSenEnabled = extSenEnabled ? true : false
-                }
-            } else { state?.extSenEnabled = false }
         }
+        if (isExtSenConfigured()) {
+            section("Enable or Disable Remote Sensor Once Configured...") {
+                input (name: "extSenEnabled", type: "bool", title: "Enable Remote Sensor Automation?", required: false, defaultValue: true, submitOnChange: true, image: imgIcon("switch_icon.png"))
+                state?.extSenEnabled = extSenEnabled ? true : false
+            }
+        } else { state?.extSenEnabled = false }
     }
 }
 
 def isExtSenConfigured() {
-	def devOk = ((extSensorDay || extSensorNight) && extSenTstat) ? true : false
+    def devOk = ((extSensorDay || extSensorNight) && extSenTstat) ? true : false
     def nightOk = (!extSensorNight && extSensorDay) || (extSensorNight && (extSenRuleType == "Circ" && ((!extSenHeatTempNight || !extSenCoolTempNight) || (extSenHeatTempNight && extSenCoolTempNight)))) ? true : false
     def dayOk = (extSensorDay && (extSensorDay && !extSensorNight) || (extSensorDay && (extSenRuleType == "Circ" && ((!extSenHeatTempDay || !extSenCoolTempDay) || (extSenHeatTempDay && extSenCoolTempDay))))) ? true : false
     //log.debug "devOk: $devOk | nightOk: $nightOk | dayOk: $dayOk"
@@ -374,7 +367,7 @@ def getDeviceTempAvg(items) {
     if(!items) { return tempVal }
     else if(items?.size() > 1) {
         tmpAvg = items*.currentTemperature
-        if(tmpAvg && tmpAvg.size() > 1) { tempVal = (tmpAvg.sum().toDouble() / tmpAvg.size().toDouble()).round(1) }
+        if(tmpAvg && tmpAvg?.size() > 1) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
     } 
     else { tempVal = getDeviceTemp(items) }
     return tempVal.toDouble()
@@ -420,8 +413,8 @@ def extSenShowTempsPage() {
     dynamicPage(name: "extSenShowTempsPage", uninstall: false) {
         if(extSensorDay) { 
             section("Day Sensor Temps:") {
-                extSensorDay.each { t ->
-                    paragraph "${t.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                extSensorDay?.each { t ->
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
                 }
             }
             section("Average Temp of Day Sensors:") {
@@ -430,8 +423,8 @@ def extSenShowTempsPage() {
         }
         if(extSensorNight) { 
             section("Night Sensor Temps:") {
-                extSensorNight.each { t ->
-                    paragraph "${t.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                extSensorNight?.each { t ->
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
                 }
             }
             section("Average Temp of Night Sensors:") {
@@ -652,32 +645,29 @@ def getSenHeatSetpointTemp() {
 }
 
 def setTstatCapabilities() {
-	try {
-    	def canCool = true
-    	def canHeat = true
-    	def hasFan = true
-    	if(extSenTstat) { 
+    try {
+        def canCool = true
+        def canHeat = true
+        def hasFan = true
+        if(extSenTstat) { 
             canCool = (extSenTstat?.currentCanCool == "true") ? true : false
             canHeat = (extSenTstat?.currentCanHeat == "true") ? true : false
             hasFan = (extSenTstat?.currentHasFan == "true") ? true : false
-    	}
+        }
         atomicState?.extSenTstatCanCool = canCool
-    	atomicState?.extSenTstatCanHeat = canHeat
-    	atomicState?.extSenTstatHasFan = hasFan
-        //log.debug "hasFan: $hasFan | canCool: $canCool | canHeat: $canHeat"
-   	} catch (e) { 
-        //log.debug "extSenRuleEnum Exception: $e"
-   	}
+        atomicState?.extSenTstatCanHeat = canHeat
+        atomicState?.extSenTstatHasFan = hasFan
+    } catch (e) { }
 }
 
 def extSenRuleEnum() {
     def canCool = atomicState?.extSenTstatCanCool ? true : false
     def canHeat = atomicState?.extSenTstatCanHeat ? true : false
     def hasFan = atomicState?.extSenTstatHasFan ? true : false
-	def vals = []
+    def vals = []
     
-	//log.debug "extSenRuleEnum -- hasFan: $hasFan (${atomicState?.extSenTstatHasFan} | canCool: $canCool (${atomicState?.extSenTstatCanCool} | canHeat: $canHeat (${atomicState?.extSenTstatCanHeat}"
-	
+    //log.debug "extSenRuleEnum -- hasFan: $hasFan (${atomicState?.extSenTstatHasFan} | canCool: $canCool (${atomicState?.extSenTstatCanCool} | canHeat: $canHeat (${atomicState?.extSenTstatCanHeat}"
+    
     if (canCool && !canHeat && hasFan) { vals = ["Cool":"Cool", "Circ":"Circulate(Fan)", "Cool_Circ":"Cool/Circulate(Fan)"] }
     else if (canCool && !canHeat && !hasFan) { vals = ["Cool":"Cool"] }
     else if (!canCool && canHeat && hasFan) { vals = ["Circ":"Circulate(Fan)", "Heat":"Heat", "Heat_Circ":"Heat/Circulate(Fan)"] }
