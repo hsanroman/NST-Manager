@@ -564,7 +564,7 @@ def getInfoHtml() {
             <style type="text/css">
                  .flat-table {
                   width: 100%;
-                  font-family: 'Lucida Grande';
+                  font-family: 'San Francisco', 'Roboto', 'Arial';
                   src: url(https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Fonts/lucidagrande.ttf);
                   border: none;
                   border-radius: 3px;
