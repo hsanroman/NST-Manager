@@ -78,7 +78,8 @@ def mainPage() {
         section("Set Nest Presence Based on ST Modes:") {
             def nModeDesc = (!modePresSensor && (awayModes || homeModes)) ? "${homeModes ? "Home Modes: $homeModes" : ""}${awayModes ? "\nAway Modes: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
             def nPresDesc = modePresSensor ? "Presence Sensor Active...\nPresence is: ${modePresSensor?.currentPresence}" : ""
-            href "modePresPage", title: "Mode Automations", description: (modePresSensor ? nPresDesc : nModeDesc), image: imgIcon("mode_automation_icon.png")
+            def nPresDelayDesc = useModePresSensorDelay ? "Delay: ${getLongTimeEnumLabel(modePresSensorDelayVal)}" : "" 
+            href "modePresPage", title: "Mode Automations", description: (modePresSensor ? "${nPresDesc}\n${nPresDelayDesc}" : nModeDesc), image: imgIcon("mode_automation_icon.png")
         }
      }
 }
@@ -1082,8 +1083,13 @@ def modePresPage() {
         section("Set Nest Presence Via Presence Sensor:") {
             input "modePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: false, submitOnChange: true, required: false,
                     image: imgIcon("presence_icon.png")
-            def presDesc = modePresSensor ? "Presence State: ${modePresSensor.currentPresence}" : ""
-            paragraph "$presDesc", image: " "
+            if(modePresSensor) {
+                paragraph "Presence State: ${modePresSensor.currentPresence}", image: " "
+                input (name: "useModePresSensorDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("switch_icon.png"))
+                if(useModePresSensorDelay) {
+                    input "modePresSensorDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
+                }
+            }
         }
     }
 }
@@ -1096,13 +1102,25 @@ def modeWatcher(evt) {
 }
 
 def modePresenceEvt(evt) {
-    log.debug "modePresenceEvt: $evt"
-    if("present" == evt.value) { 
-        LogAction("Presence ($modePresSensor) is Present setting Nest to 'Home'", "info", true)
-        parent?.setStructureAway(null, false) 
+    log.debug "modePresenceEvt: $evt?.value"
+    state?.modePresenceSensorState = evt?.value.toString()
+    
+    if(useModePresSensorDelay) {
+        runIn(modePresSensorDelayVal.toInteger(), "setNestModeWithPresence", [overwrite: true])
     } else {
-        LogAction("Presence ($modePresSensor) is Not Present setting Nest to 'Away'", "info", true)
-        parent?.setStructureAway(null, true) 
+        setNestModeWithPresence()
+    }
+}
+
+def setNestModeWithPresence() {
+    if(modePresSensor) {
+        if(modePresSensor?.currentPresence == "present") {
+            LogAction("Presence ($modePresSensor) is Present setting Nest to 'Home'", "info", true)
+            parent?.setStructureAway(null, false) 
+        } else {
+            LogAction("Presence ($modePresSensor) is Not Present setting Nest to 'Away'", "info", true)
+            parent?.setStructureAway(null, true) 
+        }
     }
 }
 
@@ -1114,9 +1132,9 @@ def checkNestPresMode() {
                 LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
                 parent?.setStructureAway(null, false) 
             }
-         }  
+        }  
     } 
-       if (awayModes) {
+    if (awayModes) {
         awayModes?.each { m ->
             if(m?.toString() == curMode) { 
                 LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
@@ -1132,6 +1150,18 @@ def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 
 /************************************************************************************************
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
+
+def getLongTimeEnumLabel(val) {
+    def result = "unknown"
+    if(val) {
+        longTimeEnum().each { item ->
+            if(item?.key.toString() == val?.toString()) { 
+                result = item?.value
+            }
+        }
+    } 
+    return result
+}
 
 def LogTrace(msg) { if(parent?.advAppDebug) { Logger(msg, "trace") } }
 
