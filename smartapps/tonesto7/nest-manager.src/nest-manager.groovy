@@ -1859,7 +1859,9 @@ def devNameResetPage() {
 
 def deviceHandlerTest() {
     //log.trace "deviceHandlerTest()"
+    atomicState.devHandlersTested = true
     return true
+    
     if(atomicState?.devHandlersTested || atomicState?.isInstalled || (atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice)) { 
         atomicState.devHandlersTested = true
         return true 
