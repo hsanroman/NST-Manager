@@ -1545,7 +1545,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
     def devt = appDevName()
-    def wLbl = atomicState?.custLocStr.isNumber() ? atomicState?.custLocStr.toString() : "${location?.zipCode}"
+    def wLbl = atomicState?.custLocStr ? atomicState?.custLocStr.toString() : "${location?.zipCode}"
     def defName = "Nest Weather${devt} (${wLbl})"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
     if(atomicState?.custLabelUsed) {
