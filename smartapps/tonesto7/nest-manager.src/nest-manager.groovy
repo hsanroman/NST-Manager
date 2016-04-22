@@ -2671,9 +2671,9 @@ def infoPage () {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
         }
         section("Help and Instructions:") {
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html", style:"embedded", required:false, title:"Readme File", 
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html", style:"embedded", required:false, title:"Readme File", 
                 description:"View the Projects Readme File...", image: getAppImg("readme_icon.png")
-            href url:"https://cdn.rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
                 description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
         section("Created by:") {
