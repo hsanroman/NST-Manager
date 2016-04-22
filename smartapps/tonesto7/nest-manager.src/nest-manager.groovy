@@ -174,11 +174,9 @@ def authPage() {
                                 image: getAppImg("protect_icon.png")) 
                     }
                     atomicState.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
-                                image: getAppImg("presence_icon.png")) 
+                    input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png")) 
                     atomicState.presDevice = presDevice ? true : false
-                    input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, 
-                                image: getAppImg("weather_icon.png")) 
+                    input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {

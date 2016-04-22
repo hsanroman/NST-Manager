@@ -76,8 +76,9 @@ def mainPage() {
             href "extTempsPage", title: "Turn off based on External Temps...", description: desc, image: imgIcon("external_temp_icon.png")
         }
         section("Set Nest Presence Based on ST Modes:") {
-            def presDesc = (awayModes || homeModes) ? "${homeModes ? "Home Modes: $homeModes" : ""}${awayModes ? "\nAway Modes: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
-            href "modePresPage", title: "Mode Automations", description: presDesc, image: imgIcon("mode_automation_icon.png")
+            def nModeDesc = (!modePresSensor && (awayModes || homeModes)) ? "${homeModes ? "Home Modes: $homeModes" : ""}${awayModes ? "\nAway Modes: $awayModes" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+            def nPresDesc = modePresSensor ? "Presence Sensor Active...\nPresence is: ${modePresSensor?.currentPresence}" : ""
+            href "modePresPage", title: "Mode Automations", description: (modePresSensor ? nPresDesc : nModeDesc), image: imgIcon("mode_automation_icon.png")
         }
      }
 }
@@ -147,7 +148,8 @@ def subscriber() {
         extSenEvtEval()
     }
     
-    if(homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
+    if (homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
+    if (modePresSensor) { subscribe(modePresSensor, "presence", modePresenceEvt) }
     if(wcContacts) { subscribe(wcContacts, "contact", wcContactEvt) }
     if(!exUseWeather && exTemp) { subscribe(exTemp, "temperature", exTempEvt, [filterEvents: false]) }
 }
@@ -843,48 +845,6 @@ def wcContactEvt(evt) {
 }
 
 /********************************************************************************  
-|                			MODE AUTOMATION CODE	     						|
-*********************************************************************************/
-def modePresPage() {
-    dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
-        section("Change Nest Presence with ST Modes:") {
-            input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
-                    image: imgIcon("mode_home_icon.png")
-            input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
-                    image: imgIcon("mode_away_icon.png")
-        }
-    }
-}
-
-def modeWatcher(evt) { 
-    log.debug "modeWatcher: $evt.value"
-    checkNestPresMode() 
-}
-
-def checkNestPresMode() { 
-    def curMode = location.mode.toString()
-    if (homeModes) {
-        homeModes?.each { m ->
-            if(m?.toString() == curMode) { 
-                LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
-                parent?.setStructureAway(null, false) 
-            }
-         }  
-    } 
-       if (awayModes) {
-        awayModes?.each { m ->
-            if(m?.toString() == curMode) { 
-                LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
-                parent?.setStructureAway(null, true) 
-            }
-        }
-    }
-}    
-
-def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
-
-
-/********************************************************************************  
 |                			External Temp AUTOMATION CODE	     				|
 *********************************************************************************/
 
@@ -1104,6 +1064,69 @@ def setTstatMode(tstat, mode) {
         return false
     }
 }
+
+
+/********************************************************************************  
+|                			MODE AUTOMATION CODE	     						|
+*********************************************************************************/
+def modePresPage() {
+    dynamicPage(name: "modePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false) {
+        if(!modePresSensor) {
+            section("Set Nest Presence with ST Modes:") {
+                input "homeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: false,
+                        image: imgIcon("mode_home_icon.png")
+                input "awayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: false,
+                        image: imgIcon("mode_away_icon.png")
+            }
+        }
+        section("Set Nest Presence Via Presence Sensor:") {
+            input "modePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: false, submitOnChange: true, required: false,
+                    image: imgIcon("presence_icon.png")
+            def presDesc = modePresSensor ? "Presence State: ${modePresSensor.currentPresence}" : ""
+            paragraph "$presDesc", image: " "
+        }
+    }
+}
+
+def modeWatcher(evt) { 
+    log.debug "modeWatcher: $evt"
+    if(!modePresSensor) {
+        checkNestPresMode()
+    } 
+}
+
+def modePresenceEvt(evt) {
+    log.debug "modePresenceEvt: $evt"
+    if("present" == evt.value) { 
+        LogAction("Presence ($modePresSensor) is Present setting Nest to 'Home'", "info", true)
+        parent?.setStructureAway(null, false) 
+    } else {
+        LogAction("Presence ($modePresSensor) is Not Present setting Nest to 'Away'", "info", true)
+        parent?.setStructureAway(null, true) 
+    }
+}
+
+def checkNestPresMode() { 
+    def curMode = location.mode.toString()
+    if (homeModes) {
+        homeModes?.each { m ->
+            if(m?.toString() == curMode) { 
+                LogAction("The mode ($location.mode) has triggered Nest 'Home'", "info", true)
+                parent?.setStructureAway(null, false) 
+            }
+         }  
+    } 
+       if (awayModes) {
+        awayModes?.each { m ->
+            if(m?.toString() == curMode) { 
+                LogAction("The mode ($location.mode) has triggered Nest 'Away'", "info", true)
+                parent?.setStructureAway(null, true) 
+            }
+        }
+    }
+}    
+
+def getNestToStModeDelay() { return (nestToStModeDelay ? nestToStModeDelay * 60 : 60) }
 
 
 /************************************************************************************************
