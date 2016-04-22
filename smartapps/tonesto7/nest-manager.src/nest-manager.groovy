@@ -1080,9 +1080,9 @@ def missedPollNotify() {
 def newUpdNotify() {
     try {
         def appUpd = isAppUpdateAvail()
-        def pUpd = isProtUpdateAvail()
-        def prUpd = isPresUpdateAvail()
-        def tUpd = isTstatUpdateAvail()
+        if(atomicState?.protects) { def pUpd = isProtUpdateAvail() }
+        if(atomicState?.presDevice) { def prUpd = isPresUpdateAvail() }
+        if(atomicState?.thermostats) { def tUpd = isTstatUpdateAvail() }
         if(atomicState?.weatherDevice) { def wUpd = isWeathUpdateAvail() }
         if(atomicState?.autoAppInstalled) { def autoUpd = isAutoAppUpdateAvail() }
         if((appUpd || pUpd || prUpd || tUpd || autoUpd || wUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
