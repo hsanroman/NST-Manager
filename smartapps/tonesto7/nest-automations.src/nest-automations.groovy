@@ -181,12 +181,17 @@ def extSensorPage() {
         def dupTstat = extSenTstatDuplication()
         def tStatHeatSp = getTstatSetpoint(extSenTstat, "heat")
         def tStatCoolSp = getTstatSetpoint(extSenTstat, "cool")
+        def tStatMode = extSenTstat ? extSenTstat?.currentThermostatMode : "unknown"
         def tStatTemp = "${getDeviceTemp(extSenTstat)}°${state?.tempUnit}"
         def locMode = location?.mode
-        def setTempsReq = (extSenRuleType in [ "Heat", "Cool", "Heat_Cool", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
+        
+        def coolTempsReq = (extSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
+        def heatTempsReq = (extSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false
+        
         section("Select the Allowed (Rule) Action Type:") {
-            if(!extSenRuleType) { paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
-                        " out the temperatures in your home in an attempt to make it more comfortable..."
+            if(!extSenRuleType) { 
+            	paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
+                          " out the temperatures in your home in an attempt to make it more comfortable...", image: imgIcon("instruct_icon.png")
             }
             input(name: "extSenRuleType", type: "enum", title: "(Rule) Action Type", options: extSenRuleEnum(), required: true, submitOnChange: true, image: imgIcon("rule_icon.png"))
         }
@@ -198,7 +203,7 @@ def extSensorPage() {
                 }
                 if(extSenTstat) { 
                     setTstatCapabilities()
-                    paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}", image: " "
+                    paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}\nCurrent Mode: $tStatMode", image: imgIcon("instruct_icon.png")
                     input "extSenTstatsMirror", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: imgIcon("thermostat_icon.png")
                     if(extSenTstatsMirror && !dupTstat) { 
                         extSenTstatsMirror?.each { t ->
@@ -207,59 +212,54 @@ def extSensorPage() {
                     }
                 }
             }
-            section("Choose Temperature Sensor(s) to use instead of the Thermostat's...") {
+            def dSenStr = !extSensorNight ? "Remote" : "Daytime"
+            section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
                 def dSenReq = (((extSensorNight && !extSensorDay) || !extSensorNight) && extSenTstat) ? true : false
-                input "extSensorDay", "capability.temperatureMeasurement", title: "Default (Daytime) Temp Sensors...", submitOnChange: true, required: dSenReq,
+                input "extSensorDay", "capability.temperatureMeasurement", title: "$dSenStr Temp Sensors", submitOnChange: true, required: dSenReq,
                         multiple: true, image: imgIcon("temperature_icon.png")
                 if(extSensorDay) {
-                    if(extSenModeDuplication()) {
-                        paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: imgIcon("error_icon.png")
-                    }
-                    if(!extSenUseSunAsMode) {
-                        input "extSensorDayModes", "mode", title: "Daytime (Default) Modes...", multiple: true, submitOnChange: true, required: ((!extSenUseSunAsMode && (extSensorNight && extSensorNightModes)) ? true : false),
-                                image: imgIcon("mode_icon.png")
-                    }
-                    input "extSenHeatTempDay", "decimal", title: "Desired Day Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: setTempsReq, image: imgIcon("heat_icon.png")
-                    input "extSenCoolTempDay", "decimal", title: "Desired Day Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: setTempsReq, image: imgIcon("cool_icon.png")
-
-                    def tmpVal = "Daytime Sensor Temp${(extSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
+                    def tempStr = !extSensorNight ? "" : "Day "
+                    input "extSenHeatTempDay", "decimal", title: "Desired ${tempStr}Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: heatTempsReq, image: imgIcon("heat_icon.png")
+                    input "extSenCoolTempDay", "decimal", title: "Desired ${tempStr}Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: coolTempsReq, image: imgIcon("cool_icon.png")
+                    //paragraph " ", image: " "
+                    def tmpVal = "$dSenStr Sensor Temp${(extSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
                     if(extSensorDay.size() > 1) {
-                        href "extSenShowTempsPage", title: "View Daytime Sensor Temps...", description: "${tmpVal}", image: " "
-                        paragraph "When multiple sensors are selected the temp will be returned as the average of those sensors combined.", image: imgIcon("i_icon.png")
-                    } else { paragraph "${tmpVal}", image: " " }
-                }
-            }
-            if(extSensorDay && extSensorNight) {
-                section("Use Sunrise/Sunset Instead of Modes to Determine Day/Night Sensors:") {
-                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("sunrise_icon.png")
+                        href "extSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: imgIcon("blank_icon.png")
+                        //paragraph "Multiple temp sensors will return the average of those sensors.", image: imgIcon("i_icon.png")
+                    } else { paragraph "${tmpVal}", image: imgIcon("instruct_icon.png") }
                 }
             }
             if(extSensorDay && (!setTempsReq || (setTempsReq && extSenHeatTempDay && extSenCoolTempDay))) {
-                section("(Optional) Choose Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
+                section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
                     input "extSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: imgIcon("temperature_icon.png")
                     if(extSensorNight) {
-                        if(extSenModeDuplication()) {
-                            paragraph "Duplicate Mode(s) found under the Day or Evening Sensor.  Please Correct", image: imgIcon("error_icon.png")
-                        }
-                        if(!extSenUseSunAsMode) {
-                            input "extSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: ((extSensorNight && !extSenUseSunAsMode) ? true : false),
-                                    image: imgIcon("mode_icon.png")
-                        }
-                        input "extSenHeatTempNight", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && setTempsReq) ? true : false), image: imgIcon("heat_icon.png")
-                        input "extSenCoolTempNight", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && setTempsReq) ? true : false), image: imgIcon("cool_icon.png")
-                        
-                        def tmpVal = "Evening Sensor Temp${(extSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
+                        input "extSenHeatTempNight", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && heatTempsReq) ? true : false), image: imgIcon("heat_icon.png")
+                        input "extSenCoolTempNight", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((extSensorNight && coolTempsReq) ? true : false), image: imgIcon("cool_icon.png")
+                        //paragraph " ", image: " "
+                        def tmpVal = "Evening Sensor Temp${(extSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
                         if(extSensorNight.size() > 1) {
-                            href "extSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: " "
-                            paragraph "When multiple Sensors are selected the Temp will be returned as the average of those sensors combined.", image: imgIcon("i_icon.png")
-                        } else { paragraph "${tmpVal}", image: " " }
+                            href "extSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: imgIcon("blank_icon.png")
+                            //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: imgIcon("i_icon.png")
+                        } else { paragraph "${tmpVal}", image: imgIcon("instruct_icon.png") }
+                    }
+                }
+            }
+            if(extSensorDay && extSensorNight) {
+                section("Day/Evening Detection Options:") {
+                    input "extSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: imgIcon("sunrise_icon.png")
+                    if(!extSenUseSunAsMode && !extSenModeDuplication()) {
+                        def modesReq = (!extSenUseSunAsMode && (extSensorDay && extSensorNight)) ? true : false
+                        input "extSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: imgIcon("mode_icon.png")
+                        input "extSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: imgIcon("mode_icon.png")
+                    } else {
+                        paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: imgIcon("error_icon.png")
                     }
                 }
             }
             if(extSenTstat && (extSensorDay || extSensorNight)) {
                 if(extSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                     section("Fan Settings:") {
-                        paragraph "The Fan Runtime can be adjusted under your nest account.  The Default Time is 15 minutes.", image: " "
+                        paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: imgIcon("instruct_icon.png")
                         input "extTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: imgIcon("delay_time_icon.png")
                     }
                 }
@@ -272,8 +272,10 @@ def extSensorPage() {
                     }
                 }
                 section ("Settings:") {
+                    paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: imgIcon("instruct_icon.png")
                     input "extTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: imgIcon("temp_icon.png")
                     if(extSenRuleType != "Circ") {
+                    	paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: imgIcon("instruct_icon.png")
                         input "extTempChgDegrees", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: imgIcon("temp_icon.png")
                     }
                     input "extSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: imgIcon("mode_icon.png")
@@ -417,23 +419,24 @@ def extSenRuleName() {
 def extSenShowTempsPage() {
     dynamicPage(name: "extSenShowTempsPage", uninstall: false) {
         if(extSensorDay) { 
-            section("Day Sensor Temps:") {
+            def dSenStr = !extSensorNight ? "Remote" : "Daytime"
+            section("$dSenStr Sensor Temps:") {
                 extSensorDay?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}", image: imgIcon("temperature_icon.png")
                 }
             }
-            section("Average Temp of Day Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}"
+            section("Average Temp of $dSenStr Sensors:") {
+                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorDay)}°${state?.tempUnit}", image: imgIcon("instruct_icon.png")
             }
         }
         if(extSensorNight) { 
             section("Night Sensor Temps:") {
                 extSensorNight?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}"
+                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}", image: imgIcon("temperature_icon.png")
                 }
             }
             section("Average Temp of Night Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}"
+                paragraph "Sensor Temp (average): ${getDeviceTempAvg(extSensorNight)}°${state?.tempUnit}", image: imgIcon("instruct_icon.png")
             }
         }
     }
