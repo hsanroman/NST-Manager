@@ -85,7 +85,7 @@ def authPage() {
     //atomicState.exLogs = [] //Uncomment this is you are seeing a state size is over 100000 error and it will reset the logs
     getAccessToken()
     preReqCheck()
-    if(!atomicState?.isInstalled) { deviceHandlerTest() }
+    deviceHandlerTest()
         
     if (!atomicState?.accessToken || !atomicState?.preReqTested || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
@@ -1859,7 +1859,8 @@ def devNameResetPage() {
 
 def deviceHandlerTest() {
     //log.trace "deviceHandlerTest()"
-    if(atomicState?.devHandlersTested || (atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice)) { 
+    return true
+    if(atomicState?.devHandlersTested || atomicState?.isInstalled || (atomicState?.thermostats && atomicState?.protects && atomicState?.presDevice && atomicState?.weatherDevice)) { 
         atomicState.devHandlersTested = true
         return true 
     }
@@ -1868,17 +1869,12 @@ def deviceHandlerTest() {
         def d2 = addChildDevice(app.namespace, getPresenceChildName(), "testNestPresence-Install123", null, [label:"Nest Presence:InstallTest"])
         def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
         def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
-        def testDevs = getAllChildDevices()
-        log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} || devCnt: ${testDevs.size()}"
-        if(testDevs.size() == 4) {
-            atomicState.devHandlersTested = true
-            testDevs?.each { 
-                deleteChildDevice(it.deviceNetworkId)
-                LogAction("${it?.label} Test Device Deleted...", "info", false)
-            }
-            atomicState.devHandlersTested = true
-            return true
-        }
+        
+        log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label}"
+        atomicState.devHandlersTested = true
+        removeTestDevs()
+        //runIn(4, "removeTestDevs")
+        return true
     } 
     catch (ex) {
         if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
@@ -1886,6 +1882,22 @@ def deviceHandlerTest() {
         } else { LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) }
         atomicState.devHandlersTested = false
         return false
+    }
+}
+
+def removeTestDevs() {
+    try {
+        def names = [ "testNestThermostat-Install123", "testNestPresence-Install123", "testNestProtect-Install123", "testNestWeather-Install123" ]
+        names?.each { dev ->
+        	//log.debug "dev: $dev"
+            def delete = getChildDevices().findAll { it?.deviceNetworkId == dev }
+            //log.debug "delete: ${delete}"
+            if(delete) { 
+               delete.each { deleteChildDevice(it.deviceNetworkId) }
+            }
+        }
+    } catch (ex) {
+        LogAction("deviceHandlerTest Exception: ${ex}", "error", true, true) 
     }
 }
 

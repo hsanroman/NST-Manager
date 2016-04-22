@@ -1052,10 +1052,10 @@ def exCheck() {
 }
 
 def exTempEvt(evt) {
-    log.debug "exTempEvt: ${evt.value}"
+    log.debug "exTempEvt: ${evt?.value}"
     def schedOff = false
     def schedOn = false
-    def curMode = exTstat.currentState("thermostatMode").value.toString()
+    def curMode = exTstat?.currentState("thermostatMode").value.toString()
     def exOk = getExTempOk()
     log.debug "exOk: $exOk"
     if(exScheduleOk()) {
