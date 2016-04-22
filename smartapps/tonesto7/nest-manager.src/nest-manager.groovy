@@ -37,12 +37,15 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.0" }
-def appVerDate() { "4-21-2016" }
+def appVersion() { "2.0.1" }
+def appVerDate() { "4-22-2016" }
 def appVerInfo() {
     
+    "V2.0.1 (Apr 22nd, 2016)\n" +
+    "Fixed: Everything\n\n" +
+    
     "V2.0.0 (Apr 21th, 2016)\n" +
-    "Fixed: Alot\n\n" +
+    "Fixed: Everything\n\n" +
     "------------------------------------------------"
 }
 
@@ -179,6 +182,15 @@ def authPage() {
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png")) 
                     atomicState.weatherDevice = weatherDevice ? true : false
                     
+                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                        if(getStZipCode() != getNestZipCode()) {
+                            paragraph "Your SmartThings location does not match you're Nest location.\nPlease enter a ZipCode or 'pws:stationId' below before we install the device.",
+                                    image: getAppImg("blank_icon.png")
+                            input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: getNestZipCode(), submitOnChange: true,
+                                    image: getAppImg("instruct_icon.png"))
+                        }
+                    }
+                    
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                     //if((thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
@@ -250,7 +262,6 @@ def prefsPage() {
         }
         section("Devices:") {
             href "devPrefPage", title: "Device Customization", description: "Tap to configure...", image: getAppImg("device_pref_icon.png")
-            
         }
         section("Notifications:") {
             href "notifPrefPage", title: "Notifications", description: "Notifications: (${pushStatus()})\n${getQTimeLabel()}\nTap to configure...", image: getAppImg("notification_icon.png")
@@ -312,7 +323,7 @@ def initialize() {
     atomicState.pollingOn = false
     atomicState.lastChildUpdDt = null // force child update on next poll
     atomicState.lastForcePoll = null
-    // atomicState.locstr = "string"  // variable to override location for getWeatherFeature   // THIS COULD BE A SETTING,  if not used, it should be NULL
+    // atomicState.custLocStr = "string"  // variable to override location for getWeatherFeature   // THIS COULD BE A SETTING,  if not used, it should be NULL
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
     }
@@ -512,7 +523,7 @@ def getApiData(type = null) {
                 }
             }
         }
-          else if(type == "dev") {
+        else if(type == "dev") {
             atomicState?.lastDevDataUpd = getDtNow()
             atomicState?.needDevPoll = false
             httpGet(params) { resp ->
@@ -1131,8 +1142,10 @@ def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Ac
 def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt).toInteger() }
 def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt).toInteger() }
 def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
-
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
+
+def getStZipCode() { return location?.zipCode.toString() }
+def getNestZipCode() { return !atomicState?.structData[atomicState?.structures].postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : "" }
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
@@ -1161,15 +1174,15 @@ def getWeatherConditions(force = false) {
             def curWeather = ""
             def curForecast = ""
             def curAstronomy = ""
-            if (atomicState?.locstr) {
-                loc = atomicState.locstr 
+            if (atomicState?.custLocStr) {
+                loc = atomicState.custLocStr 
                 curWeather = getWeatherFeature("conditions", loc)
             } else {
                 curWeather = getWeatherFeature("conditions")
             }
             if(getLastForecastUpdSec() > (1800)) {
-                if (atomicState?.locstr) {
-                    loc = atomicState.locstr 
+                if (atomicState?.custLocStr) {
+                    loc = atomicState.custLocStr 
                     curForecast = getWeatherFeature("forecast", loc)
                     curAstronomy = getWeatherFeature("astronomy", loc)
                 } else {
@@ -1479,7 +1492,7 @@ def getNestWeatherId() {
             if(d4) { return dni }
         }
         def retVal = ""
-        def devt =  appDevName()
+        def devt = appDevName()
         if(settings?.structures) { retVal = "NestWeather${devt} | ${settings?.structures}" }
         else if(atomicState?.structures) { retVal = "NestWeather${devt} | ${atomicState?.structures}" }
         else {
@@ -1492,7 +1505,7 @@ def getNestWeatherId() {
 
 def getNestTstatLabel(name) {
     //log.trace "getNestTstatLabel: ${name}"
-    def devt =  appDevName()
+    def devt = appDevName()
     def defName = "Nest Thermostat${devt} - ${name}"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
     if(atomicState?.custLabelUsed) {
@@ -1502,7 +1515,7 @@ def getNestTstatLabel(name) {
 }
 
 def getNestProtLabel(name) {
-    def devt =  appDevName()
+    def devt = appDevName()
     def defName = "Nest Protect${devt} - ${name}"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
     if(atomicState?.custLabelUsed) {
@@ -1512,7 +1525,7 @@ def getNestProtLabel(name) {
 }
 
 def getNestPresLabel() {
-    def devt =  appDevName()
+    def devt = appDevName()
     def defName = "Nest Presence Device${devt}"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Presence Device" }
     if(atomicState?.custLabelUsed) {
@@ -1522,13 +1535,21 @@ def getNestPresLabel() {
 }
 
 def getNestWeatherLabel() {
-    def devt =  appDevName()
-    def defName = "Nest Weather${devt} (${location?.zipCode})"  
+    def devt = appDevName()
+    def wLbl = !atomicState?.custLocStr ? "${location?.zipCode}" : atomicState?.custLocStr.toString()
+    def defName = "Nest Weather${devt} (${wLbl})"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
     if(atomicState?.custLabelUsed) {
         return settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
     }
     else { return defName }
+}
+
+def isWeatherDeviceInst() {
+    def res = false
+    def d = getChildDevice(getNestWeatherId())
+    if(d) { res = true }
+    return res
 }
 
 def addRemoveDevices(uninst = null) {
