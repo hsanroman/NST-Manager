@@ -13,7 +13,7 @@
     },
     "thermostat": {
       "type": "rel",
-      "ver": "2.0.0"
+      "ver": "2.0.1"
     },
     "protect": {
       "type": "rel",
