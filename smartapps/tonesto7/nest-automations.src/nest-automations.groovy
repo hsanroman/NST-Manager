@@ -1112,7 +1112,7 @@ def modePresPage() {
             input "modePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
                     image: getAppImg("presence_icon.png")
             if(modePresSensor) {
-                if (modePresSensor.size() > 1) {https://graph.api.smartthings.com/ide/app/editor/6f42e047-6902-4226-af56-b3ebb2fa2999#
+                if (modePresSensor.size() > 1) {
                     paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", getAppImg("instruct_icon.png")
                 }
                 paragraph "Presence State: ${modePresSensor.currentPresence}", image: " "
