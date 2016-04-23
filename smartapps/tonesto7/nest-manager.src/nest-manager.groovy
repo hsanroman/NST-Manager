@@ -182,11 +182,11 @@ def authPage() {
                     atomicState.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                     atomicState.weatherDevice = weatherDevice ? true : false
-                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                        if(getStZipCode() != getNestZipCode()) {
-                            href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                        }
-                    }
+                    //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                        //if(getStZipCode() != getNestZipCode()) {
+                            //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                        //}
+                    //}
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                     }
@@ -246,13 +246,13 @@ def automationsPage() {
 def custWeatherPage() {
     dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
         section("Set Custom Weather Location") {
-            paragraph "The Zipcode on you're SmartThings account does not match the Zipcode received from Nest.",
-                    image: getAppImg("blank_icon.png")
+            //paragraph "The Zipcode on you're SmartThings account does not match the Zipcode received from Nest.",
+                    //image: getAppImg("blank_icon.png")
             def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
 
             href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
                     description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: getNestZipCode(), submitOnChange: true,
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: getStZipCode(), submitOnChange: true,
                     image: getAppImg("weather_icon_grey.png"))
             paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
             atomicState.lastWeatherUpdDt = 0
