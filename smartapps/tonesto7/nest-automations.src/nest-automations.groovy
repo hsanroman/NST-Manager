@@ -162,7 +162,7 @@ def subscriber() {
     
     if (homeModes || awayModes) { subscribe(location, "mode", modeWatcher, [filterEvents: false]) }
     if (modePresSensor) { subscribe(modePresSensor, "presence", modePresenceEvt) }
-    if(wcContacts) { subscribe(wcContacts, "contact", wcContactEvt) }
+    if (wcContacts && wcTstat) { subscribe(wcContacts, "contact", wcContactEvt) }
     if(!exUseWeather && exTemp) { subscribe(exTemp, "temperature", exTempEvt, [filterEvents: false]) }
 }
 
@@ -783,7 +783,7 @@ def wcTimeOk() {
     } catch (ex) { LogAction("wcTimeOk Exception: ${ex}", "error", true, true) }
 }
 
-def getWcContactsOk() { return !wcContacts.currentState("contact").value.contains("open") ? true : false }
+def getWcContactsOk() { return wcContacts?.currentState("contact")?.value.contains("open") ? false : true }
 def watchContactOk() { return (!wcContacts && !wcTstat) ? false : true }
 def wcScheduleOk() { return (modesOk(wcModes) && daysOk(wcDays) && wcTimeOk()) ? true : false }
 def getWcOpenDtSec() { return !state?.wcOpenDt ? 100000 : GetTimeDiffSeconds(state?.wcOpenDt).toInteger() }
@@ -796,9 +796,9 @@ def wcCheck() {
     def curMode = wcTstat.currentState("thermostatMode").value.toString()
     if(getWcContactsOk()) {
         if(curMode.equals("off") && restModeOnClose && state?.wcTurnedOff == true) {
-            if(getWcCloseDtSec() >= (getWcOnDelayVal().toInteger() - 2)) {
+            if(getWcCloseDtSec() >= (getWcOnDelayVal()?.toInteger() - 2)) {
                 def lastMode = state?.wcRestoreMode ?: curMode
-                if(!state?.wcRestoreMode.equals(curMode)) {
+                if(!state?.wcRestoreMode?.equals(curMode)) {
                     if(lastMode) {
                         if(setTstatMode(wcTstat, lastMode)) {
                             state.wcTurnedOff = false
@@ -826,7 +826,7 @@ def wcCheck() {
                 log.debug "!getWcContactsOk..."
                 if(restModeOnClose) { 
                     state.wcRestoreMode = curMode
-                    log.debug "restoreToMode Set to: ${state?.wcRestoreMode}"
+                    log.debug "restoreToMode Set to: ${atomicState?.wcRestoreMode}"
                 }
                 log.debug("Selected Contacts are Open turning off ${wcTstat}")
                 state.wcTurnedOff = true
@@ -847,23 +847,18 @@ def wcCheck() {
 }
 
 def wcContactEvt(evt) {
-    //log.debug "watchContactEvt: ${evt.value}"
-    def schedOff = false
-    def schedOn = false
-    def curMode = wcTstat.currentState("thermostatMode").value.toString()
-    def conVal = evt.value.toString()
-    def wcOk = getWcContactsOk()
-    state?.wcState = (evt.value == "closed") ? "closed" : "open"
+    log.debug "watchContactEvt: ${evt?.value}"
+    def curMode = wcTstat?.currentThermostatMode.toString()
     if(wcScheduleOk()) {
-        if (conVal == "open" && !curMode == "off") {
-            state.wcOpenDt = getDtNow()
+        if (!getWcContactsOk() && curMode != "off") {
+            state?.wcOpenDt = getDtNow()
             log.debug "wcContactEvt() | Scheduling Thermostat OFF in (${getWcOffDelayVal()} seconds)..."
-            runIn(getWcOffDelayVal().toInteger(), "wcCheck", [overwrite: true]) 
+            runIn(getWcOffDelayVal()?.toInteger(), "wcCheck", [overwrite: true]) 
         }
-        else if(conVal == "closed" && (restModeOnClose && curMode == "off" && state?.wcTurnedOff == true)) {
+        else if(getWcContactsOk() && (restModeOnClose && curMode == "off" && state?.wcTurnedOff == true)) {
             state.wcCloseDt = getDtNow()
             log.debug "wcContactEvt() | Scheduling Thermostat ON in (${getWcOnDelayVal()} seconds)..."
-            runIn(getWcOnDelayVal().toInteger(), "wcCheck", [overwrite: true])
+            runIn(getWcOnDelayVal()?.toInteger(), "wcCheck", [overwrite: true])
         }
     }
 }
