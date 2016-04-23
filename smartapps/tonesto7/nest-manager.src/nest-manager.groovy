@@ -182,11 +182,11 @@ def authPage() {
                     atomicState.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                     atomicState.weatherDevice = weatherDevice ? true : false
-                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                        if(getStZipCode() != getNestZipCode()) {
-                            href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                        }
-                    }
+                    //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                        //if(getStZipCode() != getNestZipCode()) {
+                            //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                        //}
+                    //}
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                     }
@@ -246,15 +246,17 @@ def automationsPage() {
 def custWeatherPage() {
     dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
         section("Set Custom Weather Location") {
-            paragraph "The Zipcode on you're SmartThings account does not match the Zipcode received from Nest.",
-                    image: getAppImg("blank_icon.png")
+            //paragraph "The Zipcode on you're SmartThings account does not match the Zipcode received from Nest.",
+                    //image: getAppImg("blank_icon.png")
             def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
 
             href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
                     description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode or 'pws:station_id'", required: false, defaultValue: getNestZipCode(), submitOnChange: true,
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: getStZipCode(), submitOnChange: true,
                     image: getAppImg("weather_icon_grey.png"))
             paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+            atomicState.lastWeatherUpdDt = 0
+            atomicState?.lastForecastUpdDt = 0
         }
     }
 }
@@ -287,11 +289,11 @@ def prefsPage() {
                 atomicState.exLogs = []
             }
         }
-        if(atomicState?.weatherDevice) {
-            section("Weather Settings:") {
-                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-            }
-        }
+        //if(atomicState?.weatherDevice) {
+            //section("Weather Settings:") {
+                //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+            //}
+        //}
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
         }
@@ -337,7 +339,6 @@ def initialize() {
     atomicState.pollingOn = false
     atomicState.lastChildUpdDt = null // force child update on next poll
     atomicState.lastForcePoll = null
-    // atomicState.custLocStr = "string"  // variable to override location for getWeatherFeature   // THIS COULD BE A SETTING,  if not used, it should be NULL
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
     }
@@ -1188,15 +1189,15 @@ def getWeatherConditions(force = false) {
             def curWeather = ""
             def curForecast = ""
             def curAstronomy = ""
-            if (atomicState?.custLocStr) {
-                loc = atomicState.custLocStr
+            if (custLocStr) {
+                loc = custLocStr
                 curWeather = getWeatherFeature("conditions", loc)
             } else {
                 curWeather = getWeatherFeature("conditions")
             }
             if(getLastForecastUpdSec() > (1800)) {
-                if (atomicState?.custLocStr) {
-                    loc = atomicState.custLocStr
+                if (custLocStr) {
+                    loc = custLocStr
                     curForecast = getWeatherFeature("forecast", loc)
                     curAstronomy = getWeatherFeature("astronomy", loc)
                 } else {
@@ -1550,7 +1551,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
     def devt = appDevName()
-    def wLbl = atomicState?.custLocStr ? atomicState?.custLocStr.toString() : "${location?.zipCode}"
+    def wLbl = custLocStr ? custLocStr.toString() : "${location?.zipCode}"
     def defName = "Nest Weather${devt} (${wLbl})"
     if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
     if(atomicState?.custLabelUsed) {
@@ -2314,9 +2315,72 @@ def stateCleanup() {
     log.trace "stateCleanup..."
     //Things that I need to clear up on updates go here
     // this must be run standalone, and exit after running as the cleanup occurs on exit
+    state.remove("pollValue")
+    state.remove("pollStrValue")
+    state.remove("pollWaitVal")
+    state.remove("tempChgWaitVal")
+    state.remove("cmdDelayVal")
+    state.remove("testedDhInst")
+    state.remove("missedPollNotif")
+    state.remove("updNotif")
+    state.remove("updChildOnNewOnly")
+    state.remove("disAppIcons")
+    state.remove("showProtAlarmStateEvts")
+    state.remove("showAwayAsAuto")
+    state.remove("cmdQ")
+    state.remove("recentSendCmd")
+    state.remove("currentWeather")
+    state.remove("altNames")
+    state.remove("locstr")
+    state.remove("custLocStr")
+    if (!atomicState?.cmdQlist) {
+        state.remove("cmdQ2")
+        state.remove("cmdQ3")
+        state.remove("cmdQ4")
+        state.remove("cmdQ5")
+        state.remove("cmdQ6")
+        state.remove("cmdQ7")
+        state.remove("cmdQ8")
+        state.remove("cmdQ9")
+        state.remove("cmdQ10")
+        state.remove("cmdQ11")
+        state.remove("cmdQ12")
+        state.remove("cmdQ13")
+        state.remove("cmdQ14")
+        state.remove("cmdQ15")
+        state.remove("lastCmdSentDt2")
+        state.remove("lastCmdSentDt3")
+        state.remove("lastCmdSentDt4")
+        state.remove("lastCmdSentDt5")
+        state.remove("lastCmdSentDt6")
+        state.remove("lastCmdSentDt7")
+        state.remove("lastCmdSentDt8")
+        state.remove("lastCmdSentDt9")
+        state.remove("lastCmdSentDt10")
+        state.remove("lastCmdSentDt11")
+        state.remove("lastCmdSentDt12")
+        state.remove("lastCmdSentDt13")
+        state.remove("lastCmdSentDt14")
+        state.remove("lastCmdSentDt15")
+        state.remove("recentSendCmd2")
+        state.remove("recentSendCmd3")
+        state.remove("recentSendCmd4")
+        state.remove("recentSendCmd5")
+        state.remove("recentSendCmd6")
+        state.remove("recentSendCmd7")
+        state.remove("recentSendCmd8")
+        state.remove("recentSendCmd9")
+        state.remove("recentSendCmd10")
+        state.remove("recentSendCmd11")
+        state.remove("recentSendCmd12")
+        state.remove("recentSendCmd13")
+        state.remove("recentSendCmd14")
+        state.remove("recentSendCmd15")
+    }
+/*
     def clnCnt = 0
     def clnValues = ["pollValue", "pollStrValue","pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updNotif", "updChildOnNewOnly",
-                     "disAppIcons", "showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ" , "recentSendCmd"  , "currentWeather" , "altNames" ]
+                     "disAppIcons", "showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ" , "recentSendCmd"  , "currentWeather" , "altNames", "locstr" ]
     clnValues?.each { item ->
         if(atomicState?."$item") { state.remove("$item"); clnCnt = clnCnt+1 }
     }
@@ -2331,6 +2395,7 @@ def stateCleanup() {
         }
     }
     log.debug "stateCleanup Removed ($clnCnt) Variables..."
+*/
 }
 
 
@@ -2618,7 +2683,7 @@ def devPrefPage() {
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
-                paragraph "This will show 'Auto' while the location is 'Away'.\nFYI: Disabling will prevent Low/High Temp adjustments until the location returns to 'Home' again."
+                paragraph "This will show 'Auto' while the location is 'Away'."
                 input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("list_icon.png")
             }
@@ -2636,7 +2701,8 @@ def devPrefPage() {
         }
         if(atomicState?.weatherDevice) {
             section("Weather Device:") {
-                paragraph "Nothing to see here yet!!!"
+                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                //paragraph "Nothing to see here yet!!!"
             }
         }
         if((thermostats || protects || presDevice || weatherDevice)) {
