@@ -9,7 +9,7 @@
     },
     "autoapp": {
       "type": "rel",
-      "ver": "1.0.0"
+      "ver": "1.0.1"
     },
     "thermostat": {
       "type": "rel",
