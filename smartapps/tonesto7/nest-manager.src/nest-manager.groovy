@@ -287,6 +287,11 @@ def prefsPage() {
                 atomicState.exLogs = []
             }
         }
+        if(atomicState?.weatherDevice) {
+            section("Weather Settings:") {
+                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+            }
+        }
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
         }
