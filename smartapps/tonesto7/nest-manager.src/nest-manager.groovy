@@ -37,8 +37,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.1" }
-def appVerDate() { "4-22-2016" }
+def appVersion() { "2.0.2" }
+def appVerDate() { "4-24-2016" }
 def appVerInfo() {
 
     "V2.0.1 (Apr 22nd, 2016)\n" +
@@ -1189,11 +1189,14 @@ def getWeatherConditions(force = false) {
             def curWeather = ""
             def curForecast = ""
             def curAstronomy = ""
+            def curAlerts = ""
             if (custLocStr) {
                 loc = custLocStr
                 curWeather = getWeatherFeature("conditions", loc)
+                curAlerts = getWeatherFeature("alerts", loc)
             } else {
                 curWeather = getWeatherFeature("conditions")
+                curAlerts = getWeatherFeature("alerts")
             }
             if(getLastForecastUpdSec() > (1800)) {
                 if (custLocStr) {
@@ -1209,17 +1212,18 @@ def getWeatherConditions(force = false) {
                     atomicState?.curAstronomy = curAstronomy
                     atomicState?.lastForecastUpdDt = getDtNow()
                 } else {
-                    LogAction("Could Not Retrieve Latest Local Forecast and astronomy Conditions", "warn", true)
+                    LogAction("Could Not Retrieve Latest Local Forecast or astronomy Conditions", "warn", true)
                 }
             }
-            if(curWeather) {
+            if(curWeather && curAlerts) {
                 atomicState?.curWeather = curWeather
+                atomicState?.curAlerts = curAlerts
                 atomicState?.lastWeatherUpdDt = getDtNow()
             } else {
-                LogAction("Could Not Retrieve Latest Local Weather Conditions", "warn", true)
+                LogAction("Could Not Retrieve Latest Local Weather Conditions or alerts", "warn", true)
                 return false
             }
-            if(curWeather || curAstronomy || curForecast) {
+            if(curWeather || curAstronomy || curForecast || curAlerts) {
                 atomicState.needChildUpd = true
                 if (!force) { runIn(30, "postCmd", [overwrite: true]) }
                 return true
@@ -1258,6 +1262,16 @@ def getWAstronomyData() {
     } else {
         if(getWeatherConditions(true)) {
             return atomicState?.curAstronomy
+        }
+    }
+}
+
+def getWAlertsData() {
+    if(atomicState?.curAlerts) {
+        return atomicState?.curAlerts
+    } else {
+        if(getWeatherConditions(true)) {
+            return atomicState?.curAlerts
         }
     }
 }
@@ -1681,6 +1695,7 @@ def addRemoveDevices(uninst = null) {
                 atomicState?.curWeather = null
                 atomicState?.curForecast = null
                 atomicState?.curAstronomy = null
+                atomicState?.curAlerts = null
                 delete = getChildDevices().findAll { it?.deviceNetworkId == getNestWeatherId() }
             }
             else {
