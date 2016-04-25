@@ -745,13 +745,13 @@ def wcPage() {
                         image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "wcOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                input name: "wcOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
 
                 input "restModeOnClose", "bool", title: "Restore Previous mode after Closed?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(restModeOnClose) {
-                    input name: "wcOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                    input name: "wcOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -915,13 +915,13 @@ def extTempsPage() {
                                 image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "exOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                input name: "exOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                                 image: getAppImg("delay_time_icon.png")
 
                 input "exRestoreMode", "bool", title: "Restore Previous Mode when Temp goes below Threshold?", required: false, defaultValue: false, submitOnChange: true,
                                 image: getAppImg("restore_icon.png")
                 if(exRestoreMode) {
-                    input name: "exOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                    input name: "exOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                                 image: getAppImg("delay_time_icon.png")
                 }
             }
