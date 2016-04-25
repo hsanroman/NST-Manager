@@ -745,13 +745,13 @@ def wcPage() {
                         image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "wcOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
+                input name: "wcOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
 
                 input "restModeOnClose", "bool", title: "Restore Previous mode after Closed?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(restModeOnClose) {
-                    input name: "wcOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
+                    input name: "wcOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -788,14 +788,14 @@ def watchContactOk() { return (!wcContacts && !wcTstat) ? false : true }
 def wcScheduleOk() { return (modesOk(wcModes) && daysOk(wcDays) && wcTimeOk()) ? true : false }
 def getWcOpenDtSec() { return !state?.wcOpenDt ? 100000 : GetTimeDiffSeconds(state?.wcOpenDt).toInteger() }
 def getWcCloseDtSec() { return !state?.wcCloseDt ? 100000 : GetTimeDiffSeconds(state?.wcCloseDt).toInteger() }
-def getWcOffDelayVal() { return !wcOffDelay ? 360 : (wcOffDelay.toInteger() * 60) }
-def getWcOnDelayVal() { return !wcOnDelay ? 360 : (wcOnDelay.toInteger() * 60) }
+def getWcOffDelayVal() { return !wcOffDelay ? 300 : (wcOffDelay.toInteger()) }
+def getWcOnDelayVal() { return !wcOnDelay ? 300 : (wcOnDelay.toInteger()) }
 
 def wcCheck() {
     log.trace "wcCheck..."
     def curMode = wcTstat.currentState("thermostatMode").value.toString()
     if(getWcContactsOk()) {
-        if(curMode.equals("off") && restModeOnClose && state?.wcTurnedOff == true) {
+        if(curMode == "off" && restModeOnClose && state?.wcTurnedOff) {
             if(getWcCloseDtSec() >= (getWcOnDelayVal()?.toInteger() - 2)) {
                 def lastMode = state?.wcRestoreMode ?: curMode
                 if(!state?.wcRestoreMode?.equals(curMode)) {
@@ -821,7 +821,7 @@ def wcCheck() {
     }
     
     if (!getWcContactsOk()) {
-        if(!curMode.equals("off")) {
+        if(curMode != "off") {
             if(getWcOpenDtSec() >= (getWcOffDelayVal().toInteger() - 2)) {
                 log.debug "!getWcContactsOk..."
                 if(restModeOnClose) { 
@@ -915,13 +915,13 @@ def extTempsPage() {
                                 image: getAppImg("day_calendar_icon.png")
             }
             section("Delay Values:") {
-                input name: "exOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
+                input name: "exOffDelay", type: "number", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                                 image: getAppImg("delay_time_icon.png")
 
                 input "exRestoreMode", "bool", title: "Restore Previous Mode when Temp goes below Threshold?", required: false, defaultValue: false, submitOnChange: true,
                                 image: getAppImg("restore_icon.png")
                 if(exRestoreMode) {
-                    input name: "exOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 5, required: false, submitOnChange: true,
+                    input name: "exOnDelay", type: "number", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                                 image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -988,8 +988,8 @@ def exTimeOk() {
 def exScheduleOk() { return (modesOk(exModes) && daysOk(exDays) && exTimeOk()) ? true : false }
 def getExTempGoodDtSec() { return !state?.exTempGoodDt ? 100000 : GetTimeDiffSeconds(state?.exTempGoodDt).toInteger() }
 def getExTempBadDtSec() { return !state?.exTempBadDt ? 100000 : GetTimeDiffSeconds(state?.exTempBadDt).toInteger() }
-def getExOffDelayVal() { return !exOffDelay ? 360 : (exOffDelay.toInteger() * 60) }
-def getExOnDelayVal() { return !exOnDelay ? 360 : (exOnDelay.toInteger() * 60) }
+def getExOffDelayVal() { return !exOffDelay ? 300 : (exOffDelay.toInteger()) }
+def getExOnDelayVal() { return !exOnDelay ? 300 : (exOnDelay.toInteger()) }
 def getExWeatherRefreshVal() { return !weatherRfrshVal ? 1 : (weatherRfrshVal.toInteger()) }
 
 def exCheck() {
