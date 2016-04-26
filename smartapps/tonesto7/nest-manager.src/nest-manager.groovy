@@ -37,8 +37,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.2" }
-def appVerDate() { "4-24-2016" }
+def appVersion() { "2.0.3" }
+def appVerDate() { "4-26-2016" }
 def appVerInfo() {
 
     "V2.0.1 (Apr 22nd, 2016)\n" +
@@ -2575,7 +2575,6 @@ def appIcon(url) {
     return !disAppIcons ? url.toString() : ""
 }
 
-def getShowAwayAsAuto() { return showAwayAsAuto ? true : false }
 def getShowProtAlarmEvts() { return showProtAlarmStateEvts ? true : false }
 
 /******************************************************************************
@@ -2698,9 +2697,7 @@ def devPrefPage() {
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
-                paragraph "This will show 'Auto' while the location is 'Away'."
-                input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: false, submitOnChange: true,
-                        image: getAppImg("list_icon.png")
+                paragraph "Nothing to see here yet!!!"
             }
         }
         if(atomicState?.protects) {
