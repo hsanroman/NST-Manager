@@ -47,7 +47,7 @@ def appVerInfo() {
 preferences {
     page(name: "mainPage", title: "Nest Automations", content:"mainPage", uninstall: true, install: false, nextPage: "namePage")
     page(name: "remSensorPage")
-    page(name: "remSenShowTempsPage")
+    page(name: "remSensorTempsPage")
     page(name: "contactWatchPage")
     page(name: "nestModePresPage")
     page(name: "extTempPage")
@@ -59,7 +59,9 @@ preferences {
 def mainPage() {
     //log.trace "mainPage()"
     state?.tempUnit = getTemperatureScale().toString()
+    log.debug "1"
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
+    	log.debug "2"
         section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
             def remSenDayDesc = (remSensorDay) ? ("Day Sensor${(remSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit}") : ""
             def remSenNightDesc = (remSensorNight) ? ("\nNight Sensor${(remSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit}") : ""
@@ -100,6 +102,7 @@ def mainPage() {
 }
 
 def namePage() {
+log.debug "3"
     dynamicPage(name: "namePage") {
         section("Automation name") {
             label title: "Name this Automation", defaultValue: app.label, required: true
@@ -139,6 +142,7 @@ def initialize() {
 }
 
 def automationsInst() {
+	log.debug "4"
     state.isRemSenConfigured = isRemSenConfigured() ? true : false
     state.isConWatConfigured = isConWatConfigured() ? true : false
     state.isExtTmpConfigured = isExtTmpConfigured() ? true : false
@@ -173,14 +177,15 @@ def subscribeToEvents() {
         }
         remSenEvtEval()
     }
-
+	//Watch Contacts Subscriptions
+    if (conWatContacts && conWatTstat) { subscribe(conWatContacts, "contact", conWatContactEvt) }
+    
     //External Temp Subscriptions
     if(!extTmpUseWeather && extTmpTemp) { subscribe(extTmpTemp, "temperature", extTmpTempEvt, [filterEvents: false]) }
     
     //Nest Mode Subscriptions
     if (nModeHomeModes || nModeAwayModes) { subscribe(location, "mode", nModeEvt, [filterEvents: false]) }
     if (nModePresSensor) { subscribe(nModePresSensor, "presence", nModePresEvt) }
-    if (conWatContacts && conWatTstat) { subscribe(conWatContacts, "contact", conWatContactEvt) }
 }
 
 def scheduler() {
@@ -253,7 +258,7 @@ def remSensorPage() {
                     //paragraph " ", image: " "
                     def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit}"
                     if(remSensorDay.size() > 1) {
-                        href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                        href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
                         //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
                     } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
                 }
@@ -267,7 +272,7 @@ def remSensorPage() {
                         //paragraph " ", image: " "
                         def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit}"
                         if(remSensorNight.size() > 1) {
-                            href "remSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                            href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
                             //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
                         } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
                     }
@@ -336,19 +341,19 @@ def remSensorPage() {
 
 def isRemSenConfigured() {
     def devOk = ((remSensorDay || remSensorNight) && remSenTstat) ? true : false
-    def nightOk = (!remSensorNight && remSensorDay) || (remSensorNight && (extSenRuleType == "Circ" && ((!extSenHeatTempNight || !extSenCoolTempNight) || (extSenHeatTempNight && extSenCoolTempNight)))) ? true : false
-    def dayOk = (remSensorDay && (remSensorDay && !remSensorNight) || (remSensorDay && (extSenRuleType == "Circ" && ((!extSenHeatTempDay || !extSenCoolTempDay) || (extSenHeatTempDay && extSenCoolTempDay))))) ? true : false
+    def nightOk = (!remSensorNight && remSensorDay) || (remSensorNight && (remSenRuleType == "Circ" && ((!remSenHeatTempNight || !remSenCoolTempNight) || (remSenNightHeatTemp && remSenNightCoolTemp)))) ? true : false
+    def dayOk = (remSensorDay && (remSensorDay && !remSensorNight) || (remSensorDay && (remSenRuleType == "Circ" && ((!remSenDayHeatTemp || !remSenDayCoolTemp) || (remSenDayHeatTemp && remSenDayCoolTemp))))) ? true : false
     //log.debug "devOk: $devOk | nightOk: $nightOk | dayOk: $dayOk"
     return (devOk && nightOk && dayOk) ? true : false
 }
 
-def extSenMotionEvt(evt) {
-    log.debug "extSenMotionEvt event: $evt.value"
-    if(state?.extSenEnabled == false) { return }
-    else if (extSenUseSunAsMode) { return}
+def remSenMotionEvt(evt) {
+    log.debug "remSenMotionEvt event: $evt.value"
+    if(state?.remSenEnabled == false) { return }
+    else if (remSenUseSunAsMode) { return}
     else {
-        if(extMotionSensorModes) {
-            if(isInMode(extMotionSensorModes)) {
+        if(remSenMotionModes) {
+            if(isInMode(remSenMotionModes)) {
                 runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
             }
         } else {
