@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.1"}
+def devVer() { return "2.0.2"}
 
 // for the UI
 metadata {
@@ -542,7 +542,7 @@ def presenceEvent(presence) {
 def hvacModeEvent(mode) {
     def pres = getNestPresence()
     def hvacMode = getHvacMode()
-    def newMode = (parent?.settings?.showAwayAsAuto && ((pres == "away" || pres == "auto-away") && (mode == "heat" || mode == "cool")) || (mode == "heat-cool")) ? "auto" : mode
+    def newMode = (mode == "heat-cool") ? "auto" : mode
     if(!hvacMode.equals(newMode)) {
         log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
         sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
