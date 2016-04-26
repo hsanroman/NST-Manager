@@ -140,14 +140,14 @@ def initialize() {
 
 def automationsInst() {
     state.isRemSenConfigured = isRemSenConfigured() ? true : false
-    state.isWContConfigured = isWContConfigured() ? true : false
+    state.isConWatConfigured = isConWatConfigured() ? true : false
     state.isExtTmpConfigured = isExtTmpConfigured() ? true : false
     state.isNestModesConfigured = isNestModesConfigured() ? true : false
 }
 
 def getAutomationsActive() { 
-    def remActive = ((remSensorDay || remSensorNight)  && extSenTstat && extSenHeatTemp && extSenCoolTemp)
-    def conActive = (wContContacts && wContTstat)
+    def remActive = ((remSensorDay || remSensorNight)  && remSenTstat && remSenHeatTemp && extSenCoolTemp)
+    def conActive = (conWatContacts && conWatTstat)
     def nestModesActive = (nModeAwayModes && nModeHomeModes)
     def autoDesc = "${remActive ? "Remote Sensors Active..." : ""}${conActive ? "\nContact Watcher Active..." : ""}${nestModesActive ? "Mode Automation Active..." : ""}"
     parent?.automationsActive(((remActive || conActive || nestModesActive) ? true : false), autoDesc)
