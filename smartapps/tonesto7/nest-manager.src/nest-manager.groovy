@@ -600,7 +600,8 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                it.generateEvent(null)
+                def pData = ["debug":childDebug, "mt":useMilitaryTime, "pres":locationPresence(), "api":apiIssues()]
+                it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
