@@ -37,9 +37,13 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.2" }
-def appVerDate() { "4-24-2016" }
+def appVersion() { "2.0.3" }
+def appVerDate() { "4-27-2016" }
 def appVerInfo() {
+    "V1.0.3 (Apr 27th, 2016)\n" +
+    "Fixed: Bug found when unselecting a location nothing would be found again.\n" +
+    "Updated: Changed the way that data was sent to presence device\n"+
+    "Added: Support for Custom Child Notifications...\n\n" +
 
     "V2.0.1 (Apr 22nd, 2016)\n" +
     "Fixed: Everything\n\n" +
@@ -182,11 +186,11 @@ def authPage() {
                     atomicState.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                     atomicState.weatherDevice = weatherDevice ? true : false
-                    //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                        //if(getStZipCode() != getNestZipCode()) {
-                            //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                        //}
-                    //}
+                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                        if(getStZipCode() != getNestZipCode()) {
+                            href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                        }
+                    }
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                     }
@@ -598,7 +602,8 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                it.generateEvent(null)
+                def pData = ["debug":childDebug, "mt":useMilitaryTime, "pres":locationPresence(), "api":apiIssues()]
+                it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
@@ -1125,18 +1130,19 @@ def newUpdNotify() {
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
 }
 
-def sendMsg(String msg, String msgType) {
+def sendMsg(String msg, String msgType, people = null) {
     try {
         def newMsg = "${msgType}: ${msg}"
+        def who = people ? people : recipients
         if (location.contactBookEnabled) {
-            if(recipients) {
-                sendNotificationToContacts(newMsg, recipients)
+            if(who) {
+                sendNotificationToContacts(newMsg, who)
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
                 log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
             }
         } else {
-            LogAction("contact book not enabled", "debug", true)
+            LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
             if (usePush) {
                 sendPush(newMsg)
                 atomicState?.lastMsg = newMsg
@@ -1144,13 +1150,50 @@ def sendMsg(String msg, String msgType) {
                 log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
             }
             else if (phone) {
-                   sendSms(phone, newMsg)
+                sendSms(phone, newMsg)
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
                 log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
             }
         }
     } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
+}
+
+def extSendMsg(msg, msgType, people = null, sms = null, push = null) {
+    try {
+        if(!getOk2Notify()) { 
+            LogAction("No Notifications will be sent during Quiet Time...", "info", true)
+        } else {
+            def newMsg = "${msgType}: ${msg}"
+            def who = people ? people : recipients
+            if (location.contactBookEnabled) {
+                if(who) {
+                    sendNotificationToContacts(newMsg, who)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                }
+            } else {
+                LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
+                if (push) {
+                    sendPush(newMsg)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                }
+                else if (sms) {
+                    sendSms(sms, newMsg)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
+                }
+            }
+        }
+    } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
+}
+
+def getOk2Notify() {
+    return (daysOk(quietDays) && quietTimeOk() && modesOk(quietModes))
 }
 
 def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Active" : "Active") : "Not Active" } //Keep this
@@ -1380,7 +1423,7 @@ def getNestStructures() {
                 def dni = [strucData?.structure_id].join('.')
                 struct[dni] = strucData?.name.toString()
 
-                if (strucData?.structure_id == settings?.structures) {
+                if ((strucData?.structure_id == settings?.structures) || !settings?.structures) {
                     thisstruct[dni] = strucData?.name.toString()
                 }
             }
@@ -2575,7 +2618,6 @@ def appIcon(url) {
     return !disAppIcons ? url.toString() : ""
 }
 
-def getShowAwayAsAuto() { return showAwayAsAuto ? true : false }
 def getShowProtAlarmEvts() { return showProtAlarmStateEvts ? true : false }
 
 /******************************************************************************
@@ -2626,9 +2668,8 @@ def pollPrefPage() {
 
 def notifPrefPage() {
     dynamicPage(name: "notifPrefPage", install: false) {
-        section("Send Notifications") {
-            def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select people or devices to send Notifications too..."
-            paragraph "${notifDesc}"
+        def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
+        section("${notifDesc}") {
             if(!location.contactBookEnabled) {
                 input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
@@ -2698,9 +2739,7 @@ def devPrefPage() {
         }
         if(atomicState?.thermostats) {
             section("Thermostat Devices:") {
-                paragraph "This will show 'Auto' while the location is 'Away'."
-                input "showAwayAsAuto", "bool", title: "When Location is Away show Thermostat mode as Auto?", required: false, defaultValue: false, submitOnChange: true,
-                        image: getAppImg("list_icon.png")
+                paragraph "Nothing to see here yet!!!"
             }
         }
         if(atomicState?.protects) {
@@ -2720,11 +2759,10 @@ def devPrefPage() {
                 //paragraph "Nothing to see here yet!!!"
             }
         }
-        if((thermostats || protects || presDevice || weatherDevice)) {
+        if(thermostats || protects || presDevice || weatherDevice) {
             section("Device Names:") {
-                def devNameTitle = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\nTap to Modify..." : "Tap to Configure..."
-                def devNameDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Customize Device Names?" : "Device Names..."
-                href "devNamePage", title: devNameTitle, description: devNameDesc, image: getAppImg("device_name_icon.png")
+                def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\nTap to Modify..." : "Tap to Configure..."
+                href "devNamePage", title: "Device Names...", description: devDesc, image: getAppImg("device_name_icon.png")
             }
         }
     }
