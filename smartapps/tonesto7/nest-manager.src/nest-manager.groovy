@@ -38,8 +38,10 @@ definition(
 }
 
 def appVersion() { "2.0.3" }
-def appVerDate() { "4-26-2016" }
+def appVerDate() { "4-25-2016" }
 def appVerInfo() {
+    "V1.0.3 (Apr 25th, 2016)\n" +
+    "Added: Support for Custom Child Notifications...\n\n" +
 
     "V2.0.1 (Apr 22nd, 2016)\n" +
     "Fixed: Everything\n\n" +
@@ -182,11 +184,11 @@ def authPage() {
                     atomicState.presDevice = presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                     atomicState.weatherDevice = weatherDevice ? true : false
-                    //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                        //if(getStZipCode() != getNestZipCode()) {
-                            //href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                        //}
-                    //}
+                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                        if(getStZipCode() != getNestZipCode()) {
+                            href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                        }
+                    }
                     if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                         href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                     }
@@ -1125,18 +1127,19 @@ def newUpdNotify() {
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
 }
 
-def sendMsg(String msg, String msgType) {
+def sendMsg(String msg, String msgType, people = null) {
     try {
         def newMsg = "${msgType}: ${msg}"
+        def who = people ? people : recipients
         if (location.contactBookEnabled) {
-            if(recipients) {
-                sendNotificationToContacts(newMsg, recipients)
+            if(who) {
+                sendNotificationToContacts(newMsg, who)
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
                 log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
             }
         } else {
-            LogAction("contact book not enabled", "debug", true)
+            LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
             if (usePush) {
                 sendPush(newMsg)
                 atomicState?.lastMsg = newMsg
@@ -1144,13 +1147,50 @@ def sendMsg(String msg, String msgType) {
                 log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
             }
             else if (phone) {
-                   sendSms(phone, newMsg)
+                sendSms(phone, newMsg)
                 atomicState?.lastMsg = newMsg
                 atomicState?.lastMsgDt = getDtNow()
                 log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
             }
         }
     } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
+}
+
+def extSendMsg(msg, msgType, people = null, sms = null, push = null) {
+    try {
+        if(!getOk2Notify()) { 
+            LogAction("No Notifications will be sent during Quiet Time...", "info", true)
+        } else {
+            def newMsg = "${msgType}: ${msg}"
+            def who = people ? people : recipients
+            if (location.contactBookEnabled) {
+                if(who) {
+                    sendNotificationToContacts(newMsg, who)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                }
+            } else {
+                LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
+                if (push) {
+                    sendPush(newMsg)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                }
+                else if (sms) {
+                    sendSms(sms, newMsg)
+                    atomicState?.lastMsg = newMsg
+                    atomicState?.lastMsgDt = getDtNow()
+                    log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
+                }
+            }
+        }
+    } catch (ex) { LogAction("sendMsg Exception: ${ex}", "error", true, true) }
+}
+
+def getOk2Notify() {
+    return (daysOk(quietDays) && quietTimeOk() && modesOk(quietModes))
 }
 
 def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Active" : "Active") : "Not Active" } //Keep this
@@ -2625,9 +2665,8 @@ def pollPrefPage() {
 
 def notifPrefPage() {
     dynamicPage(name: "notifPrefPage", install: false) {
-        section("Send Notifications") {
-            def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select people or devices to send Notifications too..."
-            paragraph "${notifDesc}"
+        def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
+        section("${notifDesc}") {
             if(!location.contactBookEnabled) {
                 input "usePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")

@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Nest Automations                                                   |
+|    Application Name: Nest Automations                                                   	|
 |    Author: Anthony S. (@tonesto7), 														|
 |	 Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                  				|
 |                                                                                           |
@@ -25,7 +25,7 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.0.3" }
+def appVersion() { "1.1.0" }
 def appVerDate() { "4-26-2016" }
 def appVerInfo() {
     
@@ -59,50 +59,63 @@ preferences {
 def mainPage() {
     //log.trace "mainPage()"
     state?.tempUnit = getTemperatureScale().toString()
-    log.debug "1"
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
-    	log.debug "2"
         section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-            def remSenDayDesc = (remSensorDay) ? ("Day Sensor${(remSensorDay?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit}") : ""
-            def remSenNightDesc = (remSensorNight) ? ("\nNight Sensor${(remSensorNight?.size() > 1) ? " (average):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit}") : ""
             def remSenEnableDesc = state?.remSenEnabled ? "" : "External Sensor Disabled...\n"
-            def remSenMotInUse = extMotionSensors ? ("\nMotion Events: ${!remSenMotionModes ? "Active" : (isInMode(remSenMotionModes) ? "Active(Mode Ok)" : "Not Active(!Mode)")}") : ""
-            def remSenModes = remSenModes ? "\nMode Filters Active" : ""
-            def remSenSetTemps = (remSenHeatTemp && remSenCoolTemp) ? "\nSet Temps: (Heat/Cool: ${extSenHeatTemp}°${state?.tempUnit}/${extSenCoolTemp}°${state?.tempUnit})" : ""
-            def remSenRuleType = remSenRuleType ? "\nRule-Type: ${remSenRuleName()}" : ""
-            def remSenTstatStatus = remSenTstat ? "\nThermostat Mode: ${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()}" : ""
+            def remSenTstatTempDesc = remSenTstat ? "Thermostat Temp: (${getDeviceTemp(remSenTstat)}°${state?.tempUnit})" : ""
+            def remSenTstatStatus = remSenTstat ? "\nThermostat Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
+            def remSenDayDesc = remSensorDay ? ("\n${!remSensorNight ? "Remote" : "Day"} Sensor${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit})") : ""
+            def remSenNightDesc = remSensorNight ? ("\nNight Sensor${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit})") : ""
             def remSenTypeUsed = getUseNightSensor() ? remSenNightDesc : remSenDayDesc
-            def remSenDesc = isRemSenConfigured() ? 
-                "${remSenEnableDesc}Thermostat Temp: ${getDeviceTemp(remSenTstat)}°${state?.tempUnit}${remSenTstatStatus}\n${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenMotInUse}${remSenModes}\nTap to Modify..." : "Tap to Configure..."
+            def remSenSetTemps = (getRemSenCoolSetTemp() && getRemSenHeatSetTemp()) ? "\nHeat/Cool Set To: (${getRemSenHeatSetTemp()}°${state?.tempUnit}/${getRemSenCoolSetTemp()}°${state?.tempUnit})" : ""
+            def remSenRuleType = remSenRuleType ? "\nRule-Type: (${getEnumValue(remSenRuleEnum(), remSenRuleType)})" : ""
+            def remSenSunDesc = remSenUseSunAsMode ? "\nSunrise: ${state.sunriseTm} | Sunset: ${state.sunsetTm}" : ""
+            def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
+            def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
+            def remSenModes = remSenModes ? "\nMode Filters Active" : ""
+            def remSenDesc = (isRemSenConfigured() ? ("${remSenEnableDesc}${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
+                                                    "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : "Tap to Configure...")
             href "remSensorPage", title: "Use Remote Sensors...", description: remSenDesc, state: remSenDesc, image: getAppImg("remote_sensor_icon.png")
         }
-        section("Turn Off Thermostat when a Door Window is Opened:") {
-            def qOpt = (settings?.conWatModes || settings?.conWatDays || (settings?.conWatStartTime && settings?.conWatStopTime)) ? "Schedule Options Selected...\n" : ""
-            def desc = (conWatContacts && conWatTstat) ? "${conWatTstat.label}\nwith (${conWatContacts ? conWatContacts.size() : 0}) Contact(s)\n${qOpt}\nTap to Modify..." : "Tap to Configure..."
-            href "contactWatchPage", title: "Configure Sensors to Watch...", description: desc, image: getAppImg("open_window.png")
+        section("Turn Thermostat On/Off when a Door or Window is Opened:") {
+            def qOpt = (settings?.conWatModes || settings?.conWatDays || (settings?.conWatStartTime && settings?.conWatStopTime)) ? "\nSchedule Options Selected..." : ""
+            def conWatTstatDesc = conWatTstat ? "Thermostat Mode: (${conWatTstat?.currentThermostatOperatingState.toString()}/${conWatTstat?.currentThermostatMode.toString()})" : ""
+            def conWatUsedDesc = (conWatContacts && conWatTstat) ? "\nContacts: (${getConWatContactsOk() ? "Closed" : "Open"})" : ""
+            def conWatOffDesc = conWatOffDelay ? "\nOff Delay: (${getTimeEnumName(longTimeEnum(), conWatOffDelay)})" : ""
+            def conWatOnDesc = conWatOnDelay ? "\nOn Delay: (${getTimeEnumName(longTimeEnum(), conWatOnDelay)})" : ""
+            def conWatConfDesc = (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : "Tap to Configure..."
+            def conWatDesc = "${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}"
+            href "contactWatchPage", title: "Use Contact Sensors...", description: conWatDesc, image: getAppImg("open_window.png")
         }
-        section("Turn On/Off Thermostat based on Outside temps:") {
-            def qOpt = (extTmpModes || extTmpDays || (extTmpStartTime && extTmpStopTime)) ? "Schedule Options Selected...\n" : ""
-            def desc = (!extTmpUseWeather && extTmpTemp && extTmpTstat) ? ("${extTmpTstat?.label}\nwith External Temp Sensor\n${qOpt}\nTap to Modify...") : (extTmpUseWeather ? "${extTmpTstat?.label}\nwith External Weather\n${qOpt}\nTap to Modify..." : "Tap to Configure...")
-            href "extTempPage", title: "Turn off based on External Temps...", description: desc, image: getAppImg("external_temp_icon.png")
+        section("Turn Thermostat On/Off based on External Temp:") {
+            def qOpt = (settings?.extTmpModes || settings?.extTmpDays || (settings?.extTmpStartTime && settings?.extTmpStopTime)) ? "\nSchedule Options Selected..." : ""
+            def extTmpTstatDesc = extTmpTstat ? "${extTmpTstat?.label}: (${getDeviceTemp(extTmpTstat)}°${state?.tempUnit})" : ""
+            def extTmpSenUsedDesc = (!extTmpUseWeather && extTmpTempSensor && extTmpTstat) ? "\nUsing External Sensor: (${getDeviceTemp(extTmpTempSensor)}°${state?.tempUnit})" : ""
+            def extTmpWeaUsedDesc = (extTmpUseWeather && !extTmpTempSensor && extTmpTstat) ? "\nUsing External Weather: (${getExtTmpWeatherTemp()}°${state?.tempUnit})" : ""
+            def extTmpDiffDesc = extTmpDiffVal ? "\nTemp Difference Value: (${extTmpDiffVal}°${state?.tempUnit})" : ""
+            def extTmpOffDesc = extTmpOffDelay ? "\nOff Delay: (${getTimeEnumName(longTimeEnum(), extTmpOffDelay)})" : ""
+            def extTmpOnDesc = extTmpOnDelay ? "\nOn Delay: (${getTimeEnumName(longTimeEnum(), extTmpOnDelay)})" : ""
+            def extTmpConfDesc = ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : "Tap to Configure..."
+            def extTmpDesc = "${extTmpTstatDesc}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}"
+            href "extTempPage", title: "Use External Temps...", description: extTmpDesc, image: getAppImg("external_temp_icon.png")
         }
-        section("Set Nest Presence Based on ST Modes:") {
-            def nModeLocDesc = isNestModesConfigured() ? "Nest Location: ${getNestLocPres().toString().capitalize()}" : ""
-            def nModeDesc = (!nModePresSensor && (nModeAwayModes || nModeHomeModes)) ? "${nModeHomeModes ? "Home Modes: $nModeHomeModes" : ""}${nModeAwayModes ? "\nAway Modes: $nModeAwayModes" : ""}\n\nTap to Modify..." : "\nTap to Configure..."
-            def nPresDesc = nModePresSensor ? "Presence Sensor Active...\nPresence is: ${nModePresSensor?.currentPresence}" : ""
-            def nPresDelayDesc = nModePresSensorDelay ? "Delay: ${getLongTimeEnumLabel(nModePresSensorDelayVal)}" : "" 
-            href "nestModePresPage", title: "Mode Automations", description: "${nModeLocDesc}\n${(nModePresSensor ? "${nPresDesc}\n${nPresDelayDesc}" : nModeDesc)}", image: getAppImg("mode_automation_icon.png")
+        section("Set Nest Presence Based on ST Modes or Presence Sensor:") {
+            def nModeLocDesc = isNestModesConfigured() ? "Nest Mode: ${getNestLocPres().toString().capitalize()}" : ""
+            def nModeDesc = (!nModePresSensor && (nModeAwayModes && nModeHomeModes)) ? "${nModeHomeModes ? "Home Modes: ${nModeHomeModes.size()} selected" : ""}${nModeAwayModes ? "\nAway Modes: ${nModeAwayModes.size()} selected" : ""}" : ""
+            def nPresDesc = nModePresSensor ? "Using Presence Sensor: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
+            def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getLongTimeEnumLabel(nModeDelayVal)}" : ""
+            def nModeConfDesc = isNestModesConfigured() ? "\n\nTap to Modify..." : "Tap to Configure..."
+            href "nestModePresPage", title: "Nest Mode Automations", description: "${nModeLocDesc}${(nModePresSensor ? "\n${nPresDesc}" : "\n${nModeDesc}")}${nModeDelayDesc}${nModeConfDesc}", image: getAppImg("mode_automation_icon.png")
         }
         
-        section("Help and Instructions:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        section("Help:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions", 
+                description:"Tap to View...", image: getAppImg("help_icon.png")
         }
      }
 }
 
 def namePage() {
-log.debug "3"
     dynamicPage(name: "namePage") {
         section("Automation name") {
             label title: "Name this Automation", defaultValue: app.label, required: true
@@ -138,11 +151,10 @@ def initialize() {
     scheduler()
     subscribeToEvents()
     automationsInst()
-    updateWeather()
+    if(extTmpUseWeather && extTmpTstat) { updateWeather() }
 }
 
 def automationsInst() {
-	log.debug "4"
     state.isRemSenConfigured = isRemSenConfigured() ? true : false
     state.isConWatConfigured = isConWatConfigured() ? true : false
     state.isExtTmpConfigured = isExtTmpConfigured() ? true : false
@@ -177,11 +189,11 @@ def subscribeToEvents() {
         }
         remSenEvtEval()
     }
-	//Watch Contacts Subscriptions
+    //Watch Contacts Subscriptions
     if (conWatContacts && conWatTstat) { subscribe(conWatContacts, "contact", conWatContactEvt) }
     
     //External Temp Subscriptions
-    if(!extTmpUseWeather && extTmpTemp) { subscribe(extTmpTemp, "temperature", extTmpTempEvt, [filterEvents: false]) }
+    if(!extTmpUseWeather && extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpTempEvt, [filterEvents: false]) }
     
     //Nest Mode Subscriptions
     if (nModeHomeModes || nModeAwayModes) { subscribe(location, "mode", nModeEvt, [filterEvents: false]) }
@@ -189,38 +201,31 @@ def subscribeToEvents() {
 }
 
 def scheduler() {
-    if(!extTmpUseWeather && extTmpTstat) { schedule("0 0/1 * * * ?", "updateData") } 
     if(extTmpUseWeather && extTmpTstat) { schedule("0 0/${getExtTmpWeatherRefreshVal()} * * * ?", "updateWeather") }
 }
 
-def updateData() {
-    //exTempEvt(null) 
-}
-
 def updateWeather() {
+    if(remSenUseSunAsMode) { getSunTimeState() }
     if(extTmpUseWeather) { 
         getExtConditions()
-        extTmpEvt(null) 
+        extTmpTempEvt(null) 
     }
 }
 
 /******************************************************************************  
-|                			EXTERNAL SENSOR AUTOMATION CODE	                  |
+|                			REMOTE SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
 def remSensorPage() {
     def pName = "remSen"
     dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false) {
         if(state?.remSenEnabled == null) { state?.remSenEnabled = true }
         def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
-        def dupTstat = remSenTstatDuplication()
+        def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatMir)
         def tStatHeatSp = getTstatSetpoint(extSenTstat, "heat")
         def tStatCoolSp = getTstatSetpoint(extSenTstat, "cool")
         def tStatMode = remSenTstat ? remSenTstat?.currentThermostatMode : "unknown"
         def tStatTemp = "${getDeviceTemp(remSenTstat)}°${state?.tempUnit}"
         def locMode = location?.mode
-        
-        def coolTempsReq = (remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false
-        def heatTempsReq = (remSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false
         
         section("Select the Allowed (Rule) Action Type:") {
             if(!remSenRuleType) { 
@@ -235,8 +240,8 @@ def remSensorPage() {
                 if(dupTstat) {
                     paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
                 }
-                if(extSenTstat) { 
-                    setTstatCapabilities()
+                if(remSenTstat) { 
+                    setRemSenTstatCapabilities()
                     paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${state?.tempUnit}/${tStatHeatSp}°${state?.tempUnit}\nCurrent Mode: $tStatMode", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
                     if(remSenTstatsMir && !dupTstat) { 
@@ -246,82 +251,88 @@ def remSensorPage() {
                     }
                 }
             }
-            def dSenStr = !remSensorNight ? "Remote" : "Daytime"
-            section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
-                def dSenReq = (((remSensorNight && !remSensorDay) || !remSensorNight) && remSenTstat) ? true : false
-                input "remSensorDay", "capability.temperatureMeasurement", title: "$dSenStr Temp Sensors", submitOnChange: true, required: dSenReq,
-                        multiple: true, image: getAppImg("temperature_icon.png")
-                if(remSensorDay) {
-                    def tempStr = !remSensorNight ? "" : "Day "
-                    input "remSenHeatTempDay", "decimal", title: "Desired ${tempStr}Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: heatTempsReq, image: getAppImg("heat_icon.png")
-                    input "remSenCoolTempDay", "decimal", title: "Desired ${tempStr}Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: coolTempsReq, image: getAppImg("cool_icon.png")
-                    //paragraph " ", image: " "
-                    def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit}"
-                    if(remSensorDay.size() > 1) {
-                        href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
-                        //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
-                    } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
-                }
-            }
-            if(remSensorDay && (!setTempsReq || (setTempsReq && remSenDayHeatTemp && remSenDayCoolTemp))) {
-                section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
-                    input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
-                    if(remSensorNight) {
-                        input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((remSensorNight && heatTempsReq) ? true : false), image: getAppImg("heat_icon.png")
-                        input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((remSensorNight && coolTempsReq) ? true : false), image: getAppImg("cool_icon.png")
+            if(remSenTstat) {
+                def dSenStr = !remSensorNight ? "Remote" : "Daytime"
+                section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
+                    def dSenReq = (((remSensorNight && !remSensorDay) || !remSensorNight) && remSenTstat) ? true : false
+                    input "remSensorDay", "capability.temperatureMeasurement", title: "$dSenStr Temp Sensors", submitOnChange: true, required: dSenReq,
+                            multiple: true, image: getAppImg("temperature_icon.png")
+                    if(remSensorDay) {
+                        def tempStr = !remSensorNight ? "" : "Day "
+                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
+                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         //paragraph " ", image: " "
-                        def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit}"
-                        if(remSensorNight.size() > 1) {
-                            href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
-                            //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
+                        def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${state?.tempUnit}"
+                        if(remSensorDay.size() > 1) {
+                            href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                            //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
                         } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
                     }
                 }
-            }
-            if(remSensorDay && remSensorNight) {
-                section("Day/Evening Detection Options:") {
-                    input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
-                    if(!remSenUseSunAsMode && !remSenModeDuplication()) {
-                        def modesReq = (!remSenUseSunAsMode && (remSensorDay && remSensorNight)) ? true : false
-                        input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
-                        input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
-                    } else {
-                        paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
+                if(remSensorDay && ((!remSenHeatTempsReq() || !remSenCoolTempsReq()) || (remSenDayHeatTemp && remSenDayCoolTemp))) {
+                    section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
+                        input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
+                        if(remSensorNight) {
+                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${state?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
+                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${state?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                            //paragraph " ", image: " "
+                            def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${state?.tempUnit}"
+                            if(remSensorNight.size() > 1) {
+                                href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                                //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
+                            } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
+                        }
                     }
                 }
-            }
-            if(remSenTstat && (remSensorDay || remSensorNight)) {
-                if(remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
-                    section("Fan Settings:") {
-                        paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: getAppImg("instruct_icon.png")
-                        input "remSenTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                if(remSensorDay && remSensorNight) {
+                    section("Day/Evening Detection Options:") {
+                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
+                        if(remSenUseSunAsMode) {
+                            getSunTimeState()
+                            paragraph "Sunrise: ${state.sunriseTm} | Sunset: ${state.sunsetTm}", image: getAppImg("blank_icon.png")
+                        } 
+                        if(!remSenUseSunAsMode) { 
+                            if(!checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
+                                def modesReq = (!remSenUseSunAsMode && (remSensorDay && remSensorNight)) ? true : false
+                                input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                                input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                            } else {
+                                paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
+                            }
+                        }
                     }
                 }
-                section("(Optional) Use Motion Sensors to Evaluate Temps:") {
-                    input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
-                    if(remSenMotion) {
-                        paragraph "Motion State: (${isMotionActive(remSenMotion) ? "Active" : "Not Active"})", image: " "
-                        input "remSenMotionModes", "mode", title: "Only evaluate Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
-                        input "remSenMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                if(remSenTstat && (remSensorDay || remSensorNight)) {
+                    if(remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
+                        section("Fan Settings:") {
+                            paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: getAppImg("instruct_icon.png")
+                            input "remSenTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                        }
                     }
-                }
-                section("(Optional) Use Switch Event(s) to Evaluate Temps:") {
-                    input "remSenSwitch", "capability.switch", title: "Select Switches", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
-                    if(remSenSwitch) { 
-                        def swVals = [0:"Off", 1:"On", 2:"On/Off"]
-                        input "remSenSwitchOpt", "enum", title: "Event Type to Trigger?", required: true, defaultValue: 2, metadata: [values:swVals], submitOnChange: true, image: getAppImg("settings_icon.png")
+                    section("(Optional) Use Motion Sensors to Evaluate Temps:") {
+                        input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
+                        if(remSenMotion) {
+                            paragraph "Motion State: (${isMotionActive(remSenMotion) ? "Active" : "Not Active"})", image: " "
+                            input "remSenMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 60, metadata: [values:longTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                            input "remSenMotionModes", "mode", title: "Use Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
+                        }
                     }
-                    
-                }
-                section ("Optional Settings:") {
-                    paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
-                    input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("temp_icon.png")
-                    if(remSenRuleType != "Circ") {
-                        paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
-                        input "remSenTempChgVal", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                    section("(Optional) Use Switch Event(s) to Evaluate Temps:") {
+                        input "remSenSwitches", "capability.switch", title: "Select Switches", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
+                        if(remSenSwitches) { 
+                            input "remSenSwitchOpt", "enum", title: "Event Type to Trigger?", required: true, defaultValue: 2, metadata: [values:switchEnumVals()], submitOnChange: true, image: getAppImg("settings_icon.png")
+                        }
                     }
-                    input "remSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
-                    input "remSenWaitVal", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                    section ("Optional Settings:") {
+                        paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
+                        input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${state?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                        if(remSenRuleType != "Circ") {
+                            paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
+                            input "remSenTempChgVal", "decimal", title: "Change Temp Increments (°${state?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
+                        }
+                        input "remSenModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
+                        input "remSenWaitVal", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                    }
                 }
             }
         }
@@ -332,17 +343,25 @@ def remSensorPage() {
             }
         } else { state?.remSenEnabled = false }
         
-        section("Help and Instructions:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        section("Help:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions", 
+                description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
 
+//Requirements Section
+def remSenCoolTempsReq() { return (remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false }
+def remSenHeatTempsReq() { return (remSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false }
+def remSenDayHeatTempOk()   { return (!remSenHeatTempsReq() || (remSenHeatTempsReq() && remSenDayHeatTemp)) ? true : false }
+def remSenDayCoolTempOk()   { return (!remSenCoolTempsReq() || (remSenCoolTempsReq() && remSenDayCoolTemp)) ? true : false }
+def remSenNightHeatTempOk() { return (!remSenHeatTempsReq() || (remSenHeatTempsReq() && remSenNightHeatTemp)) ? true : false }
+def remSenNightCoolTempOk() { return (!remSenCoolTempsReq() || (remSenCoolTempsReq() && remSenNightCoolTemp)) ? true : false }
+
 def isRemSenConfigured() {
-    def devOk = ((remSensorDay || remSensorNight) && remSenTstat) ? true : false
-    def nightOk = (!remSensorNight && remSensorDay) || (remSensorNight && (remSenRuleType == "Circ" && ((!remSenHeatTempNight || !remSenCoolTempNight) || (remSenNightHeatTemp && remSenNightCoolTemp)))) ? true : false
-    def dayOk = (remSensorDay && (remSensorDay && !remSensorNight) || (remSensorDay && (remSenRuleType == "Circ" && ((!remSenDayHeatTemp || !remSenDayCoolTemp) || (remSenDayHeatTemp && remSenDayCoolTemp))))) ? true : false
+    def devOk = ((remSensorDay || (remSensorDay && remSensorNight)) && remSenTstat) ? true : false
+    def nightOk = ((!remSensorNight && remSensorDay) || (remSensorDay && remSensorNight && remSenNightCoolTempOk() && remSenNightHeatTempOk())) ? true : false
+    def dayOk = ((remSensorDay && !remSensorNight) || ((remSensorDay || (remSensorDay && remSensorNight)) && remSenDayHeatTempOk() && remSenDayHeatTempOk())) ? true : false
     //log.debug "devOk: $devOk | nightOk: $nightOk | dayOk: $dayOk"
     return (devOk && nightOk && dayOk) ? true : false
 }
@@ -368,13 +387,15 @@ def remSenSenTempEvt(evt) {
 }
 
 def remSenSunEvtHandler(evt) {
-    if(remSenUseSunAsMode) { remSenEvtEval() }
-    else { return }
+    if(remSenUseSunAsMode) { 
+        getSunTimeState() 
+        remSenEvtEval() 
+    } else { return }
 }
 
 def remSenSwitchEvt(evt) {
     def evtType = evt?.value.toString()
-    if(remSenSwitch) {
+    if(remSenSwitches) {
         def opt = remSenSwitchOpt?.toInteger()
         switch(opt) {
             case 0:
@@ -409,36 +430,11 @@ def remSenCheckMotion() {
     if(isMotionActive(remSenMotion)) { remSenEvtEval() }
 }
 
-def remSenTstatDuplication() {
-    def result = false
-    if(remSenTstat && remSenTstatsMir) {
-        def pTstat = remSenTstat?.deviceNetworkId.toString()
-        def mTstatAr = []
-        remSenTstatsMir?.each { ts ->
-            mTstatAr << ts?.deviceNetworkId.toString()
-        }
-        if (pTstat in mTstatAr) { return true }
-    }
-    return result
-}
-
-def extSenModeDuplication() {
-    def result = false
-    if(remSensorDayModes && remSensorNightModes) {
-         remSensorDayModes?.each { dm ->
-            if(dm in remSensorNightModes) {
-                result = true
-            }
-        }
-    }
-    return result
-}
-
 def getUseNightSensor() {
     def day = !remSensorDayModes ? false : isInMode(remSensorDayModes)
     def night = !remSensorNightModes ? false : isInMode(remSensorNightModes)
-    if(remSenUseSunAsMode) { return getTimeAfterSunset() ? true : false }
-    else if(night && !day) { return true }
+    if (remSenUseSunAsMode) { return getTimeAfterSunset() }
+    else if (night && !day) { return true }
     else if (day && !night) { return false }
     else { return null }
 }
@@ -470,8 +466,8 @@ def remSenShowTempsPage() {
         }
         if(remSensorNight) { 
             section("Night Sensor Temps:") {
-                remSensorNight?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${state?.tempUnit}", image: getAppImg("temperature_icon.png")
+                remSensorNight?.each { ts ->
+                    paragraph "${ts?.label}: ${getDeviceTemp(ts)}°${state?.tempUnit}", image: getAppImg("temperature_icon.png")
                 }
             }
             section("Average Temp of Night Sensors:") {
@@ -482,13 +478,15 @@ def remSenShowTempsPage() {
 }
 
 def getTimeAfterSunset() {
-    def sR = (location?.currentValue("sunriseTime"))
-    def sS = (location?.currentValue("sunsetTime"))
+    def sun = getSunriseAndSunset()
+    //def sunRise = (location?.currentValue("sunriseTime"))
+    //def sunSet = (location?.currentValue("sunsetTime"))
     def result = true
-    if (sS && sR) {
+    if (sun) {
         def timeNow = now()
-        def start = timeToday(sS, location?.timeZone).time
-        def stop = timeToday(sR, location?.timeZone).time
+        def start = sun?.sunset.time //timeToday(sun?.sunset.time, location?.timeZone).time
+        def stop = sun?.sunrise.time //timeToday(sunRise, location?.timeZone).time
+        //log.debug "timeNow: $timeNow | start: $start | stop: $stop"
         result = (start < stop) ? ((timeNow >= start) && (timeNow <= stop)) : ((timeNow <= stop) || (timeNow >= start))
     }
     return result
@@ -496,10 +494,9 @@ def getTimeAfterSunset() {
 
 def getLastRemSenEvalSec() { return !atomicState?.lastRemSenEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastRemSenEval).toInteger() }
 
-// Based off of Keep Me Cozy II
+// Initially based off of Keep Me Cozy II
 private remSenEvtEval() {
     log.trace "remSenEvtEval....."
-    //log.debug "Remote Sensor Enabled: ${state?.remSenEnabled} | remSenModesOk: ${modesOk(remSenModes)} | rem Sensor: ${(remSensorDay || remSensorNight)} | Thermostat: ${remSenTstat} | getRemModeOk(): ${getRemSenModeOk()}"
     if(getLastRemSenEvalSec() < (remSenWaitVal ? remSenWaitVal?.toInteger() : 60)) { 
         log.debug "Too Soon to Evaluate..."
         return 
@@ -508,39 +505,39 @@ private remSenEvtEval() {
         atomicState?.lastRemSenEval = getDtNow()
         if (state?.remSenEnabled && modesOk(remSenModes) && (remSensorDay || remSensorNight) && remSenTstat && getRemSenModeOk()) {
             def threshold = !remTempDiffVal ? 0 : remSenTempDiffDegrees.toDouble()
-            def chgTempVal = !remTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
+            def tempChangeVal = !remTempChgDegrees ? 0 : extTempChgDegrees.toDouble()
             def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
-            def curTstatFanMode = remSenTstat?.currentThermostatFanMode
+            def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
             def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-            def remSenHtemp = getSenHeatSetpointTemp()
-            def remSenCtemp = getSenCoolSetpointTemp()
+            def remSenHtemp = getRemSenHeatSetTemp()
+            def remSenCtemp = getRemSenCoolSetTemp()
             def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
             
             log.trace "Remote Sensor Rule Type: ${remSenRuleType}"
             log.trace "Remote Sensor Temp: ${curSenTemp}"
             log.trace "Thermostat Info - ( Temperature: ($curTstatTemp) | HeatSetpoint: ($curHeatSetpoint) | CoolSetpoint: ($curCoolSetpoint) | HvacMode: ($hvacMode) | OperatingState: ($curTstatOperState) | FanMode: ($curTstatFanMode) )" 
-            log.trace "Desired Temps - Heat: $extHtemp | Cool: $extCtemp"
+            log.trace "Desired Temps - Heat: $remSenHtemp | Cool: $remSenCtemp"
             
             if(hvacMode == "off") { return }
             
             else if (hvacMode in ["cool","auto"]) {
                 if ((curSenTemp - remSenCtemp) >= threshold) {
                     if(remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
-                        remSenTstat?.setCoolingSetpoint(curTstatTemp - chgTempVal)
-                        if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
-                        log.debug "remSenTstat.setCoolingSetpoint(${curTstatTemp - chgTempVal}), ON"
+                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${state?.tempUnit})"
+                        remSenTstat?.setCoolingSetpoint(curTstatTemp - tempChangeVal)
+                        if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
+                        log.debug "remSenTstat.setCoolingSetpoint(${curTstatTemp - tempChangeVal}), ON"
                     }
                 }
                 else if (((extCtemp - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
                     if(remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
-                        remSenTstat?.setCoolingSetpoint(curTstatTemp + chgTempVal)
-                        if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - chgTempVal) }
-                        log.debug "remSenTstat.setCoolingSetpoint(${curTstatTemp + chgTempVal}), OFF"
+                        log.debug "COOL - Setting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${state?.tempUnit})"
+                        remSenTstat?.setCoolingSetpoint(curTstatTemp + tempChangeVal)
+                        if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
+                        log.debug "remSenTstat.setCoolingSetpoint(${curTstatTemp + tempChangeVal}), OFF"
                     }
                 } else {
                     //log.debug "FAN(COOL): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})"
@@ -564,18 +561,18 @@ private remSenEvtEval() {
             else if (hvacMode in ["heat", "emergency heat", "auto"]) {
                 if ((remSenHtemp - curSenTemp) >= threshold) {
                     if(remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
-                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp + chgTempVal)}°${state?.tempUnit})"
-                        remSenTstat?.setHeatingSetpoint(curTstatTemp + chgTempVal)
-                        if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + chgTempVal) }
-                        log.debug "remSenTstat.setHeatingSetpoint(${curTstatTemp + chgTempVal}), ON"
+                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${state?.tempUnit})"
+                        remSenTstat?.setHeatingSetpoint(curTstatTemp + tempChangeVal)
+                        if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + tempChangeVal) }
+                        log.debug "remSenTstat.setHeatingSetpoint(${curTstatTemp + tempChangeVal}), ON"
                     }
                 }
                 else if (((curSenTemp - remSenHtemp) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
                     if(remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) {
-                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp - chgTempVal)}°${state?.tempUnit})"
-                        remSenTstat?.setHeatingSetpoint(curTstatTemp - chgTempVal)
-                        if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - chgTempVal) }
-                        log.debug "remSenTstat.setHeatingSetpoint(${curTstatTemp - chgTempVal}), OFF"
+                        log.debug "HEAT - Setting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${state?.tempUnit})"
+                        remSenTstat?.setHeatingSetpoint(curTstatTemp - tempChangeVal)
+                        if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - tempChangeVal) }
+                        log.debug "remSenTstat.setHeatingSetpoint(${curTstatTemp - tempChangeVal}), OFF"
                     }
                 } else { 
                     //log.debug "FAN(HEAT): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})"
@@ -618,7 +615,8 @@ def getRemSenFanTempOk(senTemp, userTemp, curTemp, threshold) {
 }
 
 def getRemSenModeOk() {
-    if (remSensorDay && (!remSensorDayModes && !remSensorNight && !remSensorNightModes)) {
+    if(remSenUseSunAsMode) { return true }
+    else if (remSensorDay && (!remSensorDayModes && !remSensorNight && !remSensorNightModes)) {
         return true
     }
     else if (remSensorDayModes || remSensorNightModes) {
@@ -631,7 +629,7 @@ def getRemSenModeOk() {
 
 def getRemSenFanRunOk(operState, fanState) { 
     log.trace "getRemSenFanRunOk($operState, $fanState)"
-    def val = remSenTimeBetweenRuns ? remSenTimeBetweenRuns.toInteger() : 3600
+    def val = remSenTimeBetweenRuns ? remSenTimeBetweenRuns?.toInteger() : 3600
     def cond = ((remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && operState == "idle" && fanState == "auto") ? true : false
     def timeSince = (getLastRemSenFanRunDtSec() > val)
     def result = (timeSince && cond) ? true : false
@@ -666,7 +664,7 @@ def getRemoteSenTemp() {
     }
 }
 
-def getSenCoolSetpointTemp() {
+def getRemSenCoolSetTemp() {
     if(!getUseNightSensor() && remSenDayCoolTemp) {
         return remSenDayCoolTemp?.toDouble()  
     }
@@ -678,7 +676,7 @@ def getSenCoolSetpointTemp() {
     }
 }
 
-def getSenHeatSetpointTemp() {
+def getRemSenHeatSetTemp() {
     if(!getUseNightSensor() && remSenDayHeatTemp) {
         return remSenDayHeatTemp?.toDouble()  
     }
@@ -725,43 +723,6 @@ def remSenRuleEnum() {
     return vals
 }
 
-def longTimeEnum() {
-    def vals = [
-        60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes", 
-        3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
-    ]
-    return vals
-}
-
-def shortTimeEnum() {
-    def vals = [
-        1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
-        8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds"
-    ]
-    return vals
-}
-
-def smallTempEnum() {
-    def tempUnit = state?.tempUnit
-    def vals = [
-        1:"1°${tempUnit}", 2:"2°${tempUnit}", 3:"3°${tempUnit}", 4:"4°${tempUnit}", 5:"5°${tempUnit}", 6:"6°${tempUnit}", 7:"7°${tempUnit}",
-        8:"8°${tempUnit}", 9:"9°${tempUnit}", 10:"10°${tempUnit}"
-    ]
-    return vals
-}
-
-def remSenRuleName() {
-    def result = "unknown"
-    if(remSenRuleType) {
-        remSenRuleEnum().each { item ->
-            if(item?.key.toString() == remSenRuleType?.toString()) { 
-                result = item?.value
-            }
-        }
-    } 
-    return result
-}
-
 /******************************************************************************  
 |                			WATCH CONTACTS AUTOMATION CODE	                  |
 *******************************************************************************/
@@ -769,15 +730,19 @@ def remSenRuleName() {
 def contactWatchPage() {
     def pName = "conWat"
     dynamicPage(name: "contactWatchPage", title: "Thermostat/Contact Automation", uninstall: false) {
+        def dupTstat = checkThermostatDupe(conWatTstat, conWatTstatMir)
         section("When These Contacts are open, Turn Off this Thermostat") {
-            def req = (conWatContacts || wContTstat) ? true : false
+            def req = (conWatContacts || conWatTstat) ? true : false
             input name: "conWatContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
                     image: getAppImg("contact_icon.png")
             input name: "conWatTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
                     image: getAppImg("thermostat_icon.png")
+            if(dupTstat) {
+                paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
+            }
             if(conWatTstat) {
                 input name: "conWatTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                    image: getAppImg("thermostat_icon.png")
+                        image: getAppImg("thermostat_icon.png")
             }
         }
         if(conWatContacts && conWatTstat) {
@@ -785,31 +750,29 @@ def contactWatchPage() {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
 
-                input "conWatRestModeOnClose", "bool", title: "Restore Previous mode after Closed?", required: false, defaultValue: false, submitOnChange: true,
+                input "conWatRestoreOnClose", "bool", title: "Restore previous mode when Closed?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
-                if(conWatRestModeOnClose) {
-                    input name: "conWatOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                if(conWatRestoreOnClose) {
+                    input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
             }
-            
-            section("Only During these Days, Times, or Modes:") {
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+            section("Only Act During these Days, Times, or Modes:") {
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                input "conWatPushMsOn", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: true, submitOnChange: true,
+                input "conWatPushMsgOn", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
                 if(conWatPushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
                             "Custom Recipients are Set\nTap to Modify..." : "Tap to configure..."
-                    paragraph "Custom Recipients are optional. If you choose not to set them the Nest Managers settings will be used.", image: getAppImg("instruct_icon.png")
-                    href "setRecipientsPage", title: "Set Custom Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
-        section("Help and Instructions:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        section("Help:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions", 
+                description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -839,11 +802,9 @@ def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.valu
 def conWatContactOk() { return (!conWatContacts && !conWatTstat) ? false : true }
 def conWatScheduleOk() { return (modesOk(settings?.conWatModes) && daysOk(settings?.conWatDays) && conWatTimeOk()) ? true : false }
 def getConWatOpenDtSec() { return !state?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(state?.conWatOpenDt).toInteger() }
-def getConWatCloseDtSec() { return !state?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(state?.wContCloseDt).toInteger() }
+def getConWatCloseDtSec() { return !state?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(state?.conWatCloseDt).toInteger() }
 def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toInteger()) }
-def getConWatOnDelayVal() { return !wContOnDelay ? 300 : (conWatOnDelay.toInteger()) }
-def getOpenCt = "${getOpenContacts(conWatContacts)?.join(", ")}"
-def getClosedCt = "${getClosedContacts(conWatContacts)?.join(", ")}"
+def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteger()) }
 
 def conWatCheck() {
     //log.trace "conWatCheck..."
@@ -854,7 +815,7 @@ def conWatCheck() {
     //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestModeOnClose: $conWatRestModeOnClose | lastMode: $lastMode"
     //log.debug "state.conWatTurnedOff: $state?.conWatTurnedOff | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
     if(getConWatContactsOk()) {
-        if(modeOff && conWatRestModeOnClose && state?.conWatTurnedOff) {
+        if(modeOff && conWatRestoreOnClose && state?.conWatTurnedOff) {
             if(getConWatCloseDtSec() >= (getConWatOnDelayVal()?.toInteger() - 5)) {
                 if(lastMode && state?.conWatRestoreMode != curMode) {
                     if(setTstatMode(conWatTstat, lastMode)) {
@@ -865,9 +826,9 @@ def conWatCheck() {
                                 //log.debug("Restoring ${lastMode} to ${t}")
                             }
                         }
-                        LogAction("The Mode on ${conWatTstat.label} has been restored to '${lastMode.toString().toUpperCase()}' because ALL contacts are now Closed again...", "info", true)
+                        LogAction("Restoring ${conWatTstat.label} to '${lastMode.toString().toUpperCase()}' Mode because ALL contacts are now Closed again...", "info", true)
                         if(conWatPushMsgOn) {
-                            sendNofificationMsg("The Mode on ${conWatTstat.label} has been restored to '${lastMode.toString().toUpperCase()}' because ALL contacts are now Closed again...", "Info", 
+                            sendNofificationMsg("Restoring ${conWatTstat.label} to '${lastMode.toString().toUpperCase()}' Mode because ALL contacts are now Closed again...", "Info", 
                                     conWatNotifRecips, conWatNotifPhones, conWatUsePush)
                         }
                     }
@@ -880,7 +841,7 @@ def conWatCheck() {
     if (!getConWatContactsOk()) {
         if(!modeOff) {
             if(getConWatOpenDtSec() >= (getConWatOffDelayVal().toInteger() - 2)) {
-                if(conWatRestModeOnClose) { 
+                if(conWatRestoreOnClose) { 
                     state.conWatRestoreMode = curMode
                     //log.debug "conWatRestoreMode Set to: ${state?.conWatRestoreMode}"
                 }
@@ -895,8 +856,7 @@ def conWatCheck() {
                 }
                 LogAction("conWatCheck: The ${conWatTstat.label} has been turned off because${openCtDesc}has been Opened...", "warning", true)
                 if(sendPushOnWc) {
-                    sendNofificationMsg("${conWatTstat.label} has been turned off because${openCtDesc}has been Opened...", "Info", 
-                                    conWatNotifRecips, conWatNotifPhones, conWatUsePush)
+                    sendNofificationMsg("${conWatTstat.label} has been turned off because${openCtDesc}has been Opened...", "Info", conWatNotifRecips, conWatNotifPhones, conWatUsePush)
                 }
             }
         } else { LogAction("conWatCheck() | Skipping change because mode is already 'Off'", "info", true) }
@@ -908,15 +868,18 @@ def conWatContactEvt(evt) {
     def curMode = conWatTstat?.currentThermostatMode.toString()
     def modeOff = (curMode == "off") ? true : false
     def conOpen = (evt?.value == "open") ? true : false
+    def timeVal = 300
     if(conWatScheduleOk()) {
         if (conOpen) {
             state?.conWatOpenDt = getDtNow()
+            timeVal = getConWatOffDelayVal().toInteger()
         }
         else if(!conOpen && getConWatContactsOk()) {
             state.conWatCloseDt = getDtNow()
+            timeVal = getConWatOnDelayVal().toInteger()
         }
-        log.debug "conWatContactEvt: A monitored contact is '${evt?.value.toString().toUpperCase()}' | Scheduling Evaluation in (${getConWatOffDelayVal()} seconds)..."
-        runIn(getConWatOffDelayVal()?.toInteger(), "conWatCheck", [overwrite: true]) 
+        LogAction("conWatContactEvt: A monitored contact is '${evt?.value.toString().toUpperCase()}' | Scheduling Evaluation in (${timeVal} seconds)...", "info", true)
+        runIn(timeVal, "conWatCheck", [overwrite: true]) 
     }
 }
 
@@ -927,49 +890,53 @@ def conWatContactEvt(evt) {
 def extTempPage() {
     def pName = "extTmp"
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false) {
-        section("When External Temp reaches Turn Off this Thermostat when the Local Weather temp goes above a certain threshold.  ") {
-            def req = ((extTmpUseWeather || (!extTmpUseWeather && exTmpTemp)) || extTmpTstat) ? true : false
+        section("External Temps Used to Turn off the Thermostat Below:") {
             input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: req, defaultValue: false, submitOnChange: true,
                     image: getAppImg("weather_icon.png")
-            if(exUseWeather){
+            if(extTmpUseWeather){
                 getExtConditions()
+                def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
                 def tmpVal = (location?.temperatureScale == "C") ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
-                paragraph "Current Weather Temp: $tmpVal", image: " "
-                input name: "extTmpZipcode", type: "number", title: "Custom ZipCode (Default is Hub Loction)?", submitOnChange: true, required: false,
-                        image: getAppImg("location_icon.png")
-                input name: "extTmpWeatherRfrshVal", type: "number", title: "Update Weather (in Minutes)?", default: 5, submitOnChange: true, required: false,
-                        image: getAppImg("start_time_icon.png")
+                paragraph "Current Weather Temp: ${tmpVal}°${state?.tempUnit}", image: " "
+                input name: "extTmpWeatherUpdateVal", type: "enum", title: "Update Weather (in Minutes)?", defaultValue: 300, metadata: [values:longTimeEnum()], submitOnChange: true, required: wReq,
+                        image: getAppImg("reset_icon.png")
             }
-            if(!exUseWeather) {
-                input "extTmpTemp", "capability.temperatureMeasurement", title: "Which Temperature Sensors?", submitOnChange: true, multiple: false, required: req, 
+            if(!extTmpUseWeather) {
+                def senReq = (!extTmpUseWeather && extTmpTstat) ? true : false
+                input "extTmpTempSensor", "capability.temperatureMeasurement", title: "Which Outside Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, 
                         image: getAppImg("temperature_icon.png")
-                if(exTemp) {
-                    def tmpVal = "${extTmpTemp?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
-                    paragraph "Current Sensor Temp: ${tmpVal}", image: " "
+                if(extTmpTempSensor) {
+                    def tmpVal = "${extTmpTempSensor?.currentValue("temperature").toString()}"
+                    paragraph "Current Sensor Temp: ${tmpVal}°${state?.tempUnit}", image: " "
                 }
             }
-            input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
-            if(exTstat) {
-                def tmpVal = "${extTmpTstat?.currentValue("temperature").toString()}${location?.temperatureScale.toString()}"
-                paragraph "Current Thermostat Temp: ${tmpVal}", image: " "
-                input name: "extTmpDiffVal", type: "number", title: "When Inside Temp is within this many Degrees of External Temp?", range: "-30..30", default: 0, submitOnChange: true, required: false,
-                        image: getAppImg("temp_icon.png")
+            
+        }
+        if(extTmpUseWeather || extTmpTempSensor) {
+            def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
+            section("When the External Temp Reaches a Certain Threshold Turn Off this Thermostat.  ") {
+                input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
+                if(extTmpTstat) {
+                    def tmpVal = "${extTmpTstat?.currentValue("temperature").toString()}"
+                    paragraph "Current Thermostat Temp: ${tmpVal}°${state?.tempUnit}", image: " "
+                    input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp?", range: "-30.0..30.0", defaultValue: 1, submitOnChange: true, required: true,
+                            image: getAppImg("temp_icon.png")
+                }
             }
         }
-        if((extTmpUseWeather || extTmpTemp) && extTmpTstat) {
-            section("Only During these Days, Times, or Modes:") {
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
-            }
+        if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) {
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-
-                input "extTmpRestoreMode", "bool", title: "Restore Previous Mode when Temp goes below Threshold?", required: false, defaultValue: false, submitOnChange: true,
+                input name: "extTmpRestoreMode", type: "bool", title: "Restore mode when Temp is below Threshold?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(extTmpRestoreMode) {
-                    input name: "extTmpOnDelay", type: "enum", title: "Delay On (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
+                    input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
+            }
+            section("Only Act During these Days, Times, or Modes:") {
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
                 input "extTmpPushMsgOn", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: true, submitOnChange: true,
@@ -977,8 +944,7 @@ def extTempPage() {
                 if(extTmpPushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
                             "Custom Recipients are Set\nTap to Modify..." : "Tap to configure..."
-                    paragraph "Custom Recipients are not required. I you don't set them the Nest Managers settings will be used.", image: getAppImg("instruct_icon.png")
-                    href "setRecipientsPage", title: "Set Custom Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
@@ -990,8 +956,7 @@ def extTempPage() {
 }
 
 def isExtTmpConfigured() {
-    def devOk = ((extTmpUseWeather || extTmpTemp) && extTmpTstat) ? true : false
-    state.isExtTmpConfigured = devOk
+    def devOk = ((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) ? true : false
     return devOk
 }
 
@@ -1002,116 +967,122 @@ def getExtConditions() {
     state?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c).toInteger()
     state?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     state?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
-    log.debug "${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c}"
+    //log.debug "${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c}"
 }
 
-def getExtTmpOk() { 
-    def intTemp = extTmpTstat ? Math.round(exTstat?.currentValue("temperature")).toInteger() : null
+def getExtTmpTempOk() { 
+    def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
+    def diffVal = extTmpDiffVal?.toDouble()
     def extTemp = null
     
-    if(!extTmpUseWeather && extTmpTemp) { extTemp = Math.round(exTemp?.currentValue("temperature")).toInteger() }
-    else {
+    if(!extTmpUseWeather && extTmpTempSensor) { 
+        extTemp = extTmpTempSensor?.currentTemperature.toDouble() 
+    } else {
         if(extTmpUseWeather && (state?.curWeatherTemp_f || state?.curWeatherTemp_c)) {
-            if(location?.temperatureScale == "C" && state?.curWeatherTemp_c) { extTemp = state?.curWeatherTemp_c }
-            else { extTemp = state?.curWeatherTemp_f }
-        } else { return true }
+            if(location?.temperatureScale == "C" && state?.curWeatherTemp_c) { extTemp = state?.curWeatherTemp_c.toDouble() }
+            else { extTemp = state?.curWeatherTemp_f.toDouble() }
+        } else { extTemp = 0.0 }
     }
-    log.debug "Inside Temp: $intTemp | Outside Temp: $extTemp | Temp Threshold: ${extTmpDiffVal}"
-    if(intTemp && extTemp && extTmpDiffVal) { 
+    //log.debug "Inside Temp: $intTemp | Outside Temp: $extTemp | Temp Threshold: ${extTmpDiffVal}"
+    if(intTemp && extTemp && diffVal) { 
         def tempDiff = (extTemp < intTemp) ? -(extTemp - intTemp) : (extTemp - intTemp)
-        log.debug "Inside Temp: $intTemp | Outside Temp: $extTemp | Temp Threshold: ${extTmpDiffVal} | Actual Difference: $tempDiff"
-        if(extTmpDiffVal < 0 && extTmpDiffVal <= tempDiff) { return false }
-        else if(extTmpDiffVal > 0 && tempDiff <= extTmpDiffVal) { return false }
-        
+        //log.debug "Inside Temp: ${intTemp} | Outside Temp: ${extTemp} | Temp Threshold: ${diffVal} | Actual Difference: ${tempDiff}"
+        if(diffVal < 0 && diffVal <= tempDiff) { return false }
+        else if(diffVal > 0 && tempDiff <= diffVal) { return false }
         return true
     }
-    LogAction("getExTempOk() | Failed to complete the temp check", "error", true)
+    LogAction("getExtTmpTempOk() | Failed to complete the External Temp Check!!!", "error", true)
     return null
 }
 
-def extTempTimeOk() {
+def extTmpTimeOk() {
     try {
         def strtTime = null
         def stopTime = null
         def now = new Date()
-        if(settings?.exStartTime && settings?.exStopTime) { 
-            if(settings?.exStartTime) { strtTime = settings?.exStartTime }
-            if(settings?.exStopTime) { stopTime = settings?.exStopTime }
+        if(settings?.extTmpStartTime && settings?.extTmpStopTime) { 
+            if(settings?.extTmpStartTime) { strtTime = settings?.extTmpStartTime }
+            if(settings?.extTmpStopTime) { stopTime = settings?.extTmpStopTime }
         } else { return true }  
         if (strtTime && stopTime) {
             return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
         } else { return true }
-    } catch (ex) { LogAction("exTimeOk Exception: ${ex}", "error", true, true) }
+    } catch (ex) { LogAction("extTmpTimeOk Exception: ${ex}", "error", true, true) }
 }
 
-def extTmpScheduleOk() { return (modesOk(settings?.exModes) && daysOk(settings?.exDays) && extTmpTimeOk()) ? true : false }
+def extTmpScheduleOk() { return (modesOk(settings?.extTmpModes) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
 def getExtTmpGoodDtSec() { return !state?.extTmpTempGoodDt ? 100000 : GetTimeDiffSeconds(state?.extTmpTempGoodDt).toInteger() }
 def getExtTmpBadDtSec() { return !state?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(state?.extTmpTempBadDt).toInteger() }
-def getExtTmpOffDelayVal() { return !extTmpOffDelay ? 300 : (extTmpOffDelay.toInteger()) }
-def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : (extTmpOnDelay.toInteger()) }
-def getExtTmpWeatherRefreshVal() { return !extTmpWeatherRfrshVal ? 1 : (extTmpWeatherRfrshVal.toInteger()) }
+def getExtTmpOffDelayVal() { return !extTmpOffDelay ? 300 : extTmpOffDelay.toInteger() }
+def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toInteger() }
+def getExtTmpWeatherUpdateVal() { return !extTmpWeatherUpdateVal ? 1 : extTmpWeatherUpdateVal.toInteger() }
+def getExtTmpWeatherTemp() { 
+    def tmp = 0
+    if(extTmpUseWeather && (state?.curWeatherTemp_f || state?.curWeatherTemp_c)) {
+        if(location?.temperatureScale == "C" && state?.curWeatherTemp_c) { tmp = state?.curWeatherTemp_c }
+        else { tmp = state?.curWeatherTemp_f }
+    }
+    return tmp
+}
 
 def extTmpCheck() {
-    log.trace "exCheck..."
-    def curMode = exTstat.currentState("thermostatMode").value.toString()
-    if(getExtTmpOk()) {
-        if(curMode.equals("off") && extTmpRestoreMode && state?.extTmpTurnedOff == true) {
-            if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal().toInteger() - 2)) {
+    //log.trace "extTmpCheck..."
+    def curMode = extTmpTstat.currentThermostatMode.toString()
+    def modeOff = (curMode == "off") ? true : false
+    if(getExtTmpTempOk()) {
+        if(modeOff && extTmpRestoreMode && state?.extTmpTurnedOff) {
+            if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5)) {
                 def lastMode = state?.extTmpRestoreMode ?: curMode
-                if(!state?.extTmpRestoreMode.equals(curMode)) {
-                    if(lastMode) {
-                        if(setTstatMode(extTmpTstat, lastMode)) {
-                            state.extTmpTurnedOff = false
-                            LogAction("${extTmpTstat?.label} has been restored to ${lastMode} Mode because External Temp is above Threshhold...", "info", true)
-                            if(extTmpPushMsgOn) {
-                                sendNofificationMsg("${extTmpTstat?.label} has been restored to ${lastMode} Mode because External Temp is above Threshhold...", "Info", 
-                                        extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
-                            }
+                if(lastMode && (state?.extTmpRestoreMode != curMode)) {
+                    if(setTstatMode(extTmpTstat, lastMode)) {
+                        state.extTmpTurnedOff = false
+                        LogAction("Restoring ${extTmpTstat?.label} to '${lastMode.toUpperCase()}' Mode because External Temp is above Threshhold...", "info", true)
+                        if(extTmpPushMsgOn) {
+                            sendNofificationMsg("Restoring ${extTmpTstat?.label} to '${lastMode.toUpperCase()}' Mode because External Temp is above Threshhold...", "Info", 
+                                    extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
                         }
-                    } else { LogAction("exCheck() | lastMode was not found...", "error", true) }
+                    } else { LogAction("extTmpCheck() | lastMode was not found...", "error", true) }
                 }
             }
         } 
     }
-    
-    if (!getExtTmpOk()) {
-        if(!curMode.equals("off")) {
-            if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal().toInteger() - 2)) {
-                log.debug "!getExtTmpsOk..."
+    if (!getExtTmpTempOk()) {
+        if(!modeOff) {
+            if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
                 if(extTmpRestoreMode) { 
-                    state.extTmpRestoreMode = curMode
-                    log.debug "extTmpRestoreMode Saved as: ${state?.extTmpRestoreMode}"
+                    state?.extTmpRestoreMode = curMode
+                    LogAction("Saving ${extTmpTstat?.label} (${state?.extTmpRestoreMode}) mode for Restore later.", "info", true)
                 }
-                log.debug("External Temp is at Threshhold turning off ${extTmpTstat}")
+                //log.debug("External Temp has reached the temp threshold turning 'Off' ${extTmpTstat}")
                 extTmpTstat?.off()
-                state.extTmpTurnedOff = true
-                LogAction("${extTmpTstat.label} has been turned off because External Temp is at Threshhold", "info", true)
+                state?.extTmpTurnedOff = true
+                LogAction("${extTmpTstat.label} has been turned 'Off' because External Temp has reached the set temp threshold!!!", "info", true)
                 if(extTmpPushMsgOn) {
-                    sendNofificationMsg("${extTmpTstat.label} has been turned off because External Temp is at Threshhold", "Info", extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
+                    sendNofificationMsg("${extTmpTstat.label} has been turned 'Off' because External Temp has reached the set temp threshold!!!", "Info", extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
                 }
             }
-        } else { LogAction("extTmpCheck() | Skipping change because mode is already 'Off'", "info", true) }
+        } else { LogAction("extTmpCheck() | No change made because ${extTmpTstat.label}'s mode is already 'Off'", "info", true) }
     }
 }
 
-def extTmpEvt(evt) {
-    log.debug "exTmpEvt: ${evt?.value}"
-    def schedOff = false
-    def schedOn = false
-    def curMode = extTmpTstat?.currentState("thermostatMode").value.toString()
-    def exOk = getExtTmpOk()
-    log.debug "exOk: $exOk"
+def extTmpTempEvt(evt) {
+    //log.debug "extTmpTempEvt: ${evt?.value}"
+    def curMode = extTmpTstat?.currentThermostatMode.toString()
+    def modeOff = (curMode == "off") ? true : false
+    def extTmpOk = getExtTmpTempOk()
+    def timeVal = 60
+    //log.debug "extTmpOk: $extTmpOk"
     if(extTmpScheduleOk()) {
-        if (!exOk && !curMode.equals("off")) {
+        if (!extTmpOk && !modeOff) {
             state.extTmpGoodDt = getDtNow()
-            log.debug "extTmpEvt() | Scheduling Thermostat OFF in (${getExtTmpOffDelayVal()} seconds)..."
-            runIn(getExtTmpOffDelayVal().toInteger(), "extTmpCheck", [overwrite: true]) 
+            timeVal = getExtTmpOffDelayVal()
         }
-        else if(exOk && (extTmpRestoreMode && state?.extTmpTurnedOff == true)) {
+        else if (extTmpOk) {
             state.extTmpBadDt = getDtNow()
-            log.debug "extTmpEvt() | Scheduling Thermostat ON in (${getExtTmpOnDelayVal()} seconds)..."
-            runIn(getExtTmpOnDelayVal().toInteger(), "extTmpCheck", [overwrite: true])
+            timeVal = getExtTmpOnDelayVal()
         }
+        LogAction("extTmpTempEvt() '${evt?.displayName}: (${evt?.value}°${state?.tempUnit})' | Scheduling Temp Evaluation in (${timeVal} seconds)...", "info", true)
+        runIn(timeVal, "extTmpCheck", [overwrite: true])
     }
 }
 
@@ -1125,24 +1096,31 @@ def nestModePresPage() {
         if(!nModePresSensor) {
             def modeReq = (!nModePresSensor && (nModeHomeModes || nModeAwayModes))
             section("Set Nest Presence with ST Modes:") {
-                input "nModeHomeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: homeModes,
+                input "nModeHomeModes", "mode", title: "Modes that set Nest 'Home'", multiple: true, submitOnChange: true, required: modeReq,
                         image: getAppImg("mode_home_icon.png")
-                input "nModeAwayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: homeModes,
+                if(checkModeDuplication(nModeHomeModes, nModeAwayModes)) {
+                    paragraph "Duplicate Mode(s) found under the Home or Away Mode!!!.  Please Correct...", image: getAppImg("error_icon.png")
+                }
+                input "nModeAwayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: modeReq,
                         image: getAppImg("mode_away_icon.png")
             }
         }
-        section("Set Nest Presence Via Presence Sensor:") {
+        section("Set Nest Presence using Presence Sensor:") {
             paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
-            input "modePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
+            input "nModePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
                     image: getAppImg("presence_icon.png")
             if(nModePresSensor) {
                 if (nModePresSensor.size() > 1) {
                     paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", getAppImg("instruct_icon.png")
                 }
                 paragraph "Presence State: ${nModePresSensor.currentPresence}", image: " "
-                input (name: "nModePresSensorDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
-                if(nModePresSensorDelay) {
-                    input "nModePresSensorDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeEnum()], 
+            }
+        }
+        if((nModeHomeModes && nModeAwayModes) || nModePresSensor) {
+            section("Delay Changes:") {
+                input (name: "nModeDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
+                if(nModeDelay) {
+                    input "nModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeEnum()], 
                             submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -1154,22 +1132,19 @@ def nestModePresPage() {
                 if(nModePushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
                             "Custom Recipients are Set\nTap to Modify..." : "Tap to configure..."
-                    paragraph "Custom Recipients are not required. I you don't set them the Nest Managers settings will be used.", image: getAppImg("instruct_icon.png")
-                    href "setRecipientsPage", title: "Set Custom Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
-        
-        section("Help and Instructions:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages", 
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+        section("Help:") {
+            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions", 
+                description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
 
 def isNestModesConfigured() {
     def devOk = ((!nModePresSensor && (nModeHomeModes && nModeAwayModes)) || nModePresSensor) ? true : false
-    state.isNestModesConfigured = devOk
     return devOk
 }
 
@@ -1181,38 +1156,42 @@ def nModeWatcher(evt) {
 }
 
 def nModePresEvt(evt) {
-    log.debug "nModePresEvt: [${evt?.displayName}] is (${evt?.value})"
+    //log.debug "nModePresEvt: [${evt?.displayName}] is (${evt?.value})"
+    def presSensorPresent = getPresPresent(nModePresSensor)
     def curNestPres = (getNestLocPres() == "home") ? "present" : "not present"
-    if((evt?.value.toString() != curNestPres) ? true : false) {
-        if(nModePresSensorDelay) {
-            runIn(nModePresSensorDelayVal.toInteger(), "checkNestMode", [overwrite: true])
+    //log.debug "curNestPres: ${curNestPres}"
+    if((evt?.value != curNestPres) ? true : false) {
+        if(nModeDelay) {
+            LogAction("nModePresEvt: Scheduling Evaluation for (${nModeDelayVal})", "info", true)
+            runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
         } else {
             checkNestMode()
         }
     }
 }
 
-def checkNestMode() {
+def checkNestMode(val) {
+    //log.trace "checkNestMode..."
     try {
         def curStMode = location?.mode?.toString()
-        def nModePresAway = nModePresSensor?.find { it?.currentPresence == "present" }
+        def presSensorPresent = getPresPresent(nModePresSensor)
         def nestModeAway = (getNestLocPres() == "home") ? false : true
-        def away = ((nModePresSensor && nModePresAway) || (!nModePresSensor && (curStMode in nModeAwayModes))) ? true : false
-        def home = ((nModePresSensor && !nModePresAway) || (!nModePresSensor && (curStMode in nModeHomeModes))) ? true : false
-        def awayDesc = nModePresSensor ? "The monitored Presence device(s) is No Longer Present setting" : "The mode ($location.mode) has triggered"
-        def homeDesc = nModePresSensor ? "The monitored Presence device(s) in Present setting" : "The mode ($location.mode) has triggered" 
+        def away = ((nModePresSensor && !presSensorPresent) || (!nModePresSensor && (curStMode in nModeAwayModes))) ? true : false
+        def home = ((nModePresSensor && presSensorPresent) || (!nModePresSensor && (curStMode in nModeHomeModes))) ? true : false
+        def awayDesc = nModePresSensor ? "All Presence device(s) have left setting" : "The mode ($location.mode) has triggered"
+        def homeDesc = nModePresSensor ? "A Presence Device is Now Present setting" : "The mode ($location.mode) has triggered" 
         if((away && !nestModeAway) && !home) {
-            LogAction("$desc Nest 'Away'", "info", true)
+            LogAction("$awayDesc Nest 'Away'", "info", true)
             parent?.setStructureAway(null, true) 
             sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
         }
         else if ((home && nestModeAway) && !away) {
-            LogAction("$desc Nest 'Home'", "info", true)
+            LogAction("$homeDesc Nest 'Home'", "info", true)
             parent?.setStructureAway(null, false) 
             sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
         } 
         else {
-            LogAction("checkNestMode: Conditions are not valid to change mode | current ST Mode: $curStMode | Nest Mode Away?: $nestModeAway | Away: $away | Home: $home", "info", true)
+            LogAction("checkNestMode: Conditions are not valid to change mode | PresenceSensorAway: ($presSensorAway) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
         }
     } catch (ex) { LogAction("checkNestMode Exception: ($ex)", "error", true) }
     
@@ -1239,17 +1218,20 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 }
 
 def setRecipientsPage(params) {
-    if(params) { atomicState.curPName = params?.pName }
-    def pName = atomicState?.curPName
-    //log.debug "params:  ${state.curPName}"
+    def preFix
+    if (!params?.pName) { preFix = atomicState?.curPagePrefix } 
+    else {
+        atomicState.curPagePrefix = params?.pName 
+        preFix = params?.pName
+    }
     dynamicPage(name: "setRecipientsPage", title: "Set Push Notifications Recipients", uninstall: false) {
         def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
         section("${notifDesc}:") {
             if(!location.contactBookEnabled) {
-                input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
+                input "${preFix}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
             } else {
-                input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
-                    input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false)
+                input("${preFix}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
+                    input ("${preFix}NotifPhones", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false)
                 }
             }
         }
@@ -1257,34 +1239,63 @@ def setRecipientsPage(params) {
 }
 
 def setDayModeTimePage(params) {
-    if(params) { atomicState.curPName = params?.pName }
-    def pName = atomicState?.curPName
+    def preFix
+    if (!params?.pName) { preFix = atomicState?.curPagePrefix } 
+    else {
+        atomicState.curPagePrefix = params?.pName 
+        preFix = params?.pName
+    }
     dynamicPage(name: "setDayModeTimePage", title: "Select Days, Times or Modes", uninstall: false) {
         section("Only During these Days, Times, or Modes:") {
-            def timeReq = (settings?."${pName}StartTime" || settings."${pName}StopTime") ? true : false
-            input "${pName}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
-            input "${pName}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
-            input "${pName}Modes", "mode", title: "Only with These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
-            input "${pName}Days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
+            def timeReq = (settings?."${preFix}StartTime" || settings."${preFix}StopTime") ? true : false
+            input "${preFix}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
+            input "${preFix}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
+            input "${preFix}Days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
                     options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], image: getAppImg("day_calendar_icon.png")
+            input "${preFix}Modes", "mode", title: "Only with These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
         }
     }
 }
 
 def getDayModeTimeDesc(var) {
-	def pName = var
-	def ss = (settings?."${pName}StartTime" && settings?."${pName}StopTime") ? "Start: ${time2Str(settings?."${pName}StartTime")} | Stop: ${time2Str(settings?."${pName}StopTime")}" : "" 
+    def pName = var
+    def ss = (settings?."${pName}StartTime" && settings?."${pName}StopTime") ? "Start: ${time2Str(settings?."${pName}StartTime")} | Stop: ${time2Str(settings?."${pName}StopTime")}" : "" 
     def dys = settings?."${pName}Days".toString().replaceAll("\\[|\\]", "")
     def mds = settings?."${pName}Modes".toString().replaceAll("\\[|\\]", "")
     def md = settings?."${pName}Modes" ? "Modes: (${mds})" : ""
     def dy = settings?."${pName}Days" ? "Days: (${dys})" : ""
     def confDesc = ((settings?."${pName}StartTime" || settings?."${pName}StopTime") || settings?."${pName}Modes" || settings?."${pName}Days") ? 
-    		"${ss ? "$ss\n" : ""}${md ? "$md\n" : ""}${dy ? "$dy" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+            "${ss ? "$ss\n" : ""}${md ? "$md\n" : ""}${dy ? "$dy" : ""}\n\nTap to Modify..." : "Tap to Configure..."
 }
 
 /************************************************************************************************
 |							GLOBAL Code | Logging AND Diagnostic							    |
 *************************************************************************************************/
+
+def checkThermostatDupe(tstat1, tstat2) {
+    def result = false
+    if(tstat1 && tstat2) {
+        def pTstat = tstat1?.deviceNetworkId.toString()
+        def mTstatAr = []
+        tstat2?.each { ts ->
+            mTstatAr << ts?.deviceNetworkId.toString()
+        }
+        if (pTstat in mTstatAr) { return true }
+    }
+    return result
+}
+
+def checkModeDuplication(mode1, mode2) {
+    def result = false
+    if(mode1 && mode2) {
+         mode1?.each { dm ->
+            if(dm in mode2) {
+                result = true
+            }
+        }
+    }
+    return result
+}
 
 def getClosedContacts(contacts) {
     if(contacts) {
@@ -1300,6 +1311,16 @@ def getOpenContacts(contacts) {
         return cnts ? cnts : null
     } 
     return null
+}
+
+def getPresPresent(dev) {
+    def res = false
+    if(dev) {
+        dev?.each { d ->
+            if (d?.currentPresence == "present") { res = true }
+        }
+    } 
+    return res
 }
 
 def setTstatMode(tstat, mode) {
@@ -1461,6 +1482,65 @@ def getDtNow() {
     return formatDt(now)
 }
 
+def switchEnumVals() { return [0:"Off", 1:"On", 2:"On/Off"] }
+
+def longTimeEnum() {
+    def vals = [
+        60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes", 
+        2700:"45 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
+    ]
+    return vals
+}
+
+def shortTimeEnum() {
+    def vals = [
+        1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
+        8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds"
+    ]
+    return vals
+}
+
+def smallTempEnum() {
+    def tempUnit = state?.tempUnit
+    def vals = [
+        1:"1°${tempUnit}", 2:"2°${tempUnit}", 3:"3°${tempUnit}", 4:"4°${tempUnit}", 5:"5°${tempUnit}", 6:"6°${tempUnit}", 7:"7°${tempUnit}",
+        8:"8°${tempUnit}", 9:"9°${tempUnit}", 10:"10°${tempUnit}"
+    ]
+    return vals
+}
+
+def getTimeEnumName(enm, inpt) {
+    def result = "unknown"
+    if(enm) {
+        enm?.each { item ->
+            if(item?.key.toString() == inpt?.toString()) { 
+                result = item?.value
+            }
+        }
+    } 
+    return result
+}
+
+def getEnumValue(enm, inpt) {
+    def result = "unknown"
+    if(enm) {
+        enm?.each { item ->
+            if(item?.key.toString() == inpt?.toString()) { 
+                result = item?.value
+            }
+        }
+    } 
+    return result
+}
+
+def getSunTimeState() { 
+    def tz = TimeZone.getTimeZone(location.timeZone.ID)
+    def sunsetTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunsetTime')).format('h:mm a', tz)
+    def sunriseTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunriseTime')).format('h:mm a', tz)
+    state.sunsetTm = sunsetTm
+    state.sunriseTm = sunriseTm
+}
+
 /******************************************************************************  
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
@@ -1492,5 +1572,6 @@ private def textLicense() {
         "distributed under the License is distributed on an 'AS IS' BASIS, "+
         "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
         "See the License for the specific language governing permissions and "+
-        "limitations under the License." 
+        "limitations under the License. If you wish to use/modify this software please "+
+        "reference to the author of this application."
 }
