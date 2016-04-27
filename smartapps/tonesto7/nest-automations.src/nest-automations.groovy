@@ -26,10 +26,10 @@ definition(
     singleInstance: true)
 
 def appVersion() { "1.1.0" }
-def appVerDate() { "4-26-2016" }
+def appVerDate() { "4-27-2016" }
 def appVerInfo() {
     
-    "V1.1.0 (Apr 26th, 2016)\n" +
+    "V1.1.0 (Apr 27th, 2016)\n" +
     "Updated: standardized input and variable naming.\n" +
     "Updated: Select Custom Notification Recipients for Contacts, External Temps, and Mode Automations \n" + 
     "Fixed: Reworked the mode and contact event Logic...\n\n" +

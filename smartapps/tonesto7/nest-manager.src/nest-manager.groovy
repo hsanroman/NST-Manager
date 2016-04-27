@@ -38,9 +38,10 @@ definition(
 }
 
 def appVersion() { "2.0.3" }
-def appVerDate() { "4-25-2016" }
+def appVerDate() { "4-27-2016" }
 def appVerInfo() {
-    "V1.0.3 (Apr 25th, 2016)\n" +
+    "V1.0.3 (Apr 27th, 2016)\n" +
+    "Updated: Changed the way that data was sent to presence device\n"+
     "Added: Support for Custom Child Notifications...\n\n" +
 
     "V2.0.1 (Apr 22nd, 2016)\n" +
