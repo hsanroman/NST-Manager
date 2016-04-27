@@ -9,7 +9,7 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_newInst.jpg" width="330" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/main_page_1.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
@@ -21,15 +21,15 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v2.0.0*__
-* Nest Automations - __*v1.0.0*__
+* Nest Manager - __*v2.0.3*__
+* Nest Automations - __*v1.1.0*__
 
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v2.0.0*__
+* Nest Presence Device - __*v2.0.1*__
 * Nest Protect Device - __*v2.0.0*__
-* Nest Thermostat Device - __*v2.0.0*__
-* Nest Weather Device - __*v1.0.0*__
+* Nest Thermostat Device - __*v2.0.2*__
+* Nest Weather Device - __*v1.1.0*__
 
 ## What's New
  * **NEW**: In-app HTML help pages

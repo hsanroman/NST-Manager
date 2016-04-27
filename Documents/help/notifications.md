@@ -41,3 +41,7 @@ When there is a SmartApp or Device Type code update available.
 * ***The custom values allowed are between (30-84600) seconds***
 
 ----------
+
+#### Notification From Automation App
+
+As of v1.1.0 of the Automations app you can select individual recipients for the different automations.

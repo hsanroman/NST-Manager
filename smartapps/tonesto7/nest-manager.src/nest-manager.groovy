@@ -2757,11 +2757,10 @@ def devPrefPage() {
                 //paragraph "Nothing to see here yet!!!"
             }
         }
-        if((thermostats || protects || presDevice || weatherDevice)) {
+        if(thermostats || protects || presDevice || weatherDevice) {
             section("Device Names:") {
-                def devNameTitle = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\nTap to Modify..." : "Tap to Configure..."
-                def devNameDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Customize Device Names?" : "Device Names..."
-                href "devNamePage", title: devNameTitle, description: devNameDesc, image: getAppImg("device_name_icon.png")
+                def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\nTap to Modify..." : "Tap to Configure..."
+                href "devNamePage", title: "Device Names...", description: devDesc, image: getAppImg("device_name_icon.png")
             }
         }
     }
