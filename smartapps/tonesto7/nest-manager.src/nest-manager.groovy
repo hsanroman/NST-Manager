@@ -41,6 +41,7 @@ def appVersion() { "2.0.3" }
 def appVerDate() { "4-27-2016" }
 def appVerInfo() {
     "V1.0.3 (Apr 27th, 2016)\n" +
+    "Fixed: Bug found when unselecting a location nothing would be found again.\n" +
     "Updated: Changed the way that data was sent to presence device\n"+
     "Added: Support for Custom Child Notifications...\n\n" +
 
@@ -1422,7 +1423,7 @@ def getNestStructures() {
                 def dni = [strucData?.structure_id].join('.')
                 struct[dni] = strucData?.name.toString()
 
-                if (strucData?.structure_id == settings?.structures) {
+                if ((strucData?.structure_id == settings?.structures) || !settings?.structures) {
                     thisstruct[dni] = strucData?.name.toString()
                 }
             }
