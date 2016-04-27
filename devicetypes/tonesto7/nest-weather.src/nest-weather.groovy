@@ -578,7 +578,7 @@ def getSunriseSunset() {
 
 
 def forecastDay(day) {
-	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
+    def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
     def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"><br>"
     def forecastTxt = ""
     
@@ -588,7 +588,7 @@ def forecastDay(day) {
          forecastTxt = "${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}"
     }
 
-	return  dayName + forecastImage + forecastTxt
+    return  dayName + forecastImage + forecastTxt
 }
 
 def getWeatherHtml() { 
@@ -606,7 +606,7 @@ def getWeatherHtml() {
                   background: #00a1db;
                   color: #f5f5f5;
                 }
-                
+
                 #alert {
                   font-size: 4vw;
                   font-weight: bold;
@@ -620,7 +620,7 @@ def getWeatherHtml() {
                 }
 
                 #leftData {
-                  width: 50%;
+                  width: 98%;
                   float: left;
                   clear: left;
                 }
@@ -636,53 +636,48 @@ def getWeatherHtml() {
                   font-size: 4vw;
                   padding: 5px;
                 }
-                
+
                 #forecast {
-               		border-top: 2px solid #00a1db;
-                    clear: left;
-                    padding: 5px;
-                    
+                  border-top: 2px solid #00a1db;
+                  clear: left;
+                  padding: 5px;
                 }
-                
-                
+
                 #day {
-                	width:30%;
-                    float: left;        
-               }
-               
-               #station {
-               	float:right;
-                clear:left;
+                  width: 30%;
+                  float: left;
+                }
+
+                #station {
+                  float: right;
+                  clear: left;
                 }
 
                 #weatherIcon {
-                  float: left;
-                  clear: right;
-                  width: 47%;
-                  //height: 256px;
-             
-        
-                }
-                
-                #condition {
-                    border-top: 2px solid #00a1db;
-              	 	float: right;
-               		clear:right;
-                    padding-bottom: 5px;
-                    font-size: 6vw;
-                }
-                
-                #temp {
-                  font-size: 9vw;
-                  text-align: right;
-                  width:80%;
-                  	float: right;
-               		clear:right;
+                  text-align: center;
                 }
 
-                
-               .icon {
-                	width:75%;
+                #condition {
+                  border-top: 2px solid #00a1db;
+                  text-align: center;
+                  width: 80%;
+                  padding-bottom: 5px;
+                  margin-left: auto;
+                  margin-right: auto;
+                  font-size: 6vw;
+                }
+
+                #temp {
+                  font-size: 9vw;
+                  text-align: center;
+                  margin-left: auto;
+                  margin-right: auto;
+                }
+
+                .icon {
+                  margin-left: auto;
+                  margin-right: auto;
+                  width: 70%;
                 }
 
                 #dataDump {
@@ -695,62 +690,73 @@ def getWeatherHtml() {
                   width: 100%;
                   height: 1px;
                 }
-                
-               .r33 {
+
+                .r33 {
                   width: 33%;
                   vertical-align: top;
                   font-size: 3vw;
                   padding: 3px;
                   text-align: center;
                 }
-                
+
+                .r50 {
+                  width: 48%;
+                }
               </style>
                """
         }
         body {
             """
-            <div class="container">
+              <div class="container">
               <div id="header">Current Weather Conditions</div>
               <div id="weatherInfo">
               <div id="alert">${state?.walert}</div>
               <div id="city"> ${state?.curWeather?.current_observation?.display_location.full} </div>
               <div id="leftData">
-                <div id="data">
-                  <b>Feels Like:</b> ${getFeelslike()} <br>
-                  <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
-                  <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-                  <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-                  <b>Visibility:</b> ${getVisibility()} <br>
-                  <b>Lux:</b> ${getLux()}<br>
-                  <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-                  <b>Wind:</b> ${state?.windStr} <br>
-                </div>
-              </div>
-
-            <div id="weatherIcon">
-              <img src="${getWeatherIcon()}" class="icon"> <br>
-              <div id="temp">${getTemp()}</div>
-              <div id ="condition">${state.curWeatherCond}</div>
-            </div>
-          </div>
-          
-          <table id="forecast">
-          	 <tbody>
-				<tr>
-					<td class="r33">${forecastDay(0)}</td>
-                    <td class="r33">${forecastDay(1)}</td>
-                    <td class="r33">${forecastDay(2)}</td>
-                 </tr>
-                <tr>
-                	<td class="r33">${forecastDay(3)}</td>
-                    <td class="r33">${forecastDay(4)}</td>
-                    <td class="r33">${forecastDay(5)}</td>
+              <table>
+                <tbody>
+                  <tr>
+                    <td class="r50">
+                      <div id="leftData">
+                        <div id="data">
+                          <b>Feels Like:</b> ${getFeelslike()} <br>
+                          <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+                          <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+                          <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+                          <b>Visibility:</b> ${getVisibility()} <br>
+                          <b>Lux:</b> ${getLux()}<br>
+                          <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+                          <b>Wind:</b> ${state?.windStr} <br>
+                        </div>
+                      </div>
+                    </td>
+                  <td class="r50">
+                    <div id="weatherIcon">
+                      <div>
+                        <img src="${getWeatherIcon()}" class="icon"> <br>
+                        <div id="temp">${getTemp()}</div>
+                        <div id ="condition">${state.curWeatherCond}</div>
+                      </div>
+                    </div>
+                  </td>
                 </tr>
-          	</table>
-      		
-                       <div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div>
-         
-</div>
+             </table>
+             <table id="forecast">
+               <tbody>
+                 <tr>
+                   <td class="r33">${forecastDay(0)}</td>
+                   <td class="r33">${forecastDay(1)}</td>
+                   <td class="r33">${forecastDay(2)}</td>
+                 </tr>
+                 <tr>
+                   <td class="r33">${forecastDay(3)}</td>
+                   <td class="r33">${forecastDay(4)}</td>
+                   <td class="r33">${forecastDay(5)}</td>
+                 </tr>
+               </table>
+              
+             <div class="station"><b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id} </div>
+          </div>
           """
         }
     }
