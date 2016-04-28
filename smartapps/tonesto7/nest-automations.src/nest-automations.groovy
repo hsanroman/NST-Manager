@@ -61,7 +61,7 @@ preferences {
 
 def mainPage() {
     //log.trace "mainPage()"
-    atomicState?.tempUnit = getTemperatureScale().toString()
+    atomicState?.tempUnit = getTemperatureScale()?.toString()
     return dynamicPage(name: "mainPage", title: "Automation Page...", uninstall: false) {
         section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
             def remSenEnableDesc = atomicState?.remSenEnabled ? "" : "External Sensor Disabled...\n"
@@ -1008,7 +1008,7 @@ def getExtConditions() {
     atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
     atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()
     //log.debug "${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}"
-    extTmpTempCheck()
+    if (isExtTmpConfigured()) { extTmpTempCheck() }
 }
 
 def extTmpTempOk() { 
@@ -1100,9 +1100,9 @@ def extTmpTempCheck() {
                 //log.debug("External Temp has reached the temp threshold turning 'Off' ${extTmpTstat}")
                 extTmpTstat?.off()
                 atomicState?.extTmpTstatTurnedOff = true
-                LogAction("${extTmpTstat.label} has been turned 'Off' because External Temp is below the temp threshold!!!", "info", true)
+                LogAction("${extTmpTstat} has been turned 'Off' because External Temp is below the temp threshold!!!", "info", true)
                 if(extTmpPushMsgOn) {
-                    sendNofificationMsg("${extTmpTstat.label} has been turned 'Off' because External Temp is below the temp threshold!!!", "Info", extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
+                    sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is below the temp threshold!!!", "Info", extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
                 }
             }
         } else { LogAction("extTmpTempCheck() | No change made because ${extTmpTstat?.label}'s mode is already 'Off'", "info", true) }
