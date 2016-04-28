@@ -37,9 +37,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.3" }
-def appVerDate() { "4-27-2016" }
+def appVersion() { "2.0.4" }
+def appVerDate() { "4-28-2016" }
 def appVerInfo() {
+    "V1.0.4 (Apr 28th, 2016)\n" +
+    "Fixed: Very minor bug fixes\n" +
+    
     "V1.0.3 (Apr 27th, 2016)\n" +
     "Fixed: Bug found when unselecting a location nothing would be found again.\n" +
     "Updated: Changed the way that data was sent to presence device\n"+
