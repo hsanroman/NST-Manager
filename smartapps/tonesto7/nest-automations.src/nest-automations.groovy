@@ -1216,7 +1216,7 @@ def isNestModesConfigured() {
 }
 
 def nModeWatcher(evt) { 
-    log.debug "modeWatcher: ${evt?.value}"
+    log.debug "nModeWatcher: (${evt?.value}) Mode Event Received..."
     if(!modePresSensor) {
         checkNestMode()
     } 
