@@ -1178,7 +1178,7 @@ def nestModePresPage() {
                     image: getAppImg("presence_icon.png")
             if(nModePresSensor) {
                 if (nModePresSensor.size() > 1) {
-                    paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", getAppImg("instruct_icon.png")
+                    paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", image: getAppImg("instruct_icon.png")
                 }
                 paragraph "Presence State: ${nModePresSensor.currentPresence}", image: " "
             }
@@ -1223,17 +1223,14 @@ def nModeWatcher(evt) {
 }
 
 def nModePresEvt(evt) {
-    //log.debug "nModePresEvt: [${evt?.displayName}] is (${evt?.value})"
+    log.trace "nModePresEvt: Mode is (${evt?.value})"
     def presSensorPresent = isPresenceHome(nModePresSensor)
-    def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Remember that the default update time is every 3 minutes.  So if rapid changes occur this may be delayed.
     //log.debug "curNestPres: ${curNestPres}"
-    if((evt?.value != curNestPres) ? true : false) {
-        if(nModeDelay) {
-            LogAction("nModePresEvt: Scheduling Presence Evaluation for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
-            runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
-        } else {
-            checkNestMode()
-        }
+    if(nModeDelay) {
+    	LogAction("nModePresEvt: Scheduling Presence Evaluation for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+        runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
+    } else {
+        checkNestMode()
     }
 }
 
