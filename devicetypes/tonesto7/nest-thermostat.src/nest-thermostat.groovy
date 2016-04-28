@@ -301,7 +301,7 @@ def generateEvent(Map results) {
         humidityEvent(results?.humidity.toString())
         operatingStateEvent(results?.hvac_state.toString())
         fanModeEvent(results?.fan_timer_active.toString())
-        lastCheckinEvent(results?.last_connection)
+        if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
         softwareVerEvent(results?.software_version.toString())
         onlineStatusEvent(results?.is_online.toString())
         deviceVerEvent()
