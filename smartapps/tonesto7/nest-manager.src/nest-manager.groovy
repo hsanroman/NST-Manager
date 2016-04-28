@@ -947,12 +947,12 @@ void workQueue() {
     if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
     def cmdQueue = atomicState?."cmdQ${qnum}"
     try {
-        if(cmdQueue.size() > 0) {
+        if(cmdQueue?.size() > 0) {
             runIn(60, "workQueue", [overwrite: true])  // lost schedule catchall
             atomicState?.pollBlocked = true
             cmdQueue = atomicState?."cmdQ${qnum}"
             def cmd = cmdQueue?.remove(0)
-            atomicState."cmdQ${qnum}" = cmdQueue
+            atomicState?."cmdQ${qnum}" = cmdQueue
 
             if (getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset 3 command limit
 
@@ -979,7 +979,7 @@ void workQueue() {
             qnum = 0
             done = false
             nearestQ = 100
-            cmdQueueList.eachWithIndex { val, idx ->
+            cmdQueueList?.eachWithIndex { val, idx ->
                 if (done || !atomicState?."cmdQ${idx}" ) { return }
                 else {
                     if ( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
@@ -995,7 +995,7 @@ void workQueue() {
                 }
             }
 
-            if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
+            if (!atomicState?."cmdQ${qnum}") { atomicState?."cmdQ${qnum}" = [] }
             cmdQueue = atomicState?."cmdQ${qnum}"
             if(cmdQueue?.size() == 0) {
                 atomicState.pollBlocked = false
