@@ -201,7 +201,7 @@ def subscribeToEvents() {
 }
 
 def scheduler() {
-    if(extTmpUseWeather && extTmpTstat) { schedule("0 0/${getExtTmpWeatherRefreshVal()} * * * ?", "updateWeather") }
+    if(extTmpUseWeather && extTmpTstat) { schedule("0 0/${getExtTmpWeatherUpdateVal()} * * * ?", "updateWeather") }
 }
 
 def updateWeather() {
@@ -1015,7 +1015,7 @@ def getExtTmpGoodDtSec() { return !state?.extTmpTempGoodDt ? 100000 : GetTimeDif
 def getExtTmpBadDtSec() { return !state?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(state?.extTmpTempBadDt).toInteger() }
 def getExtTmpOffDelayVal() { return !extTmpOffDelay ? 300 : extTmpOffDelay.toInteger() }
 def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toInteger() }
-def getExtTmpWeatherUpdateVal() { return !extTmpWeatherUpdateVal ? 1 : extTmpWeatherUpdateVal.toInteger() }
+def getExtTmpWeatherUpdateVal() { return !extTmpWeatherUpdateVal ? 300 : extTmpWeatherUpdateVal?.toInteger() }
 def getExtTmpWeatherTemp() { 
     def tmp = 0
     if(extTmpUseWeather && (state?.curWeatherTemp_f || state?.curWeatherTemp_c)) {
@@ -1106,7 +1106,7 @@ def nestModePresPage() {
             }
         }
         section("Set Nest Presence using Presence Sensor:") {
-            paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
+            //paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
             input "nModePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
                     image: getAppImg("presence_icon.png")
             if(nModePresSensor) {
@@ -1130,7 +1130,7 @@ def nestModePresPage() {
                 input "nModePushMsgOn", "bool", title: "Send Push Notifications on Changes?", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
                 if(nModePushMsgOn) {
-                    def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
+                    def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifPhones" || settings?."${pName}NotifUsePush")) ? 
                             "Custom Recipients are Set\nTap to Modify..." : "Tap to configure..."
                     href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
                 }
@@ -1237,7 +1237,15 @@ def setRecipientsPage(params) {
         }
     }
 }
-
+ def getRecipientsNames(val) { 
+    def n = []
+    if(val) {
+        val?.each { r ->
+           n << ["${r}"]
+        }
+    }
+ 
+ }
 def setDayModeTimePage(params) {
     def preFix
     if (!params?.pName) { preFix = atomicState?.curPagePrefix } 
