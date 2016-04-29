@@ -99,7 +99,7 @@ def mainPage() {
             def extTmpOffDesc = extTmpOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
             def extTmpOnDesc = extTmpOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
             def extTmpConfDesc = ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
-            def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}${extTmpConfDesc}") : "Tap to Configure..."
+            def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}") : "Tap to Configure..."
             href "extTempPage", title: "Use External Temps...", description: extTmpDesc, image: getAppImg("external_temp_icon.png")
         }
         section("Set Nest Presence Based on ST Modes or Presence Sensor:") {
