@@ -25,13 +25,9 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.1" }
-def appVerDate() { "5-3-2016" }
+def appVersion() { "1.2.0" }
+def appVerDate() { "5-2-2016" }
 def appVerInfo() {
-    
-    "V1.2.1 (May 3rd, 2016)\n" +
-    "Fixed: Mode Notifications were always being sent.\n"+
-    "Updated: Minor UI updates.\n\n"+
     
     "V1.2.0 (May 2nd, 2016)\n" +
     "Lot's of Fixes and the ability to use switches to set nest mode\n"+
@@ -125,7 +121,7 @@ def mainPage(params) {
                     def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModes = remSenModes ? "\nMode Filters Active" : ""
-                    def remSenDesc = (isRemSenConfigured() ? ("${remSenEnableDesc}${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
+                    def remSenDesc = (isRemSenConfigured() ? ("${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
                                                               "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : "Tap to Configure...")
                     href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc, state: remSenDesc, image: getAppImg("remote_sensor_icon.png")
                 }
@@ -305,8 +301,8 @@ def remSensorPage() {
         if(atomicState?.remSenEnabled == null) { atomicState?.remSenEnabled = true }
         def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
         def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatMir)
-        def tStatHeatSp = getTstatSetpoint(extSenTstat, "heat")
-        def tStatCoolSp = getTstatSetpoint(extSenTstat, "cool")
+        def tStatHeatSp = getTstatSetpoint(remSenTstat, "heat")
+        def tStatCoolSp = getTstatSetpoint(remSenTstat, "cool")
         def tStatMode = remSenTstat ? remSenTstat?.currentThermostatMode : "unknown"
         def tStatTemp = "${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit}"
         def locMode = location?.mode
@@ -326,17 +322,18 @@ def remSensorPage() {
                 }
                 if(remSenTstat) { 
                     setRemSenTstatCapabilities()
-                    paragraph "Current Temperature: ${tStatTemp}\nCool/Heat Setpoints: ${tStatCoolSp}°${atomicState?.tempUnit}/${tStatHeatSp}°${atomicState?.tempUnit}\nCurrent Mode: $tStatMode", image: getAppImg("instruct_icon.png")
+                    paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
                     if(remSenTstatsMir && !dupTstat) { 
                         remSenTstatsMir?.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
                         }
                     }
-                    input "remSenTstatFanSwitch", "capability.switch", title: "Turn On Fan or Switch while Thermostat/Fan is running?", required: false, submitOnChange: true, image: getAppImg("fan_ventilation_icon.png")
+                    input "remSenTstatFanSwitch", "capability.switch", title: "Turn On Fan or Switch while Thermostat/Fan is running?", required: false, submitOnChange: true, multiple: false,
+                    		image: getAppImg("fan_ventilation_icon.png")
                     if(remSenTstatFanSwitch) {
-                        def tstatSwitRunEnum = [0:"Thermostat is Running", 1:"Only When Fan is Running"]
-                        input(name: "remSenTstatSwitchRunType", type: "enum", title: "Turn On When?", options: tstatSwitRunEnum, defaultValue: 0, 
+                    	paragraph "Switch is (${remSenTstatFanSwitch?.currentSwitch?.toString().capitalize()})", image: getAppImg("blank_icon.png")
+                        input(name: "remSenTstatSwitchRunType", type: "enum", title: "Turn On When?", defaultValue: 1, metadata: [values:switchRunEnum()],  
                                 required: (remSenTstatFanSwitch ? true : false), submitOnChange: true, image: getAppImg("setting_icon.png"))
                     }
                     
@@ -346,7 +343,7 @@ def remSensorPage() {
                 def dSenStr = !remSensorNight ? "Remote" : "Daytime"
                 section("Choose $dSenStr Sensor(s) to use instead of the Thermostat's...") {
                     def dSenReq = (((remSensorNight && !remSensorDay) || !remSensorNight) && remSenTstat) ? true : false
-                    input "remSensorDay", "capability.temperatureMeasurement", title: "$dSenStr Temp Sensors", submitOnChange: true, required: dSenReq,
+                    input "remSensorDay", "capability.temperatureMeasurement", title: "${dSenStr} Temp Sensors", submitOnChange: true, required: dSenReq,
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
                         def tempStr = !remSensorNight ? "" : "Day "
@@ -495,7 +492,7 @@ def remSenTstatFanEvt(evt) {
     def isFanOn = (evt?.value == "on") ? true : false
     if(!atomicState?.remSenEnabled) { return }
     else { 
-        if(remSenTstatFanSwitch && (remSenTstatSwitchRunType.toInteger() == 0 || remSenTstatSwitchRunType.toInteger() == 1)) {
+        if(remSenTstatFanSwitch && (remSenTstatSwitchRunType.toInteger() == 1 || remSenTstatSwitchRunType.toInteger() == 2)) {
             def swOn = remSenTstatFanSwitch?.currentSwitch.toString() == "on" ? true : false
             if(isFanOn) {
                 if(!swOn) { 
@@ -519,11 +516,9 @@ def remSenTstatOperEvt(evt) {
     
     if(!atomicState?.remSenEnabled) { return }
     else { 
-    	log.debug "isTstatIdle: $isTstatIdle"
-        if(remSenTstatFanSwitch && remSenTstatSwitchRunType.toInteger() == 0) {
+        if(remSenTstatFanSwitch && remSenTstatSwitchRunType.toInteger() == 1) {
         	
             def swOn = remSenTstatFanSwitch?.currentSwitch.toString() == "on" ? true : false
-            log.debug "swOn: $swOn"
             if(!isTstatIdle) {
                 if(!swOn) { 
                 	LogAction("remSenTstatOperEvt: '${evt?.displayName}' is '${evt?.value.toString().toUpperCase()}' | Turning '$remSenTstatFanSwitch' Switch 'ON'", "info", true)
@@ -751,8 +746,8 @@ private remSenEvtEval() {
             } else { log.warn "remSenEvtEval: Did not receive a valid Thermostat Mode..." }
         }
         else {
-            def remSenHtemp = getSenHeatSetpointTemp()
-            def remSenCtemp = getSenCoolSetpointTemp()
+            def remSenHtemp = getRemSenHeatSetTemp()
+            def remSenCtemp = getRemSenCoolSetTemp()
             remSenTstat?.setHeatingSetpoint(remSenHtemp)
             remSenTstat?.setCoolingSetpoint(remSenCtemp)
             if(remSenTstatsMir) {
@@ -1826,6 +1821,13 @@ def smallTempEnum() {
     def vals = [
         1:"1°${tempUnit}", 2:"2°${tempUnit}", 3:"3°${tempUnit}", 4:"4°${tempUnit}", 5:"5°${tempUnit}", 6:"6°${tempUnit}", 7:"7°${tempUnit}",
         8:"8°${tempUnit}", 9:"9°${tempUnit}", 10:"10°${tempUnit}"
+    ]
+    return vals
+}
+
+def switchRunEnum() {
+	def vals = [ 
+    	1:"Thermostat is Running", 2:"Only Fan is On" 
     ]
     return vals
 }
