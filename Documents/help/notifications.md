@@ -55,6 +55,6 @@ When there is a SmartApp or Device Type code update available.
 
 ----------
 
-#### Notification From Automation App
+#### Custom Automation App Notifications
 
 As of v1.1.0 of the Automations app you can select individual recipients for the different automations.
