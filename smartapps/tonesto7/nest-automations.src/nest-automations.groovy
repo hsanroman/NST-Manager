@@ -25,11 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.1.2" }
+def appVersion() { "1.2.0" }
 def appVerDate() { "5-2-2016" }
 def appVerInfo() {
     
-    "V1.1.2 (May 2nd, 2016)\n" +
+    "V1.2.0 (May 2nd, 2016)\n" +
+    "Lot's of Fixes and the ability to use switches to set nest mode\n"+
     "Updated: Modified Interface to allow selecting one automation per child app.\n\n"+
     
     "V1.1.1 (Apr 28th, 2016)\n" +
