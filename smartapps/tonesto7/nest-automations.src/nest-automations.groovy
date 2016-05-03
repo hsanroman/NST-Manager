@@ -25,9 +25,13 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.0" }
-def appVerDate() { "5-2-2016" }
+def appVersion() { "1.2.1" }
+def appVerDate() { "5-3-2016" }
 def appVerInfo() {
+    
+    "V1.2.1 (May 3rd, 2016)\n" +
+    "Fixed: Mode Notifications were always being sent.\n"+
+    "Updated: Minor UI updates.\n\n"+
     
     "V1.2.0 (May 2nd, 2016)\n" +
     "Lot's of Fixes and the ability to use switches to set nest mode\n"+
@@ -54,6 +58,7 @@ def appVerInfo() {
 preferences {
 	page(name: "selectPage" )
     page(name: "mainPage")
+    page(name: "namePage", install: true, uninstall: true)
     page(name: "remSensorPage")
     page(name: "remSensorTempsPage")
     page(name: "contactWatchPage")
@@ -62,7 +67,6 @@ preferences {
     page(name: "extTempPage")
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
-    page(name: "namePage", install: true, uninstall: true)
 }
 
 def selectPage() {
@@ -105,6 +109,7 @@ def mainPage(params) {
     
     else { 
         // Main Page Entries
+        def nxtPage = (atomicState?.automationType) ? "namePage" : ""
         return dynamicPage(name: "mainPage", title: "Automation Config Page...", uninstall: true, install: false, nextPage: "namePage" ) {
             if(autoType == "remSen") {
                 section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
@@ -1257,7 +1262,7 @@ def conWatCheck() {
                 }
                 runIn(20, "conWatFollowupCheck", [overwrite: true])
                 LogAction("conWatCheck: '${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
-                if(sendPushOnWc) {
+                if(conWatPushMsgOn) {
                     sendNofificationMsg("'${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", conWatNotifRecips, conWatNotifPhones, conWatUsePush)
                 }
             }
@@ -1344,14 +1349,14 @@ def nestModePresPage() {
             }
         }
         if(!nModePresSensor) {
-            section("(Optional) Use a Switch to set 'Away' when ON and 'Home' when OFF:") {
+            section("(Optional) Set Nest Presence using a Switch:") {
                 input "nModeSwitch", "capability.switch", title: "Select a Switch", required: false, multiple: false, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
                 if(nModeSwitch) {
                 	input "nModeSwitchOpt", "enum", title: "Switch State to Trigger 'Away'?", required: true, defaultValue: "On", options: ["On", "Off"], submitOnChange: true, image: getAppImg("settings_icon.png")
                 }
             }
         }
-        if((nModeHomeModes && nModeAwayModes) || nModePresSensor) {
+        if((nModeHomeModes && nModeAwayModes) || nModePresSensor || nModeSwitch) {
             section("Delay Changes:") {
                 input (name: "nModeDelay", type: "bool", title: "Delay Changes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
                 if(nModeDelay) {
@@ -1464,14 +1469,18 @@ def checkNestMode() {
             LogAction("$awayDesc Nest 'Away'", "info", true)
             atomicState?.nModeTstatLocAway = true
             parent?.setStructureAway(null, true) 
-            sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            if(nModePushMsgOn) {
+            	sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            }
             runIn(20, "nModeFollowupCheck", [overwrite: true])
         }
         else if (home) {
             LogAction("$homeDesc Nest 'Home'", "info", true)
             atomicState?.nModeTstatLocAway = false
             parent?.setStructureAway(null, false) 
-            sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            if(nModePushMsgOn) {
+            	sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            }
             runIn(20, "nModeFollowupCheck", [overwrite: true])
         } 
         else {

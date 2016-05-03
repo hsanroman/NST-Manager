@@ -37,10 +37,13 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.6" }
-def appVerDate() { "5-2-2016" }
+def appVersion() { "2.0.7" }
+def appVerDate() { "5-3-2016" }
 def appVerInfo() {
-
+    
+	"V2.0.7 (May 3rd, 2016)\n" +
+    "Fixed UI to work with the new mobile app design.\n\n" +
+    
 	"V2.0.6 (May 2nd, 2016)\n" +
     "Added: Showing what types of automations are installed now\n\n" +
 
