@@ -40,6 +40,7 @@ definition(
 def appVersion() { "2.0.6" }
 def appVerDate() { "5-2-2016" }
 def appVerInfo() {
+
 	"V2.0.6 (May 2nd, 2016)\n" +
     "Added: Showing what types of automations are installed now\n\n" +
 
@@ -60,7 +61,8 @@ def appVerInfo() {
 }
 
 preferences {
-    page(name: "authPage", title: "Nest", nextPage:"", content:"authPage", uninstall: true, install:true)
+    page(name: "authPage", title: "Nest", nextPage:"mainPage", content:"authPage", uninstall: true, install:true)
+    page(name: "mainPage" )
     page(name: "prefsPage")
     page(name: "infoPage")
     page(name: "nestInfoPage")
@@ -141,7 +143,7 @@ def authPage() {
 
     if (!oauthTokenProvided && atomicState?.accessToken) {
         LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
-        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall:uninstallAllowed) {
+        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
@@ -151,86 +153,90 @@ def authPage() {
             }
         }
     } else {
-        return dynamicPage(name: "authPage", title: "Main Page", nextPage: "", uninstall: false) {
-            section("") {
-                paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
-                if(!appDevType() && isAppUpdateAvail()) {
-                    paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update the code.",
-                        image: getAppImg("update_icon.png")
-                }
-            }
-            def structs = getNestStructures()
-            def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
-            LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
-            if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
-                section("Your Location:") {
-                	paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
-                }
-            } else {
-                section("Select your Location:") {
-                    input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs],
-                            image: getAppImg("nest_structure_icon.png"))
-                }
-            }
-            if (structures) {
-                atomicState.structures = structures ? structures : null
-                def stats = getNestThermostats()
-                def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
-                LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
+    	return mainPage()
+    }
+}
 
-                def coSmokes = getNestProtects()
-                def coDesc = coSmokes.size() ? "Found (${coSmokes.size()}) Protects..." : "No Protects"
-                LogAction("Protects: Found ${coSmokes.size()} (${coSmokes})", "info", false)
-                section("Select your Devices:") {
-                    if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
-                    if (stats?.size() > 0) {
-                        input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
-                                image: getAppImg("thermostat_icon.png"))
-                    }
-                    atomicState.thermostats =  thermostats ? statState(thermostats) : null
-                    if (coSmokes.size() > 0) {
-                        input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
-                                image: getAppImg("protect_icon.png"))
-                    }
-                    atomicState.protects = protects ? coState(protects) : null
-                    input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
-                    atomicState.presDevice = presDevice ? true : false
-                    input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                    atomicState.weatherDevice = weatherDevice ? true : false
-                    if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                        if(getStZipCode() != getNestZipCode()) {
-                            href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                        }
-                    }
-                    if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
-                        href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
+def mainPage() {
+    return dynamicPage(name: "mainPage", title: "Main Page", install: true, uninstall: true) {
+        section("") {
+            paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+            if(!appDevType() && isAppUpdateAvail()) {
+                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update the code.",
+                    image: getAppImg("update_icon.png")
+            }
+        }
+        def structs = getNestStructures()
+        def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
+        LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
+        if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
+            section("Your Location:") {
+             	paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
+            }
+        } else {
+            section("Select your Location:") {
+                input(name: "structures", title:"Nest Locations", type: "enum", required: true, multiple: false, submitOnChange: true, description: structDesc, metadata: [values:structs],
+                        image: getAppImg("nest_structure_icon.png"))
+            }
+        }
+        if (structures) {
+            atomicState.structures = structures ? structures : null
+            def stats = getNestThermostats()
+            def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
+            LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
+
+            def coSmokes = getNestProtects()
+            def coDesc = coSmokes.size() ? "Found (${coSmokes.size()}) Protects..." : "No Protects"
+            LogAction("Protects: Found ${coSmokes.size()} (${coSmokes})", "info", false)
+            section("Select your Devices:") {
+                if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
+                if (stats?.size() > 0) {
+                    input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
+                            image: getAppImg("thermostat_icon.png"))
+                }
+                atomicState.thermostats =  thermostats ? statState(thermostats) : null
+                if (coSmokes.size() > 0) {
+                    input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
+                            image: getAppImg("protect_icon.png"))
+                }
+                atomicState.protects = protects ? coState(protects) : null
+                input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
+                atomicState.presDevice = presDevice ? true : false
+                input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
+                atomicState.weatherDevice = weatherDevice ? true : false
+                if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                    if(getStZipCode() != getNestZipCode()) {
+                        href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
                     }
                 }
-                if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
-                    def autoDesc = isAutoAppInst() ? "${getInstAutoTypesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
-                    section("Automations:") {
-                        href "automationsPage", title: "Automations...", description: autoDesc, state: autoDesc, image: getAppImg("automation_icon.png")
-                    }
-                }
-                if((atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) || diagLogs) {
-                    def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
-                    section(diagInfoDesc) {
-                        if(atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice) && atomicState?.isInstalled) {
-                            href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
-                        }
-                        if(diagLogs) {
-                            href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", image: getAppImg("diag_icon.png")
-                        }
-                    }
-                }
-                section("Preferences:") {
-                    href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to configure...",
-                        image: getAppImg("settings_icon.png")
+                if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
+                    href "devNamePage", title: "Customize Device Names?", description: "Tap to Configure...", image: getAppImg("device_name_icon.png")
                 }
             }
-            section(" ") {
-                href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
+            if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
+                def autoDesc = isAutoAppInst() ? "${getInstAutoTypesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
+                section("Automations:") {
+                    href "automationsPage", title: "Automations...", description: autoDesc, state: autoDesc, image: getAppImg("automation_icon.png")
+                }
             }
+            if((atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) || diagLogs) {
+                def diagInfoDesc = !diagLogs ? "API Info:" : "Diagnostics/Info:"
+                section(diagInfoDesc) {
+                    if(atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice) && atomicState?.isInstalled) {
+                        href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
+                    }
+                    if(diagLogs) {
+                        href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", image: getAppImg("diag_icon.png")
+                    }
+                }
+            }
+            section("Preferences:") {
+                href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to configure...",
+                    image: getAppImg("settings_icon.png")
+            }
+        }
+        section(" ") {
+            href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
         }
     }
 }
@@ -275,7 +281,8 @@ def custWeatherPage() {
 
 //Defines the Preference Page
 def prefsPage() {
-    dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false) {
+	def showUninst = (atomicState?.structures || atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice)
+    dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false, uninstall: false ) {
         section("Polling:") {
             def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
             def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
@@ -2894,11 +2901,6 @@ def diagPage () {
         section("Reset Diagnostic Queue:") {
         	href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", image: getAppImg("reset_icon.png")
         }
-        section("Last Nest Command") {
-            def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
-            def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
-            paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
-        }
     }
 }
 
@@ -2948,6 +2950,11 @@ def nestInfoPage () {
             section("Protects") {
                 href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", image: getAppImg("protect_icon.png")
             }
+        }
+        section("Last Nest Command") {
+            def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
+            def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
+            paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
         }
     }
 }
