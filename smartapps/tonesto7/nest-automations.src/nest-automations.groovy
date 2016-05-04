@@ -69,7 +69,7 @@ preferences {
 }
 
 def selectPage() {
-    log.trace "selectPage()..."
+    //log.trace "selectPage()..."
     if(!atomicState?.automationType) {
         return dynamicPage(name: "selectPage", title: "Choose an Automation Type...", uninstall: false, install: false, nextPage: "mainPage") {
             section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
@@ -90,7 +90,7 @@ def selectPage() {
 }
 
 def mainPage(params) {
-    log.trace "mainPage()"
+    //log.trace "mainPage()"
     if (!atomicState?.tempUnit) { atomicState?.tempUnit = getTemperatureScale()?.toString() }
     def autoType = null
     //If params.autotype is not null then save to atomicstate.  
