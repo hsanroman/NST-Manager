@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: Nest Automations                                                   	|
-|    Author: Anthony S. (@tonesto7), 														|
+|    Author: Anthony S. (@tonesto7)															|
 |	 Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                  				|
 |                                                                                           |
 |********************************************************************************************
@@ -25,9 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.0" }
-def appVerDate() { "5-2-2016" }
+def appVersion() { "1.2.1" }
+def appVerDate() { "5-4-2016" }
 def appVerInfo() {
+    
+    "V1.2.1 (May 4th, 2016)\n" +
+    "Fixes and UI updates\n\n"+
     
     "V1.2.0 (May 2nd, 2016)\n" +
     "Lot's of Fixes and the ability to use switches to set nest mode\n"+
@@ -133,7 +136,7 @@ def mainPage(params) {
                     def extTmpTstatMode = extTmpTstat ? "\nThermostat Mode: (${extTmpTstat?.currentThermostatOperatingState.toString()}/${extTmpTstat?.currentThermostatMode.toString()})" : ""
                     def extTmpTstatDesc = extTmpTstat ? "${extTmpTstat?.label}: (${getDeviceTemp(extTmpTstat)}°${atomicState?.tempUnit})" : ""
                     def extTmpSenUsedDesc = (!extTmpUseWeather && extTmpTempSensor && extTmpTstat) ? "\nUsing External Sensor: (${getExtTmpTemperature()}°${atomicState?.tempUnit})" : ""
-                    def extTmpWeaUsedDesc = (extTmpUseWeather && !extTmpTempSensor && extTmpTstat) ? "\nUsing External Weather: (${getExtTmpTemperature()}°${atomicState?.tempUnit})" : ""
+                    def extTmpWeaUsedDesc = (extTmpUseWeather && !extTmpTempSensor && extTmpTstat) ? "\nUsing Weather: (${getExtTmpTemperature()}°${atomicState?.tempUnit})" : ""
                     def extTmpDiffDesc = extTmpDiffVal ? "\nTemp Difference Value: (${extTmpDiffVal}°${atomicState?.tempUnit})" : ""
                     def extTmpOffDesc = extTmpOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     def extTmpOnDesc = extTmpOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
@@ -239,6 +242,7 @@ def subscribeToEvents() {
                 subscribe(remSenTstat, "temperature", remSenTstatTempEvt)
                 subscribe(remSenTstat, "thermostatMode", remSenTstatModeEvt)
                 if(remSenTstatFanSwitch) {
+                	subscribe(remSenTstatFanSwitch, "switch", remSenTstatSwitchEvt)
                     subscribe(remSenTstat, "thermostatFanMode", remSenTstatFanEvt)
                     subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt)
                 }
@@ -455,7 +459,7 @@ def isRemSenConfigured() {
 }
 
 def remSenMotionEvt(evt) {
-    log.debug "remSenMotionEvt: ${evt?.displayName} Motion is (${evt?.value})"
+    log.debug "remSenMotionEvt: Motion Sensor (${evt?.displayName}) Motion is (${evt?.value})"
     if(atomicState?.remSenEnabled == false) { return }
     else if (remSenUseSunAsMode) { return}
     else {
@@ -470,25 +474,30 @@ def remSenMotionEvt(evt) {
 }
 
 def remSenTempSenEvt(evt) {
-    log.trace "remSenTempSenEvt: ${evt?.value}"
+    //log.trace "remSenTempSenEvt: Remote Sensor (${evt?.displayName}) Temp is (${evt?.value}°${atomicState?.tempUnit})"
     if(atomicState?.remSenEnabled == false) { return }
     else { remSenEvtEval() }
 }
 
 def remSenTstatTempEvt(evt) {
-    log.trace "remSenTstatTempEvt: ${evt?.value}"
+    log.trace "remSenTstatTempEvt: Thermostat (${evt?.displayName}) Temp is (${evt?.value}°${atomicState?.tempUnit})"
     if(atomicState?.remSenEnabled == false) { return }
     else { remSenEvtEval() }
 }
 
 def remSenTstatModeEvt(evt) {
-    log.trace "remSenTstatModeEvt: ${evt?.value}"
+    log.trace "remSenTstatModeEvt: Thermostat (${evt?.displayName}) Mode is (${evt?.value.toString().toUpperCase()})"
     //if(atomicState?.remSenEnabled == false) { return }
     //else { remSenEvtEval() }
 }
 
+def remSenTstatSwitchEvt(evt) {
+	log.trace "remSenTstatSwitchEvt: Thermostat Switch (${evt?.displayName}) is (${evt?.value})"
+    
+}
+
 def remSenTstatFanEvt(evt) {
-    log.trace "remSenTstatFanEvt: ${evt?.value}"
+    log.trace "remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value})"
     def isFanOn = (evt?.value == "on") ? true : false
     if(!atomicState?.remSenEnabled) { return }
     else { 
@@ -496,13 +505,13 @@ def remSenTstatFanEvt(evt) {
             def swOn = remSenTstatFanSwitch?.currentSwitch.toString() == "on" ? true : false
             if(isFanOn) {
                 if(!swOn) { 
-                	LogAction("remSenTstatFanEvt: '${evt?.displayName}' Fan is '${evt?.value.toString().toUpperCase()}' | Turning '$remSenTstatFanSwitch' Switch 'ON'", "info", true)
+                	LogAction("remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitch}' Switch (ON)", "info", true)
                     remSenTstatFanSwitch*.on() 
                 }
             }
             else {
                 if(swOn) { 
-                	LogAction("remSenTstatFanEvt: '${evt?.displayName}' Fan is '${evt?.value.toString().toUpperCase()}' | Turning '$remSenTstatFanSwitch' Switch 'OFF'", "info", true)
+                	LogAction("remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitch}' Switch (OFF)", "info", true)
                 	remSenTstatFanSwitch*.off() 
                 }
             }
@@ -511,7 +520,7 @@ def remSenTstatFanEvt(evt) {
 }
 
 def remSenTstatOperEvt(evt) {
-    log.trace "remSenTstatOperEvt: ${evt?.value}"
+    log.trace "remSenTstatOperEvt: Thermostat OperatingState is  (${evt?.value})"
     def isTstatIdle = (evt?.value == "idle") ? true : false
     
     if(!atomicState?.remSenEnabled) { return }
@@ -521,13 +530,13 @@ def remSenTstatOperEvt(evt) {
             def swOn = remSenTstatFanSwitch?.currentSwitch.toString() == "on" ? true : false
             if(!isTstatIdle) {
                 if(!swOn) { 
-                	LogAction("remSenTstatOperEvt: '${evt?.displayName}' is '${evt?.value.toString().toUpperCase()}' | Turning '$remSenTstatFanSwitch' Switch 'ON'", "info", true)
+                	LogAction("remSenTstatOperEvt: Thermostat (${evt?.displayName}) OperatingState is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitch}' Switch (ON)", "info", true)
                     remSenTstatFanSwitch*.on() 
                 }
             }
             else {
                 if(swOn) { 
-                	LogAction("remSenTstatOperEvt: '${evt?.displayName}' is '${evt?.value.toString().toUpperCase()}' | Turning '$remSenTstatFanSwitch' Switch 'OFF'", "info", true)
+                	LogAction("remSenTstatOperEvt: Thermostat (${evt?.displayName}) OperatingState is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitch}' Switch (OFF)", "info", true)
                     remSenTstatFanSwitch*.off() 
 
                 }
@@ -564,7 +573,7 @@ def remSenSwitchEvt(evt) {
 }
 
 def remSenModeEvt(evt) {
-    log.debug "remSenModeEvt: Mode: ${evt?.value}"
+    log.debug "remSenModeEvt: Mode is (${evt?.value})"
     remSenEvtEval()
 }
 
@@ -646,7 +655,7 @@ def getLastRemSenEvalSec() { return !atomicState?.lastRemSenEval ? 100000 : GetT
 
 // Initially based off of Keep Me Cozy II
 private remSenEvtEval() {
-    log.trace "remSenEvtEval....."
+    //log.trace "remSenEvtEval....."
     if(remSenUseSunAsMode) { getSunTimeState() }
     if(getLastRemSenEvalSec() < (remSenWaitVal ? remSenWaitVal?.toInteger() : 60)) { 
         log.debug "Too Soon to Evaluate..."
@@ -885,13 +894,12 @@ def extTempPage() {
     def pName = extTmpPrefix()
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false, nextPage: "mainPage") {
         section("External Temps to use to Turn off the Thermostat Below:") {
-            input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: req, defaultValue: false, submitOnChange: true,
-                    image: getAppImg("weather_icon.png")
+            input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
             if(extTmpUseWeather){
                 getExtConditions()
                 def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
                 def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
-                paragraph "Current Weather Temp: ${tmpVal}°${atomicState?.tempUnit}", image: " "
+                paragraph "Current Weather Temp: ${tmpVal}°${atomicState?.tempUnit}", image: getAppImg("blank_icon.png")
                 input name: "extTmpWeatherUpdateVal", type: "enum", title: "Update Weather (in Minutes)?", defaultValue: 15, metadata: [values:longTimeMinEnum()], submitOnChange: true, required: wReq,
                         image: getAppImg("reset_icon.png")
             }
@@ -901,7 +909,7 @@ def extTempPage() {
                         image: getAppImg("temperature_icon.png")
                 if(extTmpTempSensor) {
                     def tmpVal = "${extTmpTempSensor?.currentValue("temperature").toString()}"
-                    paragraph "Current Sensor Temp: ${tmpVal}°${atomicState?.tempUnit}", image: " "
+                    paragraph "Current Sensor Temp: ${tmpVal}°${atomicState?.tempUnit}", image: getAppImg("blank_icon.png")
                 }
             }
             
@@ -912,7 +920,7 @@ def extTempPage() {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
                 if(extTmpTstat) {
                     def tmpVal = "${extTmpTstat?.currentValue("temperature").toString()}"
-                    paragraph "Current Thermostat Temp: ${tmpVal}°${atomicState?.tempUnit}", image: " "
+                    paragraph "Current Thermostat Temp: ${tmpVal}°${atomicState?.tempUnit}", image: getAppImg("blank_icon.png")
                     input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp (°${atomicState?.tempUnit})?", defaultValue: 1.0, submitOnChange: true, required: true,
                             image: getAppImg("temp_icon.png")
                 }
@@ -1384,7 +1392,7 @@ def isNestModesConfigured() {
 }
 
 def nModeModeEvt(evt) { 
-    log.debug "nModeModeEvt: (${evt?.value}) Mode Event Received..."
+    log.debug "nModeModeEvt: Mode is (${evt?.value})"
     if(!nModePresSensor && !nModeSwitch) {
         if(nModeDelay) {
     		LogAction("nModeWatcherEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
@@ -1396,9 +1404,9 @@ def nModeModeEvt(evt) {
 }
 
 def nModePresEvt(evt) {
-    log.trace "nModePresEvt: Mode is (${evt?.value})"
+    log.trace "nModePresEvt: Presence is (${evt?.value})"
     if(nModeDelay) {
-    	LogAction("nModePresEvt: ${!evt ? "A monitored presence device is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+    	LogAction("nModePresEvt: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
         runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
     } else {
         checkNestMode()
@@ -1406,10 +1414,10 @@ def nModePresEvt(evt) {
 }
 
 def nModeSwitchEvt(evt) {
-	log.trace "nModeSwitchEvt: ${evt?.displayName} is ${evt?.value.toString().toUpperCase()}"
+	log.trace "nModeSwitchEvt: Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})"
     if(nModeSwitch && !nModePresSensor) {
     	if(nModeDelay) {
-    		LogAction("nModeSwitchEvt: ${!evt ? "A monitored switch is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+    		LogAction("nModeSwitchEvt: ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
         	runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
     	} else {
         	checkNestMode()
