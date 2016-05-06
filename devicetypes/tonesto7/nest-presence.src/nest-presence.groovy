@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.1" }
+def devVer() { return "2.0.2" }
 
 // for the UI
 metadata {
@@ -72,7 +72,7 @@ metadata {
             state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
         }
         standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
-            state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
+            state "default", action:"refresh.refresh", icon:"st.secondary.refresh-icon"
         }
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
