@@ -122,8 +122,8 @@ def mainPage(params) {
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModes = remSenModes ? "\nMode Filters Active" : ""
                     def remSenDesc = (isRemSenConfigured() ? ("${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
-                                                              "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : "Tap to Configure...")
-                    href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc, state: remSenDesc, image: getAppImg("remote_sensor_icon.png")
+                                                              "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : null)
+                    href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: remSenDesc ? "complete" : null, image: getAppImg("remote_sensor_icon.png")
                 }
             }
 
@@ -138,8 +138,8 @@ def mainPage(params) {
                     def extTmpOffDesc = extTmpOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     def extTmpOnDesc = extTmpOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
                     def extTmpConfDesc = ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
-                    def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpTstatMode}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}") : "Tap to Configure..."
-                    href "extTempPage", title: "External Temps Config...", description: extTmpDesc, image: getAppImg("external_temp_icon.png")
+                    def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpTstatMode}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}") : null
+                    href "extTempPage", title: "External Temps Config...", description: extTmpDesc ? extTmpDesc : "Tap to Configure...", state: extTmpDesc ? "complete" : null, image: getAppImg("external_temp_icon.png")
                 } 
             }
 
@@ -151,8 +151,8 @@ def mainPage(params) {
                     def conWatOffDesc = conWatOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     def conWatOnDesc = conWatOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
                     def conWatConfDesc = (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
-                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}") : "Tap to Configure..."
-                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc, image: getAppImg("open_window.png")
+                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}") : null
+                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ? conWatDesc : "Tap to Configure...", state: conWatDesc ? "complete" : null, image: getAppImg("open_window.png")
                 } 
             } 
 
@@ -164,8 +164,8 @@ def mainPage(params) {
                     def nSwtchDesc = (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (Power is: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
                     def nModeConfDesc = (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
-                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${nModeConfDesc}" : "Tap to Configure..."
-                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc, image: getAppImg("mode_automation_icon.png")
+                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${nModeConfDesc}" : null
+                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: nModeDesc ? "complete" : null, image: getAppImg("mode_automation_icon.png")
                 } 
             } 
         }

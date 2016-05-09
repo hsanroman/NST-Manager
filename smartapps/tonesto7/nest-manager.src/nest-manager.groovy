@@ -217,9 +217,9 @@ def mainPage() {
                 }
             }
             if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
-                def autoDesc = isAutoAppInst() ? "${getInstAutoTypesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
+                def autoDesc = isAutoAppInst() ? "${getInstAutoTypesDesc()}\n\nTap to Modify..." : null
                 section("Automations:") {
-                    href "automationsPage", title: "Automations...", description: autoDesc, state: autoDesc, image: getAppImg("automation_icon.png")
+                    href "automationsPage", title: "Automations...", description: (autoDesc ? autoDesc : "Tap to Configure..."), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
                 }
             }
             if((atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) || diagLogs) {
@@ -234,8 +234,8 @@ def mainPage() {
                 }
             }
             section("Preferences:") {
-                href "prefsPage", title: "Preferences", description: "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to configure...",
-                    image: getAppImg("settings_icon.png")
+            	def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
+                href "prefsPage", title: "Preferences", description: prefDesc, state: (prefDesc ? "complete" : null), image: getAppImg("settings_icon.png")
             }
         }
         section(" ") {
