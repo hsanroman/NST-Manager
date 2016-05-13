@@ -37,14 +37,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.7" }
-def appVerDate() { "5-3-2016" }
+def appVersion() { "2.0.8" }
+def appVerDate() { "5-13-2016" }
 def appVerInfo() {
     
-	"V2.0.7 (May 3rd, 2016)\n" +
+    "V2.0.8 (May 13th, 2016)\n" +
+    "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
+    
+    "V2.0.7 (May 3rd, 2016)\n" +
     "Fixed UI to work with the new mobile app design.\n\n" +
     
-	"V2.0.6 (May 2nd, 2016)\n" +
+    "V2.0.6 (May 2nd, 2016)\n" +
     "Added: Showing what types of automations are installed now\n\n" +
 
     "V2.0.4 (Apr 28th, 2016)\n" +
@@ -60,7 +63,7 @@ def appVerInfo() {
 
     "V2.0.0 (Apr 21th, 2016)\n" +
     "Fixed: Everything\n\n" +
-    "------------------------------------------------"
+    "---------------------------------------------"
 }
 
 preferences {
@@ -156,7 +159,7 @@ def authPage() {
             }
         }
     } else {
-    	return mainPage()
+        return mainPage()
     }
 }
 
@@ -174,7 +177,7 @@ def mainPage() {
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
         if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
             section("Your Location:") {
-             	paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
+                 paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
             }
         } else {
             section("Select your Location:") {
@@ -229,12 +232,13 @@ def mainPage() {
                         href "nestInfoPage", title: "View Nest API Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
                     }
                     if(diagLogs) {
-                        href "diagPage", title:"View Diagnostics...", description:"Log Entries: (${getExLogSize()} Items)\nTap to view more...", image: getAppImg("diag_icon.png")
+                        def diagDesc = "Log Entries: (${getExLogSize()} Items)\nTap to view more..."
+                        href "diagPage", title: "View Diagnostics...", description: diagDesc, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
                     }
                 }
             }
             section("Preferences:") {
-            	def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
+                def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: (prefDesc ? "complete" : null), image: getAppImg("settings_icon.png")
             }
         }
@@ -284,23 +288,25 @@ def custWeatherPage() {
 
 //Defines the Preference Page
 def prefsPage() {
-	def showUninst = (atomicState?.structures || atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice)
+    def showUninst = (atomicState?.structures || atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice)
     dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false, uninstall: false ) {
         section("Polling:") {
             def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
             def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
             def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
-            def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active\n$pollDevDesc$pollStrDesc$pollWeaDesc"
-            href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", image: getAppImg("timer_icon.png")
+            def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
+            href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: "complete", image: getAppImg("timer_icon.png")
         }
         section("Devices:") {
             href "devPrefPage", title: "Device Customization", description: "Tap to configure...", image: getAppImg("device_pref_icon.png")
         }
         section("Notifications:") {
-            href "notifPrefPage", title: "Notifications", description: "Notifications: (${pushStatus()})\n${getQTimeLabel()}\n\nTap to configure...", image: getAppImg("notification_icon.png")
+            href "notifPrefPage", title: "Notifications", description: "Notifications: (${pushStatus()})\n${getQTimeLabel()}\n\nTap to configure...", state: (pushStatus() in ["Push Active", "Active"] ? "complete" : null), 
+                    image: getAppImg("notification_icon.png")
         }
         section("Logging:") {
-            href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", image: getAppImg("log.png")
+            href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", state: (debugStatus() == "On" || deviceDebugStatus() == "On" ? "complete" : null),
+                    image: getAppImg("log.png")
         }
         section ("Diagnostics:") {
             input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
@@ -393,16 +399,16 @@ def getInstAutoTypesDesc() {
         switch(type) {
             case "remSen":
                 remSenCnt = remSenCnt+1
-            	break
+                break
             case "conWat":
                 conWatCnt = conWatCnt+1
-            	break
+                break
             case "extTmp":
                 extTmpCnt = extTmpCnt+1
-            	break
+                break
             case "nMode":
                 nModeCnt = nModeCnt+1
-            	break
+                break
         }
     }
     def remSenDesc = (remSenCnt > 0) ? "\nRemote Sensor ($remSenCnt)" : ""
@@ -413,7 +419,7 @@ def getInstAutoTypesDesc() {
 }
 
 def subscriber() {
-    subscribe(location, null, pollWatcher, [filterEvents:false])
+    //subscribe(location, null, pollWatcher, [filterEvents:false])
     subscribe(app, onAppTouch)
     subscribe(location, "sunrise", pollWatcher, [filterEvents: false])
     subscribe(location, "sunset", pollWatcher, [filterEvents: false])
@@ -2857,9 +2863,9 @@ def infoPage () {
         }
         section("Help and Instructions:") {
             href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html", style:"embedded", required:false, title:"Readme File",
-                description:"View the Projects Readme File...", image: getAppImg("readme_icon.png")
+                description:"View the Projects Readme File...", state: "complete", image: getAppImg("readme_icon.png")
             href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help Pages",
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+                description:"View the Help and Instructions Page...", state: "complete", image: getAppImg("help_icon.png")
         }
         section("Created by:") {
             paragraph "Anthony S. (@tonesto7)"
@@ -2872,7 +2878,7 @@ def infoPage () {
         }
         section("Donations:") {
             href url: textDonateLink(), style:"external", required: false, title:"Donations",
-                description:"Tap to Open in Mobile Browser...", image: getAppImg("donate_icon.png")
+                description:"Tap to Open in Mobile Browser...", state: "complete", image: getAppImg("donate_icon.png")
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
@@ -2895,14 +2901,14 @@ def diagPage () {
         }
         section("Export or View the Logs") {
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderLogs?access_token=${atomicState.accessToken}")}", style:"embedded", required:false,
-                       title:"Diagnostic Logs", description:"Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", image: getAppImg("log_data_icon.png")
+                       title:"Diagnostic Logs", description: "Log Entries: (${getExLogSize()} Items)\n\nTap to view diagnostic logs...", state: "complete", image: getAppImg("log_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderState?access_token=${atomicState.accessToken}")}", style:"embedded", required:false,
                        title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/renderDebug?access_token=${atomicState.accessToken}")}", style:"embedded", required:false,
                        title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("debug_data_icon.png")
         }
         section("Reset Diagnostic Queue:") {
-        	href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", image: getAppImg("reset_icon.png")
+            href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", image: getAppImg("reset_icon.png")
         }
     }
 }

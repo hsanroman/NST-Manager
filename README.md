@@ -26,15 +26,15 @@ This is an addon Child-SmartApp that allows you to creat different types of auto
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v2.0.7*__
-* Nest Automations - __*v1.2.1*__
+* Nest Manager - __*v2.0.8*__
+* Nest Automations - __*v1.2.2*__
 
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v2.0.1*__
-* Nest Protect Device - __*v2.0.0*__
-* Nest Thermostat Device - __*v2.0.2*__
-* Nest Weather Device - __*v1.1.0*__
+* Nest Presence Device - __*v2.0.2*__
+* Nest Protect Device - __*v2.0.2*__
+* Nest Thermostat Device - __*v2.0.3*__
+* Nest Weather Device - __*v1.1.1*__
 
 ## What's New
  * **NEW**: In-app HTML help pages

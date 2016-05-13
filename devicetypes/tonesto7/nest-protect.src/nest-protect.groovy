@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.1.0" }
+def devVer() { return "2.0.2" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -83,8 +83,10 @@ metadata {
             }
             tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
                 attributeState("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-                attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621")
-                attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13")
+                attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621", 
+                	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok_v.png")
+                attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13", 
+                	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low_v.png")
             }
         }
         standardTile("main2", "device.alarmState", width: 2, height: 2) {
