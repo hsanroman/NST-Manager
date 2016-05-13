@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.2"}
+def devVer() { return "2.0.3"}
 
 // for the UI
 metadata {
@@ -126,16 +126,16 @@ metadata {
                     backgroundColors: getTempColors())
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
-            state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_off_icon.png")
-            state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_icon.png")
-            state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_cool_icon.png")
-            state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_heat_cool_icon.png")
+            state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/off_icon.png")
+            state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_icon.png")
+            state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/cool_icon.png")
+            state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_cool_icon.png")
         }
         standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
-            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_off.png")
-            state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_heat.png")
-            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_cool.png")
-            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/hvac_auto.png")
+            state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+            state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+            state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+            state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
             state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
             state("updating", label:"Working", icon: "st.secondary.secondary")
         }
@@ -288,7 +288,7 @@ def refresh() {
 
 def generateEvent(Map results) {
     //Logger("generateEvents Parsing data ${results}")
-      Logger("-------------------------------------------------------------------", "warn")
+      Logger("------------START OF API RESULTS DATA-------------", "warn")
     if(results) {
         state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
         debugOnEvent(parent.settings?.childDebug)
