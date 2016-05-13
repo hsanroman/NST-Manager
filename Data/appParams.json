@@ -5,19 +5,19 @@
   "versions": {
     "app": {
       "type": "rel",
-      "ver": "2.0.7"
+      "ver": "2.0.8"
     },
     "autoapp": {
       "type": "rel",
-      "ver": "1.2.1"
+      "ver": "1.2.2"
     },
     "thermostat": {
       "type": "rel",
-      "ver": "2.0.2"
+      "ver": "2.0.3"
     },
     "protect": {
       "type": "rel",
-      "ver": "2.0.1"
+      "ver": "2.0.2"
     },
     "presence": {
       "type": "rel",

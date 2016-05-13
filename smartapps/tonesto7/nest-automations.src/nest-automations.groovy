@@ -25,9 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.1" }
-def appVerDate() { "5-4-2016" }
+def appVersion() { "1.2.2" }
+def appVerDate() { "5-13-2016" }
 def appVerInfo() {
+    
+    "V1.2.2 (May 13th, 2016)\n" +
+    "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
     
     "V1.2.1 (May 4th, 2016)\n" +
     "Fixes and UI updates\n\n"+
@@ -122,8 +125,8 @@ def mainPage(params) {
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModes = remSenModes ? "\nMode Filters Active" : ""
                     def remSenDesc = (isRemSenConfigured() ? ("${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
-                                                              "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : "Tap to Configure...")
-                    href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc, state: remSenDesc, image: getAppImg("remote_sensor_icon.png")
+                                                              "${remSenSwitInUse}${remSenModes}\n\nTap to Modify...") : null)
+                    href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: (remSenDesc ? "complete" : null), image: getAppImg("remote_sensor_icon.png")
                 }
             }
 
@@ -138,8 +141,8 @@ def mainPage(params) {
                     def extTmpOffDesc = extTmpOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     def extTmpOnDesc = extTmpOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
                     def extTmpConfDesc = ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
-                    def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpTstatMode}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}") : "Tap to Configure..."
-                    href "extTempPage", title: "External Temps Config...", description: extTmpDesc, image: getAppImg("external_temp_icon.png")
+                    def extTmpDesc = isExtTmpConfigured() ? ("${extTmpTstatDesc}${extTmpTstatMode}${extTmpWeaUsedDesc}${extTmpSenUsedDesc}${extTmpDiffDesc}${extTmpOffDesc}${extTmpOnDesc}${qOpt}${extTmpConfDesc}") : null
+                    href "extTempPage", title: "External Temps Config...", description: extTmpDesc ? extTmpDesc : "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
                 } 
             }
 
@@ -151,8 +154,8 @@ def mainPage(params) {
                     def conWatOffDesc = conWatOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     def conWatOnDesc = conWatOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
                     def conWatConfDesc = (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
-                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}") : "Tap to Configure..."
-                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc, image: getAppImg("open_window.png")
+                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}") : null
+                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ? conWatDesc : "Tap to Configure...", state: (conWatDesc ? "complete" : null), image: getAppImg("open_window.png")
                 } 
             } 
 
@@ -164,8 +167,8 @@ def mainPage(params) {
                     def nSwtchDesc = (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (Power is: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
                     def nModeConfDesc = (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
-                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${nModeConfDesc}" : "Tap to Configure..."
-                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc, image: getAppImg("mode_automation_icon.png")
+                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${nModeConfDesc}" : null
+                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             } 
         }
@@ -935,7 +938,9 @@ def extTempPage() {
                 }
             }
             section("Only Act During these Days, Times, or Modes:") {
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("cal_filter_icon.png")
+                def pageDesc = getDayModeTimeDesc(pName)
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null),
+                		image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
                 input "extTmpPushMsgOn", "bool", title: "Send Push Notifications on Changes?", description: "", required: false, defaultValue: true, submitOnChange: true,
@@ -943,7 +948,8 @@ def extTempPage() {
                 if(extTmpPushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
                             "${getRecipientsNames(settings?."${pName}NotifRecips")}\n\nTap to Modify..." : "Tap to configure..."
-                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], state: (notifDesc != "Tap to Configure..." ? "complete" : null),
+                            image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
@@ -1159,7 +1165,9 @@ def contactWatchPage() {
                 }
             }
             section("Only Act During these Days, Times, or Modes:") {
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: getDayModeTimeDesc(pName), params: [pName: "${pName}"], image: getAppImg("cal_filter_icon.png")
+            	def pageDesc = getDayModeTimeDesc(pName)
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null), 
+                		image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
                 input "conWatPushMsgOn", "bool", title: "Send Push Notifications on Changes?", description: "", required: false, defaultValue: true, submitOnChange: true,
@@ -1167,7 +1175,8 @@ def contactWatchPage() {
                 if(conWatPushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
                             "${getRecipientsNames(settings?."${pName}NotifRecips")}\n\nTap to Modify..." : "Tap to configure..."
-                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], state: (notifDesc != "Tap to Configure..." ? "complete" : null),
+                            image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
@@ -1372,7 +1381,8 @@ def nestModePresPage() {
                 if(nModePushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifPhones" || settings?."${pName}NotifUsePush")) ? 
                             "${getRecipientsNames(settings?."${pName}NotifRecips")}\n\nTap to Modify..." : "Tap to configure..."
-                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], image: getAppImg("notification_opt_icon.png")
+                    href "setRecipientsPage", title: "(Optional) Select Recipients", description: notifDesc, params: [pName: "${pName}"], state: (notifDesc != "Tap to Configure..." ? "complete" : null),
+                            image: getAppImg("notification_opt_icon.png")
                 }
             }
         }
