@@ -25,11 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.2" }
+def appVersion() { "1.2.3" }
 def appVerDate() { "5-13-2016" }
 def appVerInfo() {
     
-    "V1.2.2 (May 13th, 2016)\n" +
+    "V1.2.3 (May 13th, 2016)\n" +
+    "Fixed: Contact mode filter issue\n" +
     "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
     
     "V1.2.1 (May 4th, 2016)\n" +
@@ -1025,7 +1026,7 @@ def getExtTmpTemperature() {
     return extTemp
 }
 
-def extTmpScheduleOk() { return (modesOk(settings?.extTmpModes) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
+def extTmpScheduleOk() { return (isInMode(settings?.extTmpModes) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
 def getExtTmpTempDiffVal() { return !settings?.extTmpDiffVal ? 1.0 : settings?.extTmpDiffVal.toDouble() } 
 def getExtTmpGoodDtSec() { return !atomicState?.extTmpTempGoodDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempGoodDt).toInteger() }
 def getExtTmpBadDtSec() { return !atomicState?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempBadDt).toInteger() }
@@ -1126,6 +1127,8 @@ def extTmpTempEvt(evt) {
             unschedule("extTmpTempCheck")
             LogAction("extTmpTempEvt: Skipping Event... All External Temps are above the threshold... Any existing schedules have been cancelled...", "info", true)
         }
+    } else {
+    	LogAction("extTmpTempEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
     }
 }
 
@@ -1157,7 +1160,7 @@ def contactWatchPage() {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
 
-                input "conWatRestoreOnClose", "bool", title: "Restore previous mode when Closed?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                input name: "conWatRestoreOnClose", type: "bool", title: "Restore previous mode when Closed?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(conWatRestoreOnClose) {
                     input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -1170,7 +1173,7 @@ def contactWatchPage() {
                 		image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                input "conWatPushMsgOn", "bool", title: "Send Push Notifications on Changes?", description: "", required: false, defaultValue: true, submitOnChange: true,
+                input name: "conWatPushMsgOn", type: "bool", title: "Send Push Notifications on Changes?", description: "", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
                 if(conWatPushMsgOn) {
                     def notifDesc = ((settings?."${pName}NotifRecips") || (settings?."${pName}NotifRecips" || settings?."${pName}NotifPhones")) ? 
@@ -1210,7 +1213,7 @@ def conWatTimeOk() {
 
 def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
 def conWatContactOk() { return (!conWatContacts && !conWatTstat) ? false : true }
-def conWatScheduleOk() { return (modesOk(settings?.conWatModes) && daysOk(settings?.conWatDays) && conWatTimeOk()) ? true : false }
+def conWatScheduleOk() { return (isInMode(conWatModes) && daysOk(conWatDays) && conWatTimeOk()) ? true : false }
 def getConWatOpenDtSec() { return !atomicState?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatOpenDt).toInteger() }
 def getConWatCloseDtSec() { return !atomicState?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatCloseDt).toInteger() }
 def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toInteger()) }
@@ -1297,30 +1300,34 @@ def conWatContactEvt(evt) {
     //log.debug "conWatContactEvt: ${evt?.value}"
     def pName = conWatPrefix()
     def curMode = conWatTstat?.currentThermostatMode.toString()
-    def modeOff = (curMode == "off") ? true : false
+    def isModeOff = (curMode == "off") ? true : false
     def conOpen = (evt?.value == "open") ? true : false
+    def contactsOk = getConWatContactsOk()
+    
     def canSched = false
     def timeVal
-    if(conWatScheduleOk()) {
+    if (conWatScheduleOk()) {
         if (conOpen) {
             atomicState?.conWatOpenDt = getDtNow()
             timeVal = ["valNum":getConWatOffDelayVal(), "valLabel":getEnumValue(longTimeSecEnum(), getConWatOffDelayVal())]
             canSched = true
         }
-        else if(!conOpen && getConWatContactsOk()) {
-            if(modeOff) {
+        else if (!conOpen && getConWatContactsOk()) {
+            if(isModeOff) {
                 atomicState.conWatCloseDt = getDtNow()
                 timeVal = ["valNum":getConWatOnDelayVal(), "valLabel":getEnumValue(longTimeSecEnum(), getConWatOnDelayVal())]
                 canSched = true
             }
         }
         if(canSched) {
-            LogAction("conWatContactEvt: ${!evt ? "A monitor contact is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | ContactCheck scheduled for (${timeVal?.valLabel})...", "info", true)
+            LogAction("conWatContactEvt: ${!evt ? "A monitored Contact is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Contact Check scheduled for (${timeVal?.valLabel})...", "info", true)
             runIn(timeVal?.valNum, "conWatCheck", [overwrite: true]) 
         } else {
             unschedule("conWatCheck")
-            LogAction("conWatContactEvt: Skipping Event... All Contacts are now CLOSED... Any existing schedules have been cancelled...", "info", true)
+            LogAction("conWatContactEvt: Skipping Event... Any existing schedules have been cancelled...", "info", true)
         }
+    } else {
+    	LogAction("conWatContactEvt: Skipping Event... This Event did not happen during the required Day, Mode, Time...", "info", true)
     }
 }
 
@@ -1785,7 +1792,11 @@ def isInMode(modeList) {
     def res = false
     if (modeList) {
         modeList?.each { m ->
-            if(m.toString() == location?.mode.toString()) { res = true }
+        	//log.debug "ST Mode: ${location?.mode} | M: $m"
+            if(m.toString() == location?.mode.toString()) { 
+            	//log.debug "Is In Mode: ${location?.mode}"
+                res = true 
+            }
         }  
     }
     return res
