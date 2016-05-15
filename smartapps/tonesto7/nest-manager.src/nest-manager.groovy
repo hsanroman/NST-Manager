@@ -29,7 +29,7 @@ definition(
     iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
     iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
-    singleInstance: true,
+    //singleInstance: true,
     oauth: true )
 
 {
@@ -154,8 +154,9 @@ def authPage() {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
             section(""){
-                paragraph "Tap 'Nest Login' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
-                href url: redirectUrl, style:"embedded", required: true, title: "Nest Login", description: description
+                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
+                paragraph "FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly..."
+                href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
     } else {
