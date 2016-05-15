@@ -1248,7 +1248,8 @@ def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : Ge
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
 def getStZipCode() { return location?.zipCode.toString() }
-def getNestZipCode() { return !atomicState?.structData[atomicState?.structures].postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : "" }
+def getNestZipCode() { return atomicState?.structData[atomicState?.structures].postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : "" }
+def getNestTimeZone() { return atomicState?.structData[atomicState?.structures].time_zone ? atomicState?.structData[atomicState?.structures].time_zone : null}
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
@@ -2538,9 +2539,20 @@ def getQModesLbl() { return quietModes ? ("${(((getQTimeStrtLbl() && getQTimeSto
 def getQDayLbl() { return quietDays ? "Days: ${quietDays}" : null }
 def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl() || getQModesLbl()) ? "${(getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}\n" : ""}${(quietDays ? "${getQDayLbl()}" : "")}${getQModesLbl()}" : "Tap to Set..." }
 
+def getTimeZone() { 
+    def tz
+    if (!location?.timeZone) { tz = TimeZone.getTimeZone(getNestTimeZone()) }
+    else if (location?.timeZone) { tz = location?.timeZone }
+    else {
+        LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true, true)
+    }
+    return tz
+}
+
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-    if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
+    //if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
+    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
     else {
         LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
     }
@@ -2568,7 +2580,7 @@ def daysOk(dayVals) {
     try {
         if(dayVals) {
             def day = new SimpleDateFormat("EEEE")
-            if(location?.timeZone) { day.setTimeZone(location?.timeZone) }
+            if(getTimeZone()) { day.setTimeZone(getTimeZone()) }
             return dayVals.contains(day.format(new Date())) ? false : true
         } else { return true }
     } catch (ex) { LogAction("daysOk() Exception: ${ex}", "error", true, true) }
@@ -2590,7 +2602,7 @@ def quietTimeOk() {
             else if(qStopInput == "A specific time" && qStopTime) { stopTime = qStopTime }
         } else { return true }
         if (strtTime && stopTime) {
-            return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
+            return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
     } catch (ex) { LogAction("timeOk Exception: ${ex}", "error", true, true) }
 }
@@ -2607,9 +2619,9 @@ def modesOk(modeEntry) {
 
 def time2Str(time) {
     if (time) {
-        def t = timeToday(time, location?.timeZone)
+        def t = timeToday(time, getTimeZone())
         def f = new java.text.SimpleDateFormat("h:mm a")
-        f.setTimeZone(location.timeZone ?: timeZone(time))
+        f.setTimeZone(getTimeZone() ?: timeZone(time))
         f.format(t)
     }
 }
