@@ -2540,18 +2540,17 @@ def getQDayLbl() { return quietDays ? "Days: ${quietDays}" : null }
 def getQTimeLabel() { return ((getQTimeStrtLbl() && getQTimeStopLbl()) || getQDayLbl() || getQModesLbl()) ? "${(getQTimeStrtLbl() && getQTimeStopLbl()) ? "${getQTimeStrtLbl()} - ${getQTimeStopLbl()}\n" : ""}${(quietDays ? "${getQDayLbl()}" : "")}${getQModesLbl()}" : "Tap to Set..." }
 
 def getTimeZone() { 
-    def tz
-    if (!location?.timeZone) { tz = TimeZone.getTimeZone(getNestTimeZone()) }
-    else if (location?.timeZone) { tz = location?.timeZone }
-    else {
-        LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true, true)
-    }
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = TimeZone.getTimeZone(getNestTimeZone()) }
+    
+    if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true, true) }
+    
     return tz
 }
 
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-    //if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
     if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
     else {
         LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
