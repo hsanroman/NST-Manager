@@ -29,7 +29,7 @@ definition(
     iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
     iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
-    //singleInstance: true,
+    singleInstance: true,
     oauth: true )
 
 {
@@ -37,8 +37,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.0.8" }
-def appVerDate() { "5-13-2016" }
+def appVersion() { "2.0.9" }
+def appVerDate() { "5-15-2016" }
 def appVerInfo() {
     
     "V2.0.8 (May 13th, 2016)\n" +
@@ -109,16 +109,17 @@ def authPage() {
     preReqCheck()
     deviceHandlerTest()
 
-    if (!atomicState?.accessToken || !atomicState?.preReqTested || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
+    //if (!atomicState?.accessToken || !atomicState?.preReqTested || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
+    if (!atomicState?.accessToken || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
                 def desc
                 if(!atomicState?.accessToken) {
                     desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again..."
                 }
-                else if (!atomicState?.preReqTested) {
-                    desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
-                }
+                //else if (!atomicState?.preReqTested) {
+                    //desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
+                //}
                 else if (!atomicState?.devHandlersTested) {
                     desc = "Device Handlers are likely Missing or Not Published.  Please read the installation instructions and verify all device handlers are present before continuing."
                 }
@@ -211,8 +212,9 @@ def mainPage() {
                 atomicState.presDevice = presDevice ? true : false
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                 atomicState.weatherDevice = weatherDevice ? true : false
-                if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                    if(getStZipCode() != getNestZipCode()) {
+                //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
+                if(atomicState?.weatherDevice) {
+                    if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                         href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
                     }
                 }
@@ -278,7 +280,8 @@ def custWeatherPage() {
             def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
             href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
                     description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: getStZipCode(), submitOnChange: true,
+            def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: defZip, submitOnChange: true,
                     image: getAppImg("weather_icon_grey.png"))
             paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
             atomicState.lastWeatherUpdDt = 0
