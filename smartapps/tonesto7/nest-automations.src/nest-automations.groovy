@@ -25,9 +25,12 @@ definition(
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/automation_icon.png",
     singleInstance: true)
 
-def appVersion() { "1.2.3" }
-def appVerDate() { "5-13-2016" }
+def appVersion() { "1.2.4" }
+def appVerDate() { "5-15-2016" }
 def appVerInfo() {
+    
+    "V1.2.4 (May 15th, 2016)\n" +
+    "Updated Timezone selection for users without ST Hub timezones it will use Nest's\n\n" +
     
     "V1.2.3 (May 13th, 2016)\n" +
     "Fixed: Contact mode filter issue\n" +
@@ -214,6 +217,7 @@ def initialize() {
     subscribeToEvents()
     automationsInst()
     scheduler()
+    atomicState?.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
     if(extTmpUseWeather && atomicState?.isExtTmpConfigured) { 
         updateWeather() 
     }
@@ -639,13 +643,11 @@ def remSenShowTempsPage() {
 
 def getTimeAfterSunset() {
     def sun = getSunriseAndSunset()
-    //def sunRise = (location?.currentValue("sunriseTime"))
-    //def sunSet = (location?.currentValue("sunsetTime"))
     def result = true
     if (sun) {
         def timeNow = now()
-        def start = sun?.sunset.time //timeToday(sun?.sunset.time, location?.timeZone).time
-        def stop = sun?.sunrise.time //timeToday(sunRise, location?.timeZone).time
+        def start = sun?.sunset.time
+        def stop = sun?.sunrise.time
         //log.debug "timeNow: $timeNow | start: $start | stop: $stop"
         result = (start < stop) ? ((timeNow >= start) && (timeNow <= stop)) : ((timeNow <= stop) || (timeNow >= start))
     }
@@ -1008,7 +1010,7 @@ def extTmpTimeOk() {
             if(settings?.extTmpStopTime) { stopTime = settings?.extTmpStopTime }
         } else { return true }  
         if (strtTime && stopTime) {
-            return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
+            return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
     } catch (ex) { LogAction("extTmpTimeOk Exception: ${ex}", "error", true) }
 }
@@ -1206,7 +1208,7 @@ def conWatTimeOk() {
         } else { return true } 
         
         if (strtTime && stopTime) {
-            return timeOfDayIsBetween(strtTime, stopTime, new Date(), location?.timeZone) ? false : true
+            return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
     } catch (ex) { LogAction("conWatTimeOk Exception: ${ex}", "error", true, true) }
 }
@@ -1743,9 +1745,19 @@ private debugStatus() { return atomicState?.appDebug ? "On" : "Off" } //Keep thi
 private childDebugStatus() { return atomicState?.childDebug ? "On" : "Off" } //Keep this
 private isAppDebug() { return atomicState?.appDebug ? true : false } //Keep This
 
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = atomicState?.timeZone ? TimeZone.getTimeZone(atomicState?.timeZone) : null }
+    
+    if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true, true) }
+    
+    return tz
+}
+
 def formatDt(dt) {
     def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-    if(location?.timeZone) { tf?.setTimeZone(location?.timeZone) }
+    if(getTimeZone()) { tf?.setTimeZone(getTimeZone()) }
     else {
         LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true, true)
     }
@@ -1772,7 +1784,7 @@ def daysOk(dayVals) {
     try {
         if(dayVals) {
             def day = new SimpleDateFormat("EEEE")
-            if(location?.timeZone) { day.setTimeZone(location?.timeZone) }
+            if(getTimeZone()) { day.setTimeZone(getTimeZone()) }
             return dayVals.contains(day.format(new Date())) ? false : true
         } else { return true }
     } catch (ex) { LogAction("daysOk() Exception: ${ex}", "error", true, true) }
@@ -1804,7 +1816,7 @@ def isInMode(modeList) {
 
 def time2Str(time) {
     if (time) {
-        def t = timeToday(time, location?.timeZone)
+        def t = timeToday(time, getTimeZone())
         def f = new java.text.SimpleDateFormat("h:mm a")
         f?.setTimeZone(location.timeZone ?: timeZone(time))
         f?.format(t)
