@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.2" }
+def devVer() { return "2.0.3" }
 
 // for the UI
 metadata {
@@ -106,6 +106,7 @@ def generateEvent(Map results) {
     Logger("-------------------------------------------------------------------", "warn")
     //log.debug "results: $results"
     if(results) {
+        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null 
         state?.useMilitaryTime = !results?.mt ? false : true
         debugOnEvent((!results?.debug ? false : true))
         presenceEvent(results?.pres.toString())
@@ -119,6 +120,14 @@ def generateEvent(Map results) {
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
+
+def getTimeZone() {  
+    def tz = null 
+    if (location?.timeZone) { tz = location?.timeZone } 
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null } 
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." } 
+    return tz 
+} 
 
 def deviceVerEvent() {
     def curData = device.currentState("devTypeVer")?.value
@@ -144,7 +153,7 @@ def lastUpdatedEvent() {
     def now = new Date()
     def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
     def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(location?.timeZone)
+        tf.setTimeZone(getTimeZone())
     def lastDt = "${tf?.format(now)}"
     def lastUpd = device.currentState("lastUpdatedDt")?.value
     if(!lastUpd.equals(lastDt?.toString())) {
