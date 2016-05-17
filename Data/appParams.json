@@ -32,5 +32,8 @@
     "ver": 1,
     "msg": "Update Message Placeholder",
     "type": "std"
+  },
+  "css": {
+    "css_ver": 1
   }
 }
