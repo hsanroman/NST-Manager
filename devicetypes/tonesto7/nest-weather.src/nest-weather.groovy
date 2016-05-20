@@ -67,7 +67,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 9)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -528,6 +528,23 @@ def getImgBase64(url, type) {
     }
 }
 
+def getCSS(){
+    def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+    //"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+    def params = [ 
+        uri: uri,
+        contentType: 'text/css'
+    ]
+    try {
+        httpGet(params)  { resp ->
+        return resp?.data    
+    }
+}
+ catch (ex) {
+        log.error "Failed to load CSS - Exception: $ex"
+    }
+}
+
 def getWeatherIcon(weatherIcon) {
   def url = "https://icons.wxug.com/i/c/v4/" + state?.curWeather?.current_observation?.icon + ".svg"
      return getImgBase64(url, "svg+xml")
@@ -591,9 +608,9 @@ def forecastDay(day) {
     def forecastImageLink = "<a href=\"#${day}\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
     def forecastTxt = ""
     
-    def modalHead = "<div id=\"${day}\" class=\"forecastModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
+    def modalHead = "<div id=\"${day}\" class=\"bottomModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
     def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
-	def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
+    def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
     
     if ( wantMetric() ) {
          forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
@@ -610,204 +627,18 @@ def getWeatherHtml() {
     renderHTML {
         head {
             """ <style type="text/css">
-                body {
-                  font-family: 'San Francisco', 'Roboto', 'Arial';
-                }
-
-                #header {
-                  font-size: 4vw;
-                  font-weight: bold;
-                  text-align: center;
-                  background: #00a1db;
-                  color: #f5f5f5;
-                }
-
-                #alert, #alert a {
-                  font-size: 6vw;
-                  font-weight: bold;
-                  text-align: center;
-                  background: #B74C4C;
-                  color: #f5f5f5;
-                }
-
-                #weatherInfo {
-                  text-align: left;
-                }
-
-                #leftData {
-                  width: 98%;
-                  float: left;
-                  clear: left;
-                }
-
-                #city {
-                  font-size: 6vw;
-                  width: 100%;
-                  text-align: center;
-                  border-bottom: 2px solid #808080;
-                }
-
-                #data {
-                  font-size: 4vw;
-                  padding: 5px;
-                }
-
-                #forecast {
-                  border-top: 2px solid #00a1db;
-                  clear: left;
-                  padding: 5px;
-                }
-
-                #day {
-                  width: 30%;
-                  float: left;
-                }
-
-                #station {
-  					padding:auto;
-                }
-
-                #weatherIcon {
-                  text-align: center;
-                }
-
-                #condition {
-                  border-top: 2px solid #00a1db;
-                  text-align: center;
-                  width: 80%;
-                  padding-bottom: 5px;
-                  margin-left: auto;
-                  margin-right: auto;
-                  font-size: 6vw;
-                }
-
-                #temp {
-                  font-size: 9vw;
-                  text-align: center;
-                  margin-left: auto;
-                  margin-right: auto;
-                }
-
-                .icon {
-                  margin-left: auto;
-                  margin-right: auto;
-                  width: 70%;
-                }
-
-                #dataDump {
-                  float: left;
-                  clear: left;
-                }
-
-                hr {
-                  background: #00a1db;
-                  width: 100%;
-                  height: 1px;
-                }
-
-                .r33 {
-                  width: 33%;
-                  vertical-align: top;
-                  font-size: 3vw;
-                  padding: 3px;
-                  text-align: center;
-                }
-
-                .r50 {
-                  width: 48%;
-                }
-                
-              	.r100{
-                  width: 100%;
-                  vertical-align: top;
-                  font-size: 3vw;
-                  padding: 3px;
-                  text-align: center;
-                }
-                
-        .alertModal, .forecastModal {
-            position: fixed;
-            font-family: 'San Francisco', 'Roboto', 'Arial';
-            font-size: 3vw;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            background: rgba(0,161,219,0.4);
-            z-index: 99999;
-            opacity:0;
-            -webkit-transition: opacity 400ms ease-in;
-            -moz-transition: opacity 400ms ease-in;
-            transition: opacity 400ms ease-in;
-            pointer-events: none;
-        }
-
-        .alertModal:target, .forecastModal:target {
-            opacity:1;
-            pointer-events: auto;
-        }
-
-        .alertModal > div {
-            width: 65%;
-            position: relative;
-            margin: 10% auto;
-            padding: 5px 20px 13px 20px;
-            border-radius: 10px;
-            background: #fff;
-            background: -moz-linear-gradient(#fff, #999);
-            background: -webkit-linear-gradient(#fff, #999);
-            background: -o-linear-gradient(#fff, #999);
-        }
-        
-         .forecastModal > div {
-            width: 65%;
-            position: relative;
-            margin:  75% auto;
-            padding: 5px 20px 13px 20px;
-            border-radius: 10px;
-            background: #fff;
-            background: -moz-linear-gradient(#fff, #999);
-            background: -webkit-linear-gradient(#fff, #999);
-            background: -o-linear-gradient(#fff, #999);
-        }
-
-        .close {
-            background: #606061;
-            color: #FFFFFF;
-            line-height: 25px;
-            position: absolute;
-            right: -12px;
-            text-align: center;
-            top: -10px;
-            width: 24px;
-            text-decoration: none;
-            font-weight: bold;
-            -webkit-border-radius: 12px;
-            -moz-border-radius: 12px;
-            border-radius: 12px;
-            -moz-box-shadow: 1px 1px 3px #000;
-            -webkit-box-shadow: 1px 1px 3px #000;
-            box-shadow: 1px 1px 3px #000;
-        }
-
-		.close:hover { background: #00d9ff; }
-              </style>
+                    ${getCSS()}
+                  </style>
                """
         }
         body {
             """
-              <div class="container">
-              <div id="header">Current Weather Conditions</div>
-              <div id="weatherInfo">
-              <div id="alert"><a href="#openModal">${state?.walert}</a></div>
-              <div id="city"> ${state?.curWeather?.current_observation?.display_location.full} </div>
-              <div id="leftData">
-              <table>
-                <tbody>
-                  <tr>
-                    <td class="r50">
-                      <div id="leftData">
-                        <div id="data">
+            <div class="container">
+              <h4>Current Weather Conditions</h4>
+              <h3><a href="#openModal">${state?.walert}</a></he>
+              <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
+                 <div class="row">
+                        <div class="six columns">
                           <b>Feels Like:</b> ${getFeelslike()} <br>
                           <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
                           <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
@@ -816,54 +647,42 @@ def getWeatherHtml() {
                           <b>Lux:</b> ${getLux()}<br>
                           <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
                           <b>Wind:</b> ${state?.windStr} <br>
-                        </div>
                       </div>
-                    </td>
-                  <td class="r50">
-                    <div id="weatherIcon">
-                      <div>
-                        <img src="${getWeatherIcon()}" class="icon"> <br>
-                        <div id="temp">${getTemp()}</div>
-                        <div id ="condition">${state.curWeatherCond}</div>
-                      </div>
+                    <div class="six columns">
+                        <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+                        <h2>${getTemp()}</h2>
+                        <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
                     </div>
-                  </td>
-                </tr>
-             </table>
-             <table id="forecast">
-               <tbody>
-                 <tr>
-                   <td class="r33">${forecastDay(0)}</td>
-                   <td class="r33">${forecastDay(1)}</td>
-                   <td class="r33">${forecastDay(2)}</td>
-                 </tr>
-                 <tr>
-                   <td class="r33">${forecastDay(3)}</td>
-                   <td class="r33">${forecastDay(4)}</td>
-                   <td class="r33">${forecastDay(5)}</td>
-                 </tr>
-                  <tr>
-                   <td class="r33">${forecastDay(6)}</td>
-                   <td class="r33">${forecastDay(7)}</td>
-                 </tr>
-               </table>
-                <table class="r100">
-                <tbody>
-                 <tr>
-                 	<td class="r100">
+                  </div>  
+                <div class="row topBorder">
+                   <div class="centerText four columns">${forecastDay(0)}</div>
+                   <div class="centerText four columns">${forecastDay(1)}</div>
+                   <div class="centerText four columns">${forecastDay(2)}</div>
+                </div>
+                <div class="row">
+                   <div class="centerText four columns">${forecastDay(3)}</div>
+                   <div class="centerText four columns">${forecastDay(4)}</div>
+                   <div class="centerText four columns">${forecastDay(5)}</div>
+                   </div>
+                  <div class="row">
+                   <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+                   <div class="centerText four columns">${forecastDay(7)}</div>
+                   </div>		
+                <div class="row topBorder">
+                  <div class="centerText offset-by-three six columns">
                       <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
-      				</td>
-                 </tr>
-                 </table>
+                  </div>    
+                 </div>
         
-               <div id="openModal" class="alertModal">
-					<div>
+               <div id="openModal" class="topModal">
+                    <div>
                         <a href="#close" title="Close" class="close">X</a>
                         <h2>Special Message</h2>
                         <p>${state?.walertMessage} </p>
                     </div>
                 </div>
-          </div>
+      </div>
+      
           """
         }
     }
