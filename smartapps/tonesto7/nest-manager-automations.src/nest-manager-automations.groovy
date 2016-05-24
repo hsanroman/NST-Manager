@@ -276,7 +276,7 @@ def mainPage() {
             section("Preferences:") {
                 def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
-                		image: getAppImg("settings_icon.png")
+                        image: getAppImg("settings_icon.png")
             }
         }
         section(" ") {
@@ -339,7 +339,7 @@ def prefsPage() {
             }
         }
         section("Notifications:") {
-        	def notifDesc = pushStatus() != "Not Active" ? "Notifications: (${pushStatus()})${getQTimeLabel() ? "\n${getQTimeLabel()}" : ""}\n\nTap to Modify..." : "Tap to configure..."
+            def notifDesc = pushStatus() != "Not Active" ? "Notifications: (${pushStatus()})${getQTimeLabel() ? "\n${getQTimeLabel()}" : ""}\n\nTap to Modify..." : "Tap to configure..."
             href "notifPrefPage", title: "Notifications", description: notifDesc, state: (notifDesc != "Tap to configure..." ? "complete" : null), 
                     image: getAppImg("notification_icon.png")
         }
@@ -2767,20 +2767,20 @@ def notifPrefPage() {
             if(!location.contactBookEnabled) {
                 input(name: "usePush", type: "bool", title: "Send Push Notitifications", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
             } else {
-            	input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png")) {
-                	input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
-            	}
+                input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png")) {
+                    input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
+                }
             } 
         }
         
         if (recipients || phone || usePush) {
-        	if(recipients && !atomicState?.pushTested) {
+            if(recipients && !atomicState?.pushTested) {
                     sendMsg("Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}", "info")
                     atomicState.pushTested = true
             } else { atomicState.pushTested = true }
             
             section(title: "Time Restrictions") {
-            	def qtLabel = getQTimeLabel()
+                def qtLabel = getQTimeLabel()
                 href "quietTimePage", title: "Quiet Time...", description: (qtLabel ?: "Tap to configure..."), state: (qtLabel ? "complete" : null), image: getAppImg("quiet_time_icon.png")
             }
             section("Missed Poll Notification:") {
@@ -2810,15 +2810,15 @@ def notifPrefPage() {
             section("App and Device Updates:") {
                 input (name: "sendAppUpdateMsg", type: "bool", title: "Send for Updates...", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon3.png"))
                 if(sendMissedPollMsg == null || sendAppUpdateMsg) {
-                  	def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
-                   	input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", description: updNotifyWaitValDesc, required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
-                   	if(updNotifyWaitVal) {
-                       	atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
-                       	if (updNotifyWaitVal.toInteger() == 1000000) {
-                           	input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
-                           	if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
-                       	}
-                   	} else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
+                      def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
+                       input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", description: updNotifyWaitValDesc, required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
+                       if(updNotifyWaitVal) {
+                           atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+                           if (updNotifyWaitVal.toInteger() == 1000000) {
+                               input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
+                               if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
+                           }
+                       } else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
                 }
             }
         } else { atomicState.pushTested = false }
@@ -4723,7 +4723,7 @@ def setTstatMode(tstat, mode) {
             else if(mode == "heat") { tstat?.heat() }
             else if(mode == "cool") { tstat?.cool() }
             else if(mode == "off") { tstat?.off() }
-			else { log.debug "setTstatMode() | Invalid LastMode received: ${mode}" }
+            else { log.debug "setTstatMode() | Invalid LastMode received: ${mode}" }
             
             LogAction("${tstat.label} has been set to ${mode}...", "info", true)
             return true
