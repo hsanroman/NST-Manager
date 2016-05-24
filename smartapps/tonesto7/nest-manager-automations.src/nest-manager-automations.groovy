@@ -1040,7 +1040,7 @@ void workQueue() {
         }
     }
 
-    //log.trace("workQueue Run queue: ${qnum}" )
+    log.trace("workQueue Run queue: ${qnum}" )
     if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
     def cmdQueue = atomicState?."cmdQ${qnum}"
     try {
@@ -1172,10 +1172,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
         }
         if (ex.message.contains("Bad Request")) {
-            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
         }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
         atomicState.apiIssues = true
