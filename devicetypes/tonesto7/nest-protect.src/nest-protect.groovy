@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.0.3" }
+def devVer() { return "2.0.4" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -563,7 +563,7 @@ def getCSS(){
     ]
     try {
         httpGet(params)  { resp ->
-        return resp?.data    
+        return resp?.data.text
     }
 }
  catch (ex) {
@@ -576,16 +576,21 @@ def getInfoHtml() {
             "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
     def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
     def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
-    renderHTML {
-        head {
-            """
+    def html = """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta http-equiv="cache-control" content="max-age=0"/>
+            <meta http-equiv="cache-control" content="no-cache"/>
+            <meta http-equiv="expires" content="0"/>
+            <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+            <meta http-equiv="pragma" content="no-cache"/>
+            <meta name="viewport" content="width = device-width, initial-scale=1.0">
+        </head>
+        <body>
             <style type="text/css">
                 ${getCSS()}
             </style>
-               """
-        }
-        body {
-            """
                 <div class="row">
                     <div class="offset-by-two four columns centerText">
                         $coImg
@@ -628,10 +633,10 @@ def getInfoHtml() {
                 </tr>
               </tbody>
             </table>
-            
-            """
-        }
-    }
+        </body>
+    </html>
+    """
+    render contentType: "text/html", data: html, status: 200
 }
 
 private def textDevName()   { "Nest Protect${appDevName()}" }
