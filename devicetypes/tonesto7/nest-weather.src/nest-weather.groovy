@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.2" }
+def devVer() { return "1.1.3" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -67,7 +67,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 12)
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 9)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°', 	icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
                     backgroundColors: getTempColors() )
@@ -537,7 +537,7 @@ def getCSS(){
     ]
     try {
         httpGet(params)  { resp ->
-        return resp?.data    
+        return resp?.data.text
     }
 }
  catch (ex) {
@@ -624,15 +624,21 @@ def forecastDay(day) {
 }
 
 def getWeatherHtml() { 
-    renderHTML {
-        head {
-            """ <style type="text/css">
-                    ${getCSS()}
-                  </style>
-               """
-        }
-        body {
-            """
+    def html = """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta http-equiv="cache-control" content="max-age=0"/>
+            <meta http-equiv="cache-control" content="no-cache"/>
+            <meta http-equiv="expires" content="0"/>
+            <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+            <meta http-equiv="pragma" content="no-cache"/>
+            <meta name="viewport" content="width = device-width, initial-scale=1.0">
+        </head>
+        <body>
+         <style type="text/css">
+         ${getCSS()}
+         </style>
             <div class="container">
               <h4>Current Weather Conditions</h4>
               <h3><a href="#openModal">${state?.walert}</a></he>
@@ -681,11 +687,11 @@ def getWeatherHtml() {
                         <p>${state?.walertMessage} </p>
                     </div>
                 </div>
-      </div>
-      
-          """
-        }
-    }
+            </div>
+        </body>
+    </html>
+    """
+    render contentType: "text/html", data: html, status: 200
 }
 private def textDevName()   { "Nest Weather${appDevName()}" }
 private def appDevType()    { false }
