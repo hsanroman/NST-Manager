@@ -284,6 +284,7 @@ def mainPage() {
                 def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
                         image: getAppImg("settings_icon.png")
+                input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
             }
         }
         section(" ") {
@@ -369,7 +370,6 @@ def prefsPage() {
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
-            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("no_icon.png"))
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
