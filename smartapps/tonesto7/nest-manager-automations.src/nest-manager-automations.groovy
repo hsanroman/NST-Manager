@@ -1,3 +1,9 @@
+/*
+    TODO:  
+    * Finish Critical Updates mechanism using minimum version number to display message in device handlers
+    * Try to finish update app using updateOneFromRepo and publish urls... Just need auth to get smartAppId
+    * Unified CSS
+*/
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
@@ -120,6 +126,7 @@ mappings {
             path("/renderLogs")		{action: [GET: "renderLogJson"]}
             path("/renderState")	{action: [GET: "renderStateJson"]}
             path("/renderDebug")	{action: [GET: "renderDebugJson"]}
+            path("/renderInstallData")	{action: [GET: "renderInstallData"]}
         }
     }
 }
@@ -137,7 +144,7 @@ def startPage() {
 
 def authPage() {
     //log.trace "authPage()"
-
+    
     getAccessToken()
     preReqCheck()
     deviceHandlerTest()
@@ -362,6 +369,7 @@ def prefsPage() {
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
+            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("no_icon.png"))
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
@@ -415,17 +423,21 @@ def initManagerApp() {
     } else { atomicState.isInstalled = false }
     subscriber()
     setPollingState()
+    if (optInAppAnalytics) { runIn(2, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
     runIn(20, "stateCleanup", [overwrite: true])
 }
 
 def uninstManagerApp() {
     if(addRemoveDevices(true)) {
         //Revokes Smartthings endpoint token...
-        revokeAccessToken()
+           revokeAccessToken()
+        //removes analytic data from the server        
+        if (optInAppAnalytics) { runIn(2, "removeInstallData") }
         //Revokes Nest Auth Token
         if(atomicState?.authToken) { revokeNestToken() }
         //sends notification of uninstall
         sendNotificationEvent("${textAppName()} is uninstalled...")
+        
     }
 }
 
@@ -1040,7 +1052,7 @@ void workQueue() {
         }
     }
 
-    log.trace("workQueue Run queue: ${qnum}" )
+    //log.trace("workQueue Run queue: ${qnum}" )
     if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
     def cmdQueue = atomicState?."cmdQ${qnum}"
     try {
@@ -1172,10 +1184,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
         }
         if (ex.message.contains("Bad Request")) {
-            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
         }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true, true)
         atomicState.apiIssues = true
@@ -1223,6 +1235,11 @@ def newUpdNotify() {
             atomicState?.lastUpdMsgDt = getDtNow()
         }
     } catch (ex) { LogAction("newUpdNotify Exception: ${ex}", "error", true, true) }
+}
+
+def criticalUpdateHandler() {
+    log.trace "criticalUpdateHandler..."
+    
 }
 
 def sendMsg(String msg, String msgType, people = null) {
@@ -1428,6 +1445,9 @@ def getWebFileData() {
             if(resp.data) {
                 LogAction("Getting Latest Data from appParams.json File...", "info", true)
                 atomicState?.appData = resp?.data
+                if(resp?.data?.updater?.isCritical.toString() == "true") {
+                    criticalUpdateHandler()
+                }
                 atomicState?.lastWebUpdDt = getDtNow()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
@@ -1443,6 +1463,37 @@ def getWebFileData() {
     }
     return result
 }
+
+def getSmartAppData() {
+    //log.trace "getWebFileData..."
+
+    def params = [
+        uri: "https://graph.api.smartthings.com/api/smartapps/installations/${app.id}",
+           contentType: 'application/json'
+    ]
+    def result = false
+    try {
+        httpGet(params) { resp ->
+            log.debug "resp: ${resp?.status}"
+            if(resp.data) {
+                LogAction("Getting Latest Data from appParams.json File...", "info", true)
+                log.debug "smartAppData: ${resp?.data}"
+                
+            }
+            LogTrace("getWebFileData Resp: ${resp?.data}")
+            result = true
+        }
+    }
+    catch (ex) {
+        if(ex instanceof groovyx.net.http.HttpResponseException) {
+               log.warn  "appParams.json file not found...${ex}"
+        } else {
+            LogAction("getWebFileData Exception: ${ex}", "error", true, true)
+        }
+    }
+    return result
+}
+
 
 def ver2IntArray(val) {
     def ver = val?.split("\\.")
@@ -2088,6 +2139,7 @@ def removeTestDevs() {
 
 def preReqCheck() {
     //log.trace "preReqCheckTest()"
+    generateInstallId()
     if(!location?.timeZone || !location?.zipCode) {
         atomicState.preReqTested = false
         LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true)
@@ -2125,6 +2177,10 @@ def getAccessToken() {
         LogAction("getAccessToken Exception | $msg", "warn", true)
         return false
     }
+}
+
+def generateInstallId() {
+    if(!atomicState?.installationId) { atomicState?.installationId = UUID?.randomUUID().toString() }
 }
 
 /************************************************************************************************
@@ -2167,6 +2223,7 @@ def callback() {
 
             if (atomicState?.authToken) {
                 LogAction("Nest AuthToken Generated Successfully...", "info", true)
+                generateInstallId
                 success()
             } else {
                 LogAction("There was a Failure Generating the Nest AuthToken!!!", "error", true, true)
@@ -2547,6 +2604,7 @@ def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback
 def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath) { return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
+def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 
 def latestTstatVer()    { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
@@ -2957,6 +3015,10 @@ def diagPage () {
                        title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
             href url: getAppEndpointUrl("renderDebug"), style:"embedded", required:false,
                        title:"Developer Debug Data", description:"Tap to view Debug Data...", image: getAppImg("debug_data_icon.png")
+            if (optInAppAnalytics) {
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", required:false,
+                               title:"View Analytic Install Data", description:"Tap to view Data...", image: getAppImg("debug_data_icon.png")
+            }
         }
         section("Reset Diagnostic Queue:") {
             href "resetDiagQueuePage", title: "Reset Diagnostic Logs", description: "Tap to Reset the Logs...", state: null, image: getAppImg("reset_icon.png")
@@ -3095,6 +3157,86 @@ def protInfoPage () {
     }
 }
 
+/******************************************************************************
+*                			Firebase Analytics Functions                  	  *
+*******************************************************************************/
+def createInstallDataJson() {
+    try {
+        generateInstallId()
+        def results = [:]
+        def tstatCnt = atomicState?.thermostats?.size() ?: 0
+        def protCnt = atomicState?.protects?.size() ?: 0
+        def usingPresDev = atomicState?.presDevice ? true : false
+        def usingWeatherDev = atomicState?.weatherDevice ? true : false
+        def tz = getTimeZone().ID.toString()
+        def data = ["appVersion":appVersion().toString(), "thermostats":tstatCnt, "protects":protCnt, "usingPresDev":usingPresDev, "usingWeatherDev":usingWeatherDev, "timeZone":tz, "datetime":getDtNow().toString() ]
+        def bdni = [atomicState?.installationId].join('.')
+        results[bdni] = data
+        def resultJson = new groovy.json.JsonOutput().toJson(results)
+        return resultJson
+                
+    } catch (ex) { LogAction("createInstallDataJson: Exception: ${ex}", "error", true) }
+}
+
+def renderInstallData() {
+    try {
+        //def resultString = new groovy.json.JsonOutput().prettyPrint(createInstallDataJson())
+        render contentType: "application/json", data: new groovy.json.JsonOutput().prettyPrint(createInstallDataJson())
+    } catch (ex) { LogAction("renderInstallData Exception: ${ex}", "error", true) }
+}
+
+def sendInstallData() {
+    if (optInAppAnalytics) {
+        sendAnalyticData(createInstallDataJson(), "installData/clientData.json")
+    }
+}
+
+def removeInstallData() {
+    if (optInAppAnalytics) {
+        removeAnalyticData("installData/clientData/${atomicState?.installationId}.json")
+    }
+}
+
+def sendAnalyticData(data, pathVal) {
+    //log.trace "sendAnalyticData(${data}, ${pathVal}"
+    def json = new groovy.json.JsonOutput().prettyPrint(data)
+    def result = false
+    def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
+       try {
+        httpPutJson(params) { resp ->
+            //log.debug "resp: ${resp}"
+            if( resp.status == 200) {
+                LogAction("sendAnalyticData: Install Data Sent Successfully!!!", "info", true)
+                result = true
+            }
+            else if(resp.status == 400) {
+                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+            }
+            else {
+                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+            }
+        }
+    }
+    catch (ex) {
+        if(ex instanceof groovyx.net.http.HttpResponseException) {
+            LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${resp.status}", "error", true)
+        }
+        else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true, true) }
+    }
+    return result
+}
+
+def removeAnalyticData(pathVal) {
+    //log.trace "removeAnalyticData(${pathVal}"
+    def result = false
+    httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
+        log.debug "resp status: ${resp?.status}"
+        if (resp?.status == 200) {
+            result = true
+        }
+    }
+    return result
+}
 
 /******************************************************************************
 *                Application Help and License Info Variables                  *
