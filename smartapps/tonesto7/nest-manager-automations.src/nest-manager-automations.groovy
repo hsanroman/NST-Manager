@@ -586,6 +586,7 @@ def poll(force = false, type = null) {
         updateWebStuff()
         notificationCheck() //Checks if a notification needs to be sent for a specific event
     }
+    sendExceptionData("jkjflkjalfkjal;jf;ljflkjflkrjflkjrlkjflkjrkmklfjkjr", "quietTimeOk")
 }
 
 def forcedPoll(type = null) {
@@ -2667,7 +2668,10 @@ def daysOk(dayVals) {
             if(getTimeZone()) { day.setTimeZone(getTimeZone()) }
             return dayVals.contains(day.format(new Date())) ? false : true
         } else { return true }
-    } catch (ex) { LogAction("daysOk() Exception: ${ex}", "error", true, true) }
+    } catch (ex) { 
+    	LogAction("daysOk() Exception: ${ex}", "error", true, true)
+        sendExceptionData(ex, "daysOk")    
+    }
 }
 
 def quietTimeOk() {
@@ -2688,7 +2692,10 @@ def quietTimeOk() {
         if (strtTime && stopTime) {
             return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
-    } catch (ex) { LogAction("timeOk Exception: ${ex}", "error", true, true) }
+    } catch (ex) { 
+    	LogAction("timeOk Exception: ${ex}", "error", true, true) 
+		sendExceptionData(ex, "quietTimeOk")    
+    }
 }
 
 def time2Str(time) {
@@ -3197,6 +3204,14 @@ def removeInstallData() {
     }
 }
 
+def sendExceptionData(exMsg, methodName) {
+    if (!optInSendExceptions) {
+    	def exData = ["exceptionMsg":exMsg, "exceptionDt":getDtNow().toString()]
+		def results = new groovy.json.JsonOutput().toJson(exData)
+        sendAnalyticExceptionData(results, "exceptionData/${methodName}.json")
+    }
+}
+
 def sendAnalyticData(data, pathVal) {
     //log.trace "sendAnalyticData(${data}, ${pathVal}"
     def json = new groovy.json.JsonOutput().prettyPrint(data)
@@ -3221,7 +3236,36 @@ def sendAnalyticData(data, pathVal) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
             LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${resp.status}", "error", true)
         }
-        else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true, true) }
+        else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true) }
+    }
+    return result
+}
+
+def sendAnalyticExceptionData(data, pathVal) {
+    //log.trace "sendExceptionData(${data}, ${pathVal}"
+    def json = new groovy.json.JsonOutput().prettyPrint(data)
+    def result = false
+    def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
+       try {
+        httpPostJson(params) { resp ->
+            //log.debug "resp: ${resp}"
+            if( resp.status == 200) {
+                LogAction("sendExceptionData: Exception Data Sent Successfully!!!", "info", true)
+                result = true
+            }
+            else if(resp.status == 400) {
+                LogAction("sendExceptionData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+            }
+            else {
+                LogAction("sendExceptionData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+            }
+        }
+    }
+    catch (ex) {
+        if(ex instanceof groovyx.net.http.HttpResponseException) {
+            LogAction("sendExceptionData: 'HttpResponseException' Exception: ${resp.status}", "error", true)
+        }
+        else { LogAction("sendExceptionData: Exception: ${ex}", "error", true) }
     }
     return result
 }
