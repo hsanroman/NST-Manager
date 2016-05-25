@@ -540,6 +540,7 @@ def presenceEvent(presence) {
     def nestPres = getNestPresence()
     def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
     def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
     state?.nestPresence = newNestPres
     state?.present = (pres == "present") ? true : false
     if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
