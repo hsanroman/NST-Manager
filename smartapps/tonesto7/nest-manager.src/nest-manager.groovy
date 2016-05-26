@@ -275,7 +275,7 @@ def mainPage() {
         if(atomicState?.isInstalled) {
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
-                href "uninstallPage", title: "Uninstall this App", description: "Tap to Proceed...", image: getAppImg("uninstall_icon.png")
+                href "uninstallPage", title: "Uninstall this App", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
             }
         }
     }
