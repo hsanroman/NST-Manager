@@ -318,7 +318,6 @@ def reviewSetupPage() {
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Developer Data...", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
-        
         section(" ") {
             href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
         }
@@ -350,23 +349,17 @@ def prefsPage() {
             href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", state: (debugStatus() == "On" || deviceDebugStatus() == "On" ? "complete" : null),
                     image: getAppImg("log.png")
         }
-        section ("Diagnostics:") {
-            input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            paragraph "Diagnostics allow errors to be stored inside of the SmartApps data store. You can view the logs or share them with the developer to help resolve issues..."
-            if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
-            else {
-                LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
-                atomicState.exLogs = []
-            }
-        }
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
+        }
+        section("Developer Data Sharing:") {
+            paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
+            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
+            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
         }
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
-            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
-            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
