@@ -208,7 +208,7 @@ def authPage() {
 }
 
 def mainPage() {
-	def setupComplete = !atomicState.isInstalled ? false : true
+    def setupComplete = !atomicState.isInstalled ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
@@ -277,7 +277,7 @@ def mainPage() {
             }
             if(atomicState?.isInstalled) {
                 section("Preferences:") {
-                    def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
+                    def prefDesc = "Notifications: (${pushStatus()})\nDebug: App (${debugStatus()})/Device (${deviceDebugStatus()})\nTap to Configure..."
                     href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
                             image: getAppImg("settings_icon.png")
                     
@@ -287,16 +287,16 @@ def mainPage() {
         if(atomicState?.isInstalled) {
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
-                href "uninstallPage", title: "Uninstall...", description: "Tap to Proceed...", image: getAppImg("uninstall_icon.png")
+                href "uninstallPage", title: "Uninstall this App", description: "Tap to Proceed...", image: getAppImg("uninstall_icon.png")
             }
         }
     }
 }
 
 def reviewSetupPage() {
-	return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
+    return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
         section("Device Summary:") {
-         	def ts = thermostats ? "\n (${thermostats?.size()}) Thermostats" : ""
+             def ts = thermostats ? "\n (${thermostats?.size()}) Thermostats" : ""
             def pt = protects ? "\n (${protects?.size()}) Protects" : ""
             def pd = presDevice ? "\n (1) Presence Device" : ""
             def wd = weatherDevice ? "\n (1) Weather Device" : ""
@@ -316,7 +316,11 @@ def reviewSetupPage() {
                     image: getAppImg("notification_icon.png")
         }
         section("Polling:") {
-            href "pollPrefPage", title: "Polling Preferences", description: "Tap to configure...", image: getAppImg("timer_icon.png")
+            def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
+            def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
+            def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
+            def pollStatus = !atomicState?.pollingOn ? "Not Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
+            href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
         }
         section ("Diagnostics:") {
             input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
@@ -328,7 +332,7 @@ def reviewSetupPage() {
             }
         }
         section("Developer Data Sharing:") {
-         	paragraph "The options below will enable the developer to collect non-identifiable app information as well as error data to help diagnose issues quicker."
+             paragraph "The options below will enable the developer to collect non-identifiable app information as well as error data to help diagnose issues quicker."
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
             if (optInAppAnalytics) {
@@ -350,7 +354,7 @@ def prefsPage() {
             def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
             def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
             def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
-            def pollStatus = !atomicState?.pollingOn ? "Not Active" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
+            def pollStatus = !atomicState?.pollingOn ? "Not Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
             href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
         }
         if(devSelected) {
@@ -443,12 +447,7 @@ def updated() {
 def uninstalled() {
     //log.debug "uninstalled..."
     if(!parent) { 
-        if(addRemoveDevices(true)) {
-            //Revokes Smartthings endpoint token...
-            revokeAccessToken()
-            //Revokes Nest Auth Token
-            if(atomicState?.authToken) { revokeNestToken() }
-        }
+        uninstManagerApp()
     }
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -474,21 +473,23 @@ def initManagerApp() {
     } else { atomicState.isInstalled = false }
     subscriber()
     setPollingState()
-    if (optInAppAnalytics) { runIn(2, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
+    if (optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
     runIn(20, "stateCleanup", [overwrite: true])
 }
 
 def uninstManagerApp() {
     if(addRemoveDevices(true)) {
-        //Revokes Smartthings endpoint token...
-           revokeAccessToken()
         //removes analytic data from the server        
-        if (optInAppAnalytics) { runIn(2, "removeInstallData") }
+        if (optInAppAnalytics) { 
+            removeInstallData() 
+            atomicState?.installationId = null
+        }
+        //Revokes Smartthings endpoint token...
+        revokeAccessToken()
         //Revokes Nest Auth Token
         if(atomicState?.authToken) { revokeNestToken() }
         //sends notification of uninstall
         sendNotificationEvent("${textAppName()} is uninstalled...")
-        
     }
 }
 
@@ -531,7 +532,7 @@ def getInstAutoTypesDesc() {
         }
     }
     def remSenDesc = (remSenCnt > 0) ? "\nRemote Sensor ($remSenCnt)" : ""
-    def conWatDesc = (conWatCnt > 0) ? "\nContact  Sensor ($conWatCnt)" : ""
+    def conWatDesc = (conWatCnt > 0) ? "\nContact Sensor ($conWatCnt)" : ""
     def extTmpDesc = (extTmpCnt > 0) ? "\nExternal Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\nNest Modes ($nModeCnt)" : ""
     return "Automations Installed: ${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}"
