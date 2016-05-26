@@ -44,11 +44,12 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "5-20-2016" }
+def appVerDate() { "5-26-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (May 20th, 2016)\n" +
+    "V2.1.0 (May 26th, 2016)\n" +
     "Updated: Merged Manager and Automations into one app\n" +
+    "Updated: Changed SmartApp setup flow to layout available options better to users\n" +
     "Updated: Lot's of tweaks and fixes for annoying ui bugs\n\n" +
     
     "V2.0.8 (May 13th, 2016)\n" +
@@ -81,8 +82,9 @@ preferences {
     page(name: "startPage")
     
     //Manager Pages    
-    page(name: "authPage", title: "Nest", nextPage:"mainPage", content:"authPage", uninstall: true, install:true)
+    page(name: "authPage", title: "Nest", nextPage:"mainPage", content:"authPage", uninstall: false, install:false)
     page(name: "mainPage" )
+    page(name: "reviewSetupPage" )
     page(name: "prefsPage")
     page(name: "infoPage")
     page(name: "nestInfoPage")
@@ -190,7 +192,7 @@ def authPage() {
 
     if (!oauthTokenProvided && atomicState?.accessToken) {
         LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
-        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "", uninstall: uninstallAllowed) {
+        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
@@ -206,7 +208,8 @@ def authPage() {
 }
 
 def mainPage() {
-    return dynamicPage(name: "mainPage", title: "Main Page", install: true, uninstall: true) {
+	def setupComplete = !atomicState.isInstalled ? false : true
+    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             if(!appDevType() && isAppUpdateAvail()) {
@@ -214,6 +217,7 @@ def mainPage() {
                         image: getAppImg("update_icon.png")
             }
         }
+        //beginning of structure selections
         def structs = getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
@@ -252,15 +256,6 @@ def mainPage() {
                 atomicState.presDevice = presDevice ? true : false
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
                 atomicState.weatherDevice = weatherDevice ? true : false
-                //if(atomicState?.weatherDevice && !isWeatherDeviceInst()) {
-                if(atomicState?.weatherDevice) {
-                    if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
-                        href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
-                    }
-                }
-                if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
-                    href "devNamePage", title: "Customize Device Names?", description: atomicState?.custLabelUsed ? "Tap to Modify..." : "Tap to configure...", state: (atomicState?.custLabelUsed ? "complete" : null), image: getAppImg("device_name_icon.png")
-                }
             }
             if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects)) {
                 def autoDesc = isAutoAppInst() ? "${getInstAutoTypesDesc()}\n\nTap to Modify..." : null
@@ -280,52 +275,69 @@ def mainPage() {
                     }
                 }
             }
-            section("Preferences:") {
-                def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
-                href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
-                        image: getAppImg("settings_icon.png")
-                input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
+            if(atomicState?.isInstalled) {
+                section("Preferences:") {
+                    def prefDesc = "Notifications: (${pushStatus()})\nDebug: App: (${debugStatus()})/Device: (${deviceDebugStatus()})\nTap to Configure..."
+                    href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
+                            image: getAppImg("settings_icon.png")
+                    
+                }
             }
         }
+        if(atomicState?.isInstalled) {
+            section(" ") {
+                href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
+                href "uninstallPage", title: "Uninstall...", description: "Tap to Proceed...", image: getAppImg("uninstall_icon.png")
+            }
+        }
+    }
+}
+
+def reviewSetupPage() {
+	return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
+        section("Device Summary:") {
+         	def ts = thermostats ? "\n (${thermostats?.size()}) Thermostats" : ""
+            def pt = protects ? "\n (${protects?.size()}) Protects" : ""
+            def pd = presDevice ? "\n (1) Presence Device" : ""
+            def wd = weatherDevice ? "\n (1) Weather Device" : ""
+            paragraph "Devices to Install:${!ts && !pt && !pd && !wd ? " None" : "${ts}${pt}${pd}${wd}"}"
+            if(atomicState?.weatherDevice) {
+                if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
+                    href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                }
+            }
+            if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
+                href "devNamePage", title: "Customize Device Names?", description: atomicState?.custLabelUsed ? "Tap to Modify..." : "Tap to configure...", state: (atomicState?.custLabelUsed ? "complete" : null), image: getAppImg("device_name_icon.png")
+            }
+        }
+        section("Notifications:") {
+            def notifDesc = pushStatus() != "Not Active" ? "Notifications: (${pushStatus()})${getQTimeLabel() ? "\n${getQTimeLabel()}" : ""}\n\nTap to Modify..." : "Tap to configure..."
+            href "notifPrefPage", title: "Notifications", description: notifDesc, state: (notifDesc != "Tap to configure..." ? "complete" : null), 
+                    image: getAppImg("notification_icon.png")
+        }
+        section("Polling:") {
+            href "pollPrefPage", title: "Polling Preferences", description: "Tap to configure...", image: getAppImg("timer_icon.png")
+        }
+        section ("Diagnostics:") {
+            input (name: "diagLogs", type: "bool", title: "Enable Diagnostics?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("diag_icon.png"))
+            paragraph "Diagnostics allow errors to be stored inside of the SmartApps data store. You can view the logs or share them with the developer to help resolve issues..."
+            if (diagLogs) { LogAction("Diagnostic Log Queuing is Enabled...", "info", false) }
+            else {
+                LogAction("Diagnostic Log Queuing is Disabled...", "info", false)
+                atomicState.exLogs = []
+            }
+        }
+        section("Developer Data Sharing:") {
+         	paragraph "The options below will enable the developer to collect non-identifiable app information as well as error data to help diagnose issues quicker."
+            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
+            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
+            if (optInAppAnalytics) {
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Developer Data...", description: "Tap to view Data...", required:false, image: getAppImg("blank_icon.png")
+            }
+        }
+        
         section(" ") {
             href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
-        }
-    }
-}
-
-def automationsPage() {
-    dynamicPage(name: "automationsPage", title: "", nextPage: "", install: false) {
-        def autoApp = findChildAppByName( appName() )
-        if(autoApp) {
-            section("Installed Automations...") { }
-        } else {
-            section(" ") {
-                paragraph "You haven't created any Automations yet!!!\nTap Create New Automation to get Started..."
-            }
-        }
-        section("Add a new Automation:") {
-            app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
-            
-            def rText = "NOTICE:\nThe Nest Automations App is still in BETA!!!\nIt will likely contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
-                        "We are not responsible for any damages caused by using this SmartApp and Device Handlers.\n\nUSE AT YOUR OWN RISK!!!"
-            paragraph "$rText"
-            !appVersion() ? " " : paragraph("			  Automations App: ${appVersion()}")
-        }
-    }
-}
-
-def custWeatherPage() {
-    dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
-        section("Set Custom Weather Location") {
-            def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
-            href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
-                    description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: defZip, submitOnChange: true,
-                    image: getAppImg("weather_icon_grey.png"))
-            paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
-            atomicState.lastWeatherUpdDt = 0
-            atomicState?.lastForecastUpdDt = 0
         }
     }
 }
@@ -370,9 +382,48 @@ def prefsPage() {
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
+            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
+            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
+        }
+    }
+}
+
+def automationsPage() {
+    dynamicPage(name: "automationsPage", title: "", nextPage: "", install: false) {
+        def autoApp = findChildAppByName( appName() )
+        if(autoApp) {
+            section("Installed Automations...") { }
+        } else {
+            section(" ") {
+                paragraph "You haven't created any Automations yet!!!\nTap Create New Automation to get Started..."
+            }
+        }
+        section("Add a new Automation:") {
+            app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
+            
+            def rText = "NOTICE:\nThe Nest Automations App is still in BETA!!!\nIt will likely contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
+                        "We are not responsible for any damages caused by using this SmartApp and Device Handlers.\n\nUSE AT YOUR OWN RISK!!!"
+            paragraph "$rText"
+            !appVersion() ? " " : paragraph("			  Automations App: ${appVersion()}")
+        }
+    }
+}
+
+def custWeatherPage() {
+    dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
+        section("Set Custom Weather Location") {
+            def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
+            href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
+                    description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
+            def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: defZip, submitOnChange: true,
+                    image: getAppImg("weather_icon_grey.png"))
+            paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+            atomicState.lastWeatherUpdDt = 0
+            atomicState?.lastForecastUpdDt = 0
         }
     }
 }
@@ -2838,7 +2889,7 @@ def getShowProtAlarmEvts() { return showProtAlarmStateEvts ? true : false }
 def pollPrefPage() {
     dynamicPage(name: "pollPrefPage", install: false) {
         section("") {
-            paragraph "\nPolling Preferences\n", image: getAppImg("timer_icon.png")
+            paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
         }
         section("Device Polling:") {
             def pollValDesc = !pollValue ? "Default: 3 Minutes" : pollValue
@@ -2946,7 +2997,7 @@ def notifPrefPage() {
 def devPrefPage() {
     dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
         section("") {
-            paragraph "\nDevice Preferences\n", image: getAppImg("device_pref_icon.png")
+            paragraph "Device Preferences", image: getAppImg("device_pref_icon.png")
         }
         if(thermostats || protects || presDevice || weatherDevice) {
             section("Device Names:") {
@@ -3113,10 +3164,15 @@ def nestTokenResetPage() {
     }
 }
 
+
+/******************************************************************************
+*                			  NEST API INFO PAGES                  	  		  *
+*******************************************************************************/
+
 def nestInfoPage () {
     dynamicPage(name: "nestInfoPage", install: false) {
         section("About this page:") {
-            paragraph "This Page will display the data returned from the API for each device that is selected..."
+            paragraph "The info displayed is the exact data received directly from the Nest API for each device that is selected..."
         }
         if(atomicState?.structures) {
             section("Locations") {
@@ -3144,14 +3200,12 @@ def nestInfoPage () {
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nLocation Info:", image: getAppImg("nest_structure_icon.png")
+            paragraph "Locations", image: getAppImg("nest_structure_icon.png")
         }
         for(str in atomicState?.structData) {
             if (str.key == atomicState?.structures) {
-                def strId = str.key
-                def strData = str.value
-                section("Location Name: ${strData.name}") {
-                    strData.each { item ->
+                section("Location Name: ${str?.value?.name}") {
+                    str?.value.each { item ->
                         switch (item.key) {
                             case [ "wheres" ]:
                                 break
@@ -3169,7 +3223,7 @@ def structInfoPage () {
 def tstatInfoPage () {
     dynamicPage(name: "tstatInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nThermostats:", image: getAppImg("nest_like.png")
+            paragraph "Thermostats", image: getAppImg("nest_like.png")
         }
         for(tstat in atomicState?.thermostats) {
             def devs = []
@@ -3194,7 +3248,7 @@ def tstatInfoPage () {
 def protInfoPage () {
     dynamicPage(name: "protInfoPage", refreshInterval: 15, install: false) {
         section("") {
-            paragraph "\nProtects:", image: getAppImg("protect_icon.png")
+            paragraph "Protects", image: getAppImg("protect_icon.png")
         }
         atomicState?.protects.each { prot ->
             def devs = []
@@ -3241,8 +3295,9 @@ def createInstallDataJson() {
 
 def renderInstallData() {
     try {
-        //def resultString = new groovy.json.JsonOutput().prettyPrint(createInstallDataJson())
-        render contentType: "application/json", data: new groovy.json.JsonOutput().prettyPrint(createInstallDataJson())
+        def resultJson = createInstallDataJson()
+        def resultString = new groovy.json.JsonOutput().prettyPrint(resultJson)
+        render contentType: "application/json", data: resultString
     } catch (ex) { LogAction("renderInstallData Exception: ${ex}", "error", true) }
 }
 
@@ -3325,7 +3380,7 @@ def sendAnalyticExceptionData(data, pathVal) {
 }
 
 def removeAnalyticData(pathVal) {
-    //log.trace "removeAnalyticData(${pathVal}"
+    log.trace "removeAnalyticData(${pathVal}"
     def result = false
     httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
         log.debug "resp status: ${resp?.status}"
