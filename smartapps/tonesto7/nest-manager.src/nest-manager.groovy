@@ -27,11 +27,11 @@ import groovy.time.*
 import java.text.SimpleDateFormat
 
 definition(
-    name: "${appName()}",
+    name: "${textAppName()}",
     namespace: "${textNamespace()}",
     author: "${textAuthor()}",
     description: "${textDesc()}",
-    category: "My Apps",
+    category: "Convenience", 
     iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
     iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
     iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
@@ -48,10 +48,11 @@ def appVerDate() { "5-26-2016" }
 def appVerInfo() {
     
     "V2.1.0 (May 26th, 2016)\n" +
-    "Updated: Merged Manager and Automations into one app\n" +
-    "Updated: Changed SmartApp setup flow to layout available options better to users\n" +
-    "Updated: Added in app analytics and exception error sharing with developer\n" +
-    "Updated: Lot's of tweaks and fixes for annoying ui bugs\n\n" +
+    "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
+    "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
+    "Updated: Added in app install and exception error sharing with the developer\n" +
+    "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
+    "Fixed: Nest Log Out function to actually take you back to auth screen after clearing token\n\n" +
     
     "V2.0.8 (May 13th, 2016)\n" +
     "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
@@ -74,8 +75,7 @@ def appVerInfo() {
     "Fixed: Everything\n\n" +
 
     "V2.0.0 (Apr 21th, 2016)\n" +
-    "Fixed: Everything\n\n" +
-    "---------------------------------------------"
+    "Fixed: Everything"
 }
 
 preferences {
@@ -133,7 +133,7 @@ mappings {
     }
 }
 
-//Start Page to load either parent or child
+//This Page is used to load either parent or child app interface code
 def startPage() {
     atomicState?.isParent = false
     if (parent) {
@@ -146,7 +146,6 @@ def startPage() {
 
 def authPage() {
     //log.trace "authPage()"
-    
     getAccessToken()
     preReqCheck()
     deviceHandlerTest()
@@ -186,7 +185,7 @@ def authPage() {
     //log.debug "RedirectUrl = ${redirectUrl}"
 
     if (!oauthTokenProvided && atomicState?.accessToken) {
-        LogAction("AuthToken not found: Directing to Login Page...", "debug", true)
+        LogAction("AuthToken not found: Directing to Login Page...", "info", true)
         return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", uninstall: uninstallAllowed) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
@@ -349,9 +348,6 @@ def prefsPage() {
             href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", state: (debugStatus() == "On" || deviceDebugStatus() == "On" ? "complete" : null),
                     image: getAppImg("log.png")
         }
-        section("Nest Login:") {
-            href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
-        }
         section("Developer Data Sharing:") {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
@@ -360,6 +356,9 @@ def prefsPage() {
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
             input ("disAppIcons", "bool", title: "Disable App Icons?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
+        }
+        section("Nest Login:") {
+            href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
@@ -1061,7 +1060,6 @@ private setLastCmdSentSeconds(qnum, val) {
     atomicState."lastCmdSentDt${qnum}" = val
     atomicState.lastCmdSentDt = val
 }
-
 
 void workQueue() {
     //log.trace "workQueue..."
@@ -2498,10 +2496,11 @@ def setStateVar(frc = false) {
     }
 }
 
+//Things that I need to clear up on updates go here
+//IMPORTANT: This must be run in it's own thread, and exit after running as the cleanup occurs on exit//
 def stateCleanup() {
     log.trace "stateCleanup..."
-    //Things that I need to clear up on updates go here
-    // this must be run standalone, and exit after running as the cleanup occurs on exit
+    
     state.remove("exLogs")
     state.remove("pollValue")
     state.remove("pollStrValue")
@@ -2568,17 +2567,16 @@ def stateCleanup() {
     }
 }
 
-
 /******************************************************************************
 *                			Keep These Methods				                  *
 *******************************************************************************/
-def getThermostatChildName() { return getChildDevName("Nest Thermostat") }
-def getProtectChildName()    { return getChildDevName("Nest Protect") }
-def getPresenceChildName()   { return getChildDevName("Nest Presence") }
-def getWeatherChildName()    { return getChildDevName("Nest Weather") }
-def getAutoAppChildName()    { return getChildDevName("Nest Automations") }
+def getThermostatChildName() { return getChildName("Nest Thermostat") }
+def getProtectChildName()    { return getChildName("Nest Protect") }
+def getPresenceChildName()   { return getChildName("Nest Presence") }
+def getWeatherChildName()    { return getChildName("Nest Weather") }
+def getAutoAppChildName()    { return getChildName("Nest Automations") }
 
-def getChildDevName(str)     { return "${str}${appDevName()}" }
+def getChildName(str)     { return "${str}${appDevName()}" }
 
 def getServerUrl()          { return "https://graph.api.smartthings.com" }
 def getShardUrl()           { return getApiServerUrl() }
@@ -2856,15 +2854,15 @@ def notifPrefPage() {
             section("App and Device Updates:") {
                 input (name: "sendAppUpdateMsg", type: "bool", title: "Send for Updates...", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon3.png"))
                 if(sendMissedPollMsg == null || sendAppUpdateMsg) {
-                      def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
-                       input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", description: updNotifyWaitValDesc, required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
-                       if(updNotifyWaitVal) {
-                           atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
-                           if (updNotifyWaitVal.toInteger() == 1000000) {
-                               input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
-                               if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
-                           }
-                       } else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
+                    def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
+                    input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", description: updNotifyWaitValDesc, required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
+                    if(updNotifyWaitVal) {
+                        atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+                        if (updNotifyWaitVal.toInteger() == 1000000) {
+                            input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
+                            if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
+                        }
+                    } else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
                 }
             }
         } else { atomicState.pushTested = false }
@@ -2982,12 +2980,15 @@ def uninstallPage() {
     }
 }
 
-
 // Nest Login Page
 def nestLoginPrefPage () {
-    dynamicPage(name: "nestLoginPrefPage", install: false) {
-        section("Nest Login Preferences:") {
-            href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
+    if (!atomicState?.authToken) {
+        return authPage()
+    } else {
+        return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
+            section("Nest Login Preferences:") {
+                href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
+            }
         }
     }
 }
@@ -3033,7 +3034,7 @@ def nestInfoPage () {
             paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
         }
         section("Diagnostics") {
-            href "diagPage", title: "View Diagnostic Info...", description: diagDesc, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
+            href "diagPage", title: "View Diagnostic Info...", description: null, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
         }
     }
 }
@@ -3044,14 +3045,14 @@ def structInfoPage () {
             paragraph "Locations", image: getAppImg("nest_structure_icon.png")
         }
         for(str in atomicState?.structData) {
-            if (str.key == atomicState?.structures) {
+            if (str?.key == atomicState?.structures) {
                 section("Location Name: ${str?.value?.name}") {
                     str?.value.each { item ->
-                        switch (item.key) {
-                            case [ "wheres" ]:
+                        switch (item?.key) {
+                            case [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]:
                                 break
                             default:
-                                paragraph "${item.key.toString().capitalize()}: ${item.value}"
+                                paragraph "${item?.key?.toString().capitalize()}: ${item?.value}"
                                 break
                         }
                     }
@@ -3068,17 +3069,17 @@ def tstatInfoPage () {
         }
         for(tstat in atomicState?.thermostats) {
             def devs = []
-            section("Thermostat Name: ${tstat.value}") {
+            section("Thermostat Name: ${tstat?.value}") {
                 atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
-                    switch (dev.key) {
+                    switch (dev?.key) {
                         case [ "where_id" ]:  //<< Excludes certain keys from being shown
                             break
                         default:
-                            devs << "${dev.key.toString().capitalize()}: ${dev.value}"
+                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
                             break
                     }
                 }
-                devs.sort().each { item ->
+                devs?.sort().each { item ->
                     paragraph "${item}"
                 }
             }
@@ -3093,18 +3094,18 @@ def protInfoPage () {
         }
         atomicState?.protects.each { prot ->
             def devs = []
-            section("Protect Name: ${prot.value}") {
-                atomicState?.deviceData?.smoke_co_alarms[prot.key].each { dev ->
-                    log.debug "prot dev: $dev"
-                    switch (dev.key) {
+            section("Protect Name: ${prot?.value}") {
+                atomicState?.deviceData?.smoke_co_alarms[prot?.key].each { dev ->
+                    //log.debug "prot dev: $dev"
+                    switch (dev?.key) {
                         case [ "where_id" ]:  //<< Excludes certain keys from being shown
                             break
                         default:
-                            devs << "${dev.key.toString().capitalize()}: ${dev.value}"
+                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
                             break
                     }
                 }
-                devs.sort().each { item ->
+                devs?.sort().each { item ->
                     paragraph "${item}"
                 }
             }
@@ -4426,15 +4427,15 @@ def conWatCheck() {
                         atomicState?.conWatTstatOffRequested = false
                         //atomicState.conWatTstatTurnedOff = false
                         if(conWatTstatMir) { 
-                            conWatTstatMir.each { t ->
-                                 setTstatMode(t, lastMode)
-                                //log.debug("Restoring ${lastMode} to ${t}")
+                            conWatTstatMir?.each { tstat ->
+                                 setTstatMode(tstat, lastMode)
+                                //log.debug("Restoring Mode (${lastMode}) to ${tstat}")
                             }
                         }
-                        runIn(20, "conWatFollowupCheck", [overwrite: true])
-                        LogAction("Restoring '${conWatTstat.label}' to '${lastMode.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                        if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                        LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
                         if(conWatPushMsgOn) {
-                            sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
+                            sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
                                     conWatNotifRecips, conWatNotifPhones, conWatUsePush)
                         }
                     }
@@ -4449,19 +4450,19 @@ def conWatCheck() {
             if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
                 if(conWatRestoreOnClose) { 
                     atomicState?.conWatRestoreMode = curMode
-                     LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                    LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
                 }
-                log.debug("${openCtDesc} are Open: Turning off ${conWatTstat}")
+                log.debug("${openCtDesc} are Open: Turning Off ${conWatTstat}")
                 atomicState?.conWatTstatTurnedOff = true
                 atomicState?.conWatTstatOffRequested = true
                 conWatTstat?.off()
                 if(conWatTstatMir) { 
-                    conWatTstatMir.each { t ->
-                        t.off()
-                        log.debug("Mirrored Off to ${t}")
+                    conWatTstatMir?.each { tstat ->
+                        tstat?.off()
+                        log.debug("Mirrored Off Command to ${tstat}")
                     }
                 }
-                runIn(20, "conWatFollowupCheck", [overwrite: true])
+                if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
                 LogAction("conWatCheck: '${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
                 if(conWatPushMsgOn) {
                     sendNofificationMsg("'${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", conWatNotifRecips, conWatNotifPhones, conWatUsePush)
@@ -4707,10 +4708,10 @@ def getNestLocPres() {
 /************************************************************************************************
 |						              SCHEDULER METHOD						                	|
 *************************************************************************************************/
-def setRunSchedule(sec, fnct) {
-    if(sec) {
-        def timeVal = now() + (sec * 1000)
-        schedule(timeVal, "$fnct", [overwrite: true])
+def setRunSchedule(seconds, funct) {
+    if(ssecondsec) {
+        def timeVal = now()+(seconds * 1000)
+        schedule(timeVal, "$funct", [overwrite: true])
     }
 }
 
@@ -4799,12 +4800,12 @@ def getDayModeTimeDesc(var) {
 |							GLOBAL Code | Logging AND Diagnostic							    |
 *************************************************************************************************/
 
-def checkThermostatDupe(tstat1, tstat2) {
+def checkThermostatDupe(tstatOne, tstatTwo) {
     def result = false
-    if(tstat1 && tstat2) {
-        def pTstat = tstat1?.deviceNetworkId.toString()
+    if(tstatOne && tstatTwo) {
+        def pTstat = tstatOne?.deviceNetworkId.toString()
         def mTstatAr = []
-        tstat2?.each { ts ->
+        tstatTwo?.each { ts ->
             mTstatAr << ts?.deviceNetworkId.toString()
         }
         if (pTstat in mTstatAr) { return true }
@@ -4812,11 +4813,11 @@ def checkThermostatDupe(tstat1, tstat2) {
     return result
 }
 
-def checkModeDuplication(mode1, mode2) {
+def checkModeDuplication(modeOne, modeTwo) {
     def result = false
-    if(mode1 && mode2) {
-         mode1?.each { dm ->
-            if(dm in mode2) {
+    if(modeOne && modeTwo) {
+         modeOne?.each { dm ->
+            if(dm in modeTwo) {
                 result = true
             }
         }
@@ -4827,7 +4828,7 @@ def checkModeDuplication(mode1, mode2) {
 def getClosedContacts(contacts) {
     if(contacts) {
         def cnts = contacts?.findAll { it?.currentContact == "closed" }
-        return cnts ? cnts : null
+        return cnts ?: null
     } 
     return null
 }
@@ -4840,11 +4841,11 @@ def getOpenContacts(contacts) {
     return null
 }
 
-def isSwitchOn(sw) {
+def isSwitchOn(swit) {
     def res = false
-    if(sw) {
-        sw?.each { d ->
-            if (d?.currentSwitch == "on") { res = true }
+    if(swit) {
+        swit?.each { dev ->
+            if (dev?.currentSwitch == "on") { res = true }
         }
     } 
     return res
@@ -4861,26 +4862,25 @@ def isPresenceHome(presSensor) {
 }
 
 def setTstatMode(tstat, mode) {
+    def result = false
     try {
         if(mode) {
-            if(mode == "auto") { tstat?.auto() }
-            else if(mode == "heat") { tstat?.heat() }
-            else if(mode == "cool") { tstat?.cool() }
-            else if(mode == "off") { tstat?.off() }
-            else { log.debug "setTstatMode() | Invalid LastMode received: ${mode}" }
+            if (mode == "auto") { tstat?.auto(); result = true }
+            else if (mode == "heat") { tstat?.heat(); result = true }
+            else if (mode == "cool") { tstat?.cool(); result = true }
+            else if (mode == "off") { tstat?.off(); result = true }
             
-            LogAction("${tstat.label} has been set to ${mode}...", "info", true)
-            return true
+            if(result) { LogAction("${tstat?.label} has been set to ${mode}...", "info", true) }
+            else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
         } else { 
-            LogAction("setTstatMode() | mode was not found...", "error", true)
-            return false
+            LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
         }
     }
     catch (ex) { 
         LogAction("setTstatMode() Exception | ${ex}", "error", true)
         sendExceptionData(ex, "setTstatMode")
-        return false
     }
+    return result
 }
 
 
@@ -4929,11 +4929,11 @@ def switchRunEnum() {
     return vals
 }
 
-def getEnumValue(enm, inpt) {
+def getEnumValue(enumName, inputName) {
     def result = "unknown"
-    if(enm) {
-        enm?.each { item ->
-            if(item?.key.toString() == inpt?.toString()) { 
+    if(enumName) {
+        enumName?.each { item ->
+            if(item?.key.toString() == inputName?.toString()) { 
                 result = item?.value
             }
         }
@@ -4943,8 +4943,8 @@ def getEnumValue(enm, inpt) {
 
 def getSunTimeState() { 
     def tz = TimeZone.getTimeZone(location.timeZone.ID)
-    def sunsetTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunsetTime')).format('h:mm a', tz)
-    def sunriseTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunriseTime')).format('h:mm a', tz)
+    def sunsetTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location?.currentValue('sunsetTime')).format('h:mm a', tz)
+    def sunriseTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location?.currentValue('sunriseTime')).format('h:mm a', tz)
     atomicState.sunsetTm = sunsetTm
     atomicState.sunriseTm = sunriseTm
 }
@@ -4955,10 +4955,10 @@ def getSunTimeState() {
 //Change This to rename the Default App Name
 
 private def appName() 		{ return "Nest ${parent ? "Automations" : "Manager"}${appDevName()}" }
-private def appAuthor() 	{ "Anthony S." }
-private def appNamespace() 	{ "tonesto7" }
-private def gitBranch()     { "master" }
-private def appDevType()    { false }
+private def appAuthor() 	{ return "Anthony S." }
+private def appNamespace() 	{ return "tonesto7" }
+private def gitBranch()     { return "master" }
+private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{
     def cur = atomicState?.appData?.versions?.app?.ver.toString()
