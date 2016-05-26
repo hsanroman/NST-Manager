@@ -151,7 +151,6 @@ def authPage() {
     preReqCheck()
     deviceHandlerTest()
 
-    //if (!atomicState?.accessToken || !atomicState?.preReqTested || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
     if (!atomicState?.accessToken || (!atomicState?.isInstalled && !atomicState?.devHandlersTested)) {
         return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall:false) {
             section ("Status Page:") {
@@ -159,9 +158,6 @@ def authPage() {
                 if(!atomicState?.accessToken) {
                     desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again..."
                 }
-                //else if (!atomicState?.preReqTested) {
-                    //desc = "SmartThings Location or ZipCode info not found on your ST account.  Please edit you account preferences to make sure they are set..."
-                //}
                 else if (!atomicState?.devHandlersTested) {
                     desc = "Device Handlers are likely Missing or Not Published.  Please read the installation instructions and verify all device handlers are present before continuing."
                 }
@@ -173,7 +169,6 @@ def authPage() {
             }
         }
     }
-
     updateWebStuff(true)
     setStateVar(true)
 
@@ -202,9 +197,8 @@ def authPage() {
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
-    } else {
-        return mainPage()
-    }
+    } 
+    else { return mainPage() }
 }
 
 def mainPage() {
@@ -217,7 +211,6 @@ def mainPage() {
                         image: getAppImg("update_icon.png")
             }
         }
-        //beginning of structure selections
         def structs = getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
@@ -333,10 +326,10 @@ def reviewSetupPage() {
         }
         section("Developer Data Sharing:") {
              paragraph "The options below will enable the developer to collect non-identifiable app information as well as error data to help diagnose issues quicker."
-            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
-            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("blank_icon.png"))
+            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
+            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_exception_icon.png"))
             if (optInAppAnalytics) {
-                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Developer Data...", description: "Tap to view Data...", required:false, image: getAppImg("blank_icon.png")
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Developer Data...", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
         
@@ -411,7 +404,7 @@ def automationsPage() {
             def rText = "NOTICE:\nThe Nest Automations App is still in BETA!!!\nIt will likely contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
                         "We are not responsible for any damages caused by using this SmartApp and Device Handlers.\n\nUSE AT YOUR OWN RISK!!!"
             paragraph "$rText"
-            !appVersion() ? " " : paragraph("			  Automations App: ${appVersion()}")
+            !appVersion() ? " " : paragraph("			 Automations App: ${appVersion()}")
         }
     }
 }
@@ -478,18 +471,22 @@ def initManagerApp() {
 }
 
 def uninstManagerApp() {
-    if(addRemoveDevices(true)) {
-        //removes analytic data from the server        
-        if (optInAppAnalytics) { 
-            removeInstallData() 
-            atomicState?.installationId = null
+    try {
+        if(addRemoveDevices(true)) {
+            //removes analytic data from the server        
+            if (optInAppAnalytics) { 
+                removeInstallData() 
+                atomicState?.installationId = null
+            }
+            //Revokes Smartthings endpoint token...
+            revokeAccessToken()
+            //Revokes Nest Auth Token
+            if(atomicState?.authToken) { revokeNestToken() }
+            //sends notification of uninstall
+            sendNotificationEvent("${textAppName()} is uninstalled...")
         }
-        //Revokes Smartthings endpoint token...
-        revokeAccessToken()
-        //Revokes Nest Auth Token
-        if(atomicState?.authToken) { revokeNestToken() }
-        //sends notification of uninstall
-        sendNotificationEvent("${textAppName()} is uninstalled...")
+    } catch (ex) {
+        LogAction("uninstManagerApp Exception: ${ex}", "error", true)
     }
 }
 
@@ -638,7 +635,6 @@ def poll(force = false, type = null) {
         updateWebStuff()
         notificationCheck() //Checks if a notification needs to be sent for a specific event
     }
-    //sendInstallData()
 }
 
 def forcedPoll(type = null) {
@@ -841,6 +837,8 @@ def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTim
 def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
 def getLastWeatherUpdSec() { return !atomicState?.lastWeatherUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWeatherUpdDt).toInteger() }
 def getLastForecastUpdSec() { return !atomicState?.lastForecastUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastForecastUpdDt).toInteger() }
+def getLastlastAnalyticUpdSec() { return !atomicState?.lastAnalyticUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAnalyticUpdDt).toInteger() }
+
 /************************************************************************************************
 |										Nest API Commands										|
 *************************************************************************************************/
@@ -1389,11 +1387,16 @@ def getNestTimeZone() { return atomicState?.structData[atomicState?.structures].
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
-    if (!atomicState?.appData || getLastWebUpdSec() > (1800)) {
+    if (!atomicState?.appData || (getLastWebUpdSec() > (3600*6))) {
         if(now) {
             getWebFileData()
         } else {
             if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+        }
+    }
+    if (optInAppAnalytics) {
+        if (getLastlastAnalyticUpdSec() > (3600*24)) {
+            sendInstallData()
         }
     }
     if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (pollWeatherValue ? pollWeatherValue.toInteger() : 900)) {
@@ -2632,8 +2635,8 @@ def stateCleanup() {
     state.remove("tempChgWaitVal")
     state.remove("cmdDelayVal")
     state.remove("testedDhInst")
-    state.remove("sendMissedPollMsg")
-    state.remove("sendAppUpdateMsg")
+    state.remove("missedPollNotif")
+    state.remove("updateMsgNotif")
     state.remove("updChildOnNewOnly")
     state.remove("disAppIcons")
     state.remove("showProtAlarmStateEvts")
@@ -3278,14 +3281,18 @@ def protInfoPage () {
 def createInstallDataJson() {
     try {
         generateInstallId()
-        def results = [:]
+        def ptVer = atomicState?.pDevVer ?: "Not Installed"
+        def pdVer = atomicState?.presDevVer ?: "Not Installed"
+        def wdVer = atomicState?.weatDevVer ?: "Not Installed"
+        def versions = ["apps":["manager":appVersion().toString()], "devices":["protect":ptVer, "presence":pdVer, "weather":wdVer]]
+        
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
         def usingPresDev = atomicState?.presDevice ? true : false
         def usingWeatherDev = atomicState?.weatherDevice ? true : false
         def tz = getTimeZone().ID.toString()
         def data = [
-            "guid":atomicState?.installationId, "appVersion":appVersion().toString(), "thermostats":tstatCnt, "protects":protCnt, 
+            "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
             "usingPresDev":usingPresDev, "usingWeatherDev":usingWeatherDev, "timeZone":tz, "datetime":getDtNow().toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
@@ -3332,6 +3339,7 @@ def sendAnalyticData(data, pathVal) {
             //log.debug "resp: ${resp}"
             if( resp.status == 200) {
                 LogAction("sendAnalyticData: Install Data Sent Successfully!!!", "info", true)
+                atomicState?.lastAnalyticUpdDt = getDtNow()
                 result = true
             }
             else if(resp.status == 400) {
@@ -3361,6 +3369,7 @@ def sendAnalyticExceptionData(data, pathVal) {
             //log.debug "resp: ${resp}"
             if( resp.status == 200) {
                 LogAction("sendExceptionData: Exception Data Sent Successfully!!!", "info", true)
+                atomicState?.lastSentExceptionDataDt = getDtNow()
                 result = true
             }
             else if(resp.status == 400) {
