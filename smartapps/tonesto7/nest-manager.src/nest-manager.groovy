@@ -1,7 +1,6 @@
 /*
     TODO:  
     * Finish Critical Updates mechanism using minimum version number to display message in device handlers
-    * Try to finish update app using updateOneFromRepo and publish urls... Just need auth to get smartAppId
     * Unified CSS (WIP)
 */
 /********************************************************************************************
