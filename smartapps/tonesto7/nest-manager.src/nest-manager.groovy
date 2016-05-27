@@ -3346,8 +3346,9 @@ def mainAutoPage(params) {
                     def conWatUsedDesc = (conWatContacts && conWatTstat) ? "\nContacts: (${getConWatContactsOk() ? "Closed" : "Open"})" : ""
                     def conWatOffDesc = conWatOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     def conWatOnDesc = conWatOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
+                    def conWatLastMode = atomicState?.conWatRestoreMode && conWatRestoreOnClose ? "\nLast Mode: ${atomicState?.conWatRestoreMode}" : "\nLast Mode: Not Set"
                     def conWatConfDesc = (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
-                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${qOpt}${conWatConfDesc}") : null
+                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${conWatLastMode}${qOpt}${conWatConfDesc}") : null
                     href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ? conWatDesc : "Tap to Configure...", state: (conWatDesc ? "complete" : null), image: getAppImg("open_window.png")
                 } 
             } 
