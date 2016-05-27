@@ -2,7 +2,7 @@
     TODO:  
     * Finish Critical Updates mechanism using minimum version number to display message in device handlers
     * Try to finish update app using updateOneFromRepo and publish urls... Just need auth to get smartAppId
-    * Unified CSS
+    * Unified CSS (WIP)
 */
 /********************************************************************************************
 |    Application Name: Nest Manager                                                         |
@@ -233,7 +233,7 @@ def mainPage() {
             def coDesc = coSmokes.size() ? "Found (${coSmokes.size()}) Protects..." : "No Protects"
             LogAction("Protects: Found ${coSmokes.size()} (${coSmokes})", "info", false)
             section("Select your Devices:") {
-                if (!stats.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
+                if (!stats?.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
                 if (stats?.size() > 0) {
                     input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
                             image: getAppImg("thermostat_icon.png"))
@@ -1812,18 +1812,18 @@ def addRemoveDevices(uninst = null) {
             //LogAction("addRemoveDevices() Nest Thermostats ${atomicState?.thermostats}", "debug", false)
             if (atomicState?.thermostats) {
                 tstats = atomicState?.thermostats.collect { dni ->
-                    def d = getChildDevice(getNestTstatDni(dni))
-                    if(!d) {
-                        def d1Label = getNestTstatLabel("${dni.value}")
-                        d = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d1Label}"])
-                        d.take()
+                    def d1 = getChildDevice(getNestTstatDni(dni))
+                    if(!d1) {
+                        def d1Label = getNestTstatLabel("${dni?.value}")
+                        d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, null, [label: "${d1Label}"])
+                        d1.take()
                         devsCrt = devsCrt + 1
-                        LogAction("Created: ${d.displayName} with (Id: ${dni.key})", "debug", true)
+                        LogAction("Created: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
                     } else {
-                        LogAction("Found: ${d.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+                        LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key}) already exists", "debug", true)
                     }
                     devsInUse += dni.key
-                    return d
+                    return d1
                 }
             }
             //LogAction("addRemoveDevices Nest Protects ${atomicState?.protects}", "debug", false)
@@ -1835,9 +1835,9 @@ def addRemoveDevices(uninst = null) {
                         d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
                         d2.take()
                         devsCrt = devsCrt + 1
-                        LogAction("Created: ${d2.displayName} with (Id: ${dni.key})", "debug", true)
+                        LogAction("Created: ${d2?.displayName} with (Id: ${dni?.key})", "debug", true)
                     } else {
-                        LogAction("Found: ${d2.displayName} with (Id: ${dni.key}) already exists", "debug", true)
+                        LogAction("Found: ${d2?.displayName} with (Id: ${dni?.key}) already exists", "debug", true)
                     }
                     devsInUse += dni.key
                     return d2
@@ -1859,7 +1859,6 @@ def addRemoveDevices(uninst = null) {
                         LogAction("Found: ${d3.displayName} with (Id: ${dni}) already exists", "debug", true)
                     }
                     devsInUse += dni
-                    //return d3
                 } catch (ex) {
                     LogAction("Nest Presence Device Type is Likely not installed/published", "warn", true)
                     retVal = false
@@ -1882,7 +1881,6 @@ def addRemoveDevices(uninst = null) {
                         LogAction("Found: ${d4.displayName} with (Id: ${dni}) already exists", "debug", true)
                     }
                     devsInUse += dni
-                    //return d4
                 } catch (ex) {
                     LogAction("Nest Weather Device Type is Likely not installed/published", "warn", true)
                     retVal = false
@@ -1977,7 +1975,6 @@ def devNamePage() {
                             dstr += "$str1 ${getNestTstatLabel(t.value)}"
                         }
                         else if (atomicState?.custLabelUsed) { dstr += "$str2" }
-                        //else { dstr += "\n      Matches settings" }
                     } else {
                         dstr += "New Name: ${getNestTstatLabel(t.value)}"
                     }
@@ -2001,7 +1998,6 @@ def devNamePage() {
                             dstr += "$str1 ${getNestProtLabel(p.value)}"
                         }
                         else if (atomicState?.custLabelUsed) { dstr += "$str2" }
-                        //else { dstr += "\n      Matches settings" }
                     } else {
                         dstr += "New Name: ${getNestProtLabel(p.value)}"
                     }
@@ -2016,48 +2012,44 @@ def devNamePage() {
         if(atomicState?.presDevice) {
             section ("Presence Device Name:") {
                 found = true
-                def p = getNestPresLabel()
+                def pLbl = getNestPresLabel()
                 def dni = getNestPresId()
                 def d3 = getChildDevice(dni)
                 def dstr = ""
                 if(d3) {
                     dstr += "Found: ${d3.displayName}"
-                    if (d3.displayName != p) {
-                        dstr += "$str1 ${p}"
+                    if (d3.displayName != pLbl) {
+                        dstr += "$str1 ${pLbl}"
                     }
                     else if (atomicState?.custLabelUsed) { dstr += "$str2" }
-                    //else { dstr += "\n      Matches settings" }
                 } else {
-                    dstr += "New Name: ${p}"
+                    dstr += "New Name: ${pLbl}"
                 }
                 paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed && !d3) ? " " : getAppImg("presence_icon.png")
                 if(atomicState.custLabelUsed && !d3) {
-                    input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: p, submitOnChange: true,
-                            image: getAppImg("presence_icon.png")
+                    input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: pLbl, submitOnChange: true, image: getAppImg("presence_icon.png")
                 }
             }
         }
         if(atomicState?.weatherDevice) {
             section ("Weather Device Name:") {
                 found = true
-                def w = getNestWeatherLabel()
+                def wLbl = getNestWeatherLabel()
                 def dni = getNestWeatherId()
                 def d4 = getChildDevice(dni)
                 def dstr = ""
                 if(d4) {
                     dstr += "Found: ${d4.displayName}"
-                    if (d4.displayName != w) {
-                        dstr += "$str1 ${w}"
+                    if (d4.displayName != wLbl) {
+                        dstr += "$str1 ${wLbl}"
                     }
                     else if (atomicState?.custLabelUsed) { dstr += "$str2" }
-                    //else { dstr += "\n      Matches settings" }
                 } else {
-                    dstr += "New Name: ${w}"
+                    dstr += "New Name: ${wLbl}"
                 }
                 paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed && !d4) ? " " : getAppImg("weather_icon.png")
                 if(atomicState.custLabelUsed && !d4) {
-                    input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: w, submitOnChange: true,
-                            image: getAppImg("weather_icon.png")
+                    input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: wLbl, submitOnChange: true, image: getAppImg("weather_icon.png")
                 }
             }
         }
@@ -2082,7 +2074,7 @@ def devNameResetPage() {
                 section ("Thermostat Device Names:") {
                     atomicState?.thermostats?.each { t ->
                         def ccc = settings?."tstat_${t.value}_lbl"
-                      //log.trace "t.value: ${t.value}  getNestTstatLabel: ${getNestTstatLabel(t.value)}  settings.tstat_${t.value}_lbl: ${ccc}"
+                        //log.trace "t.value: ${t.value}  getNestTstatLabel: ${getNestTstatLabel(t.value)}  settings.tstat_${t.value}_lbl: ${ccc}"
                         if(ccc && ccc != getNestTstatLabel(t.value) ) {
                             input("tstat_${t.value}_lbl", "text", title: "Reset Custom Name for ${t.value}", required: false, defaultValue: getNestTstatLabel(t.value), submitOnChange: true)
                         } else { paragraph "Device name matches custom settings:\n ${getNestTstatLabel(t.value)}" }
@@ -2980,7 +2972,9 @@ def uninstallPage() {
     }
 }
 
-// Nest Login Page
+/******************************************************************************
+*                			  NEST LOGIN PAGES                  	  		  *
+*******************************************************************************/
 def nestLoginPrefPage () {
     if (!atomicState?.authToken) {
         return authPage()
@@ -3072,7 +3066,7 @@ def tstatInfoPage () {
             section("Thermostat Name: ${tstat?.value}") {
                 atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
                     switch (dev?.key) {
-                        case [ "where_id" ]:  //<< Excludes certain keys from being shown
+                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
                             break
                         default:
                             devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
@@ -3098,7 +3092,7 @@ def protInfoPage () {
                 atomicState?.deviceData?.smoke_co_alarms[prot?.key].each { dev ->
                     //log.debug "prot dev: $dev"
                     switch (dev?.key) {
-                        case [ "where_id" ]:  //<< Excludes certain keys from being shown
+                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
                             break
                         default:
                             devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
@@ -4695,7 +4689,6 @@ def checkNestMode() {
         LogAction("checkNestMode Exception: (${ex})", "error", true)
         sendExceptionData(ex, "checkNestMode")
     }
-    
 }
 
 def getNestLocPres() {
