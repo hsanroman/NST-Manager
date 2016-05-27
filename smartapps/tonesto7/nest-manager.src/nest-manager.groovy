@@ -1226,10 +1226,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${ex} ($type | $obj:$objVal)", "error", true)
         }
         if (ex.message.contains("Bad Request")) {
-            LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
+            LogAction("procNestApiCmd 'Bad Request' Exception: ${ex} ($type | $obj:$objVal)", "error", true)
         }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true)
         sendExceptionData(ex, "procNestApiCmd")
@@ -3209,16 +3209,16 @@ def sendAnalyticData(data, pathVal) {
                 result = true
             }
             else if(resp.status == 400) {
-                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp.status}", "error", true)
             }
             else {
-                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp.status}", "warn", true)
             }
         }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${resp.status}", "error", true)
+            LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
         else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true) }
     }
@@ -3239,16 +3239,16 @@ def sendAnalyticExceptionData(data, pathVal) {
                 result = true
             }
             else if(resp.status == 400) {
-                LogAction("sendExceptionData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+                LogAction("sendExceptionData: 'Bad Request' Exception: ${resp.status}", "error", true)
             }
             else {
-                LogAction("sendExceptionData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+                LogAction("sendExceptionData: 'Unexpected' Response: ${resp.status}", "warn", true)
             }
         }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendExceptionData: 'HttpResponseException' Exception: ${resp.status}", "error", true)
+            LogAction("sendExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
         else { LogAction("sendExceptionData: Exception: ${ex}", "error", true) }
     }
