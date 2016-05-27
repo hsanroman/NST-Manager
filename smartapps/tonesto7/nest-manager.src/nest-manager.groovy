@@ -83,9 +83,9 @@ preferences {
     page(name: "startPage")
     
     //Manager Pages    
-    page(name: "authPage", title: "Nest", nextPage:"mainPage", content:"authPage", uninstall: false, install:false)
-    page(name: "mainPage" )
-    page(name: "reviewSetupPage" )
+    page(name: "authPage")
+    page(name: "mainPage")
+    page(name: "reviewSetupPage")
     page(name: "prefsPage")
     page(name: "infoPage")
     page(name: "nestInfoPage")
@@ -125,11 +125,10 @@ mappings {
     if(!parent) {
         path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
         path("/oauth/callback") 	{action: [GET: "callback"]}
-        if(diagLogs) {
-            path("/renderInstallId")  {action: [GET: "renderInstallId"]}
-            path("/renderInstallData"){action: [GET: "renderInstallData"]}
-            path("/renderState")	  {action: [GET: "renderStateJson"]}
-        }
+        
+        path("/renderInstallId")  {action: [GET: "renderInstallId"]}
+        path("/renderInstallData"){action: [GET: "renderInstallData"]}
+        path("/renderState")	  {action: [GET: "renderStateJson"]}
     }
 }
 
@@ -172,13 +171,11 @@ def authPage() {
     setStateVar(true)
 
     def description
-    def uninstallAllowed = false
     def oauthTokenProvided = false
 
     if(atomicState?.authToken) {
         description = "You are connected."
         oauthTokenProvided = true
-        uninstallAllowed = true
     } else { description = "Click to enter Nest Credentials" }
 
     def redirectUrl = buildRedirectUrl
@@ -186,7 +183,7 @@ def authPage() {
 
     if (!oauthTokenProvided && atomicState?.accessToken) {
         LogAction("AuthToken not found: Directing to Login Page...", "info", true)
-        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", uninstall: uninstallAllowed) {
+        return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", install:false, uninstall: false) {
             section("") {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
@@ -309,12 +306,12 @@ def reviewSetupPage() {
             def pollStatus = !atomicState?.pollingOn ? "Not Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
             href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
         }
-        section("Developer Data Sharing:") {
+        section("Share Data with Developer:") {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
-            input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
-            input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
+            input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
+            input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             if (optInAppAnalytics) {
-                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Developer Data...", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Data Shared with Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
         section(" ") {
@@ -348,7 +345,7 @@ def prefsPage() {
             href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", state: (debugStatus() == "On" || deviceDebugStatus() == "On" ? "complete" : null),
                     image: getAppImg("log.png")
         }
-        section("Developer Data Sharing:") {
+        section("Share Data with Developer:") {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
@@ -2776,17 +2773,13 @@ def pollPrefPage() {
                         description: pollWeatherValDesc, submitOnChange: true)
             }
         }
+        section("Other Options:") {
+            input "updChildOnNewOnly", "bool", title: "Only Update Devices on New Data?", description: "", required: false, defaultValue: true, submitOnChange: true
+        }
         section("Wait Values:") {
             def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
-            input ("pollWaitVal", "enum", title: "Forced Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
+            input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
                     description: pollWaitValDesc,submitOnChange: true)
-
-            def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
-            input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
-                    description: tempChgWaitValDesc, submitOnChange: true)
-        }
-        section("Other Options:") {
-            input "updChildOnNewOnly", "bool", title: "Only Update Children On New Data?", description: "", required: false, defaultValue: true, submitOnChange: true
         }
         section("Advanced Polling Options:") {
             paragraph "If you are still experiencing Polling issues then you can select these devices to use there events to determine if a scheduled poll was missed\nPlease select as FEW devices as possible!\nMore devices will not make for a better polling."
@@ -2891,15 +2884,18 @@ def devPrefPage() {
                 href "devNamePage", title: "Device Names...", description: devDesc, image: getAppImg("device_name_icon.png")
             }
         }
+        if(atomicState?.thermostats) {
+            section("Thermostat Devices:") {
+                def tempChgWaitValDesc = !tempChgWaitVal ? "Default: 4 Seconds" : tempChgWaitVal
+                input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
+                    description: tempChgWaitValDesc, submitOnChange: true)
+                //paragraph "Nothing to see here yet!!!"
+            }
+        }
         if(atomicState?.protects) {
             section("Protect Devices:") {
                 input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", description: "", required: false, defaultValue: true, submitOnChange: true,
                         image: getAppImg("list_icon.png")
-            }
-        }
-        if(atomicState?.thermostats) {
-            section("Thermostat Devices:") {
-                paragraph "Nothing to see here yet!!!"
             }
         }
         if(atomicState?.presDevice) {
@@ -3136,16 +3132,16 @@ def createInstallDataJson() {
         def ptVer = atomicState?.pDevVer ?: "Not Installed"
         def pdVer = atomicState?.presDevVer ?: "Not Installed"
         def wdVer = atomicState?.weatDevVer ?: "Not Installed"
-        def versions = ["apps":["manager":appVersion().toString()], "devices":["thermostat":tsVer, "protect":ptVer, "presence":pdVer, "weather":wdVer]]
+        def versions = ["apps":["manager":appVersion()?.toString()], "devices":["thermostat":tsVer, "protect":ptVer, "presence":pdVer, "weather":wdVer]]
         
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
-        def usingPresDev = atomicState?.presDevice ? true : false
-        def usingWeatherDev = atomicState?.weatherDevice ? true : false
-        def tz = getTimeZone().ID.toString()
+        def presDev = atomicState?.presDevice ? true : false
+        def weatherDev = atomicState?.weatherDevice ? true : false
+        def tz = getTimeZone()?.ID?.toString()
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "usingPresDev":usingPresDev, "usingWeatherDev":usingWeatherDev, "timeZone":tz, "datetime":getDtNow().toString() 
+            "presence":presDev, "weather":weatherDev, "timeZone":tz, "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
