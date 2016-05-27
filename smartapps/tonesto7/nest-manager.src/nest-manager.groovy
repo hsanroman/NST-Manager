@@ -2967,7 +2967,7 @@ def infoPage () {
 def uninstallPage() {
     dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
         section("") {
-            paragraph "This will uninstall the App, Automation App and Child Devices.\n Please make sure all devices are removed from any routines/rules/smartapps before tapping remove."
+            paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure all devices are removed from any routines/rules/smartapps before tapping Remove."
         }
     }
 }
@@ -3117,10 +3117,10 @@ def diagPage () {
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
-                href url: getAppEndpointUrl("renderInstallId"), style:"embedded", required: false, title:"View Install Id", description:"Tap to view...", image: getAppImg("view_icon.png")
                 if (optInAppAnalytics) {
-                    href url: getAppEndpointUrl("renderInstallData"), style:"embedded", required: false, title:"View Analytic Install Data", description:"Tap to view Data...", image: getAppImg("view_icon.png")
+                    href url: getAppEndpointUrl("renderInstallData"), style:"embedded", required: false, title:"View Shared Install Data", description:"Tap to view Data...", image: getAppImg("app_analytics_icon.png")
                 }
+                href url: getAppEndpointUrl("renderInstallId"), style:"embedded", required: false, title:"View Your Installation ID", description:"Tap to view...", image: getAppImg("view_icon.png")
             }
         }
     }
