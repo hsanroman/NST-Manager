@@ -49,6 +49,7 @@ def appVerInfo() {
     
     "V2.1.0 (May 27th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
+    "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
     "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
     "Updated: Added in app install and exception error sharing with the developer\n" +
     "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
