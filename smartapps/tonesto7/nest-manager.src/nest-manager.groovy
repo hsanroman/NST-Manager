@@ -369,17 +369,16 @@ def automationsPage() {
         if(autoApp) {
             section("Installed Automations...") { }
         } else {
-            section(" ") {
+            section("") {
                 paragraph "You haven't created any Automations yet!!!\nTap Create New Automation to get Started..."
             }
         }
         section("Add a new Automation:") {
             app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
             
-            def rText = "NOTICE:\nThe Nest Automations App is still in BETA!!!\nIt will likely contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
-                        "We are not responsible for any damages caused by using this SmartApp and Device Handlers.\n\nUSE AT YOUR OWN RISK!!!"
+            def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
+                        "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "$rText"
-            !appVersion() ? " " : paragraph("			 Automations App: ${appVersion()}")
         }
     }
 }
@@ -441,7 +440,8 @@ def initManagerApp() {
     } else { atomicState.isInstalled = false }
     subscriber()
     setPollingState()
-    if (optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
+    //If analytics are enabled this will send non-user identifiable data to firebase server
+    if (optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) }
     runIn(20, "stateCleanup", [overwrite: true])
 }
 
@@ -4326,6 +4326,10 @@ def contactWatchPage() {
                     image: getAppImg("contact_icon.png")
             input name: "conWatTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
                     image: getAppImg("thermostat_icon.png")
+            if (conWatTstat) {
+                def tstatModeDesc = conWatTstat.currentThermostatMode.toString().capitalize() ?: "Unknown"
+                paragraph "Current Mode: ${tstatModeDesc}", image: getAppImg("instruct_icon.png")
+            }
             if(dupTstat) {
                 paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
             }
