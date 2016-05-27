@@ -44,10 +44,10 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "5-26-2016" }
+def appVerDate() { "5-27-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (May 26th, 2016)\n" +
+    "V2.1.0 (May 27th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
     "Updated: Added in app install and exception error sharing with the developer\n" +
@@ -2630,12 +2630,12 @@ def GetTimeDiffSeconds(lastDate) {
     }
 }
 
-def daysOk(dayVals) {
+def daysOk(days) {
     try {
-        if(dayVals) {
-            def day = new SimpleDateFormat("EEEE")
-            if(getTimeZone()) { day.setTimeZone(getTimeZone()) }
-            return dayVals.contains(day.format(new Date())) ? false : true
+        if(days) {
+            def dayFmt = new SimpleDateFormat("EEEE")
+            if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
+            return days.contains(dayFmt.format(new Date())) ? false : true
         } else { return true }
     } catch (ex) { 
         LogAction("daysOk() Exception: ${ex}", "error", true)
@@ -3355,13 +3355,14 @@ def mainAutoPage(params) {
 
             if(autoType == "nMode") {
                 section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
+                    def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
                     def nModeLocDesc = isNestModesConfigured() ? "Nest Mode: ${getNestLocPres().toString().capitalize()}" : ""
                     def nModesDesc = ((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes)) ? "\n${nModeHomeModes ? "Home Modes: ${nModeHomeModes.size()} selected" : ""}${nModeAwayModes ? "\nAway Modes: ${nModeAwayModes.size()} selected" : ""}" : ""
                     def nPresDesc = (nModePresSensor && !nModeSwitch) ? "\nUsing Presence: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
                     def nSwtchDesc = (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (Power is: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
                     def nModeConfDesc = (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
-                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${nModeConfDesc}" : null
+                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${qOpt}${nModeConfDesc}" : null
                     href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             } 
@@ -4114,7 +4115,7 @@ def extTempPage() {
                         image: getAppImg("delay_time_icon.png")
                 }
             }
-            section("Only Act During these Days, Times, or Modes:") {
+            section(getDmtSectionDesc(extTmpPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
                 href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null),
                         image: getAppImg("cal_filter_icon.png")
@@ -4175,24 +4176,6 @@ def extTmpTempOk() {
     }
 }
 
-def extTmpTimeOk() {
-    try {
-        def strtTime = null
-        def stopTime = null
-        def now = new Date()
-        if(settings?.extTmpStartTime && settings?.extTmpStopTime) { 
-            if(settings?.extTmpStartTime) { strtTime = settings?.extTmpStartTime }
-            if(settings?.extTmpStopTime) { stopTime = settings?.extTmpStopTime }
-        } else { return true }  
-        if (strtTime && stopTime) {
-            return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
-        } else { return true }
-    } catch (ex) { 
-        LogAction("extTmpTimeOk Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "extTmpTimeOk")
-    }
-}
-
 def getExtTmpTemperature() {
     def extTemp = 0.0
     if (!extTmpUseWeather && extTmpTempSensor) {
@@ -4206,7 +4189,7 @@ def getExtTmpTemperature() {
     return extTemp
 }
 
-def extTmpScheduleOk() { return ((!extTmpModes || isInMode(extTmpModes)) && daysOk(settings?.extTmpDays) && extTmpTimeOk()) ? true : false }
+def extTmpScheduleOk() { return autoScheduleOk(extTmpPrefix()) }
 def getExtTmpTempDiffVal() { return !settings?.extTmpDiffVal ? 1.0 : settings?.extTmpDiffVal.toDouble() } 
 def getExtTmpGoodDtSec() { return !atomicState?.extTmpTempGoodDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempGoodDt).toInteger() }
 def getExtTmpBadDtSec() { return !atomicState?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempBadDt).toInteger() }
@@ -4351,7 +4334,7 @@ def contactWatchPage() {
                         image: getAppImg("delay_time_icon.png")
                 }
             }
-            section("Only Act During these Days, Times, or Modes:") {
+            section(getDmtSectionDesc(conWatPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
                 href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null), 
                         image: getAppImg("cal_filter_icon.png")
@@ -4377,28 +4360,9 @@ def isConWatConfigured() {
     return devOk
 }
 
-def conWatTimeOk() {
-    try {
-        def strtTime = null
-        def stopTime = null
-        def now = new Date()
-        if(settings?.conWatStartTime && settings?.conWatStopTime) { 
-            if(settings?.conWatStartTime) { strtTime = settings?.conWatStartTime }
-            if(settings?.conWatStopTime) { stopTime = settings?.conWatStopTime }
-        } else { return true } 
-        
-        if (strtTime && stopTime) {
-            return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
-        } else { return true }
-    } catch (ex) { 
-        LogAction("conWatTimeOk Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "conWatTimeOk")
-    }
-}
-
 def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
 def conWatContactOk() { return (!conWatContacts && !conWatTstat) ? false : true }
-def conWatScheduleOk() { return ((!conWatModes || isInMode(conWatModes)) && daysOk(conWatDays) && conWatTimeOk()) ? true : false }
+def conWatScheduleOk() { return autoScheduleOk(conWatPrefix()) }
 def getConWatOpenDtSec() { return !atomicState?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatOpenDt).toInteger() }
 def getConWatCloseDtSec() { return !atomicState?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatCloseDt).toInteger() }
 def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toInteger()) }
@@ -4567,6 +4531,11 @@ def nestModePresPage() {
             }
         }
         if(((nModeHomeModes && nModeAwayModes) && !nModePresSensor) || nModePresSensor) {
+            section(getDmtSectionDesc(nModePrefix())) {
+                def pageDesc = getDayModeTimeDesc(pName)
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null), 
+                        image: getAppImg("cal_filter_icon.png")
+            }
             section("Notifications:") {
                 input "nModePushMsgOn", "bool", title: "Send Push Notifications on Changes?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
@@ -4628,63 +4597,69 @@ def nModeFollowupCheck() {
     if(nestModeAway && !nModeAwayState) { checkNestMode() }
 }
 
+def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
+
 def checkNestMode() {
     //log.trace "checkNestMode..."
     try {
-        def curStMode = location?.mode?.toString()
-        def nestModeAway = (getNestLocPres() == "home") ? false : true
-        def awayPresDesc = (nModePresSensor && !nModeSwitch) ? "All Presence device(s) have left setting " : ""
-        def homePresDesc = (nModePresSensor && !nModeSwitch) ? "A Presence Device is Now Present setting " : ""
-        def awaySwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Away' setting " : ""
-        def homeSwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Home' setting " : ""
-        def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The mode (${curStMode}) has triggered " : ""
-        def awayDesc = "${awayPresDesc}${awaySwitDesc}${modeDesc}"
-        def homeDesc = "${homePresDesc}${homeSwitDesc}${modeDesc}"
-        def away = false
-        def home = false
-        if(nModePresSensor || nModeSwitch) {
-            if (nModePresSensor && !nModeSwitch) {
-                if (!isPresenceHome(nModePresSensor)) { away = true }
-                else { home = true } 
-            }
-            else if (nModeSwitch && !nModePresSensor) {
-                def swOptAwayOn = (nModeSwitchOpt == "On") ? true : false
-                if(swOptAwayOn) {
-                    !isSwitchOn(nModeSwitch) ? (home = true) : (away = true)
-                } else {
-                    !isSwitchOn(nModeSwitch) ? (away = true) : (home = true)
+        if(!nModeScheduleOk()) { 
+            LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
+        } else {
+            def curStMode = location?.mode
+            def nestModeAway = (getNestLocPres() == "home") ? false : true
+            def awayPresDesc = (nModePresSensor && !nModeSwitch) ? "All Presence device(s) have left setting " : ""
+            def homePresDesc = (nModePresSensor && !nModeSwitch) ? "A Presence Device is Now Present setting " : ""
+            def awaySwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Away' setting " : ""
+            def homeSwitDesc = (nModeSwitch && !nModePresSensor) ? "${nModeSwitch} State is 'Home' setting " : ""
+            def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The mode (${curStMode}) has triggered " : ""
+            def awayDesc = "${awayPresDesc}${awaySwitDesc}${modeDesc}"
+            def homeDesc = "${homePresDesc}${homeSwitDesc}${modeDesc}"
+            def away = false
+            def home = false
+            if(nModePresSensor || nModeSwitch) {
+                if (nModePresSensor && !nModeSwitch) {
+                    if (!isPresenceHome(nModePresSensor)) { away = true }
+                    else { home = true } 
+                }
+                else if (nModeSwitch && !nModePresSensor) {
+                    def swOptAwayOn = (nModeSwitchOpt == "On") ? true : false
+                    if(swOptAwayOn) {
+                        !isSwitchOn(nModeSwitch) ? (home = true) : (away = true)
+                    } else {
+                        !isSwitchOn(nModeSwitch) ? (away = true) : (home = true)
+                    }
                 }
             }
-        }
-        else {
-            if(nModeHomeModes && nModeAwayModes) {
-                if (isInMode(nModeHomeModes)) { home = true }
-                else { 
-                    if (isInMode(nModeAwayModes)) { away = true }
+            else {
+                if(nModeHomeModes && nModeAwayModes) {
+                    if (isInMode(nModeHomeModes)) { home = true }
+                    else { 
+                        if (isInMode(nModeAwayModes)) { away = true }
+                    }
                 }
             }
-        }
-        
-        if (away) {
-            LogAction("$awayDesc Nest 'Away'", "info", true)
-            atomicState?.nModeTstatLocAway = true
-            parent?.setStructureAway(null, true) 
-            if(nModePushMsgOn) {
-                sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            
+            if (away) {
+                LogAction("$awayDesc Nest 'Away'", "info", true)
+                atomicState?.nModeTstatLocAway = true
+                //parent?.setStructureAway(null, true) 
+                if(nModePushMsgOn) {
+                    sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+                }
+                //runIn(20, "nModeFollowupCheck", [overwrite: true])
             }
-            runIn(20, "nModeFollowupCheck", [overwrite: true])
-        }
-        else if (home) {
-            LogAction("$homeDesc Nest 'Home'", "info", true)
-            atomicState?.nModeTstatLocAway = false
-            parent?.setStructureAway(null, false) 
-            if(nModePushMsgOn) {
-                sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+            else if (home) {
+                LogAction("$homeDesc Nest 'Home'", "info", true)
+                atomicState?.nModeTstatLocAway = false
+                //parent?.setStructureAway(null, false) 
+                if(nModePushMsgOn) {
+                    sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+                }
+                //runIn(20, "nModeFollowupCheck", [overwrite: true])
+            } 
+            else {
+                LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
             }
-            runIn(20, "nModeFollowupCheck", [overwrite: true])
-        } 
-        else {
-            LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
         }
     } catch (ex) { 
         LogAction("checkNestMode Exception: (${ex})", "error", true)
@@ -4768,13 +4743,16 @@ def setDayModeTimePage(params) {
         preFix = params?.pName
     }
     dynamicPage(name: "setDayModeTimePage", title: "Select Days, Times or Modes", uninstall: false) {
-        section("Only During these Days, Times, or Modes:") {
+        def secDesc = settings?."${preFix}DmtInvert" ? "Not" : "Only"
+        def invt = settings?."${preFix}DmtInvert" ? true : false
+        section("${secDesc} During these Days, Times, or Modes:") {
             def timeReq = (settings?."${preFix}StartTime" || settings."${preFix}StopTime") ? true : false
+            input "${preFix}DmtInvert", "bool", title: "Use When Not in Any of These?...", defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
             input "${preFix}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
             input "${preFix}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
-            input "${preFix}Days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
+            input "${preFix}Days", "enum", title: "${invt ? "Not": "Only"} on These Days of the week", multiple: true, required: false,
                     options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], image: getAppImg("day_calendar_icon.png")
-            input "${preFix}Modes", "mode", title: "Only with These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
+            input "${preFix}Modes", "mode", title: "${invt ? "Not": "Only"} in These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
         }
     }
 }
@@ -4788,6 +4766,37 @@ def getDayModeTimeDesc(var) {
     def dy = settings?."${pName}Days" ? "Days: (${dys})" : ""
     def confDesc = ((settings?."${pName}StartTime" || settings?."${pName}StopTime") || settings?."${pName}Modes" || settings?."${pName}Days") ? 
             "${ss ? "$ss\n" : ""}${md ? "$md\n" : ""}${dy ? "$dy" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+}
+
+def getDmtSectionDesc(autoType) {
+    return settings?."${autoType}DmtInvert" ? "Do Not Act During these Days, Times, or Modes:" : "Only Act During these Days, Times, or Modes:"
+}
+
+def autoScheduleOk(autoType) { 
+    try {
+        def invt = settings?."${autoType}DmtInvert" ? true : false
+        def modeOk = true 
+        modeOk = (!settings?."${autoType}Modes" || ((isInMode(settings?."${autoType}Modes") && !invt) || (!isInMode(settings?."${autoType}Modes") && invt))) ? true : false
+        //dayOk
+        def dayOk = true
+        def dayFmt = new SimpleDateFormat("EEEE")
+        if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
+        def inDay = settings?."${autoType}Days".contains(dayFmt.format(new Date())) ? true : false
+        dayOk = (!settings?."${autoType}Days" || ((inDay && !invt) || (!inDay && invt))) ? true : false
+        
+        //scheduleTimeOk
+        def timeOk = true
+        if (settings?."${autoType}StartTime" && settings?."${autoType}StopTime") {
+            def inTime = (timeOfDayIsBetween(settings?."${autoType}StartTime", settings?."${autoType}StopTime", new Date(), getTimeZone())) ? true : false
+            timeOk = ((inTime && !invt) || (!inTime && invt)) ? true : false
+        }
+        
+        log.debug "dayOk: ${settings?."${autoType}Days"} | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | invt: ${invt}"
+        return (modeOk && dayOk && timeOk) ? true : false
+    } catch (ex) { 
+        LogAction("${autoType}-autoScheduleOk Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "${autoType}-autoScheduleOk")
+    }
 }
 
 /************************************************************************************************
