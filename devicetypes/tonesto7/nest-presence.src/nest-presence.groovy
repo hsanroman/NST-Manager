@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.3" }
+def devVer() { return "2.1.0" }
 
 // for the UI
 metadata {
@@ -102,23 +102,29 @@ def refresh() {
 }
 
 def generateEvent(Map results) {
-    //Logger("generateEvents Parsing data ${results}")
+    Logger("generateEvents Parsing data ${results}")
     Logger("-------------------------------------------------------------------", "warn")
     //log.debug "results: $results"
     if(results) {
-        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null 
+        state.timeZone = !location?.timeZone ? results?.tz : null 
         state?.useMilitaryTime = !results?.mt ? false : true
         debugOnEvent((!results?.debug ? false : true))
         presenceEvent(results?.pres.toString())
-        apiStatusEvent((!results?.api ? false : true))
-        deviceVerEvent()
-        lastUpdatedEvent()
+        apiStatusEvent((!results?.apiIssues ? false : true))
+        deviceVerEvent(results?.latestVer.ver)
     }
+    lastUpdatedEvent()
+    //This will return all of the devices state data to the logs.
+    //log.debug "Device State Data: ${getState()}"
     return null
 }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
+}
+
+def getDeviceStateData() {
+    return getState()
 }
 
 def getTimeZone() {  
@@ -129,9 +135,9 @@ def getTimeZone() {
     return tz 
 } 
 
-def deviceVerEvent() {
+def deviceVerEvent(latestVer) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestPresVer().ver.toString()
+    def pubVer = latestVer.toString() ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     if(curData != newData) {
@@ -143,6 +149,7 @@ def deviceVerEvent() {
 def debugOnEvent(debug) {
     def val = device.currentState("debugOn")?.value
     def stateVal = debug ? "On" : "Off"
+    state.debug = debug ? true : false
     if(!val.equals(stateVal)) {
         log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
         sendEvent(name: 'debugOn', value: stateVal, displayed: false)
@@ -230,7 +237,7 @@ def setHome() {
 *************************************************************************************************/
 // Local Device Logging
 def Logger(msg, logType = "debug") {
-     if(parent.settings?.childDebug) { 
+     if(state?.debug) { 
         switch (logType) {
             case "trace":
                 log.trace "${msg}"

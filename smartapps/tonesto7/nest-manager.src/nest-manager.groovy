@@ -5,7 +5,7 @@
         From there generate dynamic inputs with links to pages for each mode selected and then the thermostats under each mode
         Allow user to set heat/cool temps and modes for each thermostat
         I want my upstairs thermostat set to 70 and downstairs set to 78
-    * Implement Critical Updates mechanism using minimum version number to display message in device handlers
+    * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
     * Unified CSS (WIP)
 */
 /********************************************************************************************
@@ -100,6 +100,7 @@ preferences {
     page(name: "debugPrefPage")
     page(name: "notifPrefPage")
     page(name: "diagPage")
+    page(name: "appDataPage")
     page(name: "devNamePage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
@@ -644,7 +645,6 @@ def forcedPoll(type = null) {
         atomicState.needDevPoll = true
     }
     updateChildData()
-    atomicState?.stateSize = state?.length().toString()
 }
 
 def postCmd() {
@@ -731,14 +731,17 @@ def updateChildData() {
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def tData = atomicState?.deviceData?.thermostats[devId]
+                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMilitaryTime, "debug":childDebug, 
+                             "tz":getTimeZone(), "apiIssues":apiIssues(), "pres":locationPresence(), "childWaitVal":getChildWaitVal(),
+                             "cssUrl":getCssUrl(), "lastestVer":latestTstatVer()]
                 LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                 it.generateEvent(tData) //parse received message from parent
                 atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-                def pData = atomicState?.deviceData?.smoke_co_alarms[devId]
+                def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMilitaryTime, "debug":childDebug, "showProtActEvts":showProtActEvts,
+                             "tz":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "lastestVer":latestProtVer()]
                 LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                 it.generateEvent(pData) //parse received message from parent
                 atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
@@ -746,14 +749,16 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                def pData = ["debug":childDebug, "mt":useMilitaryTime, "pres":locationPresence(), "api":apiIssues()]
+                def pData = ["debug":childDebug, "tz":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "api":apiIssues(), "lastestVer":latestPresVer()]
                 it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 LogTrace("UpdateChildData >> Weather id: ${devId}")
-                it.generateEvent(null)
+                def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
+                it.generateEvent(["data":wData , "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), 
+                                  "cssUrl":getCssUrl(), "lastestVer":latestWeathVer()])
                 atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
@@ -1295,8 +1300,9 @@ def appUpdateNotify() {
 
 def updateHandler() {
     log.trace "updateHandler..."
-    if(atomicState?.appData?.updater?.updateType.toString() == "critical") {
-        //do something
+    if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
+        sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
+        atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
     }
     if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
         if(getLastUpdateMsgSec() > 86400) {
@@ -1304,9 +1310,6 @@ def updateHandler() {
             atomicState?.lastUpdateMsgDt = getDtNow()
         }
     }
-
-
-    atomicState?.lastWebUpdDt = getDtNow()
 }
 
 def sendMsg(msg, msgType, people = null, sms = null, push = null) {
@@ -1484,7 +1487,9 @@ def getWebFileData() {
             if(resp.data) {
                 LogAction("Getting Latest Data from appParams.json File...", "info", true)
                 atomicState?.appData = resp?.data
+                atomicState?.stateSize = state?.toString().length()
                 updateHandler()
+                atomicState?.lastWebUpdDt = getDtNow()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1514,7 +1519,6 @@ def getSmartAppData() {
             if(resp.data) {
                 LogAction("Getting SmartApp Data from SmartThings API...", "info", true)
                 log.debug "smartAppData: ${resp?.data}"
-                
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1531,6 +1535,15 @@ def getSmartAppData() {
     return result
 }
 
+def getCssUrl() {
+    if(atomicState?.appData?.css?.cssUrl) {
+        return atomicState?.appData?.css?.cssUrl
+    } else {
+        if(getWebFileData()) {
+            return atomicState?.appData?.css?.cssUrl
+        }
+    }
+}
 
 def ver2IntArray(val) {
     def ver = val?.split("\\.")
@@ -3126,9 +3139,11 @@ def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
         section("") {
             paragraph "This page will allow you to view/export diagnostic state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
+            paragraph "Current State Size: ${atomicState?.stateSize}"
         }
         section("Export or View State/Debug Data") {
             href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
+            href "appDataPage", title:"View App Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
@@ -3141,6 +3156,19 @@ def diagPage () {
     }
 }
 
+def appDataPage() {
+    dynamicPage(name: "appDataPage", install: false) {
+        if(atomicState?.appData) {
+            atomicState?.appData.each { sec ->
+                section("${sec?.key.toString().capitalize()}:") {
+                    sec?.value.each { par ->
+                        paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                    }
+                }
+            }
+        }
+    }
+}
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
 *******************************************************************************/

@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.0.5"}
+def devVer() { return "2.1.0"}
 
 // for the UI
 metadata {
@@ -286,17 +286,19 @@ def refresh() {
     parent.refresh(this)
 }
 
-def generateEvent(Map results) {
-    //Logger("generateEvents Parsing data ${results}")
-      Logger("------------START OF API RESULTS DATA-------------", "warn")
-    if(results) {
-        state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
-        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
-        debugOnEvent(parent.settings?.childDebug)
+def generateEvent(Map eventData) {
+    //log.trace("generateEvents Parsing data ${eventData}")
+    Logger("------------START OF API RESULTS DATA-------------", "warn")
+    
+    if(eventData) {
+        def results = eventData?.data
+        state.useMilitaryTime = !eventData?.mt ? false : true
+        state.timeZone = !location?.timeZone ? eventData?.tz : null
+        debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean())
         tempUnitEvent(getTemperatureScale())
         canHeatCool(results?.can_heat, results?.can_cool)
         hasFan(results?.has_fan.toString())
-        presenceEvent(parent?.locationPresence())
+        presenceEvent(eventData?.pres)
         hvacModeEvent(results?.hvac_mode.toString())
         hasLeafEvent(results?.has_leaf)
         humidityEvent(results?.humidity.toString())
@@ -305,8 +307,10 @@ def generateEvent(Map results) {
         if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
         softwareVerEvent(results?.software_version.toString())
         onlineStatusEvent(results?.is_online.toString())
-        deviceVerEvent()
-        apiStatusEvent(parent?.apiIssues())
+        deviceVerEvent(eventData?.latestVer?.ver)
+        apiStatusEvent(eventData?.apiIssues)
+        state?.childWaitVal = eventData?.childWaitVal.toInteger()
+        state?.cssUrl = eventData?.cssUrl
        
         def hvacMode = results?.hvac_mode
         def tempUnit = state?.tempUnit
@@ -373,12 +377,17 @@ def generateEvent(Map results) {
         }
     }
     lastUpdatedEvent()
-    //sendEvent(name:"devInfoHtml", value: getInfoHtml(), isStateChange: true)
+    //This will return all of the devices state data to the logs.
+    //log.debug "Device State Data: ${getState()}"
     return null
 }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
+}
+
+def getDeviceStateData() {
+    return getState()
 }
 
 def getTimeZone() { 
@@ -389,9 +398,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent() {
+def deviceVerEvent(latestVer) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestTstatVer().ver.toString()
+    def pubVer = latestVer.toString() ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData
@@ -405,6 +414,7 @@ def debugOnEvent(debug) {
     def val = device.currentState("debugOn")?.value
     def dVal = debug ? "On" : "Off"
     state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false 
     if(!val.equals(dVal)) {
         log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
         sendEvent(name: 'debugOn', value: dVal, displayed: false)
@@ -669,7 +679,7 @@ def getTemp() {
     catch (e) { return 0 }
 }
 
-def tempWaitVal() { return parent?.getChildWaitVal() ? parent?.getChildWaitVal().toInteger() : 4 }
+def tempWaitVal() { return state?.childWaitVal ? state?.childWaitVal.toInteger() : 4 }
 
 def wantMetric() { return (state?.tempUnit == "C") }
 
@@ -1221,7 +1231,7 @@ void setThermostatFanMode(fanModeStr) {
 *************************************************************************************************/
 // Local Application Logging
 def Logger(msg, logType = "debug") {
-     if(parent.settings?.childDebug) { 
+     if(state?.debug) { 
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -1293,10 +1303,8 @@ def getImgBase64(url,type) {
 }
 
 def getCSS(){
-    def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
-    //"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     def params = [ 
-        uri: uri,
+        uri: state?.cssUrl.toString(),
         contentType: 'text/css'
     ]
     try {

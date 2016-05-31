@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "1.1.3" }
+def devVer() { return "2.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -140,28 +140,36 @@ def refresh() {
     poll()
 }
 
-def generateEvent(Map results) {
-    //Logger("generateEvents Parsing data ${results}")
+def generateEvent(Map eventData) {
+    //log.trace("generateEvents Parsing data ${eventData}")
     Logger("-------------------------------------------------------------------", "warn")
-    if(!results) {
-        state.results = results
+    if(eventData) {
         state.tempUnit = getTemperatureScale()
-        state.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
-        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
-        debugOnEvent(parent?.settings?.childDebug)
-        apiStatusEvent(parent?.apiIssues())
-        deviceVerEvent()
+        state.useMilitaryTime = !eventData?.mt ? false : true
+        state.timeZone = !location?.timeZone ? eventData?.tz : null
+        debugOnEvent(!eventData?.debug ? false : true)
+        apiStatusEvent(eventData?.apiIssues)
+        deviceVerEvent(eventData?.latestVer?.ver)
+        state?.cssUrl = eventData?.cssUrl
+
+        //reads updates weather data
+        getWeatherAstronomy(eventData?.data?.weatAstronomy)
+        getWeatherForecast(eventData?.data?.weatForecase)
+        getWeatherConditions(eventData?.data?.weatCond)
+        getWeatherAlerts(eventData?.data?.weatAlerts)
     }
     lastUpdatedEvent()
-    getWeatherAstronomy()
-    getWeatherForecast()
-    getWeatherConditions()
-    getWeatherAlerts()
+    //This will return all of the devices state data to the logs.
+    //log.debug "Device State Data: ${getState()}"
     return null
 }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
+}
+
+def getDeviceStateData() {
+    return getState()
 }
 
 def getTimeZone() { 
@@ -172,9 +180,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent() {
+def deviceVerEvent(latestVer) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestWeathVer().ver.toString()
+    def pubVer = latestVer?.toString() ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData
@@ -188,6 +196,7 @@ def debugOnEvent(debug) {
     def val = device.currentState("debugOn")?.value
     def dVal = debug ? "On" : "Off"
     state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false
     if(!val.equals(dVal)) {
         log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
         sendEvent(name: 'debugOn', value: dVal, displayed: false)
@@ -265,8 +274,8 @@ def wantMetric() { return (state?.tempUnit == "C") }
 |									Weather Info for Tiles										|
 *************************************************************************************************/
 
-def getWeatherConditions() {
-    def cur = parent?.getWData()
+def getWeatherConditions(Map weatData) {
+    def cur = weatData
     if(cur) {
         state.curWeather = cur
         //log.debug "cur: $cur"
@@ -318,8 +327,8 @@ def getWeatherConditions() {
     }
 }
 
-def getWeatherForecast() {
-    def cur = parent?.getWForecastData()
+def getWeatherForecast(Map weatData) {
+    def cur = weatData
     if(cur) {
         state.curForecast = cur
         //log.debug "cur: $cur"
@@ -333,8 +342,8 @@ def getWeatherForecast() {
     }
 }
 
-def getWeatherAstronomy() {
-    def cur = parent?.getWAstronomyData()
+def getWeatherAstronomy(weatData) {
+    def cur = weatData
     if(cur) {
         state.curAstronomy = cur
         //log.debug "cur: $cur"
@@ -344,8 +353,8 @@ def getWeatherAstronomy() {
     }
 }
 
-def getWeatherAlerts() {
-    def cur = parent?.getWAlertsData()
+def getWeatherAlerts(weatData) {
+    def cur = weatData
     if(cur) {
         state.curAlerts = cur
         //log.debug "cur: $cur"
@@ -358,31 +367,31 @@ def getWeatherAlerts() {
 
         def noneString = ""
         if (!newKeys && oldKeys == null) {
-                sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
-                sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
-                state.walert = noneString
+            sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
+            sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
+            state.walert = noneString
         }
         else if (newKeys != oldKeys) {
-                if (oldKeys == null) {
-                        oldKeys = []
-                }
-                sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
+            if (oldKeys == null) {
+                oldKeys = []
+            }
+            sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
 
-                def newAlerts = false
-                alerts.each {alert ->
-                        if (!oldKeys.contains(alert.type + alert.date_epoch)) {
-                                def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
-                                sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
-                                newAlerts = true
-                                state.walert = pad(alert.description) // description
-                                state.walertMessage = pad(alert.message) // message
-                        }
+            def newAlerts = false
+            alerts.each {alert ->
+                if (!oldKeys.contains(alert.type + alert.date_epoch)) {
+                    def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
+                    sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
+                    newAlerts = true
+                    state.walert = pad(alert.description) // description
+                    state.walertMessage = pad(alert.message) // message
                 }
+            }
 
-                if (!newAlerts && device.currentValue("alert") != noneString) {
-                        sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
-                        state.walert = noneString
-                }
+            if (!newAlerts && device.currentValue("alert") != noneString) {
+                sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
+                state.walert = noneString
+            }
         }
     }
 }
@@ -390,14 +399,14 @@ def getWeatherAlerts() {
 private pad(String s, size = 25) {
         def n = (size - s.size()) / 2
         if (n > 0) {
-                def sb = ""
-                n.times {sb += " "}
-                sb += s
-                n.times {sb += " "}
-                return sb
+            def sb = ""
+            n.times {sb += " "}
+            sb += s
+            n.times {sb += " "}
+            return sb
         }
         else {
-                return s
+            return s
         }
 }
 
@@ -458,7 +467,7 @@ private estimateLux(weatherIcon) {
 *************************************************************************************************/
 // Local Device Logging
 def Logger(msg, logType = "debug") {
-     if(parent.settings?.childDebug) { 
+     if(state?.debug) { 
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -529,10 +538,8 @@ def getImgBase64(url, type) {
 }
 
 def getCSS(){
-    def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
-    //"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     def params = [ 
-        uri: uri,
+        uri: state?.cssUrl.toString(),
         contentType: 'text/css'
     ]
     try {

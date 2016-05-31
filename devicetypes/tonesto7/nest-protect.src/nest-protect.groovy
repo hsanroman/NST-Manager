@@ -21,7 +21,7 @@
 import java.text.SimpleDateFormat 
 
 preferences {
-       input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
+    input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once saved hit refresh in Device Handler",
            title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
     input("testMode", "enum", title: "Testing State", required: false, 
             options: [
@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.0.4" }
+def devVer() { return "2.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -206,19 +206,19 @@ def refresh() {
     poll()
 }
 
-def generateEvent(Map results) {	
+def generateEvent(Map eventData) {	
     state?.testMode = !testMode ? null : testMode
-    //Logger("Gen Event parsing data ${results}")
+    //log.trace("generateEvent parsing data ${eventData}")
     Logger("-------------------------------------------------------------------", "warn")
-    
-    if(results) {	
-        state?.useMilitaryTime = !parent?.settings?.useMilitaryTime ? false : true
-        state.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
-        state?.showProtActEvts = !parent?.settings?.showProtActEvts ? true : false
+    if(eventData) {
+        def results = eventData?.data
+        state?.useMilitaryTime = !eventData?.mt ? false : true
+        state.timeZone = !location?.timeZone ? eventData?.tz : null
+        state?.showProtActEvts = !eventData?.showProtActEvts ? true : eventData?.showProtActEvts.toBoolean()
         lastCheckinEvent(results?.last_connection)
         lastTestedEvent(results?.last_manual_test_time)
-        apiStatusEvent(parent?.apiIssues())
-        debugOnEvent(parent.settings?.childDebug)
+        apiStatusEvent(eventData?.apiIssues)
+        debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean() )
         onlineStatusEvent(results?.is_online.toString())
         batteryStateEvent(results?.battery_health.toString())
         carbonStateEvent(results?.co_alarm_state.toString())
@@ -227,10 +227,12 @@ def generateEvent(Map results) {
         uiColorEvent(results?.ui_color_state.toString())
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
-        deviceVerEvent()
-        //getInfoHtml()
+        deviceVerEvent(eventData?.latestVer?.ver)
+        state?.cssUrl = eventData?.cssUrl
     }
     lastUpdatedEvent()
+    //This will return all of the devices state data to the logs.
+    //log.debug "Device State Data: ${getState()}"
     return null
 }
 
@@ -242,9 +244,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent() {
+def deviceVerEvent(latestVer) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = parent?.latestProtVer().ver.toString()
+    def pubVer = latestVer?.toString() ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "v${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData
@@ -293,10 +295,11 @@ def debugOnEvent(debug) {
     def val = device.currentState("debugOn")?.value
     def dVal = debug ? "On" : "Off"
     state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false
     if(!val.equals(dVal)) {
         log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
         sendEvent(name: 'debugOn', value: dVal, displayed: false)
-       } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
+    } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
@@ -452,7 +455,7 @@ def testingStateEvent(test) {
 *************************************************************************************************/
 // Local Application Logging
 def Logger(msg, logType = "debug") {
-     if(parent.settings?.childDebug) { 
+     if(state?.debug) { 
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -527,7 +530,7 @@ def getSmokeImg() {
 def getImgBase64(url,type) {
     def params = [ 
         uri: url,
-           contentType: 'image/$type'
+        contentType: 'image/$type'
     ]
     try {
         httpGet(params) { resp ->
@@ -555,10 +558,8 @@ def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/to
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 def getCSS(){
-    def uri = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
-    //"https://gitcdn.xyz/repo/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     def params = [ 
-        uri: uri,
+        uri: state?.cssUrl.toString(),
         contentType: 'text/css'
     ]
     try {

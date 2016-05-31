@@ -36,6 +36,6 @@
     },
     "css": {
         "cssVer": 1,
-        "cssPath": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+        "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     }
 }
