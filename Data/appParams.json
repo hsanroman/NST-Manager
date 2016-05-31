@@ -29,12 +29,13 @@
         }
     },
     "updater": {
-        "updaterVer": 1,
+        "updateVer": 1,
         "updateMsg": "",
         "updateDesc": "",
         "updateType": "std"
     },
     "css": {
-        "css_ver": 1
+        "cssVer": 1,
+        "cssPath": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     }
 }
