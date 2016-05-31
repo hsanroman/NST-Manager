@@ -102,16 +102,15 @@ def refresh() {
 }
 
 def generateEvent(Map results) {
-    Logger("generateEvents Parsing data ${results}")
+    //log.trace("generateEvents Parsing data ${results}")
     Logger("-------------------------------------------------------------------", "warn")
-    //log.debug "results: $results"
     if(results) {
         state.timeZone = !location?.timeZone ? results?.tz : null 
         state?.useMilitaryTime = !results?.mt ? false : true
         debugOnEvent((!results?.debug ? false : true))
         presenceEvent(results?.pres.toString())
         apiStatusEvent((!results?.apiIssues ? false : true))
-        deviceVerEvent(results?.latestVer.ver)
+        deviceVerEvent(results?.latestVer.toString())
     }
     lastUpdatedEvent()
     //This will return all of the devices state data to the logs.
@@ -135,9 +134,9 @@ def getTimeZone() {
     return tz 
 } 
 
-def deviceVerEvent(latestVer) {
+def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = latestVer.toString() ?: null
+    def pubVer = ver ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     if(curData != newData) {

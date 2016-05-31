@@ -227,13 +227,21 @@ def generateEvent(Map eventData) {
         uiColorEvent(results?.ui_color_state.toString())
         testingStateEvent(results?.is_manual_test_active.toString())
         softwareVerEvent(results?.software_version.toString())
-        deviceVerEvent(eventData?.latestVer?.ver)
+        deviceVerEvent(eventData?.latestVer.toString())
         state?.cssUrl = eventData?.cssUrl
     }
     lastUpdatedEvent()
     //This will return all of the devices state data to the logs.
     //log.debug "Device State Data: ${getState()}"
     return null
+}
+
+def getDataByName(String name) {
+    state[name] ?: device.getDataValue(name)
+}
+
+def getDeviceStateData() {
+    return getState()
 }
 
 def getTimeZone() { 
@@ -244,9 +252,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent(latestVer) {
+def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = latestVer?.toString() ?: null
+    def pubVer = ver ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "v${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData

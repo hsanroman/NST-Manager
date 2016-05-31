@@ -288,98 +288,104 @@ def refresh() {
 
 def generateEvent(Map eventData) {
     //log.trace("generateEvents Parsing data ${eventData}")
-    Logger("------------START OF API RESULTS DATA-------------", "warn")
-    
-    if(eventData) {
-        def results = eventData?.data
-        state.useMilitaryTime = !eventData?.mt ? false : true
-        state.timeZone = !location?.timeZone ? eventData?.tz : null
-        debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean())
-        tempUnitEvent(getTemperatureScale())
-        canHeatCool(results?.can_heat, results?.can_cool)
-        hasFan(results?.has_fan.toString())
-        presenceEvent(eventData?.pres)
-        hvacModeEvent(results?.hvac_mode.toString())
-        hasLeafEvent(results?.has_leaf)
-        humidityEvent(results?.humidity.toString())
-        operatingStateEvent(results?.hvac_state.toString())
-        fanModeEvent(results?.fan_timer_active.toString())
-        if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
-        softwareVerEvent(results?.software_version.toString())
-        onlineStatusEvent(results?.is_online.toString())
-        deviceVerEvent(eventData?.latestVer?.ver)
-        apiStatusEvent(eventData?.apiIssues)
-        state?.childWaitVal = eventData?.childWaitVal.toInteger()
-        state?.cssUrl = eventData?.cssUrl
-       
-        def hvacMode = results?.hvac_mode
-        def tempUnit = state?.tempUnit
-        switch (tempUnit) {
-            case "C":
-                def heatingSetpoint = 0.0
-                def coolingSetpoint = 0.0
-                def temp = results?.ambient_temperature_c.toDouble() 
-                def targetTemp = results?.target_temperature_c.toDouble()
+    try {
+        Logger("------------START OF API RESULTS DATA-------------", "warn")
+        
+        if(eventData) {
+            def results = eventData?.data
+            state.useMilitaryTime = !eventData?.mt ? false : true
+            state.timeZone = !location?.timeZone ? eventData?.tz : null
+            debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean())
+            tempUnitEvent(getTemperatureScale())
+            canHeatCool(results?.can_heat, results?.can_cool)
+            hasFan(results?.has_fan.toString())
+            presenceEvent(eventData?.pres)
+            hvacModeEvent(results?.hvac_mode.toString())
+            hasLeafEvent(results?.has_leaf)
+            humidityEvent(results?.humidity.toString())
+            operatingStateEvent(results?.hvac_state.toString())
+            fanModeEvent(results?.fan_timer_active.toString())
+            if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
+            softwareVerEvent(results?.software_version.toString())
+            onlineStatusEvent(results?.is_online.toString())
+            deviceVerEvent(eventData?.latestVer.toString())
+            apiStatusEvent(eventData?.apiIssues)
+            state?.childWaitVal = eventData?.childWaitVal.toInteger()
+            state?.cssUrl = eventData?.cssUrl
+        
+            def hvacMode = results?.hvac_mode
+            def tempUnit = state?.tempUnit
+            switch (tempUnit) {
+                case "C":
+                    def heatingSetpoint = 0.0
+                    def coolingSetpoint = 0.0
+                    def temp = results?.ambient_temperature_c.toDouble() 
+                    def targetTemp = results?.target_temperature_c.toDouble()
 
-                if (hvacMode == "cool") { 
-                    coolingSetpoint = targetTemp
-                    //clearHeatingSetpoint()
-                } 
-                else if (hvacMode == "heat") { 
-                    heatingSetpoint = targetTemp 
-                    //clearCoolingSetpoint()
-                } 
-                else if (hvacMode == "heat-cool") {
-                    coolingSetpoint = Math.round(results?.target_temperature_high_c.toDouble())
-                    heatingSetpoint = Math.round(results?.target_temperature_low_c.toDouble())
-                }
-                if (!state?.present) {
-                    if (results?.away_temperature_high_c) { coolingSetpoint = results?.away_temperature_high_c.toDouble() }
-                    if (results?.away_temperature_low_c) { heatingSetpoint = results?.away_temperature_low_c.toDouble() }
-                }
-                temperatureEvent(temp)
-                thermostatSetpointEvent(targetTemp)
-                coolingSetpointEvent(coolingSetpoint)
-                heatingSetpointEvent(heatingSetpoint)
-                break
+                    if (hvacMode == "cool") { 
+                        coolingSetpoint = targetTemp
+                        //clearHeatingSetpoint()
+                    } 
+                    else if (hvacMode == "heat") { 
+                        heatingSetpoint = targetTemp 
+                        //clearCoolingSetpoint()
+                    } 
+                    else if (hvacMode == "heat-cool") {
+                        coolingSetpoint = Math.round(results?.target_temperature_high_c.toDouble())
+                        heatingSetpoint = Math.round(results?.target_temperature_low_c.toDouble())
+                    }
+                    if (!state?.present) {
+                        if (results?.away_temperature_high_c) { coolingSetpoint = results?.away_temperature_high_c.toDouble() }
+                        if (results?.away_temperature_low_c) { heatingSetpoint = results?.away_temperature_low_c.toDouble() }
+                    }
+                    temperatureEvent(temp)
+                    thermostatSetpointEvent(targetTemp)
+                    coolingSetpointEvent(coolingSetpoint)
+                    heatingSetpointEvent(heatingSetpoint)
+                    break
+                    
+                case "F":
+                    def heatingSetpoint = 0
+                    def coolingSetpoint = 0
+                    def temp = results?.ambient_temperature_f
+                    def targetTemp = results?.target_temperature_f
+                    
+                    if (hvacMode == "cool") { 
+                        coolingSetpoint = targetTemp
+                        //clearHeatingSetpoint()
+                    } 
+                    else if (hvacMode == "heat") { 
+                        heatingSetpoint = targetTemp
+                        //clearCoolingSetpoint()
+                    } 
+                    else if (hvacMode == "heat-cool") {
+                        coolingSetpoint = results?.target_temperature_high_f
+                        heatingSetpoint = results?.target_temperature_low_f
+                    }
+                    if (!state?.present) {
+                        if (results?.away_temperature_high_f) { coolingSetpoint = results?.away_temperature_high_f }
+                        if (results?.away_temperature_low_f)  { heatingSetpoint = results?.away_temperature_low_f }
+                    }
+                    temperatureEvent(temp)
+                    thermostatSetpointEvent(targetTemp)
+                    coolingSetpointEvent(coolingSetpoint)
+                    heatingSetpointEvent(heatingSetpoint)
+                    break
                 
-            case "F":
-                def heatingSetpoint = 0
-                def coolingSetpoint = 0
-                def temp = results?.ambient_temperature_f
-                def targetTemp = results?.target_temperature_f
-                
-                if (hvacMode == "cool") { 
-                    coolingSetpoint = targetTemp
-                    //clearHeatingSetpoint()
-                } 
-                else if (hvacMode == "heat") { 
-                    heatingSetpoint = targetTemp
-                    //clearCoolingSetpoint()
-                } 
-                else if (hvacMode == "heat-cool") {
-                    coolingSetpoint = results?.target_temperature_high_f
-                    heatingSetpoint = results?.target_temperature_low_f
-                }
-                if (!state?.present) {
-                    if (results?.away_temperature_high_f) { coolingSetpoint = results?.away_temperature_high_f }
-                    if (results?.away_temperature_low_f)  { heatingSetpoint = results?.away_temperature_low_f }
-                }
-                temperatureEvent(temp)
-                thermostatSetpointEvent(targetTemp)
-                coolingSetpointEvent(coolingSetpoint)
-                heatingSetpointEvent(heatingSetpoint)
+                default:
+                    Logger("no Temperature data $tempUnit")
                 break
-            
-            default:
-                Logger("no Temperature data $tempUnit")
-               break
+            }
         }
+        lastUpdatedEvent()
+        //This will return all of the devices state data to the logs.
+        //log.debug "Device State Data: ${getState()}"
+        return null
     }
-    lastUpdatedEvent()
-    //This will return all of the devices state data to the logs.
-    //log.debug "Device State Data: ${getState()}"
-    return null
+    catch (ex) {
+        log.error "generateEvent Exception: ${ex}"
+        parent?.sendChildExceptionEvent("thermostat", ex.toString(), "generateEvent")
+    }
 }
 
 def getDataByName(String name) {
@@ -398,9 +404,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent(latestVer) {
+def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = latestVer.toString() ?: null
+    def pubVer = ver ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData

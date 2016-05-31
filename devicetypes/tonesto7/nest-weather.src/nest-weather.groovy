@@ -149,7 +149,7 @@ def generateEvent(Map eventData) {
         state.timeZone = !location?.timeZone ? eventData?.tz : null
         debugOnEvent(!eventData?.debug ? false : true)
         apiStatusEvent(eventData?.apiIssues)
-        deviceVerEvent(eventData?.latestVer?.ver)
+        deviceVerEvent(eventData?.latestVer.toString())
         state?.cssUrl = eventData?.cssUrl
 
         //reads updates weather data
@@ -180,9 +180,9 @@ def getTimeZone() {
     return tz
 }
 
-def deviceVerEvent(latestVer) {
+def deviceVerEvent(ver) {
     def curData = device.currentState("devTypeVer")?.value
-    def pubVer = latestVer?.toString() ?: null
+    def pubVer = ver ?: null
     def dVer = devVer() ? devVer() : null
     def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
     state?.devTypeVer = newData

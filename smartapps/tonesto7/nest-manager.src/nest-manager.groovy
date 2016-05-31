@@ -102,6 +102,7 @@ preferences {
     page(name: "diagPage")
     page(name: "appDataPage")
     page(name: "devNamePage")
+    page(name: "childDevStateDataPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "quietTimePage")
@@ -733,7 +734,7 @@ def updateChildData() {
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
                 def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMilitaryTime, "debug":childDebug, 
                              "tz":getTimeZone(), "apiIssues":apiIssues(), "pres":locationPresence(), "childWaitVal":getChildWaitVal(),
-                             "cssUrl":getCssUrl(), "lastestVer":latestTstatVer()]
+                             "cssUrl":getCssUrl(), "latestVer":latestTstatVer().ver.toString()]
                 LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                 it.generateEvent(tData) //parse received message from parent
                 atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
@@ -741,7 +742,7 @@ def updateChildData() {
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
                 def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMilitaryTime, "debug":childDebug, "showProtActEvts":showProtActEvts,
-                             "tz":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "lastestVer":latestProtVer()]
+                             "tz":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "latestVer":latestProtVer().ver.toString()]
                 LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                 it.generateEvent(pData) //parse received message from parent
                 atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
@@ -749,7 +750,7 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                def pData = ["debug":childDebug, "tz":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "api":apiIssues(), "lastestVer":latestPresVer()]
+                def pData = ["debug":childDebug, "tz":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "apiIssues":apiIssues(), "latestVer":latestPresVer().ver.toString()]
                 it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
@@ -757,8 +758,8 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 LogTrace("UpdateChildData >> Weather id: ${devId}")
                 def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                it.generateEvent(["data":wData , "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), 
-                                  "cssUrl":getCssUrl(), "lastestVer":latestWeathVer()])
+                it.generateEvent(["data":wData , "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), "cssUrl":getCssUrl(), 
+                                  "latestVer":latestWeathVer().ver.toString()])
                 atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
@@ -3143,7 +3144,8 @@ def diagPage () {
         }
         section("Export or View State/Debug Data") {
             href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
-            href "appDataPage", title:"View App Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childDevStateDataPage", title:"View Device State Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "appDataPage", title:"View AppParams Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
@@ -3169,6 +3171,20 @@ def appDataPage() {
         }
     }
 }
+
+def childDevStateDataPage() {
+    dynamicPage(name: "childDevStateDataPage", install: false) {
+        getAllChildDevices().each { dev ->
+            section("${dev?.displayName.toString().capitalize()}:") {
+                def devData = dev?.getDeviceStateData()
+                devData?.each { par ->
+                    paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                }
+            }
+        }
+    }
+}
+
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
 *******************************************************************************/
@@ -3222,11 +3238,19 @@ def removeInstallData() {
 }
 
 def sendExceptionData(exMsg, methodName) {
-    if (!optInSendExceptions) {
+    if (optInSendExceptions) {
         def appType = !parent ? "managerApp" : "automationApp"
         def exData = ["methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
         def results = new groovy.json.JsonOutput().toJson(exData)
         sendAnalyticExceptionData(results, "errorData/${appType}/${methodName}.json")
+    }
+}
+
+def sendChildExceptionData(devType, exMsg, methodName) {
+    if (optInSendExceptions) {
+        def exData = ["deviceType":devType, "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+        def results = new groovy.json.JsonOutput().toJson(exData)
+        sendAnalyticExceptionData(results, "errorData/${devType}/${methodName}.json")
     }
 }
 
