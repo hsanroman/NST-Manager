@@ -294,7 +294,7 @@ def generateEvent(Map eventData) {
         if(eventData) {
             def results = eventData?.data
             state.useMilitaryTime = !eventData?.mt ? false : true
-            state.timeZone = !location?.timeZone ? eventData?.tz : null
+            state.timeZone = eventData?.tz
             debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean())
             tempUnitEvent(getTemperatureScale())
             canHeatCool(results?.can_heat, results?.can_cool)
@@ -397,9 +397,7 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() { 
-    def tz = null
-    if (location?.timeZone) { tz = location?.timeZone }
-    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
+    def tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : location?.timeZone
     if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
     return tz
 }

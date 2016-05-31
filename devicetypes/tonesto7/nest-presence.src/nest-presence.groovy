@@ -105,7 +105,7 @@ def generateEvent(Map results) {
     //log.trace("generateEvents Parsing data ${results}")
     Logger("-------------------------------------------------------------------", "warn")
     if(results) {
-        state.timeZone = !location?.timeZone ? results?.tz : null 
+        state.timeZone = results?.tz
         state?.useMilitaryTime = !results?.mt ? false : true
         debugOnEvent((!results?.debug ? false : true))
         presenceEvent(results?.pres.toString())
@@ -127,9 +127,7 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() {  
-    def tz = null 
-    if (location?.timeZone) { tz = location?.timeZone } 
-    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null } 
+    def tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : location?.timeZone
     if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." } 
     return tz 
 } 
