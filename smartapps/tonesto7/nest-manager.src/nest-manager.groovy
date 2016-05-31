@@ -3146,12 +3146,10 @@ def createInstallDataJson() {
         
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
-        def presDev = atomicState?.presDevice ? true : false
-        def weatherDev = atomicState?.weatherDevice ? true : false
         def tz = getTimeZone()?.ID?.toString()
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "presence":presDev, "weather":weatherDev, "timeZone":tz, "datetime":getDtNow()?.toString() 
+            "timeZone":tz, "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
