@@ -397,7 +397,9 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() { 
-    def tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : location?.timeZone
+    def tz = null
+    if (!state?.timeZone) { tz = location?.timeZone ?: null}
+    else { tz = state?.timeZone ? TimeZone.getTimeZone(state?.timeZone) : null }
     if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
     return tz
 }
