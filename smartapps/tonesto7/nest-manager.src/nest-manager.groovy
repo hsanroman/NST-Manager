@@ -9,16 +9,14 @@
     * Unified CSS (WIP)
 */
 /********************************************************************************************
-|    Application Name: Nest Manager                                                         |
+|    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
 |    Contributors: Ben W. (@desertblade) | Eric S. (@E_sch)                                 |
 |                                                                                           |
-|    Initial code was loosely based off of the SmartThings Ecobee App                       |
 |*******************************************************************************************|
 |    There maybe portions of the code that may resemble code from other apps in the         |
 |    community. I may have used some of it as a point of reference.                         |
 |    Thanks go out to those Authors!!!                                                      |
-|                                                                                           |
 |    I apologize if i've missed anyone.  Please let me know and I will add your credits     |
 |                                                                                           |
 |    ### I really hope that we don't have a ton or forks being released to the community,   |
@@ -646,6 +644,7 @@ def forcedPoll(type = null) {
         atomicState.needDevPoll = true
     }
     updateChildData()
+    atomicState?.stateSize = state?.length().toString()
 }
 
 def postCmd() {
@@ -1294,8 +1293,20 @@ def appUpdateNotify() {
     }
 }
 
-def criticalUpdateHandler() {
-    log.trace "criticalUpdateHandler..."
+def updateHandler() {
+    log.trace "updateHandler..."
+    if(atomicState?.appData?.updater?.updateType.toString() == "critical") {
+        //do something
+    }
+    if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+        if(getLastUpdateMsgSec() > 86400) {
+            sendMsg("Info", "${atomicState?.updater?.updateMsg}")
+            atomicState?.lastUpdateMsgDt = getDtNow()
+        }
+    }
+
+
+    atomicState?.lastWebUpdDt = getDtNow()
 }
 
 def sendMsg(msg, msgType, people = null, sms = null, push = null) {
@@ -1337,7 +1348,8 @@ def sendMsg(msg, msgType, people = null, sms = null, push = null) {
 def getLastWebUpdSec() { return !atomicState?.lastWebUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWebUpdDt).toInteger() }
 def getLastWeatherUpdSec() { return !atomicState?.lastWeatherUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastWeatherUpdDt).toInteger() }
 def getLastForecastUpdSec() { return !atomicState?.lastForecastUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastForecastUpdDt).toInteger() }
-def getLastlastAnalyticUpdSec() { return !atomicState?.lastAnalyticUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAnalyticUpdDt).toInteger() }
+def getLastAnalyticUpdSec() { return !atomicState?.lastAnalyticUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAnalyticUpdDt).toInteger() }
+def getLastUpdateMsgSec() { return !atomicState?.lastUpdateMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdateMsgDt).toInteger() }
 
 def getStZipCode() { return location?.zipCode.toString() }
 def getNestZipCode() { return atomicState?.structData[atomicState?.structures].postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : "" }
@@ -1353,7 +1365,7 @@ def updateWebStuff(now = false) {
         }
     }
     if (optInAppAnalytics && atomicState?.isInstalled) {
-        if (getLastlastAnalyticUpdSec() > (3600*24)) {
+        if (getLastAnalyticUpdSec() > (3600*24)) {
             sendInstallData()
         }
     }
@@ -1472,10 +1484,7 @@ def getWebFileData() {
             if(resp.data) {
                 LogAction("Getting Latest Data from appParams.json File...", "info", true)
                 atomicState?.appData = resp?.data
-                if(resp?.data?.updater?.isCritical.toString() == "true") {
-                    criticalUpdateHandler()
-                }
-                atomicState?.lastWebUpdDt = getDtNow()
+                updateHandler()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1503,7 +1512,7 @@ def getSmartAppData() {
         httpGet(params) { resp ->
             log.debug "resp: ${resp?.status}"
             if(resp.data) {
-                LogAction("Getting Latest Data from appParams.json File...", "info", true)
+                LogAction("Getting SmartApp Data from SmartThings API...", "info", true)
                 log.debug "smartAppData: ${resp?.data}"
                 
             }
@@ -1515,7 +1524,7 @@ def getSmartAppData() {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
                log.warn  "appParams.json file not found...${ex}"
         } else {
-            LogAction("getWebFileData Exception: ${ex}", "error", true)
+            LogAction("getSmartAppData Exception: ${ex}", "error", true)
         }
         sendExceptionData(ex, "getSmartAppData")
     }
