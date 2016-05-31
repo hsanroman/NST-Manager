@@ -3191,7 +3191,7 @@ def sendExceptionData(exMsg, methodName) {
         def appType = !parent ? "managerApp" : "automationApp"
         def exData = ["methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
         def results = new groovy.json.JsonOutput().toJson(exData)
-        sendAnalyticExceptionData(results, "${appType}/errorData/${methodName}.json")
+        sendAnalyticExceptionData(results, "errorData/${appType}/${methodName}.json")
     }
 }
 
