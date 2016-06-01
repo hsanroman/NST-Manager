@@ -46,13 +46,15 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "5-27-2016" }
+def appVerDate() { "6-1-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (May 27th, 2016)\n" +
+    "V2.1.0 (June 1st, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
     "Added: Ability to disable automations if the user so desires.\n" +
+    "Added: View all Apps/Devices state data under diagnostics.\n" +
+    "Updated: Child Device data updates have been modified to send all necessary data and remove the devices call back to the manager.\n" +
     "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
     "Updated: Added in app install and exception error sharing with the developer\n" +
     "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
@@ -3427,7 +3429,7 @@ def mainAutoPage(params) {
                     href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
-            
+
             if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured()) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
