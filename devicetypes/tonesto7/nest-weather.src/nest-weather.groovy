@@ -147,14 +147,15 @@ def refresh() {
 }
 
 def generateEvent(Map eventData) {
-    //log.trace("generateEvents Parsing data ${eventData}")
+	//log.trace("generateEvents Parsing data ${eventData}")
     try {
-        Logger("-------------------------------------------------------------------", "warn")
+        Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             state.tempUnit = getTemperatureScale()
-            state.useMilitaryTime = !eventData?.mt ? false : true
-            state.timeZone = eventData?.tz
-            debugOnEvent(!eventData?.debug ? false : true)
+            
+            state.useMilitaryTime = eventData?.mt ? true : false
+            state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+            debugOnEvent(eventData?.debug ? true : false)
             apiStatusEvent(eventData?.apiIssues)
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -182,6 +183,14 @@ def getDataByName(String name) {
 
 def getDeviceStateData() {
     return getState()
+}
+
+def getTimeZone() { 
+    def tz = null
+    if (!state?.nestTimeZone) { tz = location?.timeZone }
+    else { tz = TimeZone.getTimeZone(state?.nestTimeZone) }
+    if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true) }
+    return tz
 }
 
 def deviceVerEvent(ver) {
@@ -224,7 +233,7 @@ def lastUpdatedEvent() {
         def now = new Date()
         def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-            tf.setTimeZone(state?.timeZone)
+            tf.setTimeZone(getTimeZone())
         def lastDt = "${tf?.format(now)}"
         def lastUpd = device.currentState("lastUpdatedDt")?.value
         state?.lastUpdatedDt = lastDt?.toString()

@@ -731,20 +731,24 @@ def updateChildData() {
     runIn(40, "postCmd", [overwrite: true])
     try {
         atomicState?.lastChildUpdDt = getDtNow()
+        def useMt = !useMilitaryTime ? false : true
+        def dbg = !childDebug ? false : true
+        def nestTz = getNestTimeZone().toString()
+        log.debug "tz: ${nestTz}"
+        def api = !apiIssues() ? false : true
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMilitaryTime, "debug":childDebug, "tzData":getTimeZone(), 
-                             "apiIssues":apiIssues(), "pres":locationPresence(), "childWaitVal":getChildWaitVal(), "cssUrl":getCssUrl(), 
-                             "latestVer":latestTstatVer().ver.toString()]
+                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
+                             "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                 LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                 it.generateEvent(tData) //parse received message from parent
                 atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-                def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMilitaryTime, "debug":childDebug, "showProtActEvts":showProtActEvts,
-                             "tzData":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "latestVer":latestProtVer().ver.toString()]
+                def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
+                             "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
                 LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                 it.generateEvent(pData) //parse received message from parent
                 atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
@@ -752,8 +756,7 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                def pData = ["debug":childDebug, "tzData":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "apiIssues":apiIssues(), 
-                             "latestVer":latestPresVer().ver.toString()]
+                def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
                 it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
@@ -761,8 +764,7 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 LogTrace("UpdateChildData >> Weather id: ${devId}")
                 def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                it.generateEvent(["data":wData, "tzData":getTimeZone(), "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), "cssUrl":getCssUrl(), 
-                                  "latestVer":latestWeathVer().ver.toString()])
+                it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "latestVer":latestWeathVer()?.ver?.toString()])
                 atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
@@ -3089,7 +3091,7 @@ def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
         section("") {
             paragraph "This page will allow you to view/export diagnostic state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
-            paragraph "Current State Size: ${atomicState?.stateSize}"
+            paragraph "Current State Size: ${state?.toString().length()}"
         }
         section("Export or View State/Debug Data") {
             href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"Render App State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")

@@ -207,14 +207,14 @@ def refresh() {
 }
 
 def generateEvent(Map eventData) {
+    //log.trace("generateEvent parsing data ${eventData}")
     try {
         state?.testMode = !testMode ? null : testMode
-        //log.trace("generateEvent parsing data ${eventData}")
-        Logger("-----------------------------------------------------", "warn")
+        Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             def results = eventData?.data
             state?.useMilitaryTime = !eventData?.mt ? false : true
-            state.timeZone = eventData?.tzData
+            state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
             state?.showProtActEvts = !eventData?.showProtActEvts ? true : eventData?.showProtActEvts.toBoolean()
             lastCheckinEvent(results?.last_connection)
             lastTestedEvent(results?.last_manual_test_time)
@@ -250,6 +250,14 @@ def getDeviceStateData() {
     return getState()
 }
 
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
+}
+
 def deviceVerEvent(ver) {
     try {
         def curData = device.currentState("devTypeVer")?.value
@@ -272,7 +280,7 @@ def lastCheckinEvent(checkin) {
     try {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(state?.timeZone)
+        tf.setTimeZone(getTimeZone())
         def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
         def lastChk = device.currentState("lastConnection")?.value
         state?.lastConnection = lastConn?.toString()
@@ -292,7 +300,7 @@ def lastTestedEvent(dt) {
         def lastTstVal = device.currentState("lastTested")?.value
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(state?.timeZone)
+        tf.setTimeZone(getTimeZone())
         def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
         state?.lastTested = lastTest
         if(!lastTstVal.equals(lastTest?.toString())) {
@@ -359,7 +367,7 @@ def lastUpdatedEvent() {
         def now = new Date()
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(state?.timeZone)
+        tf.setTimeZone(getTimeZone())
         def lastDt = "${tf?.format(now)}"
         def lastUpd = device.currentState("lastUpdatedDt")?.value
         state?.lastUpdatedDt = lastDt?.toString()

@@ -297,35 +297,34 @@ def generateEvent(Map eventData) {
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
-            def results = eventData?.data
-            state.useMilitaryTime = !eventData?.mt ? false : true
-            state.timeZone = eventData?.tzData
-            debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean())
+            state.useMilitaryTime = eventData?.mt ? true : false
+            state.nestTimeZone = !location?.timeZone ? eventData.tz : null
+            debugOnEvent(eventData?.debug ? true : false)
             tempUnitEvent(getTemperatureScale())
-            canHeatCool(results?.can_heat, results?.can_cool)
-            hasFan(results?.has_fan.toString())
-            presenceEvent(eventData?.pres)
-            hvacModeEvent(results?.hvac_mode.toString())
-            hasLeafEvent(results?.has_leaf)
-            humidityEvent(results?.humidity.toString())
-            operatingStateEvent(results?.hvac_state.toString())
-            fanModeEvent(results?.fan_timer_active.toString())
-            if(results?.last_connection) { lastCheckinEvent(results?.last_connection) }
-            softwareVerEvent(results?.software_version.toString())
-            onlineStatusEvent(results?.is_online.toString())
+            canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
+            hasFan(eventData?.data?.has_fan.toString())
+            presenceEvent(eventData?.pres.toString())
+            hvacModeEvent(eventData?.data?.hvac_mode.toString())
+            hasLeafEvent(eventData?.data?.has_leaf)
+            humidityEvent(eventData?.data?.humidity.toString())
+            operatingStateEvent(eventData?.data?.hvac_state.toString())
+            fanModeEvent(eventData?.data?.fan_timer_active.toString())
+            if(eventData?.data?.last_connection) { lastCheckinEvent(eventData?.data?.last_connection) }
+            softwareVerEvent(eventData?.data?.software_version.toString())
+            onlineStatusEvent(eventData?.data?.is_online.toString())
             deviceVerEvent(eventData?.latestVer.toString())
             apiStatusEvent(eventData?.apiIssues)
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
-            state?.cssUrl = eventData?.cssUrl
+            state?.cssUrl = eventData?.cssUrl.toString()
         
-            def hvacMode = results?.hvac_mode
+            def hvacMode = eventData?.data?.hvac_mode
             def tempUnit = state?.tempUnit
             switch (tempUnit) {
                 case "C":
                     def heatingSetpoint = 0.0
                     def coolingSetpoint = 0.0
-                    def temp = results?.ambient_temperature_c.toDouble() 
-                    def targetTemp = results?.target_temperature_c.toDouble()
+                    def temp = eventData?.data?.ambient_temperature_c.toDouble() 
+                    def targetTemp = eventData?.data?.target_temperature_c.toDouble()
 
                     if (hvacMode == "cool") { 
                         coolingSetpoint = targetTemp
@@ -336,12 +335,12 @@ def generateEvent(Map eventData) {
                         //clearCoolingSetpoint()
                     } 
                     else if (hvacMode == "heat-cool") {
-                        coolingSetpoint = Math.round(results?.target_temperature_high_c.toDouble())
-                        heatingSetpoint = Math.round(results?.target_temperature_low_c.toDouble())
+                        coolingSetpoint = Math.round(eventData?.data?.target_temperature_high_c.toDouble())
+                        heatingSetpoint = Math.round(eventData?.data?.target_temperature_low_c.toDouble())
                     }
                     if (!state?.present) {
-                        if (results?.away_temperature_high_c) { coolingSetpoint = results?.away_temperature_high_c.toDouble() }
-                        if (results?.away_temperature_low_c) { heatingSetpoint = results?.away_temperature_low_c.toDouble() }
+                        if (eventData?.data?.away_temperature_high_c) { coolingSetpoint = eventData?.data?.away_temperature_high_c.toDouble() }
+                        if (eventData?.data?.away_temperature_low_c) { heatingSetpoint = eventData?.data?.away_temperature_low_c.toDouble() }
                     }
                     temperatureEvent(temp)
                     thermostatSetpointEvent(targetTemp)
@@ -352,8 +351,8 @@ def generateEvent(Map eventData) {
                 case "F":
                     def heatingSetpoint = 0
                     def coolingSetpoint = 0
-                    def temp = results?.ambient_temperature_f
-                    def targetTemp = results?.target_temperature_f
+                    def temp = eventData?.data?.ambient_temperature_f
+                    def targetTemp = eventData?.data?.target_temperature_f
                     
                     if (hvacMode == "cool") { 
                         coolingSetpoint = targetTemp
@@ -364,12 +363,12 @@ def generateEvent(Map eventData) {
                         //clearCoolingSetpoint()
                     } 
                     else if (hvacMode == "heat-cool") {
-                        coolingSetpoint = results?.target_temperature_high_f
-                        heatingSetpoint = results?.target_temperature_low_f
+                        coolingSetpoint = eventData?.data?.target_temperature_high_f
+                        heatingSetpoint = eventData?.data?.target_temperature_low_f
                     }
                     if (!state?.present) {
-                        if (results?.away_temperature_high_f) { coolingSetpoint = results?.away_temperature_high_f }
-                        if (results?.away_temperature_low_f)  { heatingSetpoint = results?.away_temperature_low_f }
+                        if (eventData?.data?.away_temperature_high_f) { coolingSetpoint = eventData?.data?.away_temperature_high_f }
+                        if (eventData?.data?.away_temperature_low_f)  { heatingSetpoint = eventData?.data?.away_temperature_low_f }
                     }
                     temperatureEvent(temp)
                     thermostatSetpointEvent(targetTemp)
@@ -399,6 +398,14 @@ def getDataByName(String name) {
 
 def getDeviceStateData() {
     return getState()
+}
+
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
 }
 
 def deviceVerEvent(ver) {
@@ -441,7 +448,7 @@ def lastCheckinEvent(checkin) {
     try {
         def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(state?.timeZone)
+        tf.setTimeZone(getTimeZone())
         def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
         def lastChk = device.currentState("lastConnection")?.value
         state?.lastConnection = lastConn?.toString()
@@ -461,7 +468,7 @@ def lastUpdatedEvent() {
         def now = new Date()
         def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(state?.timeZone)
+        tf.setTimeZone(getTimeZone())
         def lastDt = "${tf?.format(now)}"
         def lastUpd = device.currentState("lastUpdatedDt")?.value
         state?.lastUpdatedDt = lastDt?.toString()
@@ -474,7 +481,6 @@ def lastUpdatedEvent() {
         log.error "lastUpdatedEvent Exception: ${ex}"
         parent?.sendChildExceptionData("thermostat", ex.toString(), "lastUpdatedEvent")
     }
-
 }
 
 def softwareVerEvent(ver) {

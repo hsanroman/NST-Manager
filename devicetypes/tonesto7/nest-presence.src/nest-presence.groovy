@@ -101,17 +101,17 @@ def refresh() {
     poll()
 }
 
-def generateEvent(Map results) {
-    //log.trace("generateEvents Parsing data ${results}")
+def generateEvent(Map eventData) {
+    //log.trace("generateEvents Parsing data ${eventData}")
     try {
-        Logger("---------------------------------------------", "warn")
-        if(results) {
-            state.timeZone = results?.tzData
-            state?.useMilitaryTime = !results?.mt ? false : true
-            debugOnEvent(!results?.debug ? false : true)
-            presenceEvent(results?.pres.toString())
-            apiStatusEvent((!results?.apiIssues ? false : true))
-            deviceVerEvent(results?.latestVer.toString())
+        Logger("------------START OF API RESULTS DATA------------", "warn")
+        if(eventData) {
+            state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+            state?.useMilitaryTime = !eventData?.mt ? false : true
+            debugOnEvent(!eventData?.debug ? false : true)
+            presenceEvent(eventData?.pres)
+            apiStatusEvent((!eventData?.apiIssues ? false : true))
+            deviceVerEvent(eventData?.latestVer.toString())
         }
         lastUpdatedEvent()
         //This will return all of the devices state data to the logs.
@@ -130,6 +130,14 @@ def getDataByName(String name) {
 
 def getDeviceStateData() {
     return getState()
+}
+
+def getTimeZone() { 
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
 }
 
 def deviceVerEvent(ver) {
@@ -170,7 +178,7 @@ def lastUpdatedEvent() {
         def now = new Date()
         def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-            tf.setTimeZone(state?.timeZone)
+            tf.setTimeZone(getTimeZone())
         def lastDt = "${tf?.format(now)}"
         def lastUpd = device.currentState("lastUpdatedDt")?.value
         if(!lastUpd.equals(lastDt?.toString())) {
@@ -312,7 +320,7 @@ def Logger(msg, logType = "debug") {
     }
 }
  
- //This will Print logs from the parent app when added to parent method that the child calls
+//This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
     switch (level) {
         case "trace":
@@ -334,6 +342,6 @@ def log(message, level = "trace") {
     return null // always child interface call with a return value
 }
 
-private def textDevName()   { "Nest Presence${appDevName()}" }
-private def appDevType()    { false }
+private def textDevName()   { return "Nest Presence${appDevName()}" }
+private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
