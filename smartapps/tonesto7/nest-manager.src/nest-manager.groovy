@@ -375,7 +375,7 @@ def prefsPage() {
 }
 
 def automationsPage() {
-    dynamicPage(name: "automationsPage", title: "", nextPage: "", install: false) {
+    return dynamicPage(name: "automationsPage", title: "", nextPage: "mainPage", install: false) {
         def autoApp = findChildAppByName( appName() )
         if(autoApp) {
             section("Installed Automations...") { }
@@ -386,7 +386,6 @@ def automationsPage() {
         }
         section("Add a new Automation:") {
             app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
-            
             def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "$rText"
@@ -500,7 +499,7 @@ def getInstAutoTypesDesc() {
     def disCnt = 0
     childApps?.each { a ->
         def type = a?.getAutomationType()
-        def disabled = a?.getIsAutomationDisabled()
+        def disabled = !a?.getIsAutomationDisabled() ? null : a?.getIsAutomationDisabled()
         //log.debug "automation type: $type"
         switch(type) {
             case "remSen":
@@ -523,6 +522,7 @@ def getInstAutoTypesDesc() {
     def extTmpDesc = (extTmpCnt > 0) ? "\nExternal Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\nNest Modes ($nModeCnt)" : ""
     def disabDesc = (disCnt > 0) ? "\nDisabled Automations ($nModeCnt)" : ""
+    atomicState?.installedAutomation = ["remoteSensor":remSenCnt, "contact":conWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt]
     return "Automations Installed: ${disabDesc}${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}"
 }
 
@@ -3133,13 +3133,23 @@ def appParamsDataPage() {
 
 def appStateDataPage() {
     dynamicPage(name: "appStateDataPage", refreshInterval:30, install: false) {
-        def values = []
+        settings?.sort().each { item ->
+            switch (item.key) {
+                case ["accessToken", "authToken"]:
+                    break
+                default:
+                    section("Input Data: ${item?.key.toString().capitalize()}") {
+                        paragraph "${item?.value}"
+                    }
+                    break
+            }
+        }
         state?.sort().each { item ->
             switch (item.key) {
                 case ["accessToken", "authToken"]:
                     break
                 default:
-                    section("${item?.key.toString().capitalize()}:") {
+                    section("State Data: ${item?.key.toString().capitalize()}") {
                         paragraph "${item?.value}"
                     }
                     break
@@ -3165,14 +3175,33 @@ def childAppStateDataPage() {
     dynamicPage(name: "childAppStateDataPage", refreshInterval:30, install:false) {
         getChildApps().each { ca ->
             section("${ca?.label.toString().capitalize()}:") {
+                def setData = ca?.getSettingsData()
+                setData?.sort().each { sd ->
+                    paragraph "Input: ${sd?.key.toString().capitalize()}: ${sd?.value}"
+                } 
                 def appData = ca?.getAppStateData()
                 appData?.sort().each { par ->
-                    paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                    paragraph "State: ${par?.key.toString().capitalize()}: ${par?.value}"
                 }
             }
         }
     }
 }
+
+def backupChildData() {
+    def apps = getChildApps()
+    def appData = []
+    apps?.each { a -> 
+        def apl = [:]
+        def lbl = a?.label
+        def set = a?.getSettingsData()
+        def sta = a?.getStateData()
+        def bdni = [dev?.key].join('.')
+        apl[bdni] = dev?.value
+        appData << apl 
+    }
+}
+
 
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
@@ -3188,10 +3217,11 @@ def createInstallDataJson() {
         
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
+        def automations = atomicState?.installedAutomations
         def tz = getTimeZone()?.ID?.toString()
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "timeZone":tz, "datetime":getDtNow()?.toString() 
+            "automations":automations, "timeZone":tz, "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
@@ -3476,6 +3506,15 @@ def initAutoApp() {
 def getAppStateData() {
     return getState()
 }
+
+def getSettingsData() {
+    def sets = []
+    settings?.sort().each { st ->
+        sets << st
+    }
+    return sets
+}
+
 def automationsInst() {
     atomicState.isRemSenConfigured = isRemSenConfigured() ? true : false
     atomicState.isExtTmpConfigured = isExtTmpConfigured() ? true : false
