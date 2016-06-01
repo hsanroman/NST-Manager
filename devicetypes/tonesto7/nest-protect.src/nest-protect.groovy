@@ -213,13 +213,13 @@ def generateEvent(Map eventData) {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             def results = eventData?.data
-            state?.useMilitaryTime = !eventData?.mt ? false : true
+            state?.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
-            state?.showProtActEvts = !eventData?.showProtActEvts ? true : eventData?.showProtActEvts.toBoolean()
+            state?.showProtActEvts = eventData?.showProtActEvts ? true : false
             lastCheckinEvent(results?.last_connection)
             lastTestedEvent(results?.last_manual_test_time)
-            apiStatusEvent(eventData?.apiIssues)
-            debugOnEvent(!eventData?.debug ? false : eventData?.debug.toBoolean() )
+            apiStatusEvent(eventData?.apiIssues ? )
+            debugOnEvent(eventData?.debug ? true : false)
             onlineStatusEvent(results?.is_online.toString())
             batteryStateEvent(results?.battery_health.toString())
             carbonStateEvent(results?.co_alarm_state.toString())

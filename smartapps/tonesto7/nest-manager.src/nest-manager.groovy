@@ -736,7 +736,6 @@ def updateChildData() {
         def useMt = !useMilitaryTime ? false : true
         def dbg = !childDebug ? false : true
         def nestTz = getNestTimeZone().toString()
-        //log.debug "tz: ${nestTz}"
         def api = !apiIssues() ? false : true
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
@@ -3428,6 +3427,7 @@ def mainAutoPage(params) {
                     href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
+            
             if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured()) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")

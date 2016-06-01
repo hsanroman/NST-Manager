@@ -147,7 +147,7 @@ def refresh() {
 }
 
 def generateEvent(Map eventData) {
-	//log.trace("generateEvents Parsing data ${eventData}")
+    //log.trace("generateEvents Parsing data ${eventData}")
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
