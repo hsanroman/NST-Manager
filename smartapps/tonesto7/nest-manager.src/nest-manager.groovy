@@ -100,9 +100,11 @@ preferences {
     page(name: "debugPrefPage")
     page(name: "notifPrefPage")
     page(name: "diagPage")
-    page(name: "appDataPage")
+    page(name: "appParamsDataPage")
     page(name: "devNamePage")
+    page(name: "childAppStateDataPage")
     page(name: "childDevStateDataPage")
+    page(name: "appStateDataPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "quietTimePage")
@@ -732,9 +734,9 @@ def updateChildData() {
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMilitaryTime, "debug":childDebug, 
-                             "tz":getTimeZone(), "apiIssues":apiIssues(), "pres":locationPresence(), "childWaitVal":getChildWaitVal(),
-                             "cssUrl":getCssUrl(), "latestVer":latestTstatVer().ver.toString()]
+                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMilitaryTime, "debug":childDebug, "tzData":getTimeZone(), 
+                             "apiIssues":apiIssues(), "pres":locationPresence(), "childWaitVal":getChildWaitVal(), "cssUrl":getCssUrl(), 
+                             "latestVer":latestTstatVer().ver.toString()]
                 LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                 it.generateEvent(tData) //parse received message from parent
                 atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
@@ -742,7 +744,7 @@ def updateChildData() {
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
                 def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMilitaryTime, "debug":childDebug, "showProtActEvts":showProtActEvts,
-                             "tz":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "latestVer":latestProtVer().ver.toString()]
+                             "tzData":getTimeZone(), "cssUrl":getCssUrl(), "apiIssues":apiIssues(), "latestVer":latestProtVer().ver.toString()]
                 LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                 it.generateEvent(pData) //parse received message from parent
                 atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
@@ -750,7 +752,8 @@ def updateChildData() {
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 LogTrace("UpdateChildData >> Presence id: ${devId}")
-                def pData = ["debug":childDebug, "tz":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "apiIssues":apiIssues(), "latestVer":latestPresVer().ver.toString()]
+                def pData = ["debug":childDebug, "tzData":getTimeZone(), "mt":useMilitaryTime, "pres":locationPresence(), "apiIssues":apiIssues(), 
+                             "latestVer":latestPresVer().ver.toString()]
                 it.generateEvent(pData)
                 atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 return true
@@ -758,7 +761,7 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 LogTrace("UpdateChildData >> Weather id: ${devId}")
                 def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                it.generateEvent(["data":wData , "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), "cssUrl":getCssUrl(), 
+                it.generateEvent(["data":wData, "tzData":getTimeZone(), "mt":useMilitaryTime, "debug":childDebug, "apiIssues":apiIssues(), "cssUrl":getCssUrl(), 
                                   "latestVer":latestWeathVer().ver.toString()])
                 atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 return true
@@ -2086,58 +2089,6 @@ def devNamePage() {
         if(!found) {
             paragraph "No Devices Selected"
         }
-        /*if(!atomicState?.isInstalled && atomicState?.custLabelUsed) {
-            section("Reset Device Names:") {
-                href "devNameResetPage", title: "Reset Device Names?", description: "Tap to Configure...", image: getAppImg("settings_icon.png")
-            }
-        }*/
-    }
-}
-
-def devNameResetPage() {
-    dynamicPage(name: "devNameResetPage", title: "Customize Device Labels", nextPage: "", install: false) {
-        if(!atomicState.custLabelUsed && found) {
-            section ("Reset Custom Name Settings") {
-                paragraph "This section allows reset of previously used Custom names.  These settings are optional and will not change already created devices."
-            }
-            if(atomicState?.thermostats) {
-                section ("Thermostat Device Names:") {
-                    atomicState?.thermostats?.each { t ->
-                        def ccc = settings?."tstat_${t.value}_lbl"
-                        //log.trace "t.value: ${t.value}  getNestTstatLabel: ${getNestTstatLabel(t.value)}  settings.tstat_${t.value}_lbl: ${ccc}"
-                        if(ccc && ccc != getNestTstatLabel(t.value) ) {
-                            input("tstat_${t.value}_lbl", "text", title: "Reset Custom Name for ${t.value}", required: false, defaultValue: getNestTstatLabel(t.value), submitOnChange: true)
-                        } else { paragraph "Device name matches custom settings:\n ${getNestTstatLabel(t.value)}" }
-                    }
-                }
-            }
-            if(atomicState?.protects) {
-                section ("Protect Device Names:") {
-                    atomicState?.protects?.each { p ->
-                        def bbb = settings?."prot_${p.value}_lbl"
-                        if(bbb && bbb != getNestProtLabel(p.value)) {
-                            input("prot_${p.value}_lbl", "text", title: "Reset Custom Name for ${p.value}", required: false, defaultValue: getNestProtLabel(p.value), submitOnChange: true)
-                        } else { paragraph "Device name matches custom settings:\n ${getNestProtLabel(p.value)}" }
-                    }
-                }
-            }
-            if(atomicState?.presDevice) {
-                section ("Presence Device Name:") {
-                    def p = getNestPresLabel()
-                    if (settings?.presDev_lbl && settings?.presDev_lbl != p ) {
-                        input(name:"presDev_lbl", type:"text", title: "Reset Custom Name for Nest Presence Device", required: false, defaultValue: p, submitOnChange: true)
-                    } else { paragraph "Device name matches custom settings:\n ${p}" }
-                }
-            }
-            if(atomicState?.weatherDevice) {
-                section ("Weather Device Name:") {
-                    def w = getNestWeatherLabel()
-                    if (settings?.weathDev_lbl && settings?.weathDev_lbl != w) {
-                        input(name:"weathDev_lbl", type:"text", title: "Reset Custom Name for Nest Weather Device", required: false, defaultValue: w, submitOnChange: true)
-                    } else { paragraph "Device name matches custom settings:\n ${w}" }
-                }
-            }
-        }
     }
 }
 
@@ -2630,9 +2581,7 @@ def getTimeZone() {
     def tz = null
     if (location?.timeZone) { tz = location?.timeZone }
     else { tz = TimeZone.getTimeZone(getNestTimeZone()) }
-    
     if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn", true) }
-    
     return tz
 }
 
@@ -2889,15 +2838,15 @@ def notifPrefPage() {
 
 def quietTimePage() {
     dynamicPage(name: "quietTimePage", title: "Prevent Notifications\nDuring these Days, Times or Modes", uninstall: false) {
-    	def timeReq = (qStartTime || qStopTime) ? true : false
+        def timeReq = (qStartTime || qStopTime) ? true : false
         section() {
             input "qStartInput", "enum", title: "Starting at", options: ["At a Specific Time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("start_time_icon.png")
             if(qStartInput == "A specific time") { 
-            	input "qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
+                input "qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
             }
             input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("stop_time_icon.png")
             if(qStopInput == "A specific time") { 
-            	input "qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png") 
+                input "qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png") 
             }
             input "quietDays", "enum", title: "Only on these days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"),
                     options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -3143,9 +3092,11 @@ def diagPage () {
             paragraph "Current State Size: ${atomicState?.stateSize}"
         }
         section("Export or View State/Debug Data") {
-            href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
-            href "childDevStateDataPage", title:"View Device State Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            href "appDataPage", title:"View AppParams Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"Render App State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
+            href "appStateDataPage", title:"View Manager App Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childAppStateDataPage", title:"View Child Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childDevStateDataPage", title:"View Child Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "appParamsDataPage", title:"View AppParams Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
@@ -3158,10 +3109,10 @@ def diagPage () {
     }
 }
 
-def appDataPage() {
-    dynamicPage(name: "appDataPage", install: false) {
+def appParamsDataPage() {
+    dynamicPage(name: "appParamsDataPage", install: false) {
         if(atomicState?.appData) {
-            atomicState?.appData.each { sec ->
+            atomicState?.appData.sort().each { sec ->
                 section("${sec?.key.toString().capitalize()}:") {
                     sec?.value.each { par ->
                         paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
@@ -3172,12 +3123,42 @@ def appDataPage() {
     }
 }
 
+def appStateDataPage() {
+    dynamicPage(name: "appStateDataPage", refreshInterval: 15, install: false) {
+        def values = []
+        state?.sort().each { item ->
+            switch (item.key) {
+                case ["accessToken", "authToken"]:
+                    break
+                default:
+                    section("${item?.key.toString().capitalize()}:") {
+                        paragraph "${item?.value}"
+                    }
+                    break
+            }
+        }
+    }
+}
+
 def childDevStateDataPage() {
-    dynamicPage(name: "childDevStateDataPage", install: false) {
+    dynamicPage(name: "childDevStateDataPage", refreshInterval: 15, install: false) {
         getAllChildDevices().each { dev ->
             section("${dev?.displayName.toString().capitalize()}:") {
                 def devData = dev?.getDeviceStateData()
-                devData?.each { par ->
+                devData?.sort().each { par ->
+                    paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                }
+            }
+        }
+    }
+}
+
+def childAppStateDataPage() {
+    dynamicPage(name: "childAppStateDataPage", refreshInterval:15, install:false) {
+        getChildApps().each { ca ->
+            section("${ca?.label.toString().capitalize()}:") {
+                def appData = ca?.getAppStateData()
+                appData?.sort().each { par ->
                     paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
                 }
             }
@@ -3483,6 +3464,9 @@ def initAutoApp() {
     }
 }
 
+def getAppStateData() {
+    return getState()
+}
 def automationsInst() {
     atomicState.isRemSenConfigured = isRemSenConfigured() ? true : false
     atomicState.isExtTmpConfigured = isExtTmpConfigured() ? true : false
