@@ -218,7 +218,7 @@ def generateEvent(Map eventData) {
             state?.showProtActEvts = eventData?.showProtActEvts ? true : false
             lastCheckinEvent(results?.last_connection)
             lastTestedEvent(results?.last_manual_test_time)
-            apiStatusEvent(eventData?.apiIssues ? )
+            apiStatusEvent(eventData?.apiIssues)
             debugOnEvent(eventData?.debug ? true : false)
             onlineStatusEvent(results?.is_online.toString())
             batteryStateEvent(results?.battery_health.toString())
