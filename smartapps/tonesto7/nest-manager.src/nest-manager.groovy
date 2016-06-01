@@ -3132,7 +3132,7 @@ def appParamsDataPage() {
 }
 
 def appStateDataPage() {
-    dynamicPage(name: "appStateDataPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "appStateDataPage", refreshInterval:30, install: false) {
         def values = []
         state?.sort().each { item ->
             switch (item.key) {
@@ -3149,7 +3149,7 @@ def appStateDataPage() {
 }
 
 def childDevStateDataPage() {
-    dynamicPage(name: "childDevStateDataPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "childDevStateDataPage", refreshInterval:30, install: false) {
         getAllChildDevices().each { dev ->
             section("${dev?.displayName.toString().capitalize()}:") {
                 def devData = dev?.getDeviceStateData()
@@ -3162,7 +3162,7 @@ def childDevStateDataPage() {
 }
 
 def childAppStateDataPage() {
-    dynamicPage(name: "childAppStateDataPage", refreshInterval:15, install:false) {
+    dynamicPage(name: "childAppStateDataPage", refreshInterval:30, install:false) {
         getChildApps().each { ca ->
             section("${ca?.label.toString().capitalize()}:") {
                 def appData = ca?.getAppStateData()
