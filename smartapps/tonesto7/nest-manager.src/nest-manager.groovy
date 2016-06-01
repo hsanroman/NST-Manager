@@ -3357,7 +3357,7 @@ def selectAutoPage() {
             section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                 href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
             }
-            section("Set Thermostats Temps Based on ST Modes:") {
+            section("Set Thermostats Setpoints Based on ST Modes:") {
                 href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_automation_icon.png")
             }
         }
@@ -3456,10 +3456,10 @@ def mainAutoPage(params) {
             if(autoType == "tMode" && !disableAutomation) {
                 section("Set Multiple Thermostat Temps based on ST Modes:") {
                     //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
-                    
+                    def tModeDelayDesc = tModeDelay && tModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
                     def tModeTstatDesc = tModeTstats ? "Thermostats Selected: ${tModeTstats?.size()}\n\nTap to Modify..." : ""
-                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}" : null
-                    href "tstatModePage", title: "Thermostat ST Mode Automation Config", description: tModeDesc ?: "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${nModeDelayDesc}" : null
+                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ?: "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
 
@@ -3626,7 +3626,7 @@ def tModePrefix() { return "tMode" }
 
 def tstatModePage() {
     def pName = tModePrefix()
-    dynamicPage(name: "tstatModePage", title: "Thermostat Mode Setpoint Automation", uninstall: false, nextPage: "mainAutoPage") {
+    dynamicPage(name: "tstatModePage", title: "Thermostat Setpoint Mode Automation", uninstall: false, nextPage: "mainAutoPage") {
         section("Select the Thermostats you would like to adjust:") {
             input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
         }
@@ -3648,6 +3648,16 @@ def tstatModePage() {
                 }
             }
         }
+        if(tModeTstats) {
+            section("Delay Changes:") {
+                input (name: "tModeDelay", type: "bool", title: "Delay Changes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
+                if(nModeDelay) {
+                    input "tModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], 
+                            submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                }
+            }
+        }
+        
         
         section("Help:") {
             href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
@@ -3711,8 +3721,30 @@ def tModeModeEvt(evt) {
     log.debug "tModeModeEvt: Mode is (${evt?.value})"
     if (disableAutomation) { return }
     else {
-        
+        if(nModeDelay) {
+            LogAction("tModeModeEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
+            runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
+        } else {
+            checkTstatMode()
+        }
     } 
+}
+
+def checkTstatMode() {
+    log.trace "checkTstatMode..."
+    try {
+        if (disableAutomation) { return }
+        //else if(!tModeScheduleOk()) { 
+          //  LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
+        //} 
+        else {
+            def curStMode = location?.mode
+            log.debug "curStMode: $curStMode"
+        }
+    } catch (ex) { 
+        LogAction("checkTstaMode Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "checkTstatMode")
+    }
 }
 
 /******************************************************************************  
