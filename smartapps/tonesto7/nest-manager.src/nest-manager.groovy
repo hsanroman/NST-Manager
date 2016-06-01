@@ -133,9 +133,10 @@ preferences {
 
 mappings {
     if(!parent) {
+        //used during Oauth Authentication
         path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
         path("/oauth/callback") 	{action: [GET: "callback"]}
-        
+        //Renders Json Data
         path("/renderInstallId")  {action: [GET: "renderInstallId"]}
         path("/renderInstallData"){action: [GET: "renderInstallData"]}
         path("/renderState")	  {action: [GET: "renderStateJson"]}
@@ -3188,21 +3189,6 @@ def childAppStateDataPage() {
     }
 }
 
-def backupChildData() {
-    def apps = getChildApps()
-    def appData = []
-    apps?.each { a -> 
-        def apl = [:]
-        def lbl = a?.label
-        def set = a?.getSettingsData()
-        def sta = a?.getStateData()
-        def bdni = [dev?.key].join('.')
-        apl[bdni] = dev?.value
-        appData << apl 
-    }
-}
-
-
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
 *******************************************************************************/
@@ -3477,15 +3463,9 @@ def mainAutoPage(params) {
 }
 
 def nameAutoPage() {
-    def type = atomicState?.automationType
-    def typeLabel = ""
-    if (type == "remSen") { typeLabel = " (Rem Temp)${disableAutomation ? "(Disabled)" : ""}" }
-    else if (type == "extTmp") { typeLabel = " (Ext Temp)${disableAutomation ? "(Disabled)" : ""}" }
-    else if (type == "conWat") { typeLabel = " (Contact)${disableAutomation ? "(Disabled)" : ""}" }
-    else if (type == "nMode") { typeLabel = " (Nest Mode)${disableAutomation ? "(Disabled)" : ""}" }
     dynamicPage(name: "nameAutoPage") {
         section("Automation name") {
-            label title: "Name this Automation", defaultValue: "${appName()}${typeLabel}", required: true
+            label title: "Name this Automation", defaultValue: "${getAutoTypeLabel()}", required: true
             paragraph "Make sure to name it something that will help you easily identify the app later."
         } 
     }
@@ -3501,6 +3481,18 @@ def initAutoApp() {
     if(extTmpUseWeather && atomicState?.isExtTmpConfigured) { 
         updateWeather() 
     }
+    app.updateLabel("${getAutoTypeLabel()}")
+}
+
+def getAutoTypeLabel() {
+    def type = atomicState?.automationType
+    def typeLabel = ""
+    def dis = disableAutomation ? "(Disabled)" : ""
+    if (type == "remSen") { typeLabel = "${appName()} (Rem Temp)${dis}" }
+    else if (type == "extTmp") { typeLabel = "${appName()} (Ext Temp)${dis}" }
+    else if (type == "conWat") { typeLabel = "${appName()} (Contact)${dis}" }
+    else if (type == "nMode") { typeLabel = "${appName()} (Nest Mode)${dis}" }
+    return typeLabel
 }
 
 def getAppStateData() {
@@ -4433,6 +4425,9 @@ def contactWatchPage() {
             def req = (conWatContacts || conWatTstat) ? true : false
             input name: "conWatContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
                     image: getAppImg("contact_icon.png")
+            if(conWatContacts) {
+                paragraph "Current Status: ${getOpenContacts(contacts) ? "Opened" : "All Closed"}", image: getAppImg("instruct_icon.png")
+            }
             input name: "conWatTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
                     image: getAppImg("thermostat_icon.png")
             if (conWatTstat) {
