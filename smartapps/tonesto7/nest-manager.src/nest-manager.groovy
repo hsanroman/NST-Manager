@@ -123,10 +123,12 @@ preferences {
     page(name: "nameAutoPage", install: true, uninstall: true)
     page(name: "remSensorPage")
     page(name: "remSensorTempsPage")
+    page(name: "extTempPage")
     page(name: "contactWatchPage")
     page(name: "fanVentPage" )
     page(name: "nestModePresPage")
-    page(name: "extTempPage")
+    page(name: "tstatModePage")
+    page(name: "confTstatModePage")
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
 }
@@ -2563,6 +2565,7 @@ def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback
 def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath) { return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
+def getHelpPageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 
@@ -3354,6 +3357,9 @@ def selectAutoPage() {
             section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                 href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
             }
+            section("Set Thermostats Temps Based on ST Modes:") {
+                href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_automation_icon.png")
+            }
         }
     }
     else { return mainAutoPage( [autoType: atomicState?.automationType]) }
@@ -3373,6 +3379,7 @@ def mainAutoPage(params) {
     else if (autoType == "extTmp" && !isExtTmpConfigured()) { return extTempPage() }
     else if (autoType == "conWat" && !isConWatConfigured()) { return contactWatchPage() }
     else if (autoType == "nMode" && !isNestModesConfigured()) { return nestModePresPage() }
+    else if (autoType == "tMode" && !isTstatModesConfigured()) { return tstatModePage() }
     
     else { 
         // Main Page Entries
@@ -3446,7 +3453,21 @@ def mainAutoPage(params) {
                 } 
             }
 
-            if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured()) {
+            if(autoType == "tMode" && !disableAutomation) {
+                section("Set Multiple Thermostat Temps based on ST Modes:") {
+                    //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
+                    //def nModeLocDesc = isNestModesConfigured() ? "Nest Mode: ${getNestLocPres().toString().capitalize()}" : ""
+                    //def nModesDesc = ((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes)) ? "\n${nModeHomeModes ? "Home Modes: ${nModeHomeModes.size()} selected" : ""}${nModeAwayModes ? "\nAway Modes: ${nModeAwayModes.size()} selected" : ""}" : ""
+                    //def nPresDesc = (nModePresSensor && !nModeSwitch) ? "\nUsing Presence: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
+                    //def nSwtchDesc = (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (Power is: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
+                    //def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
+                    //def nModeConfDesc = (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
+                    //def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${qOpt}${nModeConfDesc}" : null
+                    href "tstatModePage", title: "Thermostat ST Mode Automation Config", description: tModeDesc ? tModeDesc : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+                } 
+            }
+
+            if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured()) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
                     if(!atomicState?.disableAutomation && !disableAutomation) {
@@ -3492,6 +3513,7 @@ def getAutoTypeLabel() {
     else if (type == "extTmp") { typeLabel = "${appName()} (Ext Temp)${dis}" }
     else if (type == "conWat") { typeLabel = "${appName()} (Contact)${dis}" }
     else if (type == "nMode") { typeLabel = "${appName()} (Nest Mode)${dis}" }
+    else if (type == "tMode") { typeLabel = "${appName()} (Tstat Mode)${dis}" }
     return typeLabel
 }
 
@@ -3507,11 +3529,17 @@ def getSettingsData() {
     return sets
 }
 
+def getSettingVal(var) {
+    def val = settings[var]
+    return val ?: null
+}
+
 def automationsInst() {
     atomicState.isRemSenConfigured = isRemSenConfigured() ? true : false
     atomicState.isExtTmpConfigured = isExtTmpConfigured() ? true : false
     atomicState.isConWatConfigured = isConWatConfigured() ? true : false
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
+    atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
 }
 
 def getAutomationType() {
@@ -3571,6 +3599,10 @@ def subscribeToEvents() {
         if (nModePresSensor && !nModeSwitch) { subscribe(nModePresSensor, "presence", nModePresEvt) }
         if (nModeSwitch && !nModePresSensor) { subscribe(nModeSwitch, "switch", nModeSwitchEvt) }
     }
+    //ST Thermostat Mode Subscriptions
+    if (autoType == "tMode") {
+        
+    }
 }
 
 def scheduler() {
@@ -3589,11 +3621,97 @@ def updateWeather() {
     }
 }
 
+/********************************************************************************  
+|                			MODE AUTOMATION CODE	     						|
+*********************************************************************************/
+def tModePrefix() { return "tMode" }
+
+def tstatModePage() {
+    def pName = tModePrefix()
+    dynamicPage(name: "tstatModePage", title: "Mode - Nest Home/Away Automation", uninstall: false, nextPage: "mainAutoPage") {
+        section("Select the Thermostats you would like to adjust:") {
+            input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
+        }
+        section("Configure Selected Thermostats:") {
+            if (tModeTstats) {
+                def tData = []
+                def tNum = 0
+                tModeTstats?.each { tstat ->
+                    tNum = tNum+1
+                    tData << ["devId":tstat?.device.deviceNetworkId, "devNum":tNum]
+                }
+                atomicState?.tModeTstatsInfo = tData
+                log.debug "tData: ${tData}"
+                //def inptNum = 1
+                tModeTstats?.each { ts ->
+                    def preName = "tMode_|${ts?.device?.deviceNetworkId}|_Modes"
+                    def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
+                    href "confTstatModePage", title: "Configure ${ts?.displayName} settings", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
+                            params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
+                            state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
+                }
+            }
+        }
+        
+        section("Help:") {
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+        }
+    }
+}
+
+def confTstatModePage(params) {
+    def devName
+    def devId
+    if (!params.devId && !params?.devName) { 
+        devId = atomicState?.curTstatModePageDevId
+        devName = atomicState?.curTstatModePageDevName } 
+    else {
+        atomicState.curTstatModePageDevName = params?.devName
+        atomicState.curTstatModePageDevId = params?.devId
+        devId = params?.devId
+        devName = params?.devName
+    }
+    
+    dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
+        def preName = "tMode_|${devId}|_Modes"
+        section(" ") {
+            input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
+        }
+        if (settings."${preName}") {
+            settings."${preName}"?.each { md ->
+                section("(${md.toString().toUpperCase()}) Options:") {
+                    def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
+                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, submitOnChange: true, image: getAppImg("heat_icon.png")
+                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, submitOnChange: true, image: getAppImg("cool_icon.png")
+                }
+            }
+        }
+    }
+}
+
+def getTstatConfigured(tstat) {
+    def result = true
+    def preName = "tMode_|${tstat?.device.deviceNetworkId}|_Modes"
+    if(settings?."${preName}") {
+        settings?."${preName}".each { md ->
+            if (!settings?."${preName}_${md}_HeatTemp" || !settings?."${preName}_${md}_CoolTemp") { return false }
+        }
+    }
+    return true    
+}
+
+def isTstatModesConfigured() {
+    //def devOk = ((!nModePresSensor && !nModeSwitch && (nModeHomeModes && nModeAwayModes)) || (nModePresSensor && !nModeSwitch) || (!nModePresSensor && nModeSwitch)) ? true : false
+    return devOk
+}
+
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
+def remSenPrefix() { return "remSen" }
+
 def remSensorPage() {
-    def pName = atomicState?.automationType
+    def pName = remSenPrefix()
     dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
         def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
         def dupTstat = checkThermostatDupe(remSenTstat, remSenTstatMir)
@@ -3721,8 +3839,7 @@ def remSensorPage() {
             }
         }
         section("Help:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions...", 
-                description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -4241,8 +4358,7 @@ def extTempPage() {
             }
         }
         section("Help and Instructions:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions...", 
-                description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -4469,8 +4585,7 @@ def contactWatchPage() {
             }
         }
         section("Help:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions...", 
-                description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -4674,8 +4789,7 @@ def nestModePresPage() {
             }
         }
         section("Help:") {
-            href url:"https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html", style:"embedded", required:false, title:"Help and Instructions...", 
-                description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
 }
