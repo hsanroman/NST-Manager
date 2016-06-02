@@ -499,6 +499,7 @@ def getInstAutoTypesDesc() {
     def conWatCnt = 0
     def extTmpCnt = 0
     def nModeCnt = 0
+    def tModeCnt = 0
     def disCnt = 0
     childApps?.each { a ->
         def type = a?.getAutomationType()
@@ -517,6 +518,9 @@ def getInstAutoTypesDesc() {
             case "nMode":
                 nModeCnt = nModeCnt+1
                 break
+            case "tMode":
+                tModeCnt = tModeCnt+1
+                break
         }
         if(disabled) { disCnt+1 }
     }
@@ -524,9 +528,10 @@ def getInstAutoTypesDesc() {
     def conWatDesc = (conWatCnt > 0) ? "\nContact Sensor ($conWatCnt)" : ""
     def extTmpDesc = (extTmpCnt > 0) ? "\nExternal Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\nNest Modes ($nModeCnt)" : ""
+    def tModeDesc = (tModeCnt > 0) ? "\nTstat Modes ($tModeCnt)" : ""
     def disabDesc = (disCnt > 0) ? "\nDisabled Automations ($nModeCnt)" : ""
-    atomicState?.installedAutomation = ["remoteSensor":remSenCnt, "contact":conWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt]
-    return "Automations Installed: ${disabDesc}${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}"
+    atomicState?.installedAutomation = ["remoteSensor":remSenCnt, "contact":conWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt]
+    return "Automations Installed: ${disabDesc}${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
 }
 
 def subscriber() {
@@ -3105,10 +3110,10 @@ def diagPage () {
         }
         section("Export or View State/Debug Data") {
             href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"Render App State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
-            href "appStateDataPage", title:"View Manager App Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            href "childAppStateDataPage", title:"View Child Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            href "childDevStateDataPage", title:"View Child Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            href "appParamsDataPage", title:"View AppParams Data File", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "appStateDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childAppStateDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childDevStateDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "appParamsDataPage", title:"View AppParams Data", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
@@ -3166,7 +3171,9 @@ def childDevStateDataPage() {
     dynamicPage(name: "childDevStateDataPage", refreshInterval:30, install: false) {
         getAllChildDevices().each { dev ->
             section("${dev?.displayName.toString().capitalize()}:") {
+                paragraph "     ***********SETTINGS DATA***********", image: " "
                 def devData = dev?.getDeviceStateData()
+                paragraph "        ***********STATE DATA***********", image: " "
                 devData?.sort().each { par ->
                     paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
                 }
@@ -3179,13 +3186,15 @@ def childAppStateDataPage() {
     dynamicPage(name: "childAppStateDataPage", refreshInterval:30, install:false) {
         getChildApps().each { ca ->
             section("${ca?.label.toString().capitalize()}:") {
+                paragraph "     ***********SETTINGS DATA***********", image: " "
                 def setData = ca?.getSettingsData()
                 setData?.sort().each { sd ->
-                    paragraph "Input: ${sd?.key.toString().capitalize()}: ${sd?.value}"
+                    paragraph "Input: ${sd?.key.toString()}: ${sd?.value}"
                 } 
                 def appData = ca?.getAppStateData()
+                paragraph "        ***********STATE DATA***********", image: " "
                 appData?.sort().each { par ->
-                    paragraph "State: ${par?.key.toString().capitalize()}: ${par?.value}"
+                    paragraph "State: ${par?.key.toString()}: ${par?.value}"
                 }
             }
         }
@@ -3456,10 +3465,10 @@ def mainAutoPage(params) {
             if(autoType == "tMode" && !disableAutomation) {
                 section("Set Multiple Thermostat Temps based on ST Modes:") {
                     //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
+                    def tModeTstatDesc = tModeTstats ? "Thermostats Selected: ${tModeTstats?.size()}" : ""
                     def tModeDelayDesc = tModeDelay && tModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
-                    def tModeTstatDesc = tModeTstats ? "Thermostats Selected: ${tModeTstats?.size()}\n\nTap to Modify..." : ""
-                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${nModeDelayDesc}" : null
-                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ?: "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tModeDelayDesc}" : null
+                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
 
@@ -3630,17 +3639,18 @@ def tstatModePage() {
         section("Select the Thermostats you would like to adjust:") {
             input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
         }
-        section("Configure Selected Thermostats:") {
-            if (tModeTstats) {
-                tModeTstats?.each { ts ->
+        
+        if (tModeTstats) {
+            tModeTstats?.each { ts ->
+                section("Configure ${ts?.displayName}:") {
                     def tStatHeatSp = getTstatSetpoint(ts, "heat")
                     def tStatCoolSp = getTstatSetpoint(ts, "cool")
                     def tStatMode = ts ? ts?.currentThermostatMode.toString().capitalize() : "unknown"
                     def tStatTemp = "${getDeviceTemp(ts)}°${atomicState?.tempUnit}"
-                    def preName = "tMode_|${ts?.device.deviceNetworkId}|_Modes"
+                    def preName = getTstatModeInputName(ts)
                     def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
                     
-                    href "confTstatModePage", title: "Configure ${ts?.displayName} settings", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
+                    href "confTstatModePage", title: "Configure Settings...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
                     paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})",
@@ -3651,14 +3661,13 @@ def tstatModePage() {
         if(tModeTstats) {
             section("Delay Changes:") {
                 input (name: "tModeDelay", type: "bool", title: "Delay Changes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
-                if(nModeDelay) {
+                if(tModeDelay) {
                     input "tModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], 
                             submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
             }
         }
-        
-        
+
         section("Help:") {
             href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
@@ -3677,7 +3686,6 @@ def confTstatModePage(params) {
         devId = params?.devId
         devName = params?.devName
     }
-    
     dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
         def preName = "tMode_|${devId}|_Modes"
         section(" ") {
@@ -3697,13 +3705,20 @@ def confTstatModePage(params) {
 
 def getTstatConfigured(tstat) {
     def result = true
-    def preName = "tMode_|${tstat?.device.deviceNetworkId}|_Modes"
+    def preName = getTstatModeInputName(tstat)
     if(settings?."${preName}") {
         settings?."${preName}".each { md ->
             if (!settings?."${preName}_${md}_HeatTemp" || !settings?."${preName}_${md}_CoolTemp") { return false }
         }
     } else { return false }
     return result
+}
+
+def getTstatModeInputName(tstat) {
+    if(tstat) {
+        return "tMode_|${tstat?.device.deviceNetworkId}|_Modes"
+    }
+    return null
 }
 
 def isTstatModesConfigured() {
@@ -3721,7 +3736,7 @@ def tModeModeEvt(evt) {
     log.debug "tModeModeEvt: Mode is (${evt?.value})"
     if (disableAutomation) { return }
     else {
-        if(nModeDelay) {
+        if(tModeDelay) {
             LogAction("tModeModeEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
             runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
         } else {
@@ -3740,6 +3755,25 @@ def checkTstatMode() {
         else {
             def curStMode = location?.mode
             log.debug "curStMode: $curStMode"
+            def heatTemp = 0
+            def coolTemp = 0
+            def tstat2Use
+            if (tModeTstats) {
+                tModeTstats?.each { ts -> 
+                    def modes = settings?."${getTstatModeInputName(ts)}" ?: null
+                    if (modes && (curStMode in modes)) {
+                        tstat2Use = ts
+                        heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
+                        coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
+                    }
+                }
+            }
+            
+            if(tstat2Use && heatTemp && coolTemp) {
+                LogAction("Setting Heat to '${heatTemp}' and Cool to '${coolTemp}'")
+                tstat2Use?.setHeatingSetpoint(heatTemp.toInteger())
+                tstat2Use?.setCoolingSetpoint(coolTemp.toInteger())
+            }
         }
     } catch (ex) { 
         LogAction("checkTstaMode Exception: (${ex})", "error", true)
