@@ -6,6 +6,7 @@
         Allow user to set heat/cool temps and modes for each thermostat
         I want my upstairs thermostat set to 70 and downstairs set to 78
     * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
+    * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
     * Unified CSS (WIP)
 */
 /********************************************************************************************
@@ -46,11 +47,12 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "6-1-2016" }
+def appVerDate() { "6-3-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (June 1st, 2016)\n" +
+    "V2.1.0 (June 3rd, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
+    "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
     "Added: Ability to disable automations if the user so desires.\n" +
     "Added: View all Apps/Devices state data under diagnostics.\n" +
@@ -212,7 +214,7 @@ def authPage() {
 }
 
 def mainPage() {
-    def setupComplete = (!atomicState?.newSetupComplete && !atomicState.isInstalled) ? false : true
+    def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
@@ -341,15 +343,15 @@ def deviceSelectPage() {
     }
 }
 
-
 def reviewSetupPage() {
     return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
         section("Device Summary:") {
-             def ts = thermostats ? "\n (${thermostats?.size()}) Thermostats" : ""
-            def pt = protects ? "\n (${protects?.size()}) Protects" : ""
+            def desc = !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
+            def ts = thermostats ? "\n (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
+            def pt = protects ? "\n (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
             def pd = presDevice ? "\n (1) Presence Device" : ""
             def wd = weatherDevice ? "\n (1) Weather Device" : ""
-            paragraph "Devices to Install:${!ts && !pt && !pd && !wd ? " None" : "${ts}${pt}${pd}${wd}"}"
+            paragraph "${desc}${!ts && !pt && !pd && !wd ? " None" : "${ts}${pt}${pd}${wd}"}"
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
@@ -3551,6 +3553,9 @@ def mainAutoPage(params) {
                         atomicState?.disableAutomationDt = null
                     }
                 }
+                section("Debug Options               ", hideable: true, hidden: true) {
+                    input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+                }
             }
         }
     }
@@ -4247,7 +4252,7 @@ private remSenEvtEval() {
                     }
                 } else {
                     LogAction("FAN(COOL): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})", "debug", false)
-                    LogAction("FAN(COOL): DiffOK (${getFanTempOk(curSenTemp, remSenCtemp, curCoolSetpoint, threshold)})", "debug", false)
+                    LogAction("FAN(COOL): DiffOK (${getRemSenFanTempOk(curSenTemp, remSenCtemp, curCoolSetpoint, threshold)})", "debug", false)
                     if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                         if( getRemSenFanTempOk(curSenTemp, remSenCtemp, curCoolSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
                             log.debug "Running $remSenTstat Fan for COOL Circulation..."
@@ -4282,7 +4287,7 @@ private remSenEvtEval() {
                     }
                 } else { 
                     LogAction("FAN(HEAT): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", false)
-                    LogAction("FAN(HEAT): DiffOK (${getFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold)})", "trace", false)
+                    LogAction("FAN(HEAT): DiffOK (${getRemSenFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold)})", "trace", false)
                     if (remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
                         if( getRemSenFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
                             log.debug "Running $remSenTstat Fan for HEAT Circulation..."
