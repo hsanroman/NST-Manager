@@ -212,7 +212,7 @@ def authPage() {
 }
 
 def mainPage() {
-    def setupComplete = !atomicState.isInstalled ? false : true
+    def setupComplete = (!atomicState?.newSetupComplete && !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
@@ -383,6 +383,7 @@ def reviewSetupPage() {
             href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
         }
     }
+    atomicState.newSetupComplete = true
 }
 
 //Defines the Preference Page
