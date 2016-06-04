@@ -196,12 +196,12 @@ def presenceEvent(presence) {
     try {
         def val = device.currentState("presence")?.value
         def pres = (presence == "home") ? "present" : "not present"
-        def nestPres = getNestPresence()
+        def nestPres = device.currentState("nestPresence").value ? device.currentState("nestPresence").value : null 
         def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
         def statePres = state?.present
         state?.present = (pres == "present") ? true : false
         state?.nestPresence = newNestPres
-        if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
+        if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
             log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
             sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
             sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
@@ -229,28 +229,12 @@ def apiStatusEvent(issue) {
     }
 }
 
-def getHvacMode() { 
-    try { return device.currentState("thermostatMode")?.value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("presence", ex.toString(), "getHvacMode")
-        return "unknown" 
-    }
-}
-
 def getNestPresence() { 
-    try { return device.currentState("nestPresence").value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("presence", ex.toString(), "getNestPresence")
-        return "home"
-    }
+    return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence").value.toString()
 }
 
 def getPresence() { 
-    try { return device.currentState("presence").value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("presence", ex.toString(), "getPresence")
-        return "present"
-    }
+    return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
 /************************************************************************************************

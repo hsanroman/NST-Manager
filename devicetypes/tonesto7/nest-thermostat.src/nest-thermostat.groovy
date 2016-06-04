@@ -636,12 +636,12 @@ def presenceEvent(presence) {
     try {
         def val = device.currentState("presence")?.value
         def pres = (presence == "home") ? "present" : "not present"
-        def nestPres = getNestPresence()
+        def nestPres = device.currentState("nestPresence").value ? device.currentState("nestPresence").value : null 
         def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
         def statePres = state?.present
         state?.present = (pres == "present") ? true : false
         state?.nestPresence = newNestPres
-        if(!val.equals(pres) || !nestPres.equals(newNestPres)) {
+        if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
             log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
             sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
             sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
@@ -789,85 +789,43 @@ def clearCoolingSetpoint() {
 }
 
 def getCoolTemp() { 
-    try { return device.currentValue("coolingSetpoint") } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getCoolTemp")
-        return 0 
-    }
+    return !device.currentValue("coolingSetpoint") ? 0 : device.currentValue("coolingSetpoint") 
 }
 
 def getHeatTemp() { 
-    try { return device.currentValue("heatingSetpoint") } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getHeatTemp")
-        return 0 
-    }
+    return !device.currentValue("heatingSetpoint") ? 0 : device.currentValue("heatingSetpoint") 
 }
 
 def getFanMode() { 
-    try { return device.currentState("thermostatFanMode")?.value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getFanMode")
-        return "unknown" 
-    }
+    return !device.currentState("thermostatFanMode")?.value ? "unknown" : device.currentState("thermostatFanMode")?.value.toString() 
 }
 
 def getHvacMode() { 
-    try { return device.currentState("thermostatMode")?.value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getHvacMode")
-        return "unknown" 
-    }
+    return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.value.toString() 
 }
 
 def getNestPresence() { 
-    try { return device.currentState("nestPresence").value.toString() } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getNestPresence")
-        return "home" 
-    }
+    return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence").value.toString()
 }
 
 def getPresence() { 
-    try { return device.currentState("presence").value.toString() }
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getPresence")
-        return "present" 
-    }
+    return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
 def getTargetTemp() { 
-    try { return device.currentValue("targetTemperature") } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getTargetTemp")
-        return 0
-    }
+    return !device.currentValue("targetTemperature") ? 0 : device.currentValue("targetTemperature") 
 }
 
 def getThermostatSetpoint() { 
-    try { return device.currentValue("thermostatSetpoint") } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getThermostatSetpoint")
-        return 0 
-    }
+    return !device.currentValue("thermostatSetpoint") ? 0 : device.currentValue("thermostatSetpoint") 
 }
 
 def getTemp() { 
-    try { return device.currentValue("temperature") } 
-    catch (ex) { 
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getTemp")
-        return 0 
-    }
+    return !device.currentValue("temperature") ? 0 : device.currentValue("temperature") 
 }
 
-def tempWaitVal() { 
-    try {
-        return state?.childWaitVal ? state?.childWaitVal.toInteger() : 4 
-    }
-    catch (ex) {
-        log.error "tempWaitVal Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "tempWaitVal")
-    }
+def getTempWaitVal() { 
+    return state?.childWaitVal ? state?.childWaitVal.toInteger() : 4
 }
 
 def wantMetric() { return (state?.tempUnit == "C") }
@@ -1014,14 +972,14 @@ void levelUpDown(tempVal, chgType = null) {
                         thermostatSetpointEvent(targetVal)
                         heatingSetpointEvent(targetVal)
                         if (!chgType) { chgType = "" }
-                        runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+                        runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
                         break
                     case "cool":
                         Logger("Sending changeSetpoint(Temp: ${targetVal})") 
                         thermostatSetpointEvent(targetVal)
                         coolingSetpointEvent(targetVal)
                         if (!chgType) { chgType = "" }
-                        runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+                        runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
                         break
                     case "auto":
                         if (chgType) {
@@ -1029,12 +987,12 @@ void levelUpDown(tempVal, chgType = null) {
                                 case "cool":
                                     Logger("Sending changeSetpoint(Temp: ${targetVal})")
                                     coolingSetpointEvent(targetVal)
-                                    runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+                                    runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
                                     break
                                 case "heat":
                                     Logger("Sending changeSetpoint(Temp: ${targetVal})")
                                     heatingSetpointEvent(targetVal)
-                                    runIn( tempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
+                                    runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
                                     break
                                 default:
                                     log.warn "Can not change temp while in this mode ($chgType}!!!"
