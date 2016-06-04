@@ -196,7 +196,7 @@ def presenceEvent(presence) {
     try {
         def val = device.currentState("presence")?.value
         def pres = (presence == "home") ? "present" : "not present"
-        def nestPres = device.currentState("nestPresence").value ? device.currentState("nestPresence").value : null 
+        def nestPres = !device.currentState("nestPresence") ? null : device.currentState("nestPresence")?.value.toString()
         def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
         def statePres = state?.present
         state?.present = (pres == "present") ? true : false
@@ -230,7 +230,7 @@ def apiStatusEvent(issue) {
 }
 
 def getNestPresence() { 
-    return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence").value.toString()
+    return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.value.toString()
 }
 
 def getPresence() { 
