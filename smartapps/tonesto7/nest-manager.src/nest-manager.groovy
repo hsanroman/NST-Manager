@@ -144,7 +144,6 @@ mappings {
         //Renders Json Data
         path("/renderInstallId")  {action: [GET: "renderInstallId"]}
         path("/renderInstallData"){action: [GET: "renderInstallData"]}
-        path("/renderState")	  {action: [GET: "renderStateJson"]}
     }
 }
 
@@ -345,6 +344,7 @@ def deviceSelectPage() {
 
 def reviewSetupPage() {
     return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
+        if(!atomicState?.newSetupComplete) { atomicState.newSetupComplete = true }
         section("Device Summary:") {
             def desc = !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
             def ts = thermostats ? "\n (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
@@ -385,7 +385,6 @@ def reviewSetupPage() {
             href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
         }
     }
-    atomicState.newSetupComplete = true
 }
 
 //Defines the Preference Page
@@ -585,7 +584,7 @@ def getInstAutoTypesDesc() {
     def nModeDesc = (nModeCnt > 0) ? "\nNest Modes ($nModeCnt)" : ""
     def tModeDesc = (tModeCnt > 0) ? "\nTstat Modes ($tModeCnt)" : ""
     def disabDesc = (disCnt > 0) ? "\nDisabled Automations ($nModeCnt)" : ""
-    atomicState?.installedAutomation = ["remoteSensor":remSenCnt, "contact":conWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt]
+    atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt]
     return "Automations Installed: ${disabDesc}${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
 }
 
@@ -2494,27 +2493,6 @@ def Logger(msg, type) {
     else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
 }
 
-def renderStateJson() {
-    try {
-        def values = []
-        state?.each { item ->
-            switch (item.key) {
-                case ["accessToken", "authToken", "structData", "deviceData", "curAlerts", "curAstronomy", "curForecast", "curWeather"]:
-                    break
-                default:
-                    values << ["${item?.key}":item?.value]
-                    break
-            }
-        }
-        def logJson = new groovy.json.JsonOutput().toJson(values)
-        def logString = new groovy.json.JsonOutput().prettyPrint(logJson)
-        render contentType: "application/json", data: logString
-    } catch (ex) { 
-        LogAction("renderStateJson Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "renderStateJson")
-    }
-}
-
 def setStateVar(frc = false) {
     //log.trace "setStateVar..."
     try {
@@ -2523,6 +2501,7 @@ def setStateVar(frc = false) {
         def stateVer = 3
         def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
         if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) {
+            if(!atomicState?.newSetupComplete) 	        { atomicState.newSetupComplete = false }
             if(!atomicState?.misPollNotifyWaitVal) 	    { atomicState.misPollNotifyWaitVal = 900 }
             if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
             if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
@@ -2635,6 +2614,10 @@ def latestPresVer()     { return atomicState?.appData?.versions?.presence ?: "un
 def latestAutoAppVer()  { return atomicState?.appData?.versions?.autoapp ?: "unknown" }
 def latestWeathVer()    { return atomicState?.appData?.versions?.weather ?: "unknown" }
 def getUse24Time()      { return useMilitaryTime ? true : false }
+
+//Returns app State Info
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
 private deviceDebugStatus() { return !childDebug ? "Off" : "On" } //Keep this
@@ -3159,22 +3142,17 @@ def protInfoPage () {
 
 def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
-        def stateSize = state?.toString().length()
-        def statePerc = (int) ((stateSize/100000)*100).toDouble().round(0)
         section("") {
             paragraph "This page will allow you to view/export diagnostic state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
         }
         section("State Size Info:") {
-            paragraph "Current State Size: ${statePerc}% (${stateSize})"
+            paragraph "Current State Size: ${getStateSizePerc()}% (${getStateSize()})"
         }
         section("View Apps & Devices Data") {
             href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "childAppDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "appParamsDataPage", title:"View AppParams Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-        }
-        section("Export to JSON") {
-            href url: getAppEndpointUrl("renderState"), style:"embedded", required:false, title:"Render App State Data", description:"Tap to view State Data...", image: getAppImg("state_data_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
             section("Analytics Data") {
@@ -3202,34 +3180,32 @@ def appParamsDataPage() {
 }
 
 def managAppDataPage() {
-    dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
-        settings?.sort().each { item ->
-            switch (item.key) {
-                case ["accessToken", "authToken"]:
-                    break
-                default:
-                    section("Input Data: ${item?.key.toString().capitalize()}") {
-                        paragraph "${item?.value}"
-                    }
-                    break
+    dynamicPage(name: "managAppDataPage", refreshInterval:60, install: false) {
+        def noShow = ["accessToken", "authToken"]
+        settings?.sort().each { item -> !(item.key in noShow)
+            section("Setting: ${item?.key.toString().capitalize()}") {
+                paragraph "${item?.value}"
             }
         }
-        state?.sort().each { item ->
-            switch (item.key) {
-                case ["accessToken", "authToken"]:
-                    break
-                default:
-                    section("State Data: ${item?.key.toString().capitalize()}") {
-                        paragraph "${item?.value}"
-                    }
-                    break
+        state?.sort().each { item -> !(item.key in noShow)
+            section("State Variable: ${item?.key.toString().capitalize()}") {
+                paragraph "${item?.value}"
+            }
+        }
+        getMetadata()?.sort().each { item -> !(item.key in noShow)
+            section("Metadata: ${item?.key.toString().capitalize()}") {
+                 paragraph "${item?.value}"
             }
         }
     }
 }
 
 def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
+    dynamicPage(name: "childDevDataPage", refreshInterval:60, install: false) {
+        log.debug "meta: ${getMetadata()}"
+        app.each { item ->
+            log.debug "item: $item"
+        }
         getAllChildDevices().each { dev ->
             section("${dev?.displayName.toString().capitalize()}:") {
                 paragraph " ----------------STATE DATA---------------"
@@ -3245,7 +3221,12 @@ def childDevDataPage() {
                 paragraph " "
                 paragraph " ---------SUPPORTED COMMANDS---------"
                 dev?.supportedCommands?.sort().each { cmd ->
-                    paragraph "${cmd}"
+                    paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                }
+                paragraph " "
+                paragraph " --------DEVICE CAPABILITIES---------"
+                dev?.capabilities?.sort().each { cap ->
+                    paragraph "${cap}"
                 }
             }
         }
@@ -3253,7 +3234,7 @@ def childDevDataPage() {
 }
 
 def childAppDataPage() {
-    dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
+    dynamicPage(name: "childAppDataPage", refreshInterval:60, install:false) {
         getChildApps().each { ca ->
             section("${ca?.label.toString().capitalize()}:") {
                 paragraph "     ***********SETTINGS DATA***********", image: " "
@@ -3285,11 +3266,11 @@ def createInstallDataJson() {
         
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
-        def automations = atomicState?.installedAutomations
+        def automations = !atomicState?.installedAutomations ? "No Automations Installed" : atomicState?.installedAutomations
         def tz = getTimeZone()?.ID?.toString()
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "automations":automations, "timeZone":tz, "datetime":getDtNow()?.toString() 
+            "automations":automations, "timeZone":tz, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
@@ -4404,9 +4385,7 @@ def remSenRuleEnum() {
     def canHeat = atomicState?.remSenTstatCanHeat ? true : false
     def hasFan = atomicState?.remSenTstatHasFan ? true : false
     def vals = []
-    
     //log.debug "remSenRuleEnum -- hasFan: $hasFan (${atomicState?.remSenTstatHasFan} | canCool: $canCool (${atomicState?.remSenTstatCanCool} | canHeat: $canHeat (${atomicState?.remSenTstatCanHeat}"
-    
     if (canCool && !canHeat && hasFan) { vals = ["Cool":"Cool", "Circ":"Circulate(Fan)", "Cool_Circ":"Cool/Circulate(Fan)"] }
     else if (canCool && !canHeat && !hasFan) { vals = ["Cool":"Cool"] }
     else if (!canCool && canHeat && hasFan) { vals = ["Circ":"Circulate(Fan)", "Heat":"Heat", "Heat_Circ":"Heat/Circulate(Fan)"] }
@@ -5355,11 +5334,11 @@ def getSunTimeState() {
     atomicState.sunriseTm = sunriseTm
 }
 
+///////////////////////////////////////////////////////////////////////////////
 /******************************************************************************
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
-//Change This to rename the Default App Name
-
+///////////////////////////////////////////////////////////////////////////////
 private def appName() 		{ return "Nest ${parent ? "Automations" : "Manager"}${appDevName()}" }
 private def appAuthor() 	{ return "Anthony S." }
 private def appNamespace() 	{ return "tonesto7" }
