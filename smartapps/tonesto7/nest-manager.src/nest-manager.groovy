@@ -1,5 +1,4 @@
 /*
-Test
     TODO:  
     * Add in 5th Mode Automation: 
         Select the modes you want to make changes for and the thermostats you want to change
@@ -3236,19 +3235,24 @@ def childDevDataPage() {
 
 def childAppDataPage() {
     dynamicPage(name: "childAppDataPage", refreshInterval:60, install:false) {
-        getChildApps().each { ca ->
-            section("${ca?.label.toString().capitalize()}:") {
-                paragraph "     ***********SETTINGS DATA***********", image: " "
-                def setData = ca?.getSettingsData()
-                setData?.sort().each { sd ->
-                    paragraph "Input: ${sd?.key.toString()}: ${sd?.value}"
-                } 
-                def appData = ca?.getAppStateData()
-                paragraph "        ***********STATE DATA***********", image: " "
-                appData?.sort().each { par ->
-                    paragraph "State: ${par?.key.toString()}: ${par?.value}"
+        def apps = getChildApps()
+        if(apps) {
+            apps?.each { ca ->
+                section("${ca?.label.toString().capitalize()}:") {
+                    paragraph "     ***********SETTINGS DATA***********", image: " "
+                    def setData = ca?.getSettingsData()
+                    setData?.sort().each { sd ->
+                        paragraph "Input: ${sd?.key.toString()}: ${sd?.value}"
+                    } 
+                    def appData = ca?.getAppStateData()
+                    paragraph "        ***********STATE DATA***********", image: " "
+                    appData?.sort().each { par ->
+                        paragraph "State: ${par?.key.toString()}: ${par?.value}"
+                    }
                 }
             }
+        } else {
+            section("") { paragraph "No Child Apps Installed..." }
         }
     }
 }
@@ -3527,7 +3531,9 @@ def mainAutoPage(params) {
                     //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
                     def tModeTstatDesc = tModeTstats ? "Thermostats Selected: ${tModeTstats?.size()}" : ""
                     def tModeDelayDesc = tModeDelay && tModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
-                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tModeDelayDesc}" : null
+                    def preName = getTstatModeInputName(ts)
+                    def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
+                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tstatDesc}${tModeDelayDesc}" : null
                     href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
@@ -3713,7 +3719,7 @@ def tstatModePage() {
                     def preName = getTstatModeInputName(ts)
                     def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
                     
-                    href "confTstatModePage", title: "Configure Settings...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
+                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
                     paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})",
@@ -3758,8 +3764,10 @@ def confTstatModePage(params) {
             settings."${preName}"?.each { md ->
                 section("(${md.toString().toUpperCase()}) Options:") {
                     def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, submitOnChange: false, image: getAppImg("heat_icon.png")
-                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, submitOnChange: false, image: getAppImg("cool_icon.png")
+                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
+                            submitOnChange: false, image: getAppImg("heat_icon.png")
+                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
+                            submitOnChange: false, image: getAppImg("cool_icon.png")
                 }
             }
         }
@@ -3820,23 +3828,25 @@ def checkTstatMode() {
             log.debug "curStMode: $curStMode"
             def heatTemp = 0
             def coolTemp = 0
-            def tstat2Use
+            def tstatOperMode
             if (tModeTstats) {
                 tModeTstats?.each { ts -> 
                     def modes = settings?."${getTstatModeInputName(ts)}" ?: null
-                    log.debug "checkTstaModes modes: ${modes}"
+                    log.debug "checkTstatModes modes: ${modes}"
                     if (modes && (curStMode in modes)) {
-                        tstat2Use = ts
-                        heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
-                        coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
+                        tstatOperMode = ts?.currentThermostatMode.toString()
+                        if(tstatOperMode in ["heat", "auto"]) {
+                            heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
+                            LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
+                            ts?.setHeatingSetpoint(heatTemp.toInteger())
+                        }
+                        if(tstatOperMode in ["cool", "auto"]) {
+                            coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
+                            LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
+                            ts?.setCoolingSetpoint(coolTemp.toInteger())
+                        }
                     }
                 }
-            }
-            
-            if(tstat2Use && heatTemp && coolTemp) {
-                LogAction("Setting Heat to '${heatTemp}' and Cool to '${coolTemp}'", "info", true)
-                tstat2Use?.setHeatingSetpoint(heatTemp.toInteger())
-                tstat2Use?.setCoolingSetpoint(coolTemp.toInteger())
             }
         }
     } catch (ex) { 
