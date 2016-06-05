@@ -574,6 +574,19 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
     }
 }
 
+def getDtNow() {
+    def now = new Date()
+    return formatDt(now)
+}
+
+def formatDt(dt) {
+    def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+    else {
+        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+    }
+    return tf.format(dt)
+}
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
@@ -814,6 +827,7 @@ def getWeatherHtml() {
                     <div class="row topBorder">
                     <div class="centerText offset-by-three six columns">
                         <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
+                        <b>Updated:</b> ${getDtNow().toString()}
                     </div>    
                     </div>
             
