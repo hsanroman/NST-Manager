@@ -4231,7 +4231,7 @@ def getLastRemSenFanRunDtSec() { return !atomicState?.lastRemSenFanRunDt ? 10000
 
 // Initially based off of Keep Me Cozy II
 private remSenEvtEval() {
-    LogAction("remSenEvtEval.....", "trace", false)
+    LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
     if(getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60)) {
@@ -4287,11 +4287,11 @@ private remSenEvtEval() {
                     LogAction("FAN(COOL): DiffOK (${getRemSenFanTempOk(curSenTemp, remSenCtemp, curCoolSetpoint, threshold)})", "debug", false)
                     if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                         if( getRemSenFanTempOk(curSenTemp, remSenCtemp, curCoolSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
-                            log.debug "Running $remSenTstat Fan for COOL Circulation..."
+                            LogAction("Running ${remSenTstat} Fan for COOL Circulation...", "info", true)
                             remSenTstat?.fanOn()
                             if(remSenTstatsMir) { 
                                 remSenTstatsMir.each { mt -> 
-                                    log.debug "Mirroring $mt Fan Run for COOL Circulation..."
+                                    LogAction("Mirroring $mt Fan Run for COOL Circulation...", "info", true)
                                     mt?.fanOn() 
                                 }
                             }
@@ -4352,8 +4352,8 @@ private remSenEvtEval() {
 def getRemSenFanTempOk(Double senTemp, Double userTemp, Double curTemp, Double threshold) {
     def diff1 = (Math.abs(senTemp - userTemp)?.round(1) < threshold)
     def diff2 = (Math.abs(userTemp - curTemp)?.round(1) < threshold)
-    LogAction("getRemSenFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - userTemp).round(1)}) < Threshold Temp: (${threshold}) ) - ($diff1)", "debug", false)
-    LogAction("getRemSenFanTempOk: ( Set Temp - Current Temp: (${Math.abs(userTemp - curTemp).round(1)}) < Threshold Temp: (${threshold}) ) - ($diff2)", "debug", false)
+    LogAction("getRemSenFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - userTemp).round(1)}) < Threshold Temp: (${threshold}) ) - (Result: $diff1)", "debug", false)
+    LogAction("getRemSenFanTempOk: ( Set Temp - Current Temp: (${Math.abs(userTemp - curTemp).round(1)}) < Threshold Temp: (${threshold}) ) - (Result: $diff2)", "debug", false)
     return (diff1 && diff2) ? true : false
 }
 

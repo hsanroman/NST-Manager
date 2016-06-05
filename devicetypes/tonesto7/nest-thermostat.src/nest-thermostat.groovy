@@ -1472,7 +1472,7 @@ void fanOff() {
 
 void fanCirculate() {
     log.trace "fanCirculate()..."
-    log.warn "fanCirculate setting not supported by Nest API"
+    fanOn()
 }
 
 void fanAuto() {
