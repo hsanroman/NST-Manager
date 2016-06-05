@@ -3431,7 +3431,7 @@ def selectAutoPage() {
                 href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
             }
             section("Set Thermostats Setpoints Based on ST Modes:") {
-                href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_automation_icon.png")
+                href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_setpoints_icon.png")
             }
         }
     }
@@ -3534,7 +3534,7 @@ def mainAutoPage(params) {
                     def preName = getTstatModeInputName(ts)
                     def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
                     def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tstatDesc}${tModeDelayDesc}" : null
-                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_setpoints_icon.png")
                 } 
             }
 
