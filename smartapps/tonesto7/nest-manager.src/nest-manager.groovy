@@ -1,4 +1,5 @@
 /*
+Test
     TODO:  
     * Add in 5th Mode Automation: 
         Select the modes you want to make changes for and the thermostats you want to change
@@ -3275,7 +3276,10 @@ def createInstallDataJson() {
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
                 
-    } catch (ex) { LogAction("createInstallDataJson: Exception: ${ex}", "error", true) }
+    } catch (ex) { 
+        LogAction("createInstallDataJson: Exception: ${ex}", "error", true) 
+        sendExceptionData(ex, "createInstallDataJson")
+    }
 }
 
 def renderInstallData() {
@@ -3348,6 +3352,7 @@ def sendAnalyticData(data, pathVal) {
             LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
         else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true) }
+        sendExceptionData(ex, "sendAnalyticData")
     }
     return result
 }
@@ -3384,12 +3389,16 @@ def sendAnalyticExceptionData(data, pathVal) {
 
 def removeAnalyticData(pathVal) {
     log.trace "removeAnalyticData(${pathVal}"
-    def result = false
-    httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
-        log.debug "resp status: ${resp?.status}"
-        if (resp?.status == 200) {
-            result = true
+    def result = true
+    try {
+        httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
+            log.debug "resp status: ${resp?.status}"
         }
+    }
+    catch (ex) {
+        LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "removeAnalyticData")
+        result = false
     }
     return result
 }
@@ -3815,6 +3824,7 @@ def checkTstatMode() {
             if (tModeTstats) {
                 tModeTstats?.each { ts -> 
                     def modes = settings?."${getTstatModeInputName(ts)}" ?: null
+                    log.debug "checkTstaModes modes: ${modes}"
                     if (modes && (curStMode in modes)) {
                         tstat2Use = ts
                         heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
