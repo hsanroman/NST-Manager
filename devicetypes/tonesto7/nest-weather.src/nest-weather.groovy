@@ -155,6 +155,7 @@ def generateEvent(Map eventData) {
             
             state.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+            state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
             debugOnEvent(eventData?.debug ? true : false)
             apiStatusEvent(eventData?.apiIssues)
             deviceVerEvent(eventData?.latestVer.toString())
@@ -468,6 +469,9 @@ def getWeatherAlerts(weatData) {
                         newAlerts = true
                         state.walert = pad(alert.description) // description
                         state.walertMessage = pad(alert.message) // message
+                        if(state?.weatherAlertNotify) {
+                            sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+                        }
                     }
                 }
 
@@ -558,6 +562,15 @@ private estimateLux(weatherIcon) {
     catch (ex) {
         log.error "estimateLux Exception: ${ex}"
         parent?.sendChildExceptionData("weather", ex.toString(), "estimateLux")
+    }
+}
+
+def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
+    if(recips || sms || push) {
+        parent?.sendMsg(msg, msgType, recips, sms, push)
+        //LogAction("Send Push Notification to $recips...", "info", true)
+    } else {
+        parent?.sendMsg(msg, msgType)
     }
 }
 

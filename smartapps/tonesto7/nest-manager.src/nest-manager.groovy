@@ -1,13 +1,7 @@
 /*
     TODO:  
-    * Add in 5th Mode Automation: 
-        Select the modes you want to make changes for and the thermostats you want to change
-        From there generate dynamic inputs with links to pages for each mode selected and then the thermostats under each mode
-        Allow user to set heat/cool temps and modes for each thermostat
-        I want my upstairs thermostat set to 70 and downstairs set to 78
     * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
     * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
-    * Unified CSS (WIP)
 */
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
@@ -47,15 +41,16 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "6-3-2016" }
+def appVerDate() { "6-5-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (June 3rd, 2016)\n" +
+    "V2.1.0 (June 5th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
     "Added: Ability to disable automations if the user so desires.\n" +
     "Added: View all Apps/Devices state data under diagnostics.\n" +
+    "Added: If weather device is installed you can now receive push notifications for weather alerts.\n" +
     "Updated: Child Device data updates have been modified to send all necessary data and remove the devices call back to the manager.\n" +
     "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
     "Updated: Added in app install and exception error sharing with the developer\n" +
@@ -359,6 +354,9 @@ def reviewSetupPage() {
             }
             if(!atomicState?.isInstalled && (thermostats || protects || presDevice || weatherDevice)) {
                 href "devNamePage", title: "Customize Device Names?", description: atomicState?.custLabelUsed ? "Tap to Modify..." : "Tap to configure...", state: (atomicState?.custLabelUsed ? "complete" : null), image: getAppImg("device_name_icon.png")
+            }
+            if(weatherDevice) {
+                input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
             }
         }
         section("Notifications:") {
@@ -829,7 +827,7 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 LogTrace("UpdateChildData >> Weather id: ${devId}")
                 def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "latestVer":latestWeathVer()?.ver?.toString()])
+                it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
                 atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 return true
             }
@@ -2457,7 +2455,7 @@ def LogTrace(msg) {
 
 def LogAction(msg, type = "debug", showAlways = false) {
     try {
-        def isDbg = parent ? (atomicState?.showDebug ? true : false) : (appDebug ? true : false)
+        def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
         if(showAlways) { Logger(msg, type) }
 
         else if (isDbg && !showAlways) { Logger(msg, type) }
@@ -2942,6 +2940,8 @@ def devPrefPage() {
         if(atomicState?.weatherDevice) {
             section("Weather Device:") {
                 href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, 
+                        image: getAppImg("weather_icon.png"))
                 //paragraph "Nothing to see here yet!!!"
             }
         }
@@ -3529,11 +3529,9 @@ def mainAutoPage(params) {
             if(autoType == "tMode" && !disableAutomation) {
                 section("Set Multiple Thermostat Temps based on ST Modes:") {
                     //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
-                    def tModeTstatDesc = tModeTstats ? "Thermostats Selected: ${tModeTstats?.size()}" : ""
+                    def tModeTstatDesc = tModeTstats ? getTstatModeDesc() : ""
                     def tModeDelayDesc = tModeDelay && tModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
-                    def preName = getTstatModeInputName(ts)
-                    def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
-                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tstatDesc}${tModeDelayDesc}" : null
+                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tModeDelayDesc}" : null
                     href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_setpoints_icon.png")
                 } 
             }
@@ -3551,6 +3549,7 @@ def mainAutoPage(params) {
                 }
                 section("Debug Options               ", hideable: true, hidden: true) {
                     input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+                    atomicState?.showDebug = showDebug
                 }
             }
         }
@@ -3706,7 +3705,7 @@ def tstatModePage() {
     def pName = tModePrefix()
     dynamicPage(name: "tstatModePage", title: "Thermostat Setpoint Mode Automation", uninstall: false, nextPage: "mainAutoPage") {
         section("Select the Thermostats you would like to adjust:") {
-            input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostat?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
+            input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
         }
         
         if (tModeTstats) {
@@ -3717,7 +3716,7 @@ def tstatModePage() {
                     def tStatMode = ts ? ts?.currentThermostatMode.toString().capitalize() : "unknown"
                     def tStatTemp = "${getDeviceTemp(ts)}°${atomicState?.tempUnit}"
                     def preName = getTstatModeInputName(ts)
-                    def tstatDesc = (settings?."${preName}" ? "Configured Modes: ${settings?."${preName}".size()}\n\n" : "")
+                    def tstatDesc = (settings?."${preName}" ? "Configured:${getTstatModeDesc(ts)}\n\n" : "")
                     
                     href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
@@ -3761,7 +3760,7 @@ def confTstatModePage(params) {
             input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
         }
         if (settings."${preName}") {
-            settings."${preName}"?.each { md ->
+            settings."${preName}"?.each { md -> 
                 section("(${md.toString().toUpperCase()}) Options:") {
                     def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
                     input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
@@ -3771,6 +3770,33 @@ def confTstatModePage(params) {
                 }
             }
         }
+    }
+}
+
+def getTstatModeDesc(tstat = null) {
+    if(tModeTstats) {
+        def dstr = ""
+        def num = 0
+        if(!tstat) {
+            tModeTstats?.each { ts ->
+                num = num+1
+                def preName = getTstatModeInputName(ts)
+                dstr += "${num > 1 ? "\n" : ""}${ts?.displayName}:"
+                if(settings?."${preName}") {
+                    settings?."${preName}".each { md ->
+                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                    }
+                }
+            }
+        } else {
+            def preName = getTstatModeInputName(tstat)
+            if(settings?."${preName}") {
+                settings?."${preName}".each { md ->
+                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                }
+            }
+        }
+        return dstr
     }
 }
 
@@ -4208,11 +4234,14 @@ private remSenEvtEval() {
     LogAction("remSenEvtEval.....", "trace", false)
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
-    if(getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60)) { 
-        log.debug "Remote Sensor: Too Soon to Evaluate Actions..."
+    if(getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60)) {
+        def schChkVal = ((remSenWaitVal() - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal() - getLastRemSenEvalSec())
+        runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
+        log.debug "Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in ($schChkVal seconds)"
         return 
     } 
     else { 
+        log.info "renSenEvtEval:  Evaluating Event..."
         atomicState?.lastRemSenEval = getDtNow()
         if (modesOk(remSenEvalModes) && (remSensorDay || remSensorNight) && remSenTstat && getRemSenModeOk()) {
             def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
@@ -4233,7 +4262,9 @@ private remSenEvtEval() {
             LogAction("Desired Temps - Heat: $remSenHtemp | Cool: $remSenCtemp", "trace", false)
             LogAction("Threshold Temp: $remSenTempDiffDegrees | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", false)
             
-            if(hvacMode == "off") { return }
+            if(hvacMode == "off") { 
+                LogAction("RemoteSensor Evaluation: Current Thermostat Mode is 'OFF' skipping Evaluation...", "info", true)
+                return }
             
             else if (hvacMode in ["cool","auto"]) {
                 if ((curSenTemp - remSenCtemp) >= threshold) {
