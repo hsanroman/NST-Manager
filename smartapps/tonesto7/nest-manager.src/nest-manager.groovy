@@ -3912,7 +3912,7 @@ def remSensorPage() {
                 }
                 if(remSenTstat) { 
                     getTstatCapabilities(remSenTstat, remSenPrefix())
-                    paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})", image: getAppImg("instruct_icon.png")
+                    paragraph "Current Temperature: (${tStatTemp})\nSetpoints: (♨ ${tStatHeatSp}°${atomicState?.tempUnit} | ❆ ${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode.toString().capitalize()})", state: "complete", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
                     if(remSenTstatsMir && !dupTstat) { 
                         remSenTstatsMir?.each { t ->
@@ -4318,8 +4318,8 @@ private remSenEvtEval() {
                         log.debug "remSenTstat.setHeatingSetpoint(${curTstatTemp - tempChangeVal}), OFF"
                     }
                 } else { 
-                    LogAction("FAN(HEAT): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", false)
-                    LogAction("FAN(HEAT): DiffOK (${getRemSenFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold)})", "trace", false)
+                    //LogAction("FAN(HEAT): $remSenRuleType | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", false)
+                    //LogAction("FAN(HEAT): DiffOK (${getRemSenFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold)})", "trace", false)
                     if (remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
                         if( getRemSenFanTempOk(curSenTemp, remSenHtemp, curHeatSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
                             log.debug "Running $remSenTstat Fan for HEAT Circulation..."
