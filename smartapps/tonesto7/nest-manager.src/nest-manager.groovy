@@ -1,5 +1,6 @@
 /*
     TODO:  
+    * Add in text to speech device selection.  Allow notification options such as warning reminders before turning off the thermostat.
     * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
     * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
 */
@@ -41,10 +42,10 @@ definition(
 }
 
 def appVersion() { "2.1.0" }
-def appVerDate() { "6-5-2016" }
+def appVerDate() { "6-6-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (June 5th, 2016)\n" +
+    "V2.1.0 (June 6th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
@@ -55,6 +56,7 @@ def appVerInfo() {
     "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
     "Updated: Added in app install and exception error sharing with the developer\n" +
     "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
+    "Fixed: Remote Sensor's should actually work like they were intended.\n" +
     "Fixed: Nest Log Out function to actually take you back to auth screen after clearing token\n\n" +
     
     "V2.0.8 (May 13th, 2016)\n" +
