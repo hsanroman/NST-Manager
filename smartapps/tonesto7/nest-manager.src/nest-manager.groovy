@@ -3465,18 +3465,25 @@ def mainAutoPage(params) {
             }
             if(autoType == "remSen" && !disableAutomation) {
                 section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-                    def remSenTstatTempDesc = remSenTstat ? "Thermostat Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
-                    def remSenTstatStatus = remSenTstat ? "\nThermostat Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
-                    def remSenDayDesc = remSensorDay ? ("\n${!remSensorNight ? "Remote" : "Day"} Sensor${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})") : ""
-                    def remSenNightDesc = remSensorNight ? ("\nNight Sensor${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})") : ""
-                    def remSenTypeUsed = getUseNightSensor() ? remSenNightDesc : remSenDayDesc
-                    def remSenSetTemps = (getRemSenCoolSetTemp() && getRemSenHeatSetTemp()) ? "\nHeat/Cool Set To: (${getRemSenHeatSetTemp()}°${atomicState?.tempUnit}/${getRemSenCoolSetTemp()}°${atomicState?.tempUnit})" : ""
-                    def remSenRuleType = remSenRuleType ? "\nRule-Type: (${getEnumValue(remSenRuleEnum(), remSenRuleType)})" : ""
+                    def remSenRuleType = remSenRuleType ? "Rule-Type: (${getEnumValue(remSenRuleEnum(), remSenRuleType)})" : ""
+                    def remSenTstatName = remSenTstat ? "\n\n${remSenTstat.displayName}:" : ""
+                    def remSenTstatTempDesc = remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
+                    def remSenTstatModeDesc = remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
+                    def remSenTstatFanModeDesc = (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""
+                    //remote sensor/Day
+                    def remSenDayModesDesc = remSensorDayModes ? "\n• Day Modes: (${remSensorDayModes.size()})" : ""
+                    def remSenSetTempsDay = (remSenDayHeatTemp && remSenDayCoolTemp) ? "\n• Heat/Cool Set To: (${remSenDayHeatTemp}°${atomicState?.tempUnit}/${remSenDayCoolTemp}°${atomicState?.tempUnit})" : ""
+                    def remSenDayDesc = remSensorDay ? ("\n\n${!remSensorNight ? "Remote" : "Day"} Sensor:${remSenDayModesDesc}\n• Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})${remSenSetTempsDay}") : ""
+                    //remote sensor Night
+                    def remSenNightModesDesc = remSensorNightModes ? "\n• Night Modes: (${remSensorNightModes.size()})" : ""
+                    def remSenSetTempsNight = (remSenNightHeatTemp && remSenNightCoolTemp) ? "\n• Heat/Cool Set To: (${remSenNightHeatTemp}°${atomicState?.tempUnit}/${remSenNightCoolTemp}°${atomicState?.tempUnit})" : ""
+                    def remSenNightDesc = remSensorNight ? ("\n\nNight Sensor:${remSenNightModesDesc}\n• Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})${remSenSetTempsNight}") : ""
+                    
                     def remSenSunDesc = remSenUseSunAsMode ? "\nSunrise: ${atomicState.sunriseTm} | Sunset: ${atomicState.sunsetTm}" : ""
                     def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModeDesc = remSenEvalModes ? "\nMode Filters Active" : ""
-                    def remSenDesc = (isRemSenConfigured() ? ("${remSenTstatTempDesc}${remSenTstatStatus}${remSenTypeUsed}${remSenSetTemps}${remSenRuleType}${remSenSunDesc}${remSenMotInUse}"+
+                    def remSenDesc = (isRemSenConfigured() ? ("${remSenRuleType}${remSenTstatName}${remSenTstatTempDesc}${remSenTstatModeDesc}${remSenTstatFanModeDesc}${remSenDayDesc}${remSenNightDesc}${remSenSunDesc}${remSenMotInUse}"+
                                                               "${remSenSwitInUse}${remSenModeDesc}\n\nTap to Modify...") : null)
                     href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: (remSenDesc ? "complete" : null), image: getAppImg("remote_sensor_icon.png")
                 }
@@ -3696,191 +3703,6 @@ def updateWeather() {
     }
 }
 
-/********************************************************************************  
-|                			MODE AUTOMATION CODE	     						|
-*********************************************************************************/
-def tModePrefix() { return "tMode" }
-
-def tstatModePage() {
-    def pName = tModePrefix()
-    dynamicPage(name: "tstatModePage", title: "Thermostat Setpoint Mode Automation", uninstall: false, nextPage: "mainAutoPage") {
-        section("Select the Thermostats you would like to adjust:") {
-            input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
-        }
-        
-        if (tModeTstats) {
-            tModeTstats?.each { ts ->
-                section("Configure ${ts?.displayName}:") {
-                    def tStatHeatSp = getTstatSetpoint(ts, "heat")
-                    def tStatCoolSp = getTstatSetpoint(ts, "cool")
-                    def tStatMode = ts ? ts?.currentThermostatMode.toString().capitalize() : "unknown"
-                    def tStatTemp = "${getDeviceTemp(ts)}°${atomicState?.tempUnit}"
-                    def preName = getTstatModeInputName(ts)
-                    def tstatDesc = (settings?."${preName}" ? "Configured:${getTstatModeDesc(ts)}\n\n" : "")
-                    
-                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
-                            params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
-                            state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
-                    paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})",
-                                image: getAppImg("instruct_icon.png")
-                }
-            }
-        }
-        if(tModeTstats) {
-            section("Delay Changes:") {
-                input (name: "tModeDelay", type: "bool", title: "Delay Changes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
-                if(tModeDelay) {
-                    input "tModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], 
-                            submitOnChange: true, image: getAppImg("delay_time_icon.png")
-                }
-            }
-        }
-
-        section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
-        }
-    }
-}
-
-def confTstatModePage(params) {
-    def devName
-    def devId
-    if (!params.devId && !params?.devName) { 
-        devId = atomicState?.curTstatModePageDevId
-        devName = atomicState?.curTstatModePageDevName } 
-    else {
-        atomicState.curTstatModePageDevName = params?.devName
-        atomicState.curTstatModePageDevId = params?.devId
-        devId = params?.devId
-        devName = params?.devName
-    }
-    dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
-        def preName = "tMode_|${devId}|_Modes"
-        section(" ") {
-            input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
-        }
-        if (settings."${preName}") {
-            settings."${preName}"?.each { md -> 
-                section("(${md.toString().toUpperCase()}) Options:") {
-                    def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
-                            submitOnChange: false, image: getAppImg("heat_icon.png")
-                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
-                            submitOnChange: false, image: getAppImg("cool_icon.png")
-                }
-            }
-        }
-    }
-}
-
-def getTstatModeDesc(tstat = null) {
-    if(tModeTstats) {
-        def dstr = ""
-        def num = 0
-        if(!tstat) {
-            tModeTstats?.each { ts ->
-                num = num+1
-                def preName = getTstatModeInputName(ts)
-                dstr += "${num > 1 ? "\n" : ""}${ts?.displayName}:"
-                if(settings?."${preName}") {
-                    settings?."${preName}".each { md ->
-                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
-                    }
-                }
-            }
-        } else {
-            def preName = getTstatModeInputName(tstat)
-            if(settings?."${preName}") {
-                settings?."${preName}".each { md ->
-                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
-                }
-            }
-        }
-        return dstr
-    }
-}
-
-def getTstatConfigured(tstat) {
-    def result = true
-    def preName = getTstatModeInputName(tstat)
-    if(settings?."${preName}") {
-        settings?."${preName}".each { md ->
-            if (!settings?."${preName}_${md}_HeatTemp" || !settings?."${preName}_${md}_CoolTemp") { return false }
-        }
-    } else { return false }
-    return result
-}
-
-def getTstatModeInputName(tstat) {
-    if(tstat) {
-        return "tMode_|${tstat?.device.deviceNetworkId}|_Modes"
-    }
-    return null
-}
-
-def isTstatModesConfigured() {
-    def res = []
-    if (tModeTstats) {
-        tModeTstats.each { ts ->
-            res << [ getTstatConfigured(ts) ]
-        }
-        if(!res?.contains("false")) { return true }
-    } else { return false}
-    return false
-}
-
-def tModeModeEvt(evt) { 
-    log.debug "tModeModeEvt: Mode is (${evt?.value})"
-    if (disableAutomation) { return }
-    else {
-        if(tModeDelay) {
-            LogAction("tModeModeEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
-            runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
-        } else {
-            checkTstatMode()
-        }
-    } 
-}
-
-def checkTstatMode() {
-    log.trace "checkTstatMode..."
-    try {
-        if (disableAutomation) { return }
-        //else if(!tModeScheduleOk()) { 
-          //  LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
-        //} 
-        else {
-            def curStMode = location?.mode
-            log.debug "curStMode: $curStMode"
-            def heatTemp = 0
-            def coolTemp = 0
-            def tstatOperMode
-            if (tModeTstats) {
-                tModeTstats?.each { ts -> 
-                    def modes = settings?."${getTstatModeInputName(ts)}" ?: null
-                    log.debug "checkTstatModes modes: ${modes}"
-                    if (modes && (curStMode in modes)) {
-                        tstatOperMode = ts?.currentThermostatMode.toString()
-                        if(tstatOperMode in ["heat", "auto"]) {
-                            heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
-                            LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
-                            ts?.setHeatingSetpoint(heatTemp.toInteger())
-                        }
-                        if(tstatOperMode in ["cool", "auto"]) {
-                            coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
-                            LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
-                            ts?.setCoolingSetpoint(coolTemp.toInteger())
-                        }
-                    }
-                }
-            }
-        }
-    } catch (ex) { 
-        LogAction("checkTstaMode Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "checkTstatMode")
-    }
-}
-
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
@@ -3912,7 +3734,9 @@ def remSensorPage() {
                 }
                 if(remSenTstat) { 
                     getTstatCapabilities(remSenTstat, remSenPrefix())
-                    paragraph "Current Temperature: (${tStatTemp})\nSetpoints: (♨ ${tStatHeatSp}°${atomicState?.tempUnit} | ❆ ${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode.toString().capitalize()})", state: "complete", image: getAppImg("instruct_icon.png")
+                    paragraph "• Temp: (${tStatTemp})\n• Mode: (${tStatMode.toString().capitalize()})${(remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""}"+
+                            "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})",
+                            state: "complete", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
                     if(remSenTstatsMir && !dupTstat) { 
                         remSenTstatsMir?.each { t ->
@@ -3939,11 +3763,11 @@ def remSensorPage() {
                         input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
                         input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         //paragraph " ", image: " "
-                        def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit}"
+                        def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
-                            href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                            href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                             //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
-                        } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
+                        } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
                     }
                 }
                 if(remSensorDay && ((!remSenHeatTempsReq() || !remSenCoolTempsReq()) || (remSenDayHeatTemp && remSenDayCoolTemp))) {
@@ -3953,11 +3777,11 @@ def remSensorPage() {
                             input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                             input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
                             //paragraph " ", image: " "
-                            def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} ${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit}"
+                            def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
-                                href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", image: getAppImg("blank_icon.png")
+                                href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                                 //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
-                            } else { paragraph "${tmpVal}", image: getAppImg("instruct_icon.png") }
+                            } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
                         }
                     }
                 }
@@ -4241,7 +4065,7 @@ private remSenEvtEval() {
         return 
     } 
     else { 
-        log.info "renSenEvtEval:  Evaluating Event..."
+        log.info "remSenEvtEval:  Evaluating Event..."
         atomicState?.lastRemSenEval = getDtNow()
         if (modesOk(remSenEvalModes) && (remSensorDay || remSensorNight) && remSenTstat && getRemSenModeOk()) {
             def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
@@ -5085,6 +4909,191 @@ def getNestLocPres() {
     else if(!parent?.locationPresence()) { return null }
     else {
         return parent?.locationPresence()
+    }
+}
+
+/********************************************************************************  
+|                   ST MODE THERMOSTAT SETPOINT AUTOMATION CODE	     		    |
+*********************************************************************************/
+def tModePrefix() { return "tMode" }
+
+def tstatModePage() {
+    def pName = tModePrefix()
+    dynamicPage(name: "tstatModePage", title: "Thermostat Setpoint Mode Automation", uninstall: false, nextPage: "mainAutoPage") {
+        section("Select the Thermostats you would like to adjust:") {
+            input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
+        }
+        
+        if (tModeTstats) {
+            tModeTstats?.each { ts ->
+                section("Configure ${ts?.displayName}:") {
+                    def tStatHeatSp = getTstatSetpoint(ts, "heat")
+                    def tStatCoolSp = getTstatSetpoint(ts, "cool")
+                    def tStatMode = ts ? ts?.currentThermostatMode.toString().capitalize() : "unknown"
+                    def tStatTemp = "${getDeviceTemp(ts)}°${atomicState?.tempUnit}"
+                    def preName = getTstatModeInputName(ts)
+                    def tstatDesc = (settings?."${preName}" ? "Configured:${getTstatModeDesc(ts)}\n\n" : "")
+                    
+                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
+                            params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
+                            state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
+                    paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})",
+                                image: getAppImg("instruct_icon.png")
+                }
+            }
+        }
+        if(tModeTstats) {
+            section("Delay Changes:") {
+                input (name: "tModeDelay", type: "bool", title: "Delay Changes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png"))
+                if(tModeDelay) {
+                    input "tModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], 
+                            submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                }
+            }
+        }
+
+        section("Help:") {
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+        }
+    }
+}
+
+def confTstatModePage(params) {
+    def devName
+    def devId
+    if (!params.devId && !params?.devName) { 
+        devId = atomicState?.curTstatModePageDevId
+        devName = atomicState?.curTstatModePageDevName } 
+    else {
+        atomicState.curTstatModePageDevName = params?.devName
+        atomicState.curTstatModePageDevId = params?.devId
+        devId = params?.devId
+        devName = params?.devName
+    }
+    dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
+        def preName = "tMode_|${devId}|_Modes"
+        section(" ") {
+            input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
+        }
+        if (settings."${preName}") {
+            settings."${preName}"?.each { md -> 
+                section("(${md.toString().toUpperCase()}) Options:") {
+                    def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
+                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
+                            submitOnChange: false, image: getAppImg("heat_icon.png")
+                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
+                            submitOnChange: false, image: getAppImg("cool_icon.png")
+                }
+            }
+        }
+    }
+}
+
+def getTstatModeDesc(tstat = null) {
+    if(tModeTstats) {
+        def dstr = ""
+        def num = 0
+        if(!tstat) {
+            tModeTstats?.each { ts ->
+                num = num+1
+                def preName = getTstatModeInputName(ts)
+                dstr += "${num > 1 ? "\n" : ""}${ts?.displayName}:"
+                if(settings?."${preName}") {
+                    settings?."${preName}".each { md ->
+                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                    }
+                }
+            }
+        } else {
+            def preName = getTstatModeInputName(tstat)
+            if(settings?."${preName}") {
+                settings?."${preName}".each { md ->
+                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                }
+            }
+        }
+        return dstr
+    }
+}
+
+def getTstatConfigured(tstat) {
+    def result = true
+    def preName = getTstatModeInputName(tstat)
+    if(settings?."${preName}") {
+        settings?."${preName}".each { md ->
+            if (!settings?."${preName}_${md}_HeatTemp" || !settings?."${preName}_${md}_CoolTemp") { return false }
+        }
+    } else { return false }
+    return result
+}
+
+def getTstatModeInputName(tstat) {
+    if(tstat) {
+        return "tMode_|${tstat?.device.deviceNetworkId}|_Modes"
+    }
+    return null
+}
+
+def isTstatModesConfigured() {
+    def res = []
+    if (tModeTstats) {
+        tModeTstats.each { ts ->
+            res << [ getTstatConfigured(ts) ]
+        }
+        if(!res?.contains("false")) { return true }
+    } else { return false}
+    return false
+}
+
+def tModeModeEvt(evt) { 
+    log.debug "tModeModeEvt: Mode is (${evt?.value})"
+    if (disableAutomation) { return }
+    else {
+        if(tModeDelay) {
+            LogAction("tModeModeEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), tModeDelayVal)})", "info", true)
+            runIn( tModeDelayVal.toInteger(), "checkTstatMode", [overwrite: true] )
+        } else {
+            checkTstatMode()
+        }
+    } 
+}
+
+def checkTstatMode() {
+    log.trace "checkTstatMode..."
+    try {
+        if (disableAutomation) { return }
+        //else if(!tModeScheduleOk()) { 
+          //  LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
+        //} 
+        else {
+            def curStMode = location?.mode
+            log.debug "curStMode: $curStMode"
+            def heatTemp = 0
+            def coolTemp = 0
+            def tstatOperMode
+            if (tModeTstats) {
+                tModeTstats?.each { ts -> 
+                    def modes = settings?."${getTstatModeInputName(ts)}" ?: null
+                    log.debug "checkTstatModes modes: ${modes}"
+                    if (modes && (curStMode in modes)) {
+                        tstatOperMode = ts?.currentThermostatMode.toString()
+                        if(tstatOperMode in ["heat", "auto"]) {
+                            heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
+                            LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
+                            ts?.setHeatingSetpoint(heatTemp.toInteger())
+                        }
+                        if(tstatOperMode in ["cool", "auto"]) {
+                            coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
+                            LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
+                            ts?.setCoolingSetpoint(coolTemp.toInteger())
+                        }
+                    }
+                }
+            }
+        }
+    } catch (ex) { 
+        LogAction("checkTstaMode Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "checkTstatMode")
     }
 }
 
