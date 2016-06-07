@@ -155,6 +155,7 @@ def generateEvent(Map eventData) {
             
             state.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+            state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
             debugOnEvent(eventData?.debug ? true : false)
             apiStatusEvent(eventData?.apiIssues)
             deviceVerEvent(eventData?.latestVer.toString())
@@ -468,6 +469,9 @@ def getWeatherAlerts(weatData) {
                         newAlerts = true
                         state.walert = pad(alert.description) // description
                         state.walertMessage = pad(alert.message) // message
+                        if(state?.weatherAlertNotify) {
+                            sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+                        }
                     }
                 }
 
@@ -561,6 +565,28 @@ private estimateLux(weatherIcon) {
     }
 }
 
+def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
+    if(recips || sms || push) {
+        parent?.sendMsg(msg, msgType, recips, sms, push)
+        //LogAction("Send Push Notification to $recips...", "info", true)
+    } else {
+        parent?.sendMsg(msg, msgType)
+    }
+}
+
+def getDtNow() {
+    def now = new Date()
+    return formatDt(now)
+}
+
+def formatDt(dt) {
+    def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+    else {
+        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+    }
+    return tf.format(dt)
+}
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
@@ -801,6 +827,7 @@ def getWeatherHtml() {
                     <div class="row topBorder">
                     <div class="centerText offset-by-three six columns">
                         <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
+                        <b>Updated:</b> ${getDtNow().toString()}
                     </div>    
                     </div>
             
