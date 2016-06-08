@@ -41,11 +41,11 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.1.0" }
+def appVersion() { "2.2.0" }
 def appVerDate() { "6-7-2016" }
 def appVerInfo() {
     
-    "V2.1.0 (June 7th, 2016)\n" +
+    "V2.2.0 (June 7th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "New: You can now select devices to send Speech Notifications for Contact Automations.\n" +
@@ -3994,14 +3994,13 @@ def remSenTstatOperEvt(evt) {
 }
 
 def remSenTstatFanSwitchCheck(evt) {
-    log.trace "remSenTstatFanSwitchCheck..."
+    LogAction("remSenTstatFanSwitchCheck...", "trace", false)
     try {
         def hvacFanOn = (evt.fan && evt.fan in ["fanOn", "fanCirculate"]) ? true : false
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
         def remSenReqSetPoint = determRemSenReqSetpointTemp()
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
         def tempDiff = Math.abs(remSenReqSetPoint - curSenTemp)
-        log.debug "remSenTstatFanSwitchHvacModeFilter: $remSenTstatFanSwitchHvacModeFilter"
         if(disableAutomation) { return }
         else if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter =! hvacMode)) {
             LogAction("remSenTstatFanSwitchCheck: Skipping Because Thermostat Mode does not Match the required Mode to Trigger Running of the Fan", "info", true)
