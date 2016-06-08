@@ -3918,7 +3918,6 @@ def getRemSenTstatFanSwitchesSpdChk() {
             if(checkFanSpeedSupport(sw)) { devCnt = devCnt+1 }
         }
     }
-    log.debug "devCnt: $devCnt"
     return (devCnt >= 1) ? true : false
 }
 
