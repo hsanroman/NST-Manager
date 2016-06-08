@@ -43,45 +43,47 @@ definition(
 def appVersion() { "2.2.0" }
 def appVerDate() { "6-8-2016" }
 def appVerInfo() {
-    
-    "V2.2.0 (June 8th, 2016)\n" +
-    "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
-    "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
-    "New: You can now select devices to send Speech Notifications for Contact Automations.\n" +
-    "New: Remote Sensors now supports selection of switches to trigger when heating/cooling. It also supports fan speeds based on threshold temps\n" +    
-    "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
-    "Added: Ability to disable automations if the user so desires.\n" +
-    "Added: View all Apps/Devices state data under diagnostics.\n" +
-    "Added: If weather device is installed you can now receive push notifications for weather alerts.\n" +
-    "Updated: Child Device data updates have been modified to send all necessary data and remove the devices call back to the manager.\n" +
-    "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
-    "Updated: Added in app install and exception error sharing with the developer\n" +
-    "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
-    "Fixed: Remote Sensor's should actually work like they were intended.\n" +
-    "Fixed: Nest Log Out function to actually take you back to auth screen after clearing token\n\n" +
-    
-    "V2.0.8 (May 13th, 2016)\n" +
-    "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
-    
-    "V2.0.7 (May 3rd, 2016)\n" +
-    "Fixed UI to work with the new mobile app design.\n\n" +
-    
-    "V2.0.6 (May 2nd, 2016)\n" +
-    "Added: Showing what types of automations are installed now\n\n" +
+    def str = ""
+    str += "V2.2.0 (June 8th, 2016):"
+    str += "\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+    str += "\n\n• NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
+    str += "\n\n• NEW: You can now select devices to send Speech Notifications for Contact Automations."
+    str += "\n\n• NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
+    str += "\n\n• ADDED: You can now use Day,Time,Mode filters in certain Nest Mode Automations."
+    str += "\n\n• ADDED: Ability to Disable each automations individually."
+    str += "\n\n• ADDED: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts."
+    str += "\n\n• UPDATED: There is new install setup now that flows much better and allows display of the important available options better to users."
+    str += "\n\n• UPDATED: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly."
+    str += "\n\n• NEW: Analytics have been added to the app to share installation data, it will also send generic exception error data. "
+    str += "  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out."
+    str += "\n\n• FIXED: Remote Sensor's Fan circulation should now work like it was intended."
+    str += "\n\n• FIXED: Nest Log Out function to actually take you back to auth screen after clearing token."
+    str += "\n\n• ADDED: View all Apps/Devices state data under diagnostics."
+    str += "\n\n• UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
-    "V2.0.4 (Apr 28th, 2016)\n" +
-    "Fixed: Very minor bug fixes\n\n" +
+    str += "\n\n\nV2.0.8 (May 13th, 2016):"
+    str += "\n• UPDATED: Certain Inputs to turn blue when there settings have been configured."
     
-    "V2.0.3 (Apr 27th, 2016)\n" +
-    "Fixed: Bug found when unselecting a location nothing would be found again.\n" +
-    "Updated: Changed the way that data was sent to presence device\n"+
-    "Added: Support for Custom Child Notifications...\n\n" +
+    str += "\n\n\nV2.0.7 (May 3rd, 2016):"
+    str += "\n• FIXED: UI to work with the new mobile app design."
+    
+    str += "\n\n\nV2.0.6 (May 2nd, 2016):"
+    str += "\n• ADDED: Showing what types of automations are installed now."
 
-    "V2.0.1 (Apr 22nd, 2016)\n" +
-    "Fixed: Everything\n\n" +
+    str += "\n\n\nV2.0.4 (Apr 28th, 2016):"
+    str += "\n• FIXED: Very minor bug fixes"
+    
+    str += "\n\n\nV2.0.3 (Apr 27th, 2016):"
+    str += "\n• FIXED: Bug found when unselecting a location nothing would be found again."
+    str += "\n\n• UPDATED: Changed the way that data was sent to presence device"
+    str += "\n\n• ADDED: Support for Custom Child Notifications..."
 
-    "V2.0.0 (Apr 21th, 2016)\n" +
-    "Fixed: Everything"
+    str += "\n\n\nV2.0.1 (Apr 22nd, 2016):"
+    str += "\n• FIXED: Everything"
+
+    str += "\n\n\nV2.0.0 (Apr 21th, 2016):"
+    str += "\n• FIXED: Everything"
+    return str
 }
 
 preferences {
