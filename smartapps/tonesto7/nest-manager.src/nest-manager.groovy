@@ -1296,6 +1296,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
                 LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
                 atomicState?.apiIssues = false
                 result = true
+                if(!atomicState?.apiCommandCnt) { atomicState?.apiCommandCnt = 1 }
+                else { atomicState?.apiCommandCnt = atomicState?.apiCommandCnt+1 }
             }
             else if(resp.status == 400) {
                 LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
@@ -2514,6 +2516,7 @@ def setStateVar(frc = false) {
             if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
             if(!atomicState?.custLabelUsed)             { atomicState?.custLabelUsed = false }
             if(!atomicState?.useAltNames)               { atomicState.useAltNames = false }
+            if(!atomicState?.apiCommandCnt)             { atomicState?.apiCommandCnt = 0 }
             atomicState?.stateVarUpd = true
             atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
         }
@@ -3079,10 +3082,11 @@ def nestInfoPage () {
                 href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", image: getAppImg("protect_icon.png")
             }
         }
-        section("Last Nest Command") {
+        section("Recent Command") {
+            def cmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
             def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
             def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
-            paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
+            paragraph "• Commands Sent: (${cmdCnt})\n• Last Cmd: (${cmdTxt})\n• Last Date: (${cmdDt})"
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
@@ -3091,10 +3095,10 @@ def nestInfoPage () {
 }
 
 def structInfoPage () {
-    dynamicPage(name: "structInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
         def noShow = [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]
         section("") {
-            paragraph "Locations", image: getAppImg("nest_structure_icon.png")
+            paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
         }
         atomicState?.structData?.each { struc ->
             if (struc?.key == atomicState?.structures) {
@@ -3113,12 +3117,11 @@ def structInfoPage () {
     }
 }
 
-
 def tstatInfoPage () {
-    dynamicPage(name: "tstatInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
         def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
-            paragraph "Thermostats", image: getAppImg("nest_like.png")
+            paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
         }
         atomicState?.thermostats?.sort().each { tstat ->
             def str = ""
@@ -3136,10 +3139,10 @@ def tstatInfoPage () {
 }
 
 def protInfoPage () {
-    dynamicPage(name: "protInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
         def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
-            paragraph "Protects", image: getAppImg("protect_icon.png")
+            paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
         }
         atomicState?.protects.sort().each { prot ->
             def str = ""
@@ -3314,9 +3317,10 @@ def createInstallDataJson() {
         def protCnt = atomicState?.protects?.size() ?: 0
         def automations = !atomicState?.installedAutomations ? "No Automations Installed" : atomicState?.installedAutomations
         def tz = getTimeZone()?.ID?.toString()
+        def apiCmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "automations":automations, "timeZone":tz, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString() 
+            "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
