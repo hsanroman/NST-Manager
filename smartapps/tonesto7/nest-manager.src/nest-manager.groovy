@@ -1,6 +1,5 @@
 /*
     TODO:  
-    * Add in text to speech device selection.  Allow notification options such as warning reminders before turning off the thermostat.
     * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
     * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
 */
@@ -42,10 +41,10 @@ definition(
 }
 
 def appVersion() { "2.2.0" }
-def appVerDate() { "6-7-2016" }
+def appVerDate() { "6-8-2016" }
 def appVerInfo() {
     
-    "V2.2.0 (June 7th, 2016)\n" +
+    "V2.2.0 (June 8th, 2016)\n" +
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "New: You can now select devices to send Speech Notifications for Contact Automations.\n" +
@@ -206,8 +205,8 @@ def authPage() {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
             section(""){
-                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
-                paragraph "FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly...", state: null
+                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
+                paragraph "❖ FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
@@ -220,8 +219,8 @@ def mainPage() {
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
-            if(!appDevType() && isAppUpdateAvail()) {
-                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update the code.",
+            if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
+                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\nPlease visit the IDE to update the code.",
                         image: getAppImg("update_icon.png")
             }
         }
@@ -384,7 +383,7 @@ def reviewSetupPage() {
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             if (optInAppAnalytics) {
-                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Data Shared with Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
         section(" ") {
@@ -1377,15 +1376,17 @@ def appUpdateNotify() {
 }
 
 def updateHandler() {
-    log.trace "updateHandler..."
-    if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
-        sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
-        atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
-    }
-    if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
-        if(getLastUpdateMsgSec() > 86400) {
-            sendMsg("Info", "${atomicState?.updater?.updateMsg}")
-            atomicState?.lastUpdateMsgDt = getDtNow()
+    //log.trace "updateHandler..."
+    if(atomicState?.isInstalled) {
+        if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
+            sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
+            atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
+        }
+        if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+            if(getLastUpdateMsgSec() > 86400) {
+                sendMsg("Info", "${atomicState?.updater?.updateMsg}")
+                atomicState?.lastUpdateMsgDt = getDtNow()
+            }
         }
     }
 }
@@ -1565,9 +1566,8 @@ def getWebFileData() {
             if(resp.data) {
                 LogAction("Getting Latest Data from appParams.json File...", "info", true)
                 atomicState?.appData = resp?.data
-                atomicState?.stateSize = state?.toString().length()
-                updateHandler()
                 atomicState?.lastWebUpdDt = getDtNow()
+                updateHandler()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1644,30 +1644,30 @@ def isNewUpdateAvail(newVer, curVer) {
 }
 
 def isAppUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.app.ver, appVersion())) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.app?.ver, appVersion())) {
         return true
     } else { return false }
 }
 def isPresUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.presence.ver, atomicState?.presDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer)) {
         return true
     } else { return false }
 }
 
 def isProtUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.protect.ver, atomicState?.pDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.protect?.ver, atomicState?.pDevVer)) {
         return true
     } else { return false }
 }
 
 def isTstatUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.thermostat.ver, atomicState?.tDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.thermostat?.ver, atomicState?.tDevVer)) {
         return true
     } else { return false }
 }
 
 def isWeathUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.weather?.ver, atomicState?.weathAppVer)) {
         return true
     } else { return false }
 }
@@ -2872,7 +2872,7 @@ def notifPrefPage() {
             if(!location.contactBookEnabled) {
                 input(name: "usePush", type: "bool", title: "Send Push Notitifications", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
             } else {
-                input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png")) {
+                input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
                     input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
                 }
             } 
@@ -3024,7 +3024,7 @@ def infoPage () {
 def uninstallPage() {
     dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
         section("") {
-            paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure all devices are removed from any routines/rules/smartapps before tapping Remove."
+            paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
         }
     }
 }
@@ -3424,9 +3424,13 @@ def removeAnalyticData(pathVal) {
         }
     }
     catch (ex) {
-        LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "removeAnalyticData")
-        result = false
+        if(ex instanceof groovyx.net.http.ResponseParseException) {
+            LogAction("removeAnalyticData: Response: ${ex.message}", "info", true)
+        } else {
+            LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
+            sendExceptionData(ex, "removeAnalyticData")
+            result = false
+        }
     }
     return result
 }
@@ -4724,7 +4728,7 @@ def contactWatchPage() {
 }
 
 def isConWatConfigured() {
-    return (conWatContacts && conWatTstat) ? true : false
+    return (conWatContacts && conWatTstat && conWatOffDelay) ? true : false
 }
 
 def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
@@ -5283,12 +5287,12 @@ def setNotificationPage(params) {
                         image: getAppImg("notification_icon.png")
         }
         if(settings["${pName}PushMsgOn"]) {
-            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications..."
-            section("${notifDesc}:") {
+            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications:\n(Manager App Recipients are Used by Default)"
+            section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
                     input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
                 } else {
-                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
+                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("recipient_icon.png")) {
                         input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false)
                     }
                 }
@@ -5302,13 +5306,13 @@ def setNotificationPage(params) {
         
         if(allowSpeech) {
             section("Voice Notification Preferences:") {
-                input "${pName}AllowSpeechNotif", "bool", title: "Speak Notitifications", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
+                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice Notitifications?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
                 if(settings["${pName}AllowSpeechNotif"]) {
-                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false,
-                            submitOnChange: true, image: getAppImg("speech_icon.png")
                     input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", multiple: true, required: false, 
                             submitOnChange: true, image: getAppImg("media_player.png")
+                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false,
+                            submitOnChange: true, image: getAppImg("speech2_icon.png")
                     if(settings["${pName}SpeechMediaPlayer"]) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
                         input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
@@ -5323,7 +5327,7 @@ def getNotifConfigDesc() {
     def pName = getPagePrefix()
     def recipDesc = getRecipientDesc() ?: ""
     def schedDesc = (getNotifSchedDesc() ? "${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected..." : "")
-    def speechDesc = (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "\nSpeech Devices: Active" : ""
+    def speechDesc = (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "${schedDesc == "" ? "" : "\n"}Speech Devices: Active" : ""
     def notifDesc = (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ? 
             "\n\nTap to Modify..." : "Tap to Configure..."
     return "${recipDesc}${schedDesc}${speechDesc}${notifDesc}"
@@ -5363,7 +5367,7 @@ def getRecipientsNames(val) {
 }
 
 def getRecipientDesc() {
-    return ((settings["${getPagePrefix()}NotifRecips"]) || (settings["${getPagePrefix()}NotifPhones"] || settings["${getPagePrefix()}NotifUsePush"])) ? "${getRecipientsNames(settings["${getPagePrefix()}NotifRecips"])}" : null
+    return ((settings?."${getPagePrefix()}NotifRecips") || (settings?."${getPagePrefix()}NotifPhones" || settings?."${getPagePrefix()}NotifUsePush")) ? "${getRecipientsNames(settings?."${getPagePrefix()}NotifRecips")}" : null
 }
 
 def setNotificationTimePage() {
