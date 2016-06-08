@@ -3092,47 +3092,44 @@ def nestInfoPage () {
 
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 15, install: false) {
+        def noShow = [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]
         section("") {
             paragraph "Locations", image: getAppImg("nest_structure_icon.png")
         }
-        for(str in atomicState?.structData) {
-            if (str?.key == atomicState?.structures) {
-                section("Location Name: ${str?.value?.name}") {
-                    str?.value.each { item ->
-                        switch (item?.key) {
-                            case [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]:
-                                break
-                            default:
-                                paragraph "${item?.key?.toString().capitalize()}: ${item?.value}"
-                                break
-                        }
+        atomicState?.structData?.each { struc ->
+            if (struc?.key == atomicState?.structures) {
+                def str = ""
+                def cnt = 0
+                section("Location Name: ${struc?.value?.name}") {
+                    def data = struc?.value.findAll { !(it.key in noShow) }
+                    data?.sort().each { item ->
+                        cnt = cnt+1
+                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                     }
+                    paragraph "${str}"
                 }
             }
         }
     }
 }
 
+
 def tstatInfoPage () {
     dynamicPage(name: "tstatInfoPage", refreshInterval: 15, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
             paragraph "Thermostats", image: getAppImg("nest_like.png")
         }
-        for(tstat in atomicState?.thermostats) {
-            def devs = []
+        atomicState?.thermostats?.sort().each { tstat ->
+            def str = ""
+            def cnt = 0
             section("Thermostat Name: ${tstat?.value}") {
-                atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
-                    switch (dev?.key) {
-                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
-                            break
-                        default:
-                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
-                            break
-                    }
+                def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                 }
-                devs?.sort().each { item ->
-                    paragraph "${item}"
-                }
+                paragraph "${str}"
             }
         }
     }
@@ -3140,25 +3137,20 @@ def tstatInfoPage () {
 
 def protInfoPage () {
     dynamicPage(name: "protInfoPage", refreshInterval: 15, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
             paragraph "Protects", image: getAppImg("protect_icon.png")
         }
-        atomicState?.protects.each { prot ->
-            def devs = []
+        atomicState?.protects.sort().each { prot ->
+            def str = ""
+            def cnt = 0
             section("Protect Name: ${prot?.value}") {
-                atomicState?.deviceData?.smoke_co_alarms[prot?.key].each { dev ->
-                    //log.debug "prot dev: $dev"
-                    switch (dev?.key) {
-                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
-                            break
-                        default:
-                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
-                            break
-                    }
+                def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                 }
-                devs?.sort().each { item ->
-                    paragraph "${item}"
-                }
+                paragraph "${str}"
             }
         }
     }
@@ -3167,7 +3159,7 @@ def protInfoPage () {
 def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
         section("") {
-            paragraph "This page will allow you to view/export diagnostic state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
+            paragraph "This page will allow you to view all diagnostic data related to the apps/devices in order to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
         }
         section("State Size Info:") {
             paragraph "Current State Size: ${getStateSizePerc()}% (${getStateSize()})"
@@ -3190,89 +3182,114 @@ def diagPage () {
 }
 
 def appParamsDataPage() {
-    dynamicPage(name: "appParamsDataPage", install: false) {
+    dynamicPage(name: "appParamsDataPage", refreshInterval: 30, install: false) {
         if(atomicState?.appData) {
             atomicState?.appData.sort().each { sec ->
                 section("${sec?.key.toString().capitalize()}:") {
+                    def str = ""
+                    def cnt = 0
                     sec?.value.each { par ->
-                        paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                        cnt = cnt+1
+                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${par?.key.toString()}: ${par?.value}"
                     }
+                    paragraph "${str}"
                 }
             }
         }
     }
 }
 
+
+
+
 def managAppDataPage() {
-    dynamicPage(name: "managAppDataPage", refreshInterval:60, install: false) {
-        def noShow = ["accessToken", "authToken"]
-        settings?.sort().each { item -> !(item.key in noShow)
-            section("Setting: ${item?.key.toString().capitalize()}") {
-                paragraph "${item?.value}"
+    dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
+        def noShow = ["accessToken", "authToken" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
+        section("SETTINGS DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = settings?.findAll { !(it.key in noShow) }
+               data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
             }
+            paragraph "${str}"
         }
-        state?.sort().each { item -> !(item.key in noShow)
-            section("State Variable: ${item?.key.toString().capitalize()}") {
-                paragraph "${item?.value}"
+        section("STATE DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = state?.findAll { !(it.key in noShow) }
+            data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
             }
+            paragraph "${str}"
         }
-        getMetadata()?.sort().each { item -> !(item.key in noShow)
-            section("Metadata: ${item?.key.toString().capitalize()}") {
-                 paragraph "${item?.value}"
+        section("APP METADATA:") {
+            def str = ""
+            def cnt = 0
+            getMetadata()?.sort().each { item -> 
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n\n"}${item?.key.toString().toUpperCase()}:\n\n"
+                def cnt2 = 0
+                item?.value.sort().each { vals ->
+                    cnt2 = cnt2+1
+                    str += "${(cnt2 <= 1) ? "" : "\n\n"}• ${vals?.key.toString()}: (${vals?.value})"
+                }
             }
+            paragraph "${str}"
         }
     }
 }
 
 def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:60, install: false) {
-        log.debug "meta: ${getMetadata()}"
-        app.each { item ->
-            log.debug "item: $item"
-        }
+    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
         getAllChildDevices().each { dev ->
+            def str = ""
             section("${dev?.displayName.toString().capitalize()}:") {
-                paragraph " ----------------STATE DATA---------------"
+                str += "   --------------STATE DATA--------------"
                 dev?.getDeviceStateData()?.sort().each { par ->
-                    paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                 }
-                paragraph " "
-                paragraph " ---------SUPPORTED ATTRIBUTES---------"
+                str += "\n\n\n  ---------SUPPORTED ATTRIBUTES---------"
                 def devData = dev?.supportedAttributes.collect { it as String }
                 devData?.sort().each { 
-                    paragraph "${"$it" as String}: ${dev.currentValue("$it")}"
+                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
                 }
-                paragraph " "
-                paragraph " ---------SUPPORTED COMMANDS---------"
+                   str += "\n\n\n  ---------SUPPORTED COMMANDS---------"
                 dev?.supportedCommands?.sort().each { cmd ->
-                    paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
                 }
-                paragraph " "
-                paragraph " --------DEVICE CAPABILITIES---------"
+                
+                str += "\n\n\n -----------DEVICE CAPABILITIES-----------"
                 dev?.capabilities?.sort().each { cap ->
-                    paragraph "${cap}"
+                    str += "\n\n• ${cap}"
                 }
+                paragraph "${str}"
             }
         }
     }
 }
 
 def childAppDataPage() {
-    dynamicPage(name: "childAppDataPage", refreshInterval:60, install:false) {
+    dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
         def apps = getChildApps()
         if(apps) {
             apps?.each { ca ->
+                def str = ""
                 section("${ca?.label.toString().capitalize()}:") {
-                    paragraph "     ***********SETTINGS DATA***********", image: " "
+                    str += "--------------SETTINGS DATA--------------"
                     def setData = ca?.getSettingsData()
                     setData?.sort().each { sd ->
-                        paragraph "Input: ${sd?.key.toString()}: ${sd?.value}"
+                        str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
                     } 
                     def appData = ca?.getAppStateData()
-                    paragraph "        ***********STATE DATA***********", image: " "
+                    str += "\n\n\n ------------STATE DATA------------"
                     appData?.sort().each { par ->
-                        paragraph "State: ${par?.key.toString()}: ${par?.value}"
+                        str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                     }
+                    paragraph "${str}"
                 }
             }
         } else {
@@ -3574,7 +3591,7 @@ def mainAutoPage(params) {
                 } 
             }
 
-            if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured()) {
+            if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured())) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
                     if(!atomicState?.disableAutomation && disableAutomation) {
@@ -3651,6 +3668,7 @@ def automationsInst() {
     atomicState.isConWatConfigured = isConWatConfigured() ? true : false
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
+    atomicState?.isInstalled = true
 }
 
 def getAutomationType() {
