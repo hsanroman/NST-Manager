@@ -49,6 +49,7 @@ def appVerInfo() {
     "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
     "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
     "New: You can now select devices to send Speech Notifications for Contact Automations.\n" +
+    "New: Remote Sensors now supports selection of switches to trigger when heating/cooling. It also supports fan speeds based on threshold temps\n" +    
     "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
     "Added: Ability to disable automations if the user so desires.\n" +
     "Added: View all Apps/Devices state data under diagnostics.\n" +
@@ -3506,8 +3507,9 @@ def mainAutoPage(params) {
                     def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModeDesc = remSenEvalModes ? "\nMode Filters Active" : ""
+                    def remSenTstatSwitchDesc = getRemSenTstatFanSwitchDesc() ? "\n\nFan Switch Status:\n${getRemSenTstatFanSwitchDesc()}" : ""
                     def remSenDesc = (isRemSenConfigured() ? ("${remSenRuleType}${remSenTstatName}${remSenTstatTempDesc}${remSenTstatModeDesc}${remSenTstatFanModeDesc}${remSenDayDesc}${remSenNightDesc}${remSenSunDesc}${remSenMotInUse}"+
-                                                              "${remSenSwitInUse}${remSenModeDesc}\n\nTap to Modify...") : null)
+                                                              "${remSenSwitInUse}${remSenModeDesc}${remSenTstatSwitchDesc}\n\nTap to Modify...") : null)
                     href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: (remSenDesc ? "complete" : null), image: getAppImg("remote_sensor_icon.png")
                 }
             }
@@ -3670,7 +3672,7 @@ def subscribeToEvents() {
                 if(remSenTstatFanSwitches) {
                     subscribe(remSenTstatFanSwitches, "switch", remSenTstatFanSwitchEvt)
                     subscribe(remSenTstat, "thermostatFanMode", remSenTstatFanEvt)
-                    if(remSenTstatSwitchRunType.toInteger() == 1) { subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt) }
+                    if(remSenTstatFanSwitchTriggerType.toInteger() == 1) { subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt) }
                 }
             }
             if(remSenMotion) { subscribe(remSenMotion, "motionSensor", remSenMotionEvt) }
@@ -3728,35 +3730,6 @@ def updateWeather() {
     }
 }
 
-
-def remSenTstatFanSwitchPage() {
-    dynamicPage(name: "remSenTstatFanSwitchPage", uninstall: false) {
-        section("Configure External Fans/Switches") {
-            input "remSenTstatFanSwitches", "capability.switch", title: "Turn On Fan or Switch while Thermostat/Fan is running?", required: false, submitOnChange: true, multiple: true,
-                    image: getAppImg("fan_ventilation_icon.png")
-                if(remSenTstatFanSwitches) {
-                    def swDesc = ""
-                    def swCnt = 0
-                    remSenTstatFanSwitches?.each { sw ->
-                        swCnt = swCnt+1
-                        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label} (${sw?.currentSwitch?.toString().capitalize()})"
-                    }
-                    paragraph "Current Status:\n${swDesc}", state: "complete", image: getAppImg("blank_icon.png")
-                    input(name: "remSenTstatFanSwitchTriggerType", type: "enum", title: "Turn On Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],  
-                            required: (remSenTstatFanSwitches ? true : false), submitOnChange: true, image: getAppImg("setting_icon.png"))
-                    input(name: "remSenTstatFanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:["Auto":"auto", "Cool":"cool", "Heat":"heat", "Any":"any"]],  
-                             submitOnChange: true, image: getAppImg("setting_icon.png"))
-                    input(name: "remSenTstatFanSwitchSpeedCntrl", type: "enum", title: "Enable Speed Control?", defaultValue: false, submitOnChange: true, image: getAppImg("setting_icon.png"))
-                    if(remSenTstatFanSwitchSpeedCntrl) {
-                        input "remSenTstatFanSwitchLowSpeed", "decimal", title: "Low Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("temp_icon.png")
-                        input "remSenTstatFanSwitchMedSpeed", "decimal", title: "Medium Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
-                        input "remSenTstatFanSwitchHighSpeed", "decimal", title: "High Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 4.0, submitOnChange: true, image: getAppImg("temp_icon.png")
-                    }
-                }
-        }
-    }
-}
-
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
 *******************************************************************************/
@@ -3802,13 +3775,7 @@ def remSensorPage() {
             section("Turn On Fan or Switch while Thermostat Fan is running") {
                 href "remSenTstatFanSwitchPage", title: "Turn On Fan or Switch while Thermostat/Fan is running?", description: "", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
                 if(remSenTstatFanSwitches) {
-                    def swDesc = ""
-                    def swCnt = 0
-                    remSenTstatFanSwitches?.each { sw ->
-                        swCnt = swCnt+1
-                        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label} (${sw?.currentSwitch?.toString().capitalize()})"
-                    }
-                    paragraph "Current Status:\n${swDesc}", state: "complete", image: getAppImg("blank_icon.png")
+                    paragraph "Current Status:\n${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
                 }
             }
             if(remSenTstat) {
@@ -3902,6 +3869,59 @@ def remSensorPage() {
     }
 }
 
+def remSenTstatFanSwitchPage() {
+    dynamicPage(name: "remSenTstatFanSwitchPage", uninstall: false) {
+        section("Configure External Fans/Switches") {
+            input "remSenTstatFanSwitches", "capability.switch", title: "Turn On Fan or Switch while Thermostat/Fan is running?", required: false, submitOnChange: true, multiple: true,
+                    image: getAppImg("fan_ventilation_icon.png")
+            if(remSenTstatFanSwitches) {
+                paragraph "Current Status:\n${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+            }
+        }
+        if(remSenTstatFanSwitches) {
+            atomicState?.remSenTstatFanSwitchSpeedEnabled = getRemSenTstatFanSwitchesSpdChk() ? true : false
+            section("Fan Event Triggers") {
+                input(name: "remSenTstatFanSwitchTriggerType", type: "enum", title: "Turn On Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],  
+                    submitOnChange: true, image: getAppImg("${remSenTstatFanSwitchTriggerType == 1 ? "thermostat" : "home_fan"}_icon.png"))
+                input(name: "remSenTstatFanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "Any", metadata: [values:["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any"]],  
+                        submitOnChange: true, image: getAppImg("mode_icon.png"))
+            }
+            if(atomicState?.remSenTstatFanSwitchSpeedEnabled) {
+                section("Fan Speed Options") {
+                    input(name: "remSenTstatFanSwitchSpeedCtrl", type: "bool", title: "Enable Speed Control?", defaultValue: atomicState?.remSenTstatFanSwitchSpeedEnabled, submitOnChange: true, image: getAppImg("speed_knob_icon.png"))
+                    if(remSenTstatFanSwitchSpeedCtrl) {
+                        input "remSenTstatFanSwitchLowSpeed", "decimal", title: "Low Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("fan_low_speed.png")
+                        input "remSenTstatFanSwitchMedSpeed", "decimal", title: "Medium Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("fan_med_speed.png")
+                        input "remSenTstatFanSwitchHighSpeed", "decimal", title: "High Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 4.0, submitOnChange: true, image: getAppImg("fan_high_speed.png")
+                    }
+                }
+            }
+        }
+    }
+}
+
+def getRemSenTstatFanSwitchDesc() {
+    def swDesc = ""
+    def swCnt = 0
+    remSenTstatFanSwitches?.each { sw ->
+        swCnt = swCnt+1
+        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label} (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "/(SpdCtl)" : ""}"
+    }
+    swDesc += remSenTstatFanSwitchSpeedCtrl ? "\n\nMulti-Speed Fan Support: Active" : ""
+    return (swDesc == "") ? null : "${swDesc}"
+}
+
+def getRemSenTstatFanSwitchesSpdChk() {
+    def devCnt = 0
+    if(remSenTstatFanSwitches) {
+        remSenTstatFanSwitches?.each { sw ->
+            if(checkFanSpeedSupport(sw)) { devCnt = devCnt+1 }
+        }
+    }
+    log.debug "devCnt: $devCnt"
+    return (devCnt >= 1) ? true : false
+}
+
 //Requirements Section
 def remSenCoolTempsReq() { return (remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false }
 def remSenHeatTempsReq() { return (remSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false }
@@ -3958,24 +3978,9 @@ def remSenTstatFanSwitchEvt(evt) {
 
 def remSenTstatFanEvt(evt) {
     log.trace "remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value})"
-    def isFanOn = (evt?.value == "on") ? true : false
     if(disableAutomation) { return }
     else { 
-        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() == 1 || remSenTstatFanSwitchTriggerType.toInteger() == 2)) {
-            def swOn = (remSenTstatFanSwitches*.currentSwitch.toString() == "on") ? true : false
-            if(isFanOn) {
-                if(!swOn) { 
-                    LogAction("remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitches}' Switch (ON)", "info", true)
-                    remSenTstatFanSwitches*.on() 
-                }
-            }
-            else {
-                if(swOn) { 
-                    LogAction("remSenTstatFanEvt: Thermostat (${evt?.displayName}) Fan is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitches}' Switch (OFF)", "info", true)
-                    remSenTstatFanSwitches*.off() 
-                }
-            }
-        }
+        remSenTstatFanSwitchCheck(["fan":evt?.value])
     }
 }
 
@@ -3984,21 +3989,70 @@ def remSenTstatOperEvt(evt) {
     def isTstatIdle = (evt?.value == "idle") ? true : false
     if(disableAutomation) { return }
     else { 
-        if(remSenTstatFanSwitches && remSenTstatFanSwitchTriggerType.toInteger() == 1) {
-            def swOn = (remSenTstatFanSwitches*.currentSwitch.toString() == "on") ? true : false
-            if(!isTstatIdle) {
-                if(!swOn) { 
-                    LogAction("remSenTstatOperEvt: Thermostat (${evt?.displayName}) OperatingState is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitches}' Switch (ON)", "info", true)
-                    remSenTstatFanSwitches*.on() 
+        remSenTstatFanSwitchCheck()
+    }
+}
+
+def remSenTstatFanSwitchCheck(evt) {
+    log.trace "remSenTstatFanSwitchCheck..."
+    try {
+        def hvacFanOn = (evt.fan && evt.fan in ["fanOn", "fanCirculate"]) ? true : false
+        def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+        def remSenReqSetPoint = determRemSenReqSetpointTemp()
+        def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
+        def tempDiff = Math.abs(remSenReqSetPoint - curSenTemp)
+        log.debug "remSenTstatFanSwitchHvacModeFilter: $remSenTstatFanSwitchHvacModeFilter"
+        if(disableAutomation) { return }
+        else if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter =! hvacMode)) {
+            LogAction("remSenTstatFanSwitchCheck: Skipping Because Thermostat Mode does not Match the required Mode to Trigger Running of the Fan", "info", true)
+            return
+        }
+        else {
+            if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() == 1 || remSenTstatFanSwitchTriggerType.toInteger() == 2)) {
+                if(hvacFanOn) {
+                    if(atomicState?.remSenTstatFanSwitchSpeedEnabled && remSenTstatFanSwitchHighSpeed && remSenTstatFanSwitchMedSpeed && remSenTstatFanSwitchLowSpeed) {
+                        remSenTstatFanSwitches.each { sw ->
+                            def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
+                            if(!swOn) { 
+                                if(checkFanSpeedSupport(sw)) {
+                                    if(tempDiff < remSenTstatFanSwitchLowSpeed.toDouble()) {
+                                        sw?.off()
+                                        LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch (OFF)", "info", true)
+                                    }
+                                    else if(tempDiff >= remSenTstatFanSwitchLowSpeed.toDouble() && tempDiff < remSenTstatFanSwitchMedSpeed.toDouble()) {
+                                        sw?.lowSpeed()
+                                        LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
+                                    }
+                                    else if(tempDiff >= remSenTstatFanSwitchMedSpeed.toDouble() && tempDiff < remSenTstatFanSwitchHighSpeed.toDouble()) {
+                                        sw?.medSpeed()
+                                        LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($remSenTstatFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
+                                    }
+                                    else if(tempDiff >= remSenTstatFanSwitchHighSpeed.toDouble()) {
+                                        sw?.highSpeed()
+                                        LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($remSenTstatFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
+                                    }
+                                } else {
+                                    LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
+                                    sw?.on() 
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            else {
-                if(swOn) { 
-                    LogAction("remSenTstatOperEvt: Thermostat (${evt?.displayName}) OperatingState is (${evt?.value.toString().toUpperCase()}) | Turning '${remSenTstatFanSwitches}' Switch (OFF)", "info", true)
-                    remSenTstatFanSwitches*.off() 
+                else {
+                    remSenTstatFanSwitches.each { sw ->
+                        def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
+                        if(swOn) { 
+                            LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
+                            sw?.off()
+                        } 
+                    }
                 }
             }
         }
+    } catch (ex) {
+        LogAction("remSenTstatFanSwitchCheck Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "remSenTstatFanSwitchCheck")
     }
 }
 
@@ -4070,8 +4124,6 @@ def getDeviceTempAvg(items) {
     return tempVal.toDouble()
 }
 
-
-
 def remSenShowTempsPage() {
     dynamicPage(name: "remSenShowTempsPage", uninstall: false) {
         if(remSensorDay) { 
@@ -4109,6 +4161,19 @@ def getTimeAfterSunset() {
         result = (start < stop) ? ((timeNow >= start) && (timeNow <= stop)) : ((timeNow <= stop) || (timeNow >= start))
     }
     return result
+}
+
+def determRemSenReqSetpointTemp() {
+    def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+    def operState = remSenTstat ? remSenTstat?.currentThermostatOperatingState.toString() : null
+    def temp = 0.0
+    if((hvacMode == "cool") || (hvacMode == "auto" && operState == "cooling")) {
+        temp = getRemSenCoolSetTemp().toDouble()
+    }
+    else if((hvacMode == "heat") || (hvacMode == "auto" && operState == "heating")) {
+        temp = getRemSenHeatSetTemp().toDouble()
+    }
+    return temp
 }
 
 def getLastRemSenEvalSec() { return !atomicState?.lastRemSenEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastRemSenEval).toInteger() }
@@ -4341,7 +4406,19 @@ def remSenRuleEnum() {
     return vals
 }
 
+private getDeviceSupportedCommands(dev) {
+    return dev?.supportedCommands.findAll { it as String } 
+}
 
+def checkFanSpeedSupport(dev) {
+    def req = ["lowSpeed", "medSpeed", "highSpeed"]
+    def devCnt = 0
+    def devData = getDeviceSupportedCommands(dev)
+    devData.each { cmd ->
+        if(cmd.name in req) { devCnt = devCnt+1 }
+    }
+    return (devCnt) >= 1 ? true : false
+}
 /********************************************************************************  
 |                			EXTERNAL TEMP AUTOMATION CODE	     				|
 *********************************************************************************/
@@ -5519,7 +5596,7 @@ def smallTempEnum() {
 
 def switchRunEnum() {
     def vals = [ 
-        1:"Thermostat is Running", 2:"Only Fan is On" 
+        1:"Run with Thermostat", 2:"Only When Fan is On" 
     ]
     return vals
 }
