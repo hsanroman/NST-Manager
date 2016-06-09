@@ -41,11 +41,12 @@ definition(
 }
 
 def appVersion() { "2.2.0" }
-def appVerDate() { "6-8-2016" }
+def appVerDate() { "6-9-2016" }
 def appVerInfo() {
     def str = ""
-    str += "V2.2.0 (June 8th, 2016):"
-    str += "\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+    str += "V2.2.0 (June 9th, 2016):"
+    str += "\n• NEW: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser."
+    str += "\n\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
     str += "\n\n• NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
     str += "\n\n• NEW: You can now select devices to send Speech Notifications for Contact Automations."
     str += "\n\n• NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
@@ -224,6 +225,8 @@ def mainPage() {
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\nPlease visit the IDE to update the code.",
                         image: getAppImg("update_icon.png")
+                href url: stIdeLink(), style:"external", required: false, title:"Link to ST IDE",
+                        description:"Tap to Open in Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -5705,6 +5708,7 @@ private def textAuthor()    { return "${appAuthor()}" }
 private def textNamespace() { return "${appNamespace()}" }
 private def textVerInfo()   { return "${appVerInfo()}" }
 private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
+private def stIdeLink()     { return "https://ide.smartthings.com" }
 private def textCopyright() { return "Copyright© 2016 - Anthony S." }
 private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
 private def textHelp()      { return "" }
