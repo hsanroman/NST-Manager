@@ -280,11 +280,9 @@ def mainPage() {
                 href "automationsPage", title: "Automations...", description: (autoDesc ? autoDesc : "Tap to Configure..."), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
             }
         }
-        if((atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) || diagLogs) {
+        if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
             section("Diagnostics/Info:") {
-                if(atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice) && atomicState?.isInstalled) {
-                    href "nestInfoPage", title: "View API/Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
-                }
+                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -3067,7 +3065,7 @@ def nestTokenResetPage() {
 def nestInfoPage () {
     dynamicPage(name: "nestInfoPage", install: false) {
         section("About this page:") {
-            paragraph "The info displayed is the exact data received directly from the Nest API for each device that is selected..."
+            paragraph "The info displayed below is the data received directly from the Nest API..."
         }
         if(atomicState?.structures) {
             section("Locations") {
