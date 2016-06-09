@@ -208,7 +208,7 @@ def authPage() {
             }
             section(""){
                 paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
-                paragraph "❖ FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
+                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
