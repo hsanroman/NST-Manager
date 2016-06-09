@@ -1,6 +1,5 @@
 /*
     TODO:  
-    * Add in text to speech device selection.  Allow notification options such as warning reminders before turning off the thermostat.
     * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
     * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
 */
@@ -42,47 +41,49 @@ definition(
 }
 
 def appVersion() { "2.2.0" }
-def appVerDate() { "6-7-2016" }
+def appVerDate() { "6-8-2016" }
 def appVerInfo() {
-    
-    "V2.2.0 (June 7th, 2016)\n" +
-    "New: Merged Manager and Automations are now one codebase but two apps... Thanks @ady264\n" +
-    "New: Automation to select your thermostats and modes and choose heat/cool setpoints for each mode.\n" +
-    "New: You can now select devices to send Speech Notifications for Contact Automations.\n" +
-    "New: Remote Sensors now supports selection of switches to trigger when heating/cooling. It also supports fan speeds based on threshold temps\n" +    
-    "Added: Day,Time,Mode filters to Nest Mode Automations.\n" +
-    "Added: Ability to disable automations if the user so desires.\n" +
-    "Added: View all Apps/Devices state data under diagnostics.\n" +
-    "Added: If weather device is installed you can now receive push notifications for weather alerts.\n" +
-    "Updated: Child Device data updates have been modified to send all necessary data and remove the devices call back to the manager.\n" +
-    "Updated: The First install setup now flows much better to layout the available options better to users.\n" +
-    "Updated: Added in app install and exception error sharing with the developer\n" +
-    "Updated: Lot's of tweaks and fixes for annoying ui bugs\n" +
-    "Fixed: Remote Sensor's should actually work like they were intended.\n" +
-    "Fixed: Nest Log Out function to actually take you back to auth screen after clearing token\n\n" +
-    
-    "V2.0.8 (May 13th, 2016)\n" +
-    "Updated Certain Inputs to turn blue when there settings have been configured.\n\n" +
-    
-    "V2.0.7 (May 3rd, 2016)\n" +
-    "Fixed UI to work with the new mobile app design.\n\n" +
-    
-    "V2.0.6 (May 2nd, 2016)\n" +
-    "Added: Showing what types of automations are installed now\n\n" +
+    def str = ""
+    str += "V2.2.0 (June 8th, 2016):"
+    str += "\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+    str += "\n\n• NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
+    str += "\n\n• NEW: You can now select devices to send Speech Notifications for Contact Automations."
+    str += "\n\n• NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
+    str += "\n\n• ADDED: You can now use Day,Time,Mode filters in certain Nest Mode Automations."
+    str += "\n\n• ADDED: Ability to Disable each automations individually."
+    str += "\n\n• ADDED: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts."
+    str += "\n\n• UPDATED: There is new install setup now that flows much better and allows display of the important available options better to users."
+    str += "\n\n• UPDATED: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly."
+    str += "\n\n• NEW: Analytics have been added to the app to share installation data, it will also send generic exception error data. "
+    str += "  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out."
+    str += "\n\n• FIXED: Remote Sensor's Fan circulation should now work like it was intended."
+    str += "\n\n• FIXED: Nest Log Out function to actually take you back to auth screen after clearing token."
+    str += "\n\n• ADDED: View all Apps/Devices state data under diagnostics."
+    str += "\n\n• UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
-    "V2.0.4 (Apr 28th, 2016)\n" +
-    "Fixed: Very minor bug fixes\n\n" +
+    str += "\n\n\nV2.0.8 (May 13th, 2016):"
+    str += "\n• UPDATED: Certain Inputs to turn blue when there settings have been configured."
     
-    "V2.0.3 (Apr 27th, 2016)\n" +
-    "Fixed: Bug found when unselecting a location nothing would be found again.\n" +
-    "Updated: Changed the way that data was sent to presence device\n"+
-    "Added: Support for Custom Child Notifications...\n\n" +
+    str += "\n\n\nV2.0.7 (May 3rd, 2016):"
+    str += "\n• FIXED: UI to work with the new mobile app design."
+    
+    str += "\n\n\nV2.0.6 (May 2nd, 2016):"
+    str += "\n• ADDED: Showing what types of automations are installed now."
 
-    "V2.0.1 (Apr 22nd, 2016)\n" +
-    "Fixed: Everything\n\n" +
+    str += "\n\n\nV2.0.4 (Apr 28th, 2016):"
+    str += "\n• FIXED: Very minor bug fixes"
+    
+    str += "\n\n\nV2.0.3 (Apr 27th, 2016):"
+    str += "\n• FIXED: Bug found when unselecting a location nothing would be found again."
+    str += "\n\n• UPDATED: Changed the way that data was sent to presence device"
+    str += "\n\n• ADDED: Support for Custom Child Notifications..."
 
-    "V2.0.0 (Apr 21th, 2016)\n" +
-    "Fixed: Everything"
+    str += "\n\n\nV2.0.1 (Apr 22nd, 2016):"
+    str += "\n• FIXED: Everything"
+
+    str += "\n\n\nV2.0.0 (Apr 21th, 2016):"
+    str += "\n• FIXED: Everything"
+    return str
 }
 
 preferences {
@@ -206,8 +207,8 @@ def authPage() {
                 paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             }
             section(""){
-                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\nAfter logon you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
-                paragraph "FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly...", state: null
+                paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
+                paragraph "❖ FYI: If using Nest Family please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
@@ -220,8 +221,8 @@ def mainPage() {
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
-            if(!appDevType() && isAppUpdateAvail()) {
-                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState.appData.versions.app.ver}\nPlease visit the IDE to update the code.",
+            if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
+                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\nPlease visit the IDE to update the code.",
                         image: getAppImg("update_icon.png")
             }
         }
@@ -384,7 +385,7 @@ def reviewSetupPage() {
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             if (optInAppAnalytics) {
-                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View Data Shared with Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
+                href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
         section(" ") {
@@ -1297,6 +1298,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
                 LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
                 atomicState?.apiIssues = false
                 result = true
+                if(!atomicState?.apiCommandCnt) { atomicState?.apiCommandCnt = 1 }
+                else { atomicState?.apiCommandCnt = atomicState?.apiCommandCnt+1 }
             }
             else if(resp.status == 400) {
                 LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
@@ -1377,15 +1380,17 @@ def appUpdateNotify() {
 }
 
 def updateHandler() {
-    log.trace "updateHandler..."
-    if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
-        sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
-        atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
-    }
-    if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
-        if(getLastUpdateMsgSec() > 86400) {
-            sendMsg("Info", "${atomicState?.updater?.updateMsg}")
-            atomicState?.lastUpdateMsgDt = getDtNow()
+    //log.trace "updateHandler..."
+    if(atomicState?.isInstalled) {
+        if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
+            sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
+            atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
+        }
+        if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+            if(getLastUpdateMsgSec() > 86400) {
+                sendMsg("Info", "${atomicState?.updater?.updateMsg}")
+                atomicState?.lastUpdateMsgDt = getDtNow()
+            }
         }
     }
 }
@@ -1565,9 +1570,8 @@ def getWebFileData() {
             if(resp.data) {
                 LogAction("Getting Latest Data from appParams.json File...", "info", true)
                 atomicState?.appData = resp?.data
-                atomicState?.stateSize = state?.toString().length()
-                updateHandler()
                 atomicState?.lastWebUpdDt = getDtNow()
+                updateHandler()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1644,30 +1648,30 @@ def isNewUpdateAvail(newVer, curVer) {
 }
 
 def isAppUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.app.ver, appVersion())) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.app?.ver, appVersion())) {
         return true
     } else { return false }
 }
 def isPresUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.presence.ver, atomicState?.presDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer)) {
         return true
     } else { return false }
 }
 
 def isProtUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.protect.ver, atomicState?.pDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.protect?.ver, atomicState?.pDevVer)) {
         return true
     } else { return false }
 }
 
 def isTstatUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.thermostat.ver, atomicState?.tDevVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.thermostat?.ver, atomicState?.tDevVer)) {
         return true
     } else { return false }
 }
 
 def isWeathUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData.versions.weather.ver, atomicState?.weathAppVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.weather?.ver, atomicState?.weathAppVer)) {
         return true
     } else { return false }
 }
@@ -2514,6 +2518,7 @@ def setStateVar(frc = false) {
             if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
             if(!atomicState?.custLabelUsed)             { atomicState?.custLabelUsed = false }
             if(!atomicState?.useAltNames)               { atomicState.useAltNames = false }
+            if(!atomicState?.apiCommandCnt)             { atomicState?.apiCommandCnt = 0 }
             atomicState?.stateVarUpd = true
             atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
         }
@@ -2872,7 +2877,7 @@ def notifPrefPage() {
             if(!location.contactBookEnabled) {
                 input(name: "usePush", type: "bool", title: "Send Push Notitifications", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
             } else {
-                input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png")) {
+                input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
                     input ("phone", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
                 }
             } 
@@ -3024,7 +3029,7 @@ def infoPage () {
 def uninstallPage() {
     dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
         section("") {
-            paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure all devices are removed from any routines/rules/smartapps before tapping Remove."
+            paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
         }
     }
 }
@@ -3079,10 +3084,11 @@ def nestInfoPage () {
                 href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", image: getAppImg("protect_icon.png")
             }
         }
-        section("Last Nest Command") {
+        section("Recent Command") {
+            def cmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
             def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
             def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
-            paragraph "Command: ${cmdTxt}\nDateTime: ${cmdDt}"
+            paragraph "• Commands Sent: (${cmdCnt})\n• Last Cmd: (${cmdTxt})\n• Last Date: (${cmdDt})"
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
@@ -3091,22 +3097,22 @@ def nestInfoPage () {
 }
 
 def structInfoPage () {
-    dynamicPage(name: "structInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]
         section("") {
-            paragraph "Locations", image: getAppImg("nest_structure_icon.png")
+            paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
         }
-        for(str in atomicState?.structData) {
-            if (str?.key == atomicState?.structures) {
-                section("Location Name: ${str?.value?.name}") {
-                    str?.value.each { item ->
-                        switch (item?.key) {
-                            case [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]:
-                                break
-                            default:
-                                paragraph "${item?.key?.toString().capitalize()}: ${item?.value}"
-                                break
-                        }
+        atomicState?.structData?.each { struc ->
+            if (struc?.key == atomicState?.structures) {
+                def str = ""
+                def cnt = 0
+                section("Location Name: ${struc?.value?.name}") {
+                    def data = struc?.value.findAll { !(it.key in noShow) }
+                    data?.sort().each { item ->
+                        cnt = cnt+1
+                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                     }
+                    paragraph "${str}"
                 }
             }
         }
@@ -3114,51 +3120,42 @@ def structInfoPage () {
 }
 
 def tstatInfoPage () {
-    dynamicPage(name: "tstatInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
-            paragraph "Thermostats", image: getAppImg("nest_like.png")
+            paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
         }
-        for(tstat in atomicState?.thermostats) {
-            def devs = []
+        atomicState?.thermostats?.sort().each { tstat ->
+            def str = ""
+            def cnt = 0
             section("Thermostat Name: ${tstat?.value}") {
-                atomicState?.deviceData?.thermostats[tstat.key].each { dev ->
-                    switch (dev?.key) {
-                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
-                            break
-                        default:
-                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
-                            break
-                    }
+                def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                 }
-                devs?.sort().each { item ->
-                    paragraph "${item}"
-                }
+                paragraph "${str}"
             }
         }
     }
 }
 
 def protInfoPage () {
-    dynamicPage(name: "protInfoPage", refreshInterval: 15, install: false) {
+    dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
         section("") {
-            paragraph "Protects", image: getAppImg("protect_icon.png")
+            paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
         }
-        atomicState?.protects.each { prot ->
-            def devs = []
+        atomicState?.protects.sort().each { prot ->
+            def str = ""
+            def cnt = 0
             section("Protect Name: ${prot?.value}") {
-                atomicState?.deviceData?.smoke_co_alarms[prot?.key].each { dev ->
-                    //log.debug "prot dev: $dev"
-                    switch (dev?.key) {
-                        case [ "where_id", "device_id", "structure_id" ]:  //<< Excludes certain keys from being shown
-                            break
-                        default:
-                            devs << "${dev?.key?.toString().capitalize()}: ${dev?.value}"
-                            break
-                    }
+                def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
                 }
-                devs?.sort().each { item ->
-                    paragraph "${item}"
-                }
+                paragraph "${str}"
             }
         }
     }
@@ -3167,7 +3164,7 @@ def protInfoPage () {
 def diagPage () {
     dynamicPage(name: "diagPage", install: false) {
         section("") {
-            paragraph "This page will allow you to view/export diagnostic state data to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
+            paragraph "This page will allow you to view all diagnostic data related to the apps/devices in order to assist the developer in troubleshooting...", image: getAppImg("diag_icon.png")
         }
         section("State Size Info:") {
             paragraph "Current State Size: ${getStateSizePerc()}% (${getStateSize()})"
@@ -3190,89 +3187,114 @@ def diagPage () {
 }
 
 def appParamsDataPage() {
-    dynamicPage(name: "appParamsDataPage", install: false) {
+    dynamicPage(name: "appParamsDataPage", refreshInterval: 30, install: false) {
         if(atomicState?.appData) {
             atomicState?.appData.sort().each { sec ->
                 section("${sec?.key.toString().capitalize()}:") {
+                    def str = ""
+                    def cnt = 0
                     sec?.value.each { par ->
-                        paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                        cnt = cnt+1
+                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${par?.key.toString()}: ${par?.value}"
                     }
+                    paragraph "${str}"
                 }
             }
         }
     }
 }
 
+
+
+
 def managAppDataPage() {
-    dynamicPage(name: "managAppDataPage", refreshInterval:60, install: false) {
-        def noShow = ["accessToken", "authToken"]
-        settings?.sort().each { item -> !(item.key in noShow)
-            section("Setting: ${item?.key.toString().capitalize()}") {
-                paragraph "${item?.value}"
+    dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
+        def noShow = ["accessToken", "authToken" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
+        section("SETTINGS DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = settings?.findAll { !(it.key in noShow) }
+               data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
             }
+            paragraph "${str}"
         }
-        state?.sort().each { item -> !(item.key in noShow)
-            section("State Variable: ${item?.key.toString().capitalize()}") {
-                paragraph "${item?.value}"
+        section("STATE DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = state?.findAll { !(it.key in noShow) }
+            data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
             }
+            paragraph "${str}"
         }
-        getMetadata()?.sort().each { item -> !(item.key in noShow)
-            section("Metadata: ${item?.key.toString().capitalize()}") {
-                 paragraph "${item?.value}"
+        section("APP METADATA:") {
+            def str = ""
+            def cnt = 0
+            getMetadata()?.sort().each { item -> 
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n\n"}${item?.key.toString().toUpperCase()}:\n\n"
+                def cnt2 = 0
+                item?.value.sort().each { vals ->
+                    cnt2 = cnt2+1
+                    str += "${(cnt2 <= 1) ? "" : "\n\n"}• ${vals?.key.toString()}: (${vals?.value})"
+                }
             }
+            paragraph "${str}"
         }
     }
 }
 
 def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:60, install: false) {
-        log.debug "meta: ${getMetadata()}"
-        app.each { item ->
-            log.debug "item: $item"
-        }
+    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
         getAllChildDevices().each { dev ->
+            def str = ""
             section("${dev?.displayName.toString().capitalize()}:") {
-                paragraph " ----------------STATE DATA---------------"
+                str += "   --------------STATE DATA--------------"
                 dev?.getDeviceStateData()?.sort().each { par ->
-                    paragraph "${par?.key.toString().capitalize()}: ${par?.value}"
+                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                 }
-                paragraph " "
-                paragraph " ---------SUPPORTED ATTRIBUTES---------"
+                str += "\n\n\n  ---------SUPPORTED ATTRIBUTES---------"
                 def devData = dev?.supportedAttributes.collect { it as String }
                 devData?.sort().each { 
-                    paragraph "${"$it" as String}: ${dev.currentValue("$it")}"
+                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
                 }
-                paragraph " "
-                paragraph " ---------SUPPORTED COMMANDS---------"
+                   str += "\n\n\n  ---------SUPPORTED COMMANDS---------"
                 dev?.supportedCommands?.sort().each { cmd ->
-                    paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
                 }
-                paragraph " "
-                paragraph " --------DEVICE CAPABILITIES---------"
+                
+                str += "\n\n\n -----------DEVICE CAPABILITIES-----------"
                 dev?.capabilities?.sort().each { cap ->
-                    paragraph "${cap}"
+                    str += "\n\n• ${cap}"
                 }
+                paragraph "${str}"
             }
         }
     }
 }
 
 def childAppDataPage() {
-    dynamicPage(name: "childAppDataPage", refreshInterval:60, install:false) {
+    dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
         def apps = getChildApps()
         if(apps) {
             apps?.each { ca ->
+                def str = ""
                 section("${ca?.label.toString().capitalize()}:") {
-                    paragraph "     ***********SETTINGS DATA***********", image: " "
+                    str += "--------------SETTINGS DATA--------------"
                     def setData = ca?.getSettingsData()
                     setData?.sort().each { sd ->
-                        paragraph "Input: ${sd?.key.toString()}: ${sd?.value}"
+                        str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
                     } 
                     def appData = ca?.getAppStateData()
-                    paragraph "        ***********STATE DATA***********", image: " "
+                    str += "\n\n\n ------------STATE DATA------------"
                     appData?.sort().each { par ->
-                        paragraph "State: ${par?.key.toString()}: ${par?.value}"
+                        str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                     }
+                    paragraph "${str}"
                 }
             }
         } else {
@@ -3297,9 +3319,10 @@ def createInstallDataJson() {
         def protCnt = atomicState?.protects?.size() ?: 0
         def automations = !atomicState?.installedAutomations ? "No Automations Installed" : atomicState?.installedAutomations
         def tz = getTimeZone()?.ID?.toString()
+        def apiCmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
         def data = [
             "guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, 
-            "automations":automations, "timeZone":tz, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString() 
+            "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString() 
         ]
         def resultJson = new groovy.json.JsonOutput().toJson(data)
         return resultJson
@@ -3424,9 +3447,13 @@ def removeAnalyticData(pathVal) {
         }
     }
     catch (ex) {
-        LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "removeAnalyticData")
-        result = false
+        if(ex instanceof groovyx.net.http.ResponseParseException) {
+            LogAction("removeAnalyticData: Response: ${ex.message}", "info", true)
+        } else {
+            LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
+            sendExceptionData(ex, "removeAnalyticData")
+            result = false
+        }
     }
     return result
 }
@@ -3507,7 +3534,7 @@ def mainAutoPage(params) {
                     def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     def remSenModeDesc = remSenEvalModes ? "\nMode Filters Active" : ""
-                    def remSenTstatSwitchDesc = getRemSenTstatFanSwitchDesc() ? "\n\nFan Switch Status:\n${getRemSenTstatFanSwitchDesc()}" : ""
+                    def remSenTstatSwitchDesc = getRemSenTstatFanSwitchDesc() ? "\n\n${getRemSenTstatFanSwitchDesc()}" : ""
                     def remSenDesc = (isRemSenConfigured() ? ("${remSenRuleType}${remSenTstatName}${remSenTstatTempDesc}${remSenTstatModeDesc}${remSenTstatFanModeDesc}${remSenDayDesc}${remSenNightDesc}${remSenSunDesc}${remSenMotInUse}"+
                                                               "${remSenSwitInUse}${remSenModeDesc}${remSenTstatSwitchDesc}\n\nTap to Modify...") : null)
                     href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: (remSenDesc ? "complete" : null), image: getAppImg("remote_sensor_icon.png")
@@ -3570,7 +3597,7 @@ def mainAutoPage(params) {
                 } 
             }
 
-            if (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured()) {
+            if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured())) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
                     if(!atomicState?.disableAutomation && disableAutomation) {
@@ -3647,6 +3674,7 @@ def automationsInst() {
     atomicState.isConWatConfigured = isConWatConfigured() ? true : false
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
+    atomicState?.isInstalled = true
 }
 
 def getAutomationType() {
@@ -3772,10 +3800,10 @@ def remSensorPage() {
                     }
                 }
             }
-            section("Turn On Fan or Switch while Thermostat Fan is running") {
-                href "remSenTstatFanSwitchPage", title: "Turn On Fan or Switch while Thermostat/Fan is running?", description: "", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
+            section("Turn On a Fan/Switch While your Thermostat is Running:") {
+                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: "", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
                 if(remSenTstatFanSwitches) {
-                    paragraph "Current Status:\n${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+                    paragraph "${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
                 }
             }
             if(remSenTstat) {
@@ -3871,19 +3899,21 @@ def remSensorPage() {
 
 def remSenTstatFanSwitchPage() {
     dynamicPage(name: "remSenTstatFanSwitchPage", uninstall: false) {
-        section("Configure External Fans/Switches") {
-            input "remSenTstatFanSwitches", "capability.switch", title: "Turn On Fan or Switch while Thermostat/Fan is running?", required: false, submitOnChange: true, multiple: true,
+        section("Configure External Fans/Switches\n(3-Speed Fans Supported)") {
+            input "remSenTstatFanSwitches", "capability.switch", title: "Select the Switches?", required: false, submitOnChange: true, multiple: true,
                     image: getAppImg("fan_ventilation_icon.png")
             if(remSenTstatFanSwitches) {
-                paragraph "Current Status:\n${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+                paragraph "${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
             }
         }
         if(remSenTstatFanSwitches) {
             atomicState?.remSenTstatFanSwitchSpeedEnabled = getRemSenTstatFanSwitchesSpdChk() ? true : false
             section("Fan Event Triggers") {
-                input(name: "remSenTstatFanSwitchTriggerType", type: "enum", title: "Turn On Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],  
+                paragraph "These are all event based triggers and will not occur until the Thermostat device sends the event.  Depending on your configured Poll time it may take 1 minute or more",
+                        image: getAppImg("instruct_icon.png")
+                input(name: "remSenTstatFanSwitchTriggerType", type: "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],  
                     submitOnChange: true, image: getAppImg("${remSenTstatFanSwitchTriggerType == 1 ? "thermostat" : "home_fan"}_icon.png"))
-                input(name: "remSenTstatFanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "Any", metadata: [values:["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any"]],  
+                input(name: "remSenTstatFanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],  
                         submitOnChange: true, image: getAppImg("mode_icon.png"))
             }
             if(atomicState?.remSenTstatFanSwitchSpeedEnabled) {
@@ -3905,10 +3935,13 @@ def getRemSenTstatFanSwitchDesc() {
     def swCnt = 0
     remSenTstatFanSwitches?.each { sw ->
         swCnt = swCnt+1
-        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label} (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "/(SpdCtl)" : ""}"
+        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3SpdCtl)" : ""}"
     }
-    swDesc += remSenTstatFanSwitchSpeedCtrl ? "\n\nMulti-Speed Fan Support: Active" : ""
-    return (swDesc == "") ? null : "${swDesc}"
+    swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "\n\nFan Switch Config:" : ""
+    swDesc += remSenTstatFanSwitchSpeedCtrl ? "\n• 3-Speed Fan Support: (Active)" : ""
+    swDesc += remSenTstatFanSwitchTriggerType ? "\n• Fan Trigger: (${getEnumValue(switchRunEnum(), remSenTstatFanSwitchTriggerType)})" : ""
+    swDesc += remSenTstatFanSwitchHvacModeFilter ? "\n• HvacMode Filter: (${getEnumValue(fanModeTrigEnum(), remSenTstatFanSwitchHvacModeFilter)})" : ""
+    return (swDesc == "") ? null : "Fan Switch Devices:\n${swDesc}"
 }
 
 def getRemSenTstatFanSwitchesSpdChk() {
@@ -4723,7 +4756,7 @@ def contactWatchPage() {
 }
 
 def isConWatConfigured() {
-    return (conWatContacts && conWatTstat) ? true : false
+    return (conWatContacts && conWatTstat && conWatOffDelay) ? true : false
 }
 
 def getConWatContactsOk() { return conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
@@ -4819,7 +4852,7 @@ def conWatTstatModeEvt(evt) {
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
-        if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
+        //if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
     }
 }
 
@@ -5282,12 +5315,12 @@ def setNotificationPage(params) {
                         image: getAppImg("notification_icon.png")
         }
         if(settings["${pName}PushMsgOn"]) {
-            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications..."
-            section("${notifDesc}:") {
+            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications:\n(Manager App Recipients are Used by Default)"
+            section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
                     input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
                 } else {
-                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
+                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("recipient_icon.png")) {
                         input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false)
                     }
                 }
@@ -5301,13 +5334,13 @@ def setNotificationPage(params) {
         
         if(allowSpeech) {
             section("Voice Notification Preferences:") {
-                input "${pName}AllowSpeechNotif", "bool", title: "Speak Notitifications", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
+                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice Notitifications?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
                 if(settings["${pName}AllowSpeechNotif"]) {
-                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false,
-                            submitOnChange: true, image: getAppImg("speech_icon.png")
                     input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", multiple: true, required: false, 
                             submitOnChange: true, image: getAppImg("media_player.png")
+                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false,
+                            submitOnChange: true, image: getAppImg("speech2_icon.png")
                     if(settings["${pName}SpeechMediaPlayer"]) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
                         input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
@@ -5322,7 +5355,7 @@ def getNotifConfigDesc() {
     def pName = getPagePrefix()
     def recipDesc = getRecipientDesc() ?: ""
     def schedDesc = (getNotifSchedDesc() ? "${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected..." : "")
-    def speechDesc = (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "\nSpeech Devices: Active" : ""
+    def speechDesc = (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "${schedDesc == "" ? "" : "\n"}Speech Devices: Active" : ""
     def notifDesc = (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ? 
             "\n\nTap to Modify..." : "Tap to Configure..."
     return "${recipDesc}${schedDesc}${speechDesc}${notifDesc}"
@@ -5362,7 +5395,7 @@ def getRecipientsNames(val) {
 }
 
 def getRecipientDesc() {
-    return ((settings["${getPagePrefix()}NotifRecips"]) || (settings["${getPagePrefix()}NotifPhones"] || settings["${getPagePrefix()}NotifUsePush"])) ? "${getRecipientsNames(settings["${getPagePrefix()}NotifRecips"])}" : null
+    return ((settings?."${getPagePrefix()}NotifRecips") || (settings?."${getPagePrefix()}NotifPhones" || settings?."${getPagePrefix()}NotifUsePush")) ? "${getRecipientsNames(settings?."${getPagePrefix()}NotifRecips")}" : null
 }
 
 def setNotificationTimePage() {
@@ -5596,6 +5629,11 @@ def switchRunEnum() {
     def vals = [ 
         1:"Run with Thermostat", 2:"Only When Fan is On" 
     ]
+    return vals
+}
+
+def fanModeTrigEnum() {
+    def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any Mode"]
     return vals
 }
 
