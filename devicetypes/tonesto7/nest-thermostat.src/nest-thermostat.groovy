@@ -1293,7 +1293,7 @@ def getHvacModes() {
     def modesList = ['off']
     if( state?.can_heat == true ) { modesList.push('heat') }
     if( state?.can_cool == true ) { modesList.push('cool') }
-    if( state?.can_heat == true || state?.can_cool == true ) { modesList.push('auto') }
+    if( state?.can_heat == true && state?.can_cool == true ) { modesList.push('auto') }
     Logger("Modes = ${modesList}")
     return modesList
 }
