@@ -3528,27 +3528,42 @@ def mainAutoPage(params) {
             }
             if(autoType == "remSen" && !disableAutomation) {
                 section("Use Remote Temperature Sensor(s) to Control your Thermostat:") {
-                    def remSenRuleType = remSenRuleType ? "Rule-Type: (${getEnumValue(remSenRuleEnum(), remSenRuleType)})" : ""
-                    def remSenTstatName = remSenTstat ? "\n\n${remSenTstat.displayName}:" : ""
-                    def remSenTstatTempDesc = remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
-                    def remSenTstatModeDesc = remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
-                    def remSenTstatFanModeDesc = (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""
-                    //remote sensor/Day
-                    def remSenDayModesDesc = (remSensorDayModes && remSensorNight && remSensorNightModes) ? "\n• Day Modes: (${remSensorDayModes.size()})" : ""
-                    def remSenSetTempsDay = (remSenDayHeatTemp && remSenDayCoolTemp) ? "\n• Heat/Cool Set To: (${remSenDayHeatTemp}°${atomicState?.tempUnit}/${remSenDayCoolTemp}°${atomicState?.tempUnit})" : ""
-                    def remSenDayDesc = remSensorDay ? ("\n\n${!remSensorNight ? "Remote" : "Day"} Sensor:${remSenDayModesDesc}\n• Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})${remSenSetTempsDay}") : ""
-                    //remote sensor Night
-                    def remSenNightModesDesc = (remSensorNight && remSensorNightModes) ? "\n• Night Modes: (${remSensorNightModes.size()})" : ""
-                    def remSenSetTempsNight = (remSenNightHeatTemp && remSenNightCoolTemp) ? "\n• Heat/Cool Set To: (${remSenNightHeatTemp}°${atomicState?.tempUnit}/${remSenNightCoolTemp}°${atomicState?.tempUnit})" : ""
-                    def remSenNightDesc = remSensorNight ? ("\n\nNight Sensor:${remSenNightModesDesc}\n• Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})${remSenSetTempsNight}") : ""
+                    def remSenDescStr = ""
+                    remSenDescStr += remSenRuleType ? "Rule-Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}" : ""
+                    remSenDescStr += (remSenEvalModes || remSenMotion || remSenSwitches) ? "\n\nRule Evaluation Triggers:" : ""
+                    remSenDescStr += remSenMotion ? ("\n • Motion Sensors: (${remSenMotion?.size()})\n└ Status: ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
+                    remSenDescStr += remSenSwitches ? ("\n • Switches: (${remSenSwitches?.size()})\n└ Trigger Type: (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
+                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenMotion.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Active" : "Not Active"}" : ""
                     
-                    def remSenSunDesc = remSenUseSunAsMode ? "\nSunrise: ${atomicState.sunriseTm} | Sunset: ${atomicState.sunsetTm}" : ""
-                    def remSenMotInUse = remSenMotion ? ("\nMotion: ${((!remSenMotionModes || isInMode(remSenMotionModes)) ? "Active" : "Not Active")} ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
-                    def remSenSwitInUse = remSenSwitches ? ("\nSwitches Used: (${remSenSwitches?.size()}) | Triggers (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
-                    def remSenModeDesc = remSenEvalModes ? "\nMode Filters Active" : ""
-                    def remSenTstatSwitchDesc = getRemSenTstatFanSwitchDesc() ? "\n\n${getRemSenTstatFanSwitchDesc()}" : ""
-                    def remSenDesc = (isRemSenConfigured() ? ("${remSenRuleType}${remSenTstatName}${remSenTstatTempDesc}${remSenTstatModeDesc}${remSenTstatFanModeDesc}${remSenDayDesc}${remSenNightDesc}${remSenSunDesc}${remSenMotInUse}"+
-                                                              "${remSenSwitInUse}${remSenModeDesc}${remSenTstatSwitchDesc}\n\nTap to Modify...") : null)
+                    remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
+                    remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
+                    remSenDescStr += remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
+                    remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
+                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""
+                    
+                    remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
+                    
+                    remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
+                    remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
+                    //remote sensor/Day
+                    def dayModeDesc = ""
+                    dayModeDesc += remSensorDay ? "\n\n${!remSensorNight ? "Remote" : "Day"} Sensor:" : ""
+                    dayModeDesc += remSensorDay ? "\n• Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})" : ""
+                    dayModeDesc += (remSensorDay && remSensorDayModes && remSensorNight && remSensorNightModes) ? "\n• Day Modes: (${remSensorDayModes.size()})" : ""
+                    dayModeDesc += (remSensorDay && remSenDayHeatTemp && remSenDayCoolTemp) ? "\n• Desired Temps: (H: ${remSenDayHeatTemp}°${atomicState?.tempUnit}/C: ${remSenDayCoolTemp}°${atomicState?.tempUnit})" : ""
+                    remSenDescStr += remSensorDay ? "${dayModeDesc}" : ""
+                    
+                    //remote sensor Night
+                    def nightModeDesc = ""
+                    nightModeDesc += remSensorNight ? "\n\nNight Sensor:" : ""
+                    nightModeDesc += remSensorNight ? ("\n• Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})") : ""
+                    nightModeDesc += (remSensorNight && remSensorNightModes) ? "\n• Night Modes: (${remSensorNightModes.size()})" : ""
+                    nightModeDesc += (remSensorNight && remSenNightHeatTemp && remSenNightCoolTemp) ? "\n• Desired Temps: (H: ${remSenNightHeatTemp}°${atomicState?.tempUnit}/C: ${remSenNightCoolTemp}°${atomicState?.tempUnit})" : ""
+                    remSenDescStr += remSensorNight ? "${nightModeDesc}" : ""
+                    
+                    remSenDescStr += getRemSenTstatFanSwitchDesc() ? "\n\n${getRemSenTstatFanSwitchDesc()}" : ""
+
+                    def remSenDesc = (isRemSenConfigured() ? "${remSenDescStr}\n\nTap to Modify..." : null)
                     href "remSensorPage", title: "Remote Sensors Config...", description: remSenDesc ? remSenDesc : "Tap to Configure...", state: (remSenDesc ? "complete" : null), image: getAppImg("remote_sensor_icon.png")
                 }
             }
@@ -3813,10 +3828,7 @@ def remSensorPage() {
                 }
             }
             section("Turn On a Fan/Switch While your Thermostat is Running:") {
-                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: "", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
-                if(remSenTstatFanSwitches) {
-                    paragraph "${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
-                }
+                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: "${getRemSenTstatFanSwitchDesc()}", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
             }
             if(remSenTstat) {
                 def dSenStr = !remSensorNight ? "Remote" : "Daytime"
@@ -3828,8 +3840,8 @@ def remSensorPage() {
                         def tempStr = !remSensorNight ? "" : "Day "
                         input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
                         input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
-                        //paragraph " ", image: " "
-                        def tmpVal = "$dSenStr Sensor Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
+                        
+                        def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
                             href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                             //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
@@ -3843,7 +3855,7 @@ def remSensorPage() {
                             input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                             input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
                             //paragraph " ", image: " "
-                            def tmpVal = "Evening Sensor Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
+                            def tmpVal = "Evening Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
                                 href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                                 //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
@@ -3853,10 +3865,10 @@ def remSensorPage() {
                 }
                 if(remSensorDay && remSensorNight) {
                     section("Day/Evening Detection Options:") {
-                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset instead of Modes?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
+                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
                         if(remSenUseSunAsMode) {
                             getSunTimeState()
-                            paragraph "Sunrise: ${atomicState.sunriseTm} | Sunset: ${atomicState.sunsetTm}", image: getAppImg("blank_icon.png")
+                            paragraph "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}", state: "complete", image: getAppImg("blank_icon.png")
                         } 
                         if(!remSenUseSunAsMode) { 
                             if(!checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
@@ -3887,7 +3899,7 @@ def remSensorPage() {
                     section("(Optional) Use Switch Event(s) to Evaluate Temps:") {
                         input "remSenSwitches", "capability.switch", title: "Select Switches", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
                         if(remSenSwitches) { 
-                            input "remSenSwitchOpt", "enum", title: "Event Type to Trigger?", required: true, defaultValue: 2, metadata: [values:switchEnumVals()], submitOnChange: true, image: getAppImg("settings_icon.png")
+                            input "remSenSwitchOpt", "enum", title: "Switch Event to Trigger Evaluation?", required: true, defaultValue: 2, metadata: [values:switchEnumVals()], submitOnChange: true, image: getAppImg("settings_icon.png")
                         }
                     }
                     section ("Optional Settings:") {
@@ -3915,7 +3927,7 @@ def remSenTstatFanSwitchPage() {
             input "remSenTstatFanSwitches", "capability.switch", title: "Select the Switches?", required: false, submitOnChange: true, multiple: true,
                     image: getAppImg("fan_ventilation_icon.png")
             if(remSenTstatFanSwitches) {
-                paragraph "${getRemSenTstatFanSwitchDesc()}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+                paragraph "${getRemSenTstatFanSwitchDesc(false)}", state: getRemSenTstatFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
             }
         }
         if(remSenTstatFanSwitches) {
@@ -3930,7 +3942,7 @@ def remSenTstatFanSwitchPage() {
             }
             if(atomicState?.remSenTstatFanSwitchSpeedEnabled) {
                 section("Fan Speed Options") {
-                    input(name: "remSenTstatFanSwitchSpeedCtrl", type: "bool", title: "Enable Speed Control?", defaultValue: atomicState?.remSenTstatFanSwitchSpeedEnabled, submitOnChange: true, image: getAppImg("speed_knob_icon.png"))
+                    input(name: "remSenTstatFanSwitchSpeedCtrl", type: "bool", title: "Enable Speed Control?", defaultValue: (atomicState?.remSenTstatFanSwitchSpeedEnabled ? true : false), submitOnChange: true, image: getAppImg("speed_knob_icon.png"))
                     if(remSenTstatFanSwitchSpeedCtrl) {
                         input "remSenTstatFanSwitchLowSpeed", "decimal", title: "Low Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("fan_low_speed.png")
                         input "remSenTstatFanSwitchMedSpeed", "decimal", title: "Medium Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("fan_med_speed.png")
@@ -3942,18 +3954,25 @@ def remSenTstatFanSwitchPage() {
     }
 }
 
-def getRemSenTstatFanSwitchDesc() {
+def getRemSenTstatFanSwitchDesc(showOpt = true) {
     def swDesc = ""
     def swCnt = 0
+    if(showOpt) {
+    	swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "Fan Switch Config:" : ""
+    }
+    swDesc += remSenTstatFanSwitches ? "${showOpt ? "\n" : ""}  • Fan Switches:" : ""
+    def rmSwCnt = remSenTstatFanSwitches?.size() ?: 0
     remSenTstatFanSwitches?.each { sw ->
         swCnt = swCnt+1
-        swDesc += "${swCnt > 1 ? "\n" : ""}• ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3SpdCtl)" : ""}"
+        swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3Spd)" : ""}"
     }
-    swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "\n\nFan Switch Config:" : ""
-    swDesc += remSenTstatFanSwitchSpeedCtrl ? "\n• 3-Speed Fan Support: (Active)" : ""
-    swDesc += remSenTstatFanSwitchTriggerType ? "\n• Fan Trigger: (${getEnumValue(switchRunEnum(), remSenTstatFanSwitchTriggerType)})" : ""
-    swDesc += remSenTstatFanSwitchHvacModeFilter ? "\n• HvacMode Filter: (${getEnumValue(fanModeTrigEnum(), remSenTstatFanSwitchHvacModeFilter)})" : ""
-    return (swDesc == "") ? null : "Fan Switch Devices:\n${swDesc}"
+    if(showOpt) {
+        swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "\n\nFan Triggers:" : ""
+        swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchSpeedCtrl) ? "\n  • 3-Speed Fan Support: (Active)" : ""
+        swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchTriggerType) ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), remSenTstatFanSwitchTriggerType)})" : ""
+        swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchHvacModeFilter) ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), remSenTstatFanSwitchHvacModeFilter)})" : ""
+    }
+    return (swDesc == "") ? null : "${swDesc}"
 }
 
 def getRemSenTstatFanSwitchesSpdChk() {
@@ -4228,7 +4247,7 @@ private remSenEvtEval() {
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
     if(getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60)) {
-        def schChkVal = ((remSenWaitVal() - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal() - getLastRemSenEvalSec())
+        def schChkVal = ((remSenWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal - getLastRemSenEvalSec())
         runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in ($schChkVal seconds)", "info", true)
         return 
@@ -5114,19 +5133,17 @@ def tstatModePage() {
         
         if (tModeTstats) {
             tModeTstats?.each { ts ->
-                section("Configure ${ts?.displayName}:") {
-                    def tStatHeatSp = getTstatSetpoint(ts, "heat")
-                    def tStatCoolSp = getTstatSetpoint(ts, "cool")
-                    def tStatMode = ts ? ts?.currentThermostatMode.toString().capitalize() : "unknown"
-                    def tStatTemp = "${getDeviceTemp(ts)}°${atomicState?.tempUnit}"
-                    def preName = getTstatModeInputName(ts)
-                    def tstatDesc = (settings?."${preName}" ? "Configured:${getTstatModeDesc(ts)}\n\n" : "")
-                    
-                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}Tap to Modify" : "Tap to Configure..."), 
+                section("${ts?.displayName} Configuration:") {
+                    def str = ""
+                    str += "Current Status:"
+                    str += "\n• Temperature: (${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
+                    str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
+                    str += "\n• Mode: (${ts ? (${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}) : "unknown"})"
+                    def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
+                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
-                    paragraph "Current Temperature: (${tStatTemp})\nHeat/Cool Setpoints: (${tStatHeatSp}°${atomicState?.tempUnit}/${tStatCoolSp}°${atomicState?.tempUnit})\nCurrent Mode: (${tStatMode})",
-                                image: getAppImg("instruct_icon.png")
+                    paragraph "${str}", image: getAppImg("instruct_icon.png")
                 }
             }
         }
@@ -5185,7 +5202,7 @@ def getTstatModeDesc(tstat = null) {
             tModeTstats?.each { ts ->
                 num = num+1
                 def preName = getTstatModeInputName(ts)
-                dstr += "${num > 1 ? "\n" : ""}${ts?.displayName}:"
+                dstr += "${num > 1 ? "\n\n" : ""}${ts?.displayName}:"
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
                         dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
@@ -5639,7 +5656,7 @@ def smallTempEnum() {
 
 def switchRunEnum() {
     def vals = [ 
-        1:"Run with Thermostat", 2:"Only When Fan is On" 
+        1:"Heating/Cooling", 2:"With Fan Only" 
     ]
     return vals
 }
