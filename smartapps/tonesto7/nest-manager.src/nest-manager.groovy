@@ -292,7 +292,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Preferences:") {
-                def prefDesc = "Notifications: (${pushStatus()})\nDebug: App (${debugStatus()})/Device (${deviceDebugStatus()})\nTap to Configure..."
+                def prefDesc = "Notifications: (${pushStatus()})\n\nDebug:\n• App: (${debugStatus()})\n• Device: (${deviceDebugStatus()})\n\nTap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Active" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
                         image: getAppImg("settings_icon.png")
             }
@@ -353,12 +353,14 @@ def reviewSetupPage() {
     return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
         if(!atomicState?.newSetupComplete) { atomicState.newSetupComplete = true }
         section("Device Summary:") {
-            def desc = !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
-            def ts = thermostats ? "\n (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
-            def pt = protects ? "\n (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
-            def pd = presDevice ? "\n (1) Presence Device" : ""
-            def wd = weatherDevice ? "\n (1) Weather Device" : ""
-            paragraph "${desc}${!ts && !pt && !pd && !wd ? " None" : "${ts}${pt}${pd}${wd}"}"
+            def str = ""
+            str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
+            str += thermostats ? "\n• (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
+            str += protects ? "\n• (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
+            str += presDevice ? "\n• (1) Presence Device" : ""
+            str += weatherDevice ? "\n• (1) Weather Device" : ""
+            str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "• None" : ""
+            paragraph "${str}"
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
@@ -377,11 +379,7 @@ def reviewSetupPage() {
                     image: getAppImg("notification_icon.png")
         }
         section("Polling:") {
-            def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
-            def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
-            def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
-            def pollStatus = !atomicState?.pollingOn ? "Not Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
-            href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
+            href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
         }
         section("Share Data with Developer:") {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
@@ -402,11 +400,7 @@ def prefsPage() {
     def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice))
     dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false, uninstall: false ) {
         section("Polling:") {
-            def pollDevDesc = "Device Polling: ${getInputEnumLabel(pollValue, pollValEnum())}"
-            def pollStrDesc = "\nStructure Polling: ${getInputEnumLabel(pollStrValue, pollValEnum())}"
-            def pollWeaDesc = atomicState?.weatherDevice ? "\nWeather Polling: ${getInputEnumLabel(pollWeatherValue, notifValEnum())}" : ""
-            def pollStatus = !atomicState?.pollingOn ? "Not Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}" : "Active\n${pollDevDesc}${pollStrDesc}${pollWeaDesc}"
-            href "pollPrefPage", title: "Polling Preferences", description: "Polling: ${pollStatus}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
+            href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
         }
         if(devSelected) {
             section("Devices:") {
@@ -2873,6 +2867,16 @@ def pollPrefPage() {
     }
 }
 
+def getPollingConfDesc() {
+    def pStr = ""
+    pStr += "Polling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
+    pStr += "\n• Device: (${getInputEnumLabel(pollValue, pollValEnum())})"
+    pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue, pollValEnum())})"
+    pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue, notifValEnum())})" : ""
+    pStr += "\n• Update Child Data: ${updChildOnNewOnly ? "(Only on New)" : "(Always)"}"
+    return pStr
+}
+
 def notifPrefPage() {
     dynamicPage(name: "notifPrefPage", install: false) {
         def sectDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
@@ -3214,9 +3218,6 @@ def appParamsDataPage() {
         }
     }
 }
-
-
-
 
 def managAppDataPage() {
     dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
