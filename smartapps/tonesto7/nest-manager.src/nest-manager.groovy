@@ -96,6 +96,7 @@ preferences {
     page(name: "mainPage")
     page(name: "deviceSelectPage")
     page(name: "reviewSetupPage")
+    page(name: "changeLogPage")
     page(name: "prefsPage")
     page(name: "infoPage")
     page(name: "nestInfoPage")
@@ -221,7 +222,8 @@ def mainPage() {
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
-            paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+            href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
+            //paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\nPlease visit the IDE to update the code.",
                         image: getAppImg("update_icon.png")
@@ -3019,10 +3021,18 @@ def infoPage () {
             paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)", state: "complete"
         }
         section("App Revision History:") {
-            paragraph appVerInfo()
+            href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("blank_icon.png")
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
+        }
+    }
+}
+
+def changeLogPage () {
+    dynamicPage(name: "changeLogPage", title: "View Change Info", install: false) {
+        section("App Revision History:") {
+            paragraph appVerInfo()
         }
     }
 }
