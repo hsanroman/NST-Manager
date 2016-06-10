@@ -652,8 +652,7 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-    //poll(true)
-    getWebFileData()
+    poll(true)
 }
 
 def refresh(child = null) {
