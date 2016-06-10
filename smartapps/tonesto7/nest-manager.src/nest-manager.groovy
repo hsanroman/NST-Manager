@@ -299,7 +299,6 @@ def mainPage() {
                 def descStr = ""
                 descStr += getAppNotifConfDesc() ?: ""
                 descStr += getAppDebugDesc() ? "${getAppNotifConfDesc() ? "\n" : ""}${getAppDebugDesc() ?: ""}" : ""
-                log.debug "descStr: $descStr"
                 def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
