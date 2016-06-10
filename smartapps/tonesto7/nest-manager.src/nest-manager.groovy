@@ -188,7 +188,7 @@ def authPage() {
                     desc = "Application Status has not received any messages to display"
                 }
                 LogAction("Status Message: $desc", "warn", true)
-                paragraph "$desc", state: null
+                paragraph "$desc", required: true, state: null
             }
         }
     }
@@ -214,7 +214,7 @@ def authPage() {
             }
             section(""){
                 paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button.", state: "complete"
-                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", state: "complete"
+                paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly...", required: true, state: null
                 href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
             }
         }
@@ -296,9 +296,8 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Preferences:") {
-                def prefDesc = "Notifications: (${pushStatus()})\nDebug:\n• App: (${debugStatus()})\n• Device: (${deviceDebugStatus()})${advAppDebug ? "(Trace)" : ""}\n\nTap to Configure..."
-                href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Enabled" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
-                        image: getAppImg("settings_icon.png")
+                def prefDesc = "${getAppNotifConfDesc() ?: ""}${getAppDebugDesc() ?: ""}${getAppNotifConfDesc() ? "\n" : ""}${(getAppNotifConfDesc() || getAppDebugDesc()) ? "\nTap to Modify..." : "\n\nTap to Configure..."}"
+                href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Enabled" || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
@@ -374,7 +373,7 @@ def reviewSetupPage() {
             }
         }
         section("Notifications:") {
-            href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ?: "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
+            href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify..." : "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
         }
         section("Polling:") {
             href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to configure...", state: (pollStatus != "Not Active" ? "complete" : null), image: getAppImg("timer_icon.png")
@@ -409,10 +408,11 @@ def prefsPage() {
             }
         }
         section("Notifications:") {
-            href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ?: "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
+            href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify..." : "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null), 
+                    image: getAppImg("notification_icon.png")
         }
         section("Logging:") {
-            href "debugPrefPage", title: "Logs", description: "App Logs: (${debugStatus()})\nDevice Logs: (${deviceDebugStatus()})\n\nTap to configure...", state: (debugStatus() == "On" || deviceDebugStatus() == "On" ? "complete" : null),
+            href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to configure..." : ""), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
                     image: getAppImg("log.png")
         }
         section("Share Data with Developer:") {
@@ -2326,6 +2326,7 @@ def callback() {
             httpPost(uri: tokenUrl) { resp ->
                 atomicState.tokenExpires = resp?.data.expires_in
                 atomicState.authToken = resp?.data.access_token
+                if(atomicState?.authToken) { atomicState?.tokenCreatedDt = getDtNow() }
             }
 
             if (atomicState?.authToken) {
@@ -2651,10 +2652,10 @@ def getUse24Time()      { return useMilitaryTime ? true : false }
 def getStateSize()      { return state?.toString().length() }
 def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
-private debugStatus() { return !appDebug ? "Off" : "On" } //Keep this
-private deviceDebugStatus() { return !childDebug ? "Off" : "On" } //Keep this
-private isAppDebug() { return !appDebug ? false : true } //Keep This
-private isChildDebug() { return !childDebug ? false : true } //Keep This
+private debugStatus() { return !appDebug ? "Off" : "On" }
+private deviceDebugStatus() { return !childDebug ? "Off" : "On" }
+private isAppDebug() { return !appDebug ? false : true }
+private isChildDebug() { return !childDebug ? false : true }
 def getPagePrefix() { return !parent ? "" : atomicState?.automationType }
 
 def getTimeZone() { 
@@ -2761,6 +2762,12 @@ def time2Str(time) {
         f.setTimeZone(getTimeZone() ?: timeZone(time))
         f.format(t)
     }
+}
+
+def epochToTime(tm) {
+    def tf = new SimpleDateFormat("h:mm a")
+        tf?.setTimeZone(getTimeZone())
+    return tf.format(tm)
 }
 
 def getDtNow() {
@@ -2953,9 +2960,10 @@ def notifPrefPage() {
 
 def getAppNotifConfDesc() {
     def str = ""
-    str += pushStatus() ? "Notifications: (${pushStatus()})" : ""
-    str += (pushStatus() && getNotifSchedDesc()) ? "\n\n${getNotifSchedDesc()}" : ""
-    return pushStatus() ? "${str}\n\nTap to Modify..." : null
+    str += pushStatus() ? "Notifications:" : ""
+    str += (pushStatus()) ? "${recipients ? "\n • Contacts: (${recipients?.size()})" : ""}${usePush ? "\n • Push Messages: Enabled" : ""}${sms ? "\n • SMS: (${sms?.size()})" : ""}${phone ? "\n • SMS: (${phone?.size()})" : ""}" : ""
+    str += (pushStatus() && getNotifSchedDesc()) ? "\n\nSchedule:\n${getNotifSchedDesc()}" : ""
+    return pushStatus() ? "${str}" : null
 }
 
 def devPrefPage() {
@@ -3029,6 +3037,13 @@ def debugPrefPage() {
     }
 }
 
+def getAppDebugDesc() {
+    def str = ""
+    str += isAppDebug() ? "App Debug: (${debugStatus()})${advAppDebug ? "(Trace)" : ""}" : ""
+    str += isChildDebug() ? "${isAppDebug() ? "\n" : ""}• Device Debug: (${deviceDebugStatus()})" : ""
+    return (str != "") ? "${str}" : null
+}
+
 def infoPage () {
     dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
         section("About this App:") {
@@ -3083,8 +3098,13 @@ def nestLoginPrefPage () {
         return authPage()
     } else {
         return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
+            section("Authorization Info:") {
+                paragraph "Token Created on: ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
+                paragraph "Token Expires on: ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
+                paragraph "Last API Connection Occurred: ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
+            }
             section("Nest Login Preferences:") {
-                href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", image: getAppImg("reset_icon.png")
+                href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", required: true, state: null, image: getAppImg("reset_icon.png")
             }
         }
     }
@@ -5452,36 +5472,40 @@ def setNotificationPage(params) {
 
 def getNotifConfigDesc() {
     def pName = getPagePrefix()
-    def recipDesc = getRecipientDesc() ?: ""
-    def schedDesc = (getNotifSchedDesc() ? "${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected..." : "")
-    def speechDesc = (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "${schedDesc == "" ? "" : "\n"}Speech Devices: Active" : ""
-    def notifDesc = (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ? 
-            "\n\nTap to Modify..." : "Tap to Configure..."
-    return "${recipDesc}${schedDesc}${speechDesc}${notifDesc}"
+    def str = ""
+    str += getRecipientDesc() ?: ""
+    str += (getNotifSchedDesc() ? "${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected..." : "")
+    str += (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "${schedDesc == "" ? "" : "\n"}Speech Devices: Active" : ""
+    def notifDesc = (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ? "${str}" : null
+    return notifDesc
 }
 
 def getNotifSchedDesc() { 
+    def sun = getSunriseAndSunset()
+    def startInput = settings?."${getPagePrefix()}qStartInput"
+    def startTime = settings?."${getPagePrefix()}qStartTime"
+    def stopInput = settings?."${getPagePrefix()}qStopInput"
+    def stopTime = settings?."${getPagePrefix()}qStopTime"
+    def dayInput = settings?."${getPagePrefix()}quietDays"
+    def modeInput = settings?."${getPagePrefix()}quietModes"
     def notifDesc = ""
-    def getNotifTimeStartLbl = (settings?."${getPagePrefix()}qStartInput" == "A specific time") ? (settings?."${getPagePrefix()}qStartTime" ? "${time2Str(settings?."${getPagePrefix()}qStartTime")}" : null) : 
-        ((settings?."${getPagePrefix()}qStartInput" == "sunset" || settings?."${getPagePrefix()}qStartInput" == "sunrise") ? "${settings?."${getPagePrefix()}qstartInput".toString().capitalize()}" : null)
-    def getNotifTimeStopLbl = (settings?."${getPagePrefix()}qStopInput" == "A specific time") ? (settings?."${getPagePrefix()}qStopTime" ? "${time2Str(settings?."${getPagePrefix()}qStopTime")}" : null) : 
-            ((settings?."${getPagePrefix()}qStopInput" == "sunset" || settings?."${getPagePrefix()}qStopInput" == "sunrise") ? "${settings?."${getPagePrefix()}qStopInput".toString().capitalize()}" : null)
-    notifDesc += ((getNotifTimeStartLbl && getNotifTimeStopLbl) || settings?."${getPagePrefix()}quietDays" || settings?."${getPagePrefix()}quietModes") ? "Silence Notifications:" : ""
-    notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? "\n• Start Time: (${getNotifTimeStartLbl})\n• Stop Time: ${getNotifTimeStopLbl}" : ""
-    def days = settings?."${getPagePrefix()}quietDays" ? "" : null
+    def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
+    def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
+    notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
+    def days = dayInput ? "" : null
     def dcnt = 0
-    settings?."${getPagePrefix()}quietDays".each { 
+    dayInput.sort().each { 
         dcnt = dcnt+1
-        days += ((dcnt < 1) || (settings?."${getPagePrefix()}quietDays".size() > 1)) ? "\n      ${it}" : "${it}"
+        days += ((dcnt < 1) || (dayInput.size() > 1)) ? "\n      ${it}" : "${it}"
     }
-    def modes = settings?."${getPagePrefix()}quietModes" ? "" : null
+    def modes = modeInput ? "" : null
     def mcnt = 0
-    settings?."${getPagePrefix()}quietModes".each { 
+    modeInput.sort().each { 
         mcnt = mcnt+1
-        modes += ((mcnt > 1) || (settings?."${getPagePrefix()}quietModes".size() > 1)) ? "\n      ${it}" : "${it}"
+        modes += ((mcnt > 1) || (modeInput.size() > 1)) ? "\n      ${it}" : "${it}"
     }
-    notifDesc += days ? "\n• Day${isPluralString(settings?."${getPagePrefix()}quietDays")}: ${days}" : ""
-    notifDesc += modes ? "\n• Mode${isPluralString(settings?."${getPagePrefix()}quietModes")}: ${modes}" : ""
+    notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""} • Silent Day${isPluralString(dayInput)}: ${days}" : ""
+    notifDesc += modes ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl || days) ? "\n" : ""} • Silent Mode${isPluralString(modeInput)}: ${modes}" : ""
     return (notifDesc != "") ? "${notifDesc}" : null
 }
 
