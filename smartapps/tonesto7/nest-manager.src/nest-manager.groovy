@@ -44,10 +44,11 @@ def appVersion() { "2.2.1" }
 def appVerDate() { "6-9-2016" }
 def appVerInfo() {
     def str = ""
-    str += "\n\n\nV2.2.1 (June 9th, 2016):"
-    str += "\n• UPDATED: ."
+    str += "V2.2.1 (June 9th, 2016):"
+    str += "\n• ADDED: App now supports Broadcast message from developer."
+    str += "\n\n• UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
 
-    str += "V2.2.0 (June 8th, 2016):"
+    str += "\n\n\nV2.2.0 (June 8th, 2016):"
     str += "\n• NEW: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser."
     str += "\n\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
     str += "\n\n• NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
@@ -236,7 +237,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Location & Devices:") {
-                def devDesc = "Current Devices: ${getAllChildDevices().size()}\n\nTap to Modify..."
+                def devDesc = getDevicesDesc() ? "Current Devices: ${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
                 href "deviceSelectPage", title: "Location & Devices", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
             }
         }
@@ -295,7 +296,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Preferences:") {
-                def prefDesc = "Notifications: (${pushStatus()})\n\nDebug:\n• App: (${debugStatus()})\n• Device: (${deviceDebugStatus()})${advAppDebug ? "(Trace)" : ""}\n\nTap to Configure..."
+                def prefDesc = "Notifications: (${pushStatus()})\nDebug:\n• App: (${debugStatus()})\n• Device: (${deviceDebugStatus()})${advAppDebug ? "(Trace)" : ""}\n\nTap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Enabled" || debugStatus() != "Off" || deviceDebugStatus() != "Off") ? "complete" : null), 
                         image: getAppImg("settings_icon.png")
             }
@@ -358,11 +359,7 @@ def reviewSetupPage() {
         section("Device Summary:") {
             def str = ""
             str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
-            str += thermostats ? "\n• (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
-            str += protects ? "\n• (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
-            str += presDevice ? "\n• (1) Presence Device" : ""
-            str += weatherDevice ? "\n• (1) Weather Device" : ""
-            str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "• None" : ""
+            str += getDevicesDesc() ?: ""
             paragraph "${str}"
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
@@ -655,7 +652,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-    poll(true)
+    //poll(true)
+    getWebFileData()
 }
 
 def refresh(child = null) {
@@ -1271,7 +1269,7 @@ void workQueue() {
 
             atomicState?.cmdLastProcDt = getDtNow()
             if(cmdQueue?.size() > 10) {
-                sendMsg("There is now ${cmdQueue?.size()} events in the Command Queue...", "Warning")
+                sendMsg("Warning", "There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...")
                 LogAction("There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong...", "warn", true)
             }
             return
@@ -1330,7 +1328,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
                 LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
                 atomicState?.apiIssues = false
                 //attempts to update device event immediately after successful command.
-                sendEvtUpdateToDevice(typeId, type, obj, objVal) 
+                sendEvtUpdateToDevice(typeId, type, obj, objVal)
+                atomicState?.lastCmdSentStatus = "ok" 
                 result = true
                 if(!atomicState?.apiCommandCnt) { atomicState?.apiCommandCnt = 1 }
                 else { atomicState?.apiCommandCnt = atomicState?.apiCommandCnt+1 }
@@ -1353,6 +1352,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true)
         sendExceptionData(ex, "procNestApiCmd")
         atomicState.apiIssues = true
+        atomicState?.lastCmdSentStatus = "failed"
     }
     return result
 }
@@ -1430,7 +1430,7 @@ def updateHandler() {
     }
 }
 
-def sendMsg(msg, msgType, people = null, sms = null, push = null, brdcast = null) {
+def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null) {
     try {
         if(!getOk2Notify()) { 
             LogAction("No Notifications will be sent during Quiet Time...", "info", true)
@@ -1462,7 +1462,7 @@ def sendMsg(msg, msgType, people = null, sms = null, push = null, brdcast = null
                 }
             } else {
                 sendPushMessage(newMsg)
-                log.debug "Broadcast Message Sent: ${atomicState?.lastMsgDt}"
+                log.debug "Broadcast Message Sent: ${newMsg} - ${atomicState?.lastMsgDt}"
             }
         }
     } catch (ex) { 
@@ -1632,7 +1632,7 @@ def getWebFileData() {
 def broadcastCheck() {
     if(atomicState?.appData.broadcast) {
         if(atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
-            sendMst(atomicState?.appData?.broadcast?.message.toString(), atomicState?.appData?.broadcast?.type.toString(), null, null, null, true)
+            sendMsg(atomicState?.appData?.broadcast?.type.toString().capitalize(), atomicState?.appData?.broadcast?.message.toString(), null, null, null, true)
             atomicState?.lastBroadcastId = atomicState?.appData?.broadcast?.msgId
         }
     }
@@ -2903,7 +2903,7 @@ def notifPrefPage() {
         
         if (recipients || phone || usePush) {
             if(recipients && !atomicState?.pushTested) {
-                sendMsg("Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}", "info")
+                sendMsg("Info", "Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}")
                 atomicState.pushTested = true
             } else { atomicState.pushTested = true }
             
@@ -2999,6 +2999,16 @@ def devPrefPage() {
             }
         }
     }
+}
+
+def getDevicesDesc() {
+    def str = ""
+    str += thermostats ? "\n• (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
+    str += protects ? "\n• (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
+    str += presDevice ? "\n• (1) Presence Device" : ""
+    str += weatherDevice ? "\n• (1) Weather Device" : ""
+    str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "• No Devices Selected..." : ""
+    return (str != "") ? str : null
 }
 
 def debugPrefPage() {
@@ -3118,9 +3128,10 @@ def nestInfoPage () {
         }
         section("Recent Command") {
             def cmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
-            def cmdTxt = atomicState.lastCmdSent ? atomicState?.lastCmdSent : "Nothing found..."
-            def cmdDt = atomicState.lastCmdSentDt ? atomicState?.lastCmdSentDt : "Nothing found..."
-            paragraph "• Commands Sent: (${cmdCnt})\n• Last Cmd: (${cmdTxt})\n• Last Date: (${cmdDt})"
+            def cmdTxt = atomicState.lastCmdSent ?: "Nothing found..."
+            def cmdDt = atomicState.lastCmdSentDt ?: "Nothing found..."
+            def cmdStat = atomicState?.lastCmdSentStatus ?: "Nothing found..."
+            paragraph "• Commands Sent: (${cmdCnt})\n• Last Cmd: (${cmdTxt})\n• Last Date: (${cmdDt})\n• Last Result: (${cmdStat})"
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
@@ -3276,36 +3287,6 @@ def managAppDataPage() {
     }
 }
 
-def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
-        getAllChildDevices().each { dev ->
-            def str = ""
-            section("${dev?.displayName.toString().capitalize()}:") {
-                str += "   --------------STATE DATA--------------"
-                dev?.getDeviceStateData()?.sort().each { par ->
-                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
-                }
-                str += "\n\n\n  ---------SUPPORTED ATTRIBUTES---------"
-                def devData = dev?.supportedAttributes.collect { it as String }
-                devData?.sort().each { 
-                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
-                }
-                   str += "\n\n\n  ---------SUPPORTED COMMANDS---------"
-                dev?.supportedCommands?.sort().each { cmd ->
-                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-                }
-                
-                str += "\n\n\n -----------DEVICE CAPABILITIES-----------"
-                dev?.capabilities?.sort().each { cap ->
-                    str += "\n\n• ${cap}"
-                }
-                paragraph "${str}"
-            }
-        }
-    }
-}
-
 def childAppDataPage() {
     dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
         def apps = getChildApps()
@@ -3313,13 +3294,13 @@ def childAppDataPage() {
             apps?.each { ca ->
                 def str = ""
                 section("${ca?.label.toString().capitalize()}:") {
-                    str += "--------------SETTINGS DATA--------------"
+                    str += "   ─────SETTINGS DATA─────"
                     def setData = ca?.getSettingsData()
                     setData?.sort().each { sd ->
                         str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
                     } 
                     def appData = ca?.getAppStateData()
-                    str += "\n\n\n ------------STATE DATA------------"
+                    str += "\n\n\n  ───────STATE DATA──────"
                     appData?.sort().each { par ->
                         str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                     }
@@ -3331,6 +3312,37 @@ def childAppDataPage() {
         }
     }
 }
+
+def childDevDataPage() {
+    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
+        getAllChildDevices().each { dev ->
+            def str = ""
+            section("${dev?.displayName.toString().capitalize()}:") {
+                str += "   ───────STATE DATA──────"
+                dev?.getDeviceStateData()?.sort().each { par ->
+                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
+                }
+                str += "\n\n\n  ────SUPPORTED ATTRIBUTES────"
+                def devData = dev?.supportedAttributes.collect { it as String }
+                devData?.sort().each { 
+                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
+                }
+                   str += "\n\n\n  ────SUPPORTED COMMANDS────"
+                dev?.supportedCommands?.sort().each { cmd ->
+                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                }
+                
+                str += "\n\n\n  ─────DEVICE CAPABILITIES─────"
+                dev?.capabilities?.sort().each { cap ->
+                    str += "\n\n• ${cap}"
+                }
+                paragraph "${str}"
+            }
+        }
+    }
+}
+
 
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
@@ -5335,10 +5347,10 @@ def setRunSchedule(seconds, funct) {
 *************************************************************************************************/
 def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
     if(recips || sms || push) {
-        parent?.sendMsg(msg, msgType, recips, sms, push)
+        parent?.sendMsg(msgType, msg, recips, sms, push)
         //LogAction("Send Push Notification to $recips...", "info", true)
     } else {
-        parent?.sendMsg(msg, msgType)
+        parent?.sendMsg(msgType, msg)
     }
 }
 
