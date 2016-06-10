@@ -296,8 +296,11 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Preferences:") {
-                def prefDesc = "${getAppNotifConfDesc() ?: ""}${getAppDebugDesc() ?: ""}${getAppNotifConfDesc() ? "\n" : ""}${(getAppNotifConfDesc() || getAppDebugDesc()) ? "\nTap to Modify..." : "\n\nTap to Configure..."}"
-                href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() != "Not Enabled" || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
+                def descStr = ""
+                descStr += getAppNotifConfDesc() ? "${getAppNotifConfDesc() ?: ""}" : ""
+                descStr += getAppDebugDesc() ? "${getAppNotifConfDesc() ? "\n" : ""}${getAppDebugDesc() ?: ""}" : ""
+                def prefDesc= (descStr != "") ? "\n\nTap to Modify..." : "Tap to Configure..."
+                href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
@@ -930,28 +933,36 @@ def apiVar() {
 
 def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
     log.trace "sendEvtUpdateToDevice($typeId, $type, $obj, $objVal)..."
-    def devId
-    if(obj == apiVar().cmdObjs.away) {
-        def pres = (obJVal?.toString() == "home") ? "present" : "not present"
-        def nestPres = (obJVal?.toString() == "home") ? "home" : ((obJVal?.toString() == "auto-away") ? "auto-away" : "away")
-        def devIds
-        if(presDevice) { devIds.push(getNestPresId()) }
-        if(atomicState?.thermostats) {
-            atomicState?.thermostats.each { ts ->
-                devIds.push(ts.key.toString())
+    try {
+        def devId
+        if(obj == apiVar()?.cmdObjs.away) {
+            def pres = (obJVal?.toString() == "home") ? "present" : "not present"
+            def nestPres = (obJVal?.toString() == "home") ? "home" : ((obJVal?.toString() == "auto-away") ? "auto-away" : "away")
+            def devIds = []
+            if(presDevice) { devIds?.push(getNestPresId()) }
+            if(atomicState?.thermostats) {
+                atomicState?.thermostats.each { tstat ->
+                    //log.debug "tstat: ${tstat.key}"
+                    devIds?.push(tstat?.key.toString())
+                }
+            }
+            //log.debug "devIds: $devIds"
+            if(devIds) { 
+                devIds?.each { dev ->
+                    //log.debug "dev: $dev"
+                    def cDev = getChildDevice(dev?.toString())
+                    log.debug "child: $cDev"
+                    sendEvent(device: cDev, name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
+                    sendEvent(device: cDev, name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true)
+                }
             }
         }
-        if(devIds) { 
-            devIds.each { d ->
-                log.debug "dev: $dev"
-                def dev = getChildDevice(d.toString())
-                sendEvent(device: dev, name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
-                sendEvent(device: dev, name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true)
-            }
-        }
+        //def dev = getChildDevice(typeId.toString())
+        //log.debug "dev: $dev"
+    } catch (ex) {
+        LogAction("sendEvtUpdateToDevice Exception: ${ex}", "errorS", true)
+        sendExceptionData(ex, "sendEvtUpdateToDevice")
     }
-    //def dev = getChildDevice(typeId.toString())
-    //log.debug "dev: $dev"
 }
 
 def setStructureAway(child, value) {
@@ -1184,12 +1195,12 @@ void workQueue() {
     //log.trace "workQueue..."
     def cmdDelay = getChildWaitVal()
 
-    if (!atomicState?.cmdQlist) { atomicState.cmdQlist = [] }
+    if (!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
     def cmdQueueList = atomicState?.cmdQlist
     def done = false
     def nearestQ = 100
     def qnum = 0
-    cmdQueueList.eachWithIndex { val, idx ->
+    cmdQueueList?.eachWithIndex { val, idx ->
         if (done || !atomicState?."cmdQ${idx}" ) { return }
         else {
             if ( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
@@ -1316,28 +1327,27 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         //log.trace "procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}"
 
         httpPutJson(params) { resp ->
-            if (resp.status == 307) {
-                def newUrl = resp.headers.location.split("\\?")
+            if (resp?.status == 307) {
+                def newUrl = resp?.headers?.location?.split("\\?")
                 LogTrace("NewUrl: ${newUrl[0]}")
                 if ( procNestApiCmd(newUrl[0], typeId, type, obj, objVal, qnum, true) ) {
                     result = true
                 }
             }
-            else if( resp.status == 200) {
+            else if( resp?.status == 200) {
                 LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
                 atomicState?.apiIssues = false
-                //attempts to update device event immediately after successful command.
-                sendEvtUpdateToDevice(typeId, type, obj, objVal)
-                atomicState?.lastCmdSentStatus = "ok" 
                 result = true
-                if(!atomicState?.apiCommandCnt) { atomicState?.apiCommandCnt = 1 }
-                else { atomicState?.apiCommandCnt = atomicState?.apiCommandCnt+1 }
+                //attempts to update device event immediately after successful command.
+                increaseCmdCnt()
+                atomicState?.lastCmdSentStatus = "ok" 
+                sendEvtUpdateToDevice(typeId, type, obj, objVal)
             }
             else if(resp.status == 400) {
-                LogAction("procNestApiCmd 'Bad Request' Exception: ${resp.status} ($type | $obj:$objVal)", "error", true)
+                LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
             }
             else {
-                LogAction("procNestApiCmd 'Unexpected' Response: ${resp.status}", "warn", true)
+                LogAction("procNestApiCmd 'Unexpected' Response: ${resp?.status}", "warn", true)
             }
         }
     }
@@ -1354,6 +1364,17 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         atomicState?.lastCmdSentStatus = "failed"
     }
     return result
+}
+
+def increaseCmdCnt() {
+    try {
+        def cmdCnt = !atomicState?.apiCommandCnt ? 1 : atomicState?.apiCommandCnt.toInteger()
+        cmdCnt = cmdCnt+1
+        if(cmdCnt) { atomicState?.apiCommandCnt = cmdCnd?.toInteger() }
+    } catch (ex) {
+        LogAction("increaseCmdCnt Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "increaseCmdCnt")
+    }
 }
 
 
@@ -1629,7 +1650,7 @@ def getWebFileData() {
 }
 
 def broadcastCheck() {
-    if(atomicState?.appData.broadcast) {
+    if(atomicState?.isInstalled && atomicState?.appData.broadcast) {
         if(atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
             sendMsg(atomicState?.appData?.broadcast?.type.toString().capitalize(), atomicState?.appData?.broadcast?.message.toString(), null, null, null, true)
             atomicState?.lastBroadcastId = atomicState?.appData?.broadcast?.msgId
@@ -2470,12 +2491,14 @@ def toQueryString(Map m) {
 def clientId() {
     //if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" }
     if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
+    //if (!appSettings.clientId) { return "66f28a3c-9b5f-4678-b4d9-47b9687cd6fa" } //api v5 token
     else { return appSettings.clientId }
 }
 
 def clientSecret() {
     //if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" }
     if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" } //token with cam support
+    //if (!appSettings.clientSecret) {return "BHxtSbjUwVtKrRkLthxNlvpN7" } //api v5 token
     else { return appSettings.clientSecret }
 }
 
@@ -2890,7 +2913,7 @@ def getPollingConfDesc() {
     pStr += "\n• Device: (${getInputEnumLabel(pollValue, pollValEnum())})"
     pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue, pollValEnum())})"
     pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue, notifValEnum())})" : ""
-    pStr += "\n• Update Child Data: ${updChildOnNewOnly ? "(Only on New)" : "(Always)"}"
+    pStr += "\n• Update Child Data: ${(updChildOnNewOnly == null || updChildOnNewOnly == true) ? "(Only on New)" : "(Always)"}"
     return pStr
 }
 
@@ -2962,7 +2985,7 @@ def getAppNotifConfDesc() {
     def str = ""
     str += pushStatus() ? "Notifications:" : ""
     str += (pushStatus()) ? "${recipients ? "\n • Contacts: (${recipients?.size()})" : ""}${usePush ? "\n • Push Messages: Enabled" : ""}${sms ? "\n • SMS: (${sms?.size()})" : ""}${phone ? "\n • SMS: (${phone?.size()})" : ""}" : ""
-    str += (pushStatus() && getNotifSchedDesc()) ? "\n\nSchedule:\n${getNotifSchedDesc()}" : ""
+    str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
     return pushStatus() ? "${str}" : null
 }
 
@@ -3099,9 +3122,9 @@ def nestLoginPrefPage () {
     } else {
         return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
             section("Authorization Info:") {
-                paragraph "Token Created on: ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
-                paragraph "Token Expires on: ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
-                paragraph "Last API Connection Occurred: ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
+                paragraph "Token Created:\n• ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
+                paragraph "Token Expires:\n• ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
+                paragraph "Last Connection:\n• ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
             }
             section("Nest Login Preferences:") {
                 href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", required: true, state: null, image: getAppImg("reset_icon.png")
@@ -3146,11 +3169,13 @@ def nestInfoPage () {
             }
         }
         section("Recent Command") {
-            def cmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
-            def cmdTxt = atomicState.lastCmdSent ?: "Nothing found..."
-            def cmdDt = atomicState.lastCmdSentDt ?: "Nothing found..."
-            def cmdStat = atomicState?.lastCmdSentStatus ?: "Nothing found..."
-            paragraph "• Commands Sent: (${cmdCnt})\n• Last Cmd: (${cmdTxt})\n• Last Date: (${cmdDt})\n• Last Result: (${cmdStat})"
+            def cmdDesc = ""
+            cmdDesc += " • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
+            cmdDesc += "\nLast Command Details:"
+            cmdDesc += "\n • DateTime: (${atomicState.lastCmdSentDt ?: "Nothing found..."})"
+            cmdDesc += "\n • Cmd Sent: (${atomicState.lastCmdSent ?: "Nothing found..."})"
+            cmdDesc += "\n • Cmd Result: (${atomicState?.lastCmdSentStatus ?: "Nothing found..."})"
+            paragraph "${cmdDesc}"
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, state: (diagDesc ? "complete" : null), image: getAppImg("diag_icon.png")
@@ -3251,7 +3276,7 @@ def diagPage () {
 def appParamsDataPage() {
     dynamicPage(name: "appParamsDataPage", refreshInterval: 30, install: false) {
         if(atomicState?.appData) {
-            atomicState?.appData.sort().each { sec ->
+            atomicState?.appData?.sort().each { sec ->
                 section("${sec?.key.toString().capitalize()}:") {
                     def str = ""
                     def cnt = 0
@@ -5494,15 +5519,19 @@ def getNotifSchedDesc() {
     notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
     def days = dayInput ? "" : null
     def dcnt = 0
-    dayInput.sort().each { 
-        dcnt = dcnt+1
-        days += ((dcnt < 1) || (dayInput.size() > 1)) ? "\n      ${it}" : "${it}"
+    if(dayInput) {
+        dayInput.sort().each { 
+            dcnt = dcnt+1
+            days += ((dcnt < 1) || (dayInput?.size() > 1)) ? "\n      ${it}" : "${it}"
+        }
     }
     def modes = modeInput ? "" : null
     def mcnt = 0
-    modeInput.sort().each { 
-        mcnt = mcnt+1
-        modes += ((mcnt > 1) || (modeInput.size() > 1)) ? "\n      ${it}" : "${it}"
+    if(modeInput) {
+        modeInput.sort().each { 
+            mcnt = mcnt+1
+            modes += ((mcnt > 1) || (modeInput.size() > 1)) ? "\n      ${it}" : "${it}"
+        }
     }
     notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""} • Silent Day${isPluralString(dayInput)}: ${days}" : ""
     notifDesc += modes ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl || days) ? "\n" : ""} • Silent Mode${isPluralString(modeInput)}: ${modes}" : ""
