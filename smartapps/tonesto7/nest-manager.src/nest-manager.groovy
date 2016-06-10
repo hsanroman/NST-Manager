@@ -3605,7 +3605,7 @@ def mainAutoPage(params) {
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
                     extDesc += extTmpRestoreMode ? "\n • Last Mode: ${atomicState?.extTmpRestoreMode ?: "Not Set"}" : ""
                     extDesc += extTmpRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
-                    extDesc += (settings?."${extTmpPrefix()}Modes" || settings?."${extTmpPrefix()}Days" || (settings?."${extTmpPrefix()}StartTime" && settings?."${extTmpPrefix()}StopTime")) ? "\n • Schedule Exceptions: Active..." : ""
+                    extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? "\n • Schedule Exceptions: Active..." : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
                     def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
                     href "extTempPage", title: "External Temps Config...", description: extTmpDesc ?: "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
@@ -3614,17 +3614,21 @@ def mainAutoPage(params) {
 
             if(autoType == "conWat" && !disableAutomation) { 
                 section("Turn Thermostat On/Off when a Door or Window is Opened:") {
-                    def qOpt = (settings?.conWatModes || settings?.conWatDays || (settings?.conWatStartTime && settings?.conWatStopTime)) ? "\nSchedule Options Selected..." : ""
-                    def conWatTstatDesc = conWatTstat ? "Thermostat Mode: (${conWatTstat?.currentThermostatOperatingState.toString()}/${conWatTstat?.currentThermostatMode.toString()})" : ""
-                    def conWatUsedDesc = (conWatContacts && conWatTstat) ? "\nContacts: (${getConWatContactsOk() ? "Closed" : "Open"})" : ""
-                    def conWatOffDesc = conWatOffDelay ? "\nOff Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
-                    def conWatOnDesc = conWatOnDelay ? "\nOn Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    def conWatSpkDesc = (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"])) ? 
-                            "\nSpeech Notifications: Active" : ""
-                    def conWatLastMode = atomicState?.conWatRestoreMode && conWatRestoreOnClose ? "\nLast Mode: ${atomicState?.conWatRestoreMode}" : "\nLast Mode: Not Set"
-                    def conWatConfDesc = (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
-                    def conWatDesc = isConWatConfigured() ? ("${conWatTstatDesc}${conWatUsedDesc}${conWatOffDesc}${conWatOnDesc}${conWatLastMode}${conWatSpkDesc}${qOpt}${conWatConfDesc}") : null
-                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ? conWatDesc : "Tap to Configure...", state: (conWatDesc ? "complete" : null), image: getAppImg("open_window.png")
+                    def conDesc = ""
+                    conDesc += conWatTstat ? "${conWatTstat?.label}\n • Temp: (${getDeviceTemp(conWatTstat)}°${atomicState?.tempUnit})" : ""
+                    conDesc += conWatTstat ? "\n • Mode: (${conWatTstat?.currentThermostatOperatingState.toString()}/${conWatTstat?.currentThermostatMode.toString()})" : ""
+                    conDesc += (conWatContacts && conWatTstat && conWatContactDesc()) ? "\n\n${conWatContactDesc()}" : ""
+                    conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
+                    conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
+                    conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
+                    conDesc += conWatRestoreMode ? "\n • Last Mode: ${atomicState?.conWatRestoreMode ?: "Not Set"}" : ""
+                    conDesc += conWatRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
+                    conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"])) ? 
+                            "\n\n • Voice Notifications: Active" : ""
+                    conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? "\n • Schedule Exceptions: Active..." : ""
+                    conDesc += (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
+                    def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
+                    href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ?: "Tap to Configure...", state: (conWatDesc ? "complete" : null), image: getAppImg("open_window.png")
                 } 
             } 
 
@@ -4763,16 +4767,18 @@ def contactWatchPage() {
             input name: "conWatContacts", type: "capability.contactSensor", title: "Which Contact(s)?", multiple: true, submitOnChange: true, required: req,
                     image: getAppImg("contact_icon.png")
             if(conWatContacts) {
-                def conDesc = "${getOpenContacts(conWatContacts) ? "(${getOpenContacts(conWatContacts).size()}) Opened" : "All Closed"}"
-                paragraph "Contact Status:\n• ${conDesc}", state: "complete", image: getAppImg("instruct_icon.png")
+                //def conDesc = "${getOpenContacts(conWatContacts) ? "(${getOpenContacts(conWatContacts).size()}) Opened" : "All Closed"}"
+                paragraph "${conWatContactDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
             }
             input name: "conWatTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req,
                     image: getAppImg("thermostat_icon.png")
             if (conWatTstat) {
                 getTstatCapabilities(conWatTstat, conWatPrefix())
-                def tstatModeDesc = conWatTstat.currentThermostatMode.toString().capitalize() ?: "Unknown"
-                def tstatOperDesc = conWatTstat.currentThermostatOperatingState.toString().capitalize() ?: "Unknown"
-                paragraph "Current Mode: (${tstatOperDesc}/${tstatModeDesc})", state: "complete", image: getAppImg("instruct_icon.png")
+                def str = ""
+                str += conWatTstat ? "Current Status:" : ""
+                str += conWatTstat ? "\n• Temp: ${conWatTstat?.currentTemperature}°${atomicState?.tempUnit}" : ""
+                str += conWatTstat ? "\n• Mode: ${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()}" : ""
+                paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
             if(dupTstat) {
                 paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
@@ -4815,6 +4821,21 @@ def contactWatchPage() {
             href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
+}
+
+def conWatContactDesc() {
+    if(conWatContacts) {
+        def cCnt = conWatContacts?.size() ?: 0
+        def str = ""
+        def cnt = 0
+        str += "Contacts:"
+        conWatContacts?.each { dev ->
+            cnt = cnt+1
+            str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${dev?.currentContact?.toString().capitalize()})"
+        }
+        return str
+    }
+    return null
 }
 
 def isConWatConfigured() {
@@ -4974,9 +4995,12 @@ def nestModePresPage() {
                 }
                 input "nModeAwayModes", "mode", title: "Modes that set Nest 'Away'", multiple: true, submitOnChange: true, required: modeReq,
                         image: getAppImg("mode_away_icon.png")
+                if (nModeHomeModes && nModeAwayModes) {
+                    paragraph " • Location Mode: ${location?.mode}", state: "complete", image: getAppImg("instruct_icon.png")
+                }
             }
         }
-        if(!nModeSwitch) {
+        if(!nModeHomeModes && !nModeAwayModes && !nModeSwitch) {
             section("(Optional) Set Nest Presence using Presence Sensor:") {
                 //paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
                 input "nModePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", multiple: true, submitOnChange: true, required: false,
@@ -4985,11 +5009,11 @@ def nestModePresPage() {
                     if (nModePresSensor.size() > 1) {
                         paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", image: getAppImg("instruct_icon.png")
                     }
-                    paragraph "Presence State: ${nModePresSensor.currentPresence}", image: " "
+                    paragraph "${nModePresenceDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
                 }
             }
         }
-        if(!nModePresSensor) {
+        if(!nModePresSensor && !nModeHomeModes && !nModeAwayModes) {
             section("(Optional) Set Nest Presence using a Switch:") {
                 input "nModeSwitch", "capability.switch", title: "Select a Switch", required: false, multiple: false, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
                 if(nModeSwitch) {
@@ -5021,6 +5045,21 @@ def nestModePresPage() {
             href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
         }
     }
+}
+
+def nModePresenceDesc() {
+    if(nModePresSensor) {
+        def cCnt = nModePresSensor?.size() ?: 0
+        def str = ""
+        def cnt = 0
+        str += "Presence Status:"
+        nModePresSensor?.each { dev ->
+            cnt = cnt+1
+            str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label.length() > 10) ? "\n│ └ " : ""}(${dev?.currentPresence?.toString().capitalize()})"
+        }
+        return str
+    }
+    return null
 }
 
 def isNestModesConfigured() {
@@ -5632,6 +5671,14 @@ def getOpenContacts(contacts) {
         return cnts ? cnts : null
     } 
     return null
+}
+
+def isContactOpen(con) {
+    def res = false
+    if(con) {
+        if (con?.currentSwitch == "on") { res = true }
+    } 
+    return res
 }
 
 def isSwitchOn(swit) {
