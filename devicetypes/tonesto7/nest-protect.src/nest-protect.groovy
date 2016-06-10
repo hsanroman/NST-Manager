@@ -281,7 +281,7 @@ def lastCheckinEvent(checkin) {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
         tf.setTimeZone(getTimeZone())
-        def lastConn = "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}"
+        def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
         def lastChk = device.currentState("lastConnection")?.value
         state?.lastConnection = lastConn?.toString()
         if(!lastChk.equals(lastConn?.toString())) {
