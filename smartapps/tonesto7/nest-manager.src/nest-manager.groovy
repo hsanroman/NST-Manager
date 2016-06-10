@@ -297,9 +297,10 @@ def mainPage() {
         if(atomicState?.isInstalled) {
             section("Preferences:") {
                 def descStr = ""
-                descStr += getAppNotifConfDesc() ? "${getAppNotifConfDesc() ?: ""}" : ""
+                descStr += getAppNotifConfDesc() ?: ""
                 descStr += getAppDebugDesc() ? "${getAppNotifConfDesc() ? "\n" : ""}${getAppDebugDesc() ?: ""}" : ""
-                def prefDesc= (descStr != "") ? "\n\nTap to Modify..." : "Tap to Configure..."
+                log.debug "descStr: $descStr"
+                def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
             section(" ") {
@@ -415,7 +416,7 @@ def prefsPage() {
                     image: getAppImg("notification_icon.png")
         }
         section("Logging:") {
-            href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to configure..." : ""), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
+            href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to modify..." : "Tap to configure..."), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
                     image: getAppImg("log.png")
         }
         section("Share Data with Developer:") {
@@ -2984,7 +2985,10 @@ def notifPrefPage() {
 def getAppNotifConfDesc() {
     def str = ""
     str += pushStatus() ? "Notifications:" : ""
-    str += (pushStatus()) ? "${recipients ? "\n • Contacts: (${recipients?.size()})" : ""}${usePush ? "\n • Push Messages: Enabled" : ""}${sms ? "\n • SMS: (${sms?.size()})" : ""}${phone ? "\n • SMS: (${phone?.size()})" : ""}" : ""
+    str += (pushStatus() && recipients) ? "\n • Contacts: (${recipients?.size()})" : ""
+    str += (pushStatus() && usePush) ? "\n • Push Messages: Enabled" : ""
+    str += (pushStatus() && sms) ? "\n • SMS: (${sms?.size()})" : ""
+    str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
     str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
     return pushStatus() ? "${str}" : null
 }
