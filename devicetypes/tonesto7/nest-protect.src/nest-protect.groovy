@@ -216,7 +216,8 @@ def generateEvent(Map eventData) {
             state?.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
             state?.showProtActEvts = eventData?.showProtActEvts ? true : false
-            lastCheckinEvent(results?.last_connection)
+            if(!results?.last_connection) { lastCheckinEvent(null) } 
+            else { lastCheckinEvent(results?.last_connection) }
             lastTestedEvent(results?.last_manual_test_time)
             apiStatusEvent(eventData?.apiIssues)
             debugOnEvent(eventData?.debug ? true : false)
