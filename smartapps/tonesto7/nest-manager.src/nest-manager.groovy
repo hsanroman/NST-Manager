@@ -1430,34 +1430,39 @@ def updateHandler() {
     }
 }
 
-def sendMsg(msg, msgType, people = null, sms = null, push = null) {
+def sendMsg(msg, msgType, people = null, sms = null, push = null, brdcast = null) {
     try {
         if(!getOk2Notify()) { 
             LogAction("No Notifications will be sent during Quiet Time...", "info", true)
         } else {
             def newMsg = "${msgType}: ${msg}"
-            def who = people ? people : recipients
-            if (location.contactBookEnabled) {
-                if(who) {
-                    sendNotificationToContacts(newMsg, who)
-                    atomicState?.lastMsg = newMsg
-                    atomicState?.lastMsgDt = getDtNow()
-                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+            if(!brdcast) {
+                def who = people ? people : recipients
+                if (location.contactBookEnabled) {
+                    if(who) {
+                        sendNotificationToContacts(newMsg, who)
+                        atomicState?.lastMsg = newMsg
+                        atomicState?.lastMsgDt = getDtNow()
+                        log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                    }
+                } else {
+                    LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
+                    if (push) {
+                        sendPush(newMsg)
+                        atomicState?.lastMsg = newMsg
+                        atomicState?.lastMsgDt = getDtNow()
+                        log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
+                    }
+                    else if (sms) {
+                        sendSms(sms, newMsg)
+                        atomicState?.lastMsg = newMsg
+                        atomicState?.lastMsgDt = getDtNow()
+                        log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
+                    }
                 }
             } else {
-                LogAction("ContactBook is NOT Enabled on your SmartThings Account...", "warn", true)
-                if (push) {
-                    sendPush(newMsg)
-                    atomicState?.lastMsg = newMsg
-                    atomicState?.lastMsgDt = getDtNow()
-                    log.debug "Push Message Sent: ${atomicState?.lastMsgDt}"
-                }
-                else if (sms) {
-                    sendSms(sms, newMsg)
-                    atomicState?.lastMsg = newMsg
-                    atomicState?.lastMsgDt = getDtNow()
-                    log.debug "SMS Message Sent: ${atomicState?.lastMsgDt}"
-                }
+                sendPushMessage(newMsg)
+                log.debug "Broadcast Message Sent: ${atomicState?.lastMsgDt}"
             }
         }
     } catch (ex) { 
@@ -1607,6 +1612,7 @@ def getWebFileData() {
                 atomicState?.appData = resp?.data
                 atomicState?.lastWebUpdDt = getDtNow()
                 updateHandler()
+                broadcastCheck()
             }
             LogTrace("getWebFileData Resp: ${resp?.data}")
             result = true
@@ -1623,33 +1629,13 @@ def getWebFileData() {
     return result
 }
 
-def getSmartAppData() {
-    //log.trace "getWebFileData..."
-    def params = [
-        uri: "https://graph.api.smartthings.com/api/smartapps/installations/${app.id}",
-           contentType: 'application/json'
-    ]
-    def result = false
-    try {
-        httpGet(params) { resp ->
-            log.debug "resp: ${resp?.status}"
-            if(resp.data) {
-                LogAction("Getting SmartApp Data from SmartThings API...", "info", true)
-                log.debug "smartAppData: ${resp?.data}"
-            }
-            LogTrace("getWebFileData Resp: ${resp?.data}")
-            result = true
+def broadcastCheck() {
+    if(atomicState?.appData.broadcast) {
+        if(atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
+            sendMst(atomicState?.appData?.broadcast?.message.toString(), atomicState?.appData?.broadcast?.type.toString(), null, null, null, true)
+            atomicState?.lastBroadcastId = atomicState?.appData?.broadcast?.msgId
         }
     }
-    catch (ex) {
-        if(ex instanceof groovyx.net.http.HttpResponseException) {
-               log.warn  "appParams.json file not found...${ex}"
-        } else {
-            LogAction("getSmartAppData Exception: ${ex}", "error", true)
-        }
-        sendExceptionData(ex, "getSmartAppData")
-    }
-    return result
 }
 
 def getCssUrl() {
