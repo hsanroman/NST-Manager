@@ -40,10 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.2.1" }
-def appVerDate() { "6-9-2016" }
+def appVersion() { "2.2.2" }
+def appVerDate() { "6-10-2016" }
 def appVerInfo() {
     def str = ""
+    str += "V2.2.2 (June 10th, 2016):"
+    str += "\n• UPDATED: Various UI Tweaks."
+    str += "\n\n• Vacant."
+    
     str += "V2.2.1 (June 9th, 2016):"
     str += "\n• ADDED: App now supports Broadcast message from developer."
     str += "\n\n• UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
@@ -66,28 +70,6 @@ def appVerInfo() {
     str += "\n\n• ADDED: View all Apps/Devices state data under diagnostics."
     str += "\n\n• UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
-    str += "\n\n\nV2.0.8 (May 13th, 2016):"
-    str += "\n• UPDATED: Certain Inputs to turn blue when there settings have been configured."
-    
-    str += "\n\n\nV2.0.7 (May 3rd, 2016):"
-    str += "\n• FIXED: UI to work with the new mobile app design."
-    
-    str += "\n\n\nV2.0.6 (May 2nd, 2016):"
-    str += "\n• ADDED: Showing what types of automations are installed now."
-
-    str += "\n\n\nV2.0.4 (Apr 28th, 2016):"
-    str += "\n• FIXED: Very minor bug fixes"
-    
-    str += "\n\n\nV2.0.3 (Apr 27th, 2016):"
-    str += "\n• FIXED: Bug found when unselecting a location nothing would be found again."
-    str += "\n\n• UPDATED: Changed the way that data was sent to presence device"
-    str += "\n\n• ADDED: Support for Custom Child Notifications..."
-
-    str += "\n\n\nV2.0.1 (Apr 22nd, 2016):"
-    str += "\n• FIXED: Everything"
-
-    str += "\n\n\nV2.0.0 (Apr 21th, 2016):"
-    str += "\n• FIXED: Everything"
     return str
 }
 
@@ -291,7 +273,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
             section("Diagnostics/Info:") {
-                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
+                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -5256,8 +5238,9 @@ def tstatModePage() {
                     str += "Current Status:"
                     str += "\n• Temperature: (${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
                     str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
-                    str += "\n• Mode: (${ts ? (${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}) : "unknown"})"
+                    str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
+                    log.debug "tstatDesc: $tstatDesc"
                     href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
@@ -5306,6 +5289,7 @@ def confTstatModePage(params) {
                             submitOnChange: false, image: getAppImg("heat_icon.png")
                     input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
                             submitOnChange: false, image: getAppImg("cool_icon.png")
+                    input "${preName}_${md}_HvacMode", "enum", title: "(${md}) Hvac Mode)", required: true, options: ["auto", "cool", "heat"], submitOnChange: false, image: getAppImg("cool_icon.png")
                 }
             }
         }
