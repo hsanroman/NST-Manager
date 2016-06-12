@@ -3669,15 +3669,13 @@ def mainAutoPage(params) {
             if(autoType == "nMode" && !disableAutomation) {
                 section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                     def nDesc = ""
-                    
                     nDesc += isNestModesConfigured() ? "Nest Mode:\n • Status: (${getNestLocPres().toString().capitalize()})" : ""
-                    
                     if (((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes))) {
-                        nDesc += nModeHomeModes ? "\n • Home Modes: ${nModeHomeModes.size()} selected" : ""
-                        nDesc += nModeAwayModes ? "\n • Away Modes: ${nModeAwayModes.size()} selected" : ""
+                        nDesc += nModeHomeModes ? "\n • Home Modes: (${nModeHomeModes.size()})" : ""
+                        nDesc += nModeAwayModes ? "\n • Away Modes: (${nModeAwayModes.size()})" : ""
                     }
-                    nDesc += (nModePresSensor && !nModeSwitch) ? "\nUsing Presence: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
-                    nDesc += (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
+                    nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
+                    nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
                     nDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
@@ -5092,7 +5090,7 @@ def nestModePresPage() {
                         image: getAppImg("presence_icon.png")
                 if(nModePresSensor) {
                     if (nModePresSensor.size() > 1) {
-                        paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' arrive", image: getAppImg("instruct_icon.png")
+                        paragraph "Nest will be set 'Away' when all Presence sensors leave and will return to 'Home' when someone arrives", image: getAppImg("instruct_icon.png")
                     }
                     paragraph "${nModePresenceDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
                 }
@@ -5140,7 +5138,7 @@ def nModePresenceDesc() {
         str += "Presence Status:"
         nModePresSensor?.each { dev ->
             cnt = cnt+1
-            str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label.length() > 10) ? "\n│ └ " : ""}(${dev?.currentPresence?.toString().capitalize()})"
+            str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${dev?.currentPresence?.toString().capitalize()})"
         }
         return str
     }
@@ -5366,7 +5364,6 @@ def getTstatModeDesc(tstat = null) {
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
                         dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                        
                         dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
                         dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
                             " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
@@ -5558,7 +5555,7 @@ def getNotifConfigDesc() {
     def str = ""
     str += (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
             "Notification Status:" : ""
-    str += (settings?."${pName}NotifRecips") ? "\n • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
+    str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
     str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
     str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
     //str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
