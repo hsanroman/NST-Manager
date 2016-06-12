@@ -40,10 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.2.1" }
-def appVerDate() { "6-9-2016" }
+def appVersion() { "2.2.2" }
+def appVerDate() { "6-10-2016" }
 def appVerInfo() {
     def str = ""
+    str += "V2.2.2 (June 10th, 2016):"
+    str += "\n• UPDATED: Various UI Tweaks."
+    str += "\n\n• Vacant."
+    
     str += "V2.2.1 (June 9th, 2016):"
     str += "\n• ADDED: App now supports Broadcast message from developer."
     str += "\n\n• UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
@@ -66,28 +70,6 @@ def appVerInfo() {
     str += "\n\n• ADDED: View all Apps/Devices state data under diagnostics."
     str += "\n\n• UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
-    str += "\n\n\nV2.0.8 (May 13th, 2016):"
-    str += "\n• UPDATED: Certain Inputs to turn blue when there settings have been configured."
-    
-    str += "\n\n\nV2.0.7 (May 3rd, 2016):"
-    str += "\n• FIXED: UI to work with the new mobile app design."
-    
-    str += "\n\n\nV2.0.6 (May 2nd, 2016):"
-    str += "\n• ADDED: Showing what types of automations are installed now."
-
-    str += "\n\n\nV2.0.4 (Apr 28th, 2016):"
-    str += "\n• FIXED: Very minor bug fixes"
-    
-    str += "\n\n\nV2.0.3 (Apr 27th, 2016):"
-    str += "\n• FIXED: Bug found when unselecting a location nothing would be found again."
-    str += "\n\n• UPDATED: Changed the way that data was sent to presence device"
-    str += "\n\n• ADDED: Support for Custom Child Notifications..."
-
-    str += "\n\n\nV2.0.1 (Apr 22nd, 2016):"
-    str += "\n• FIXED: Everything"
-
-    str += "\n\n\nV2.0.0 (Apr 21th, 2016):"
-    str += "\n• FIXED: Everything"
     return str
 }
 
@@ -137,7 +119,7 @@ preferences {
     page(name: "fanVentPage" )
     page(name: "nestModePresPage")
     page(name: "tstatModePage")
-    page(name: "confTstatModePage")
+    page(name: "tModeTstatConfModePage")
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
 
@@ -291,7 +273,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
             section("Diagnostics/Info:") {
-                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_icon.png")
+                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -460,7 +442,7 @@ def automationsPage() {
             app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
             def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
-            paragraph "$rText"
+            paragraph "${rText}"//, required: true, state: null
         }
     }
 }
@@ -3651,9 +3633,10 @@ def mainAutoPage(params) {
                     extDesc += extTmpDiffVal ? "\n • Temp Threshold: (${extTmpDiffVal}°${atomicState?.tempUnit})" : ""
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
-                    extDesc += extTmpRestoreMode ? "\n • Last Mode: ${atomicState?.extTmpRestoreMode ?: "Not Set"}" : ""
+                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode ?: "Not Set"})" : ""
                     extDesc += extTmpRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
-                    extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? "\n • Schedule Exceptions: Active..." : ""
+                    extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
                     def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
                     href "extTempPage", title: "External Temps Config...", description: extTmpDesc ?: "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
@@ -3669,11 +3652,12 @@ def mainAutoPage(params) {
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    conDesc += conWatRestoreMode ? "\n • Last Mode: ${atomicState?.conWatRestoreMode ?: "Not Set"}" : ""
-                    conDesc += conWatRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
-                    conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"])) ? 
-                            "\n\n • Voice Notifications: Active" : ""
-                    conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? "\n • Schedule Exceptions: Active..." : ""
+                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ?: "Not Set"})" : ""
+                    conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: True" : ""
+                    conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
                     def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
                     href "contactWatchPage", title: "Contact Sensors Config...", description: conWatDesc ?: "Tap to Configure...", state: (conWatDesc ? "complete" : null), image: getAppImg("open_window.png")
@@ -3682,25 +3666,34 @@ def mainAutoPage(params) {
 
             if(autoType == "nMode" && !disableAutomation) {
                 section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
-                    def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
-                    def nModeLocDesc = isNestModesConfigured() ? "Nest Mode: ${getNestLocPres().toString().capitalize()}" : ""
-                    def nModesDesc = ((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes)) ? "\n${nModeHomeModes ? "Home Modes: ${nModeHomeModes.size()} selected" : ""}${nModeAwayModes ? "\nAway Modes: ${nModeAwayModes.size()} selected" : ""}" : ""
-                    def nPresDesc = (nModePresSensor && !nModeSwitch) ? "\nUsing Presence: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
-                    def nSwtchDesc = (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (Power is: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
-                    def nModeDelayDesc = nModeDelay && nModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
-                    def nModeConfDesc = (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
-                    def nModeDesc = isNestModesConfigured() ? "${nModeLocDesc}${nModesDesc}${nPresDesc}${nSwtchDesc}${nModeDelayDesc}${qOpt}${nModeConfDesc}" : null
-                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ? nModeDesc : "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+                    def nDesc = ""
+                    
+                    nDesc += isNestModesConfigured() ? "Nest Mode:\n • Status: (${getNestLocPres().toString().capitalize()})" : ""
+                    
+                    if (((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes))) {
+                        nDesc += nModeHomeModes ? "\n • Home Modes: ${nModeHomeModes.size()} selected" : ""
+                        nDesc += nModeAwayModes ? "\n • Away Modes: ${nModeAwayModes.size()} selected" : ""
+                    }
+                    nDesc += (nModePresSensor && !nModeSwitch) ? "\nUsing Presence: (${nModePresSensor?.currentPresence?.toString().replaceAll("\\[|\\]", "")})" : ""
+                    nDesc += (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
+                    nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
+                    nDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
+                    def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
+                    href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
                 } 
             }
 
             if(autoType == "tMode" && !disableAutomation) {
                 section("Set Multiple Thermostat Temps based on ST Modes:") {
+                    def tDesc = ""
                     //def qOpt = (settings?.nModeModes || settings?.nModeDays || (settings?.nModeStartTime && settings?.nModeStopTime)) ? "\nSchedule Options Selected..." : ""
-                    def tModeTstatDesc = tModeTstats ? getTstatModeDesc() : ""
-                    def tModeDelayDesc = tModeDelay && tModeDelayVal ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
-                    def tModeDesc = isTstatModesConfigured() ? "${tModeTstatDesc}${tModeDelayDesc}" : null
-                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ? "${tModeDesc}\n\nTap to Modify..." : "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_setpoints_icon.png")
+                    tDesc += tModeTstats ? getTstatModeDesc() : ""
+                    tDesc += (tModeDelay && tModeDelayVal) ? "\nDelay: ${getEnumValue(longTimeSecEnum(), tModeDelayVal)}" : ""
+                    tDesc += tModeTstats ? "\n\nTap to Modify..." : ""
+                    def tModeDesc = isTstatModesConfigured() ? "${tDesc}" : null
+                    href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ?: "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_setpoints_icon.png")
                 } 
             }
 
@@ -3825,7 +3818,7 @@ def subscribeToEvents() {
     if (autoType == "extTmp") {
         if(!extTmpUseWeather && extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpTempEvt, [filterEvents: false]) }
         if(extTmpTstat ) {
-            subscribe(extTmpTstat, "thermostatMode", extTmpTstatEvt) 
+            subscribe(extTmpTstat, "thermostatMode", extTmpTstatModeEvt) 
         }
     }
     //Contact Watcher Subscriptions
@@ -4609,9 +4602,9 @@ def extTempPage() {
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "extTmpRestoreMode", type: "bool", title: "Restore Previous Mode when Temp is below Threshold?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                input name: "extTmpRestoreOnTemp", type: "bool", title: "Restore Previous Mode when Temp is below Threshold?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
-                if(extTmpRestoreMode) {
+                if(extTmpRestoreOnTemp) {
                     if(atomicState?."${extTmpPrefix()}TstatCanCool" && atomicState?."${extTmpPrefix()}TstatCanHeat") {
                         input name: "extTmpRestoreAutoMode", type: "bool", title: "Restore to Auto Mode?", description: "", required: false, defaultValue: false, submitOnChange: true,
                                 image: getAppImg("restore_icon.png")
@@ -4622,7 +4615,7 @@ def extTempPage() {
             }
             section(getDmtSectionDesc(extTmpPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null),
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null),
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
@@ -4631,7 +4624,7 @@ def extTempPage() {
             }
         }
         section("Help and Instructions:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("info.png")
         }
     }
 }
@@ -4701,30 +4694,46 @@ def extTmpTempCheck() {
     //log.trace "extTmpTempCheck..."
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
     def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
-    def lastMode = extTmpRestoreMode ? (extTmpRestoreAutoMode ? "auto" : (atomicState?.extTmpRestoreMode ?: curMode)) : null
     def modeOff = (curMode == "off") ? true : false
+    def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
+    
     if(extTmpTempOk()) {
-        if(modeOff && extTmpRestoreMode && atomicState?.extTmpTstatTurnedOff) {
+        if(okToRestore) {
             if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5)) {
-                if(lastMode && (lastMode != curMode)) {
+                def lastMode = null
+                if(extTmpRestoreOnTemp) {
+                    if(!atomicState?.extTmpRestoreMode) {
+                        if(extTmpRestoreAutoMode) {
+                            lastMode = "auto"
+                            LogAction("extTmpTempCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
+                        }
+                    } else {
+                        lastMode = atomicState?.extTmpRestoreMode
+                    }
+                }
+                if(lastMode != curMode) {
                     if(setTstatMode(extTmpTstat, lastMode)) {
-                        //atomicState.extTmpTstatTurnedOff = false
+                        atomicState?.extTmpTstatTurnedOff = false
                         atomicState?.extTmpTstatOffRequested = false
                         runIn(20, "extTmpFollowupCheck", [overwrite: true])
-                        LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshhold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
+                        LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshhold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
                         if(extTmpPushMsgOn) {
                             sendNofificationMsg("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshhold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info", 
-                                    extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
+                                    settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                         }
-                    } else { LogAction("extTmpTempCheck() | lastMode was not found...", "error", true) }
+                    } else { 
+                        LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) 
+                    }
+                } else {
+                    LogAction("extTmpTempCheck() | Skipping Restore because the Mode to Restore is same as Current Mode", "info", true)
                 }
-            }
-        } 
+            } 
+        }
     }
     if (!extTmpTempOk()) {
         if(!modeOff) {
             if(getExtTmpBadDtSec() >= (getExtTmpOffDelayVal() - 2)) {
-                if(extTmpRestoreMode) { 
+                if(extTmpRestoreOnTemp) { 
                     atomicState?.extTmpRestoreMode = curMode
                     LogAction("Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                 }
@@ -4735,15 +4744,16 @@ def extTmpTempCheck() {
                 runIn(20, "extTmpFollowupCheck", [overwrite: true])
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(extTmpPushMsgOn) {
-                    sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", extTmpNotifRecips, extTmpNotifPhones, extTmpUsePush)
+                    sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
+                        settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                 }
             }
-        } else { LogAction("extTmpTempCheck() | No change made because ${extTmpTstat?.label} is already 'Off'", "info", true) }
+        } else { LogAction("extTmpTempCheck() | Skipping change because '${extTmpTstat?.label}' mode is already 'OFF'", "info", true) }
     }
 }
 
-def extTmpTstatEvt(evt) {
-    //log.trace "extTmpTstatEvt... ${evt.value}"
+def extTmpTstatModeEvt(evt) {
+    log.trace "extTmpTstatModeEvt... '${evt?.displayName}' Mode is now (${evt?.value.toString().toUpperCase()})"
     if(disableAutomation) { return }
     else {
         def modeOff = (evt?.value == "off") ? true : false
@@ -4752,7 +4762,7 @@ def extTmpTstatEvt(evt) {
 }
 
 def extTmpFollowupCheck() {
-    log.trace "extTmpFollowupCheck..."
+    //log.trace "extTmpFollowupCheck..."
     def curMode = extTmpTstat?.currentThermostatMode.toString()
     def modeOff = (curMode == "off") ? true : false
     def extTmpTstatReqOff = atomicState?.extTmpTstatOffRequested ? true : false
@@ -4845,7 +4855,7 @@ def contactWatchPage() {
                         image: getAppImg("restore_icon.png")
                 if(conWatRestoreOnClose) {
                     if(atomicState?."${conWatPrefix()}TstatCanCool" && atomicState?."${conWatPrefix()}TstatCanHeat") {
-                        input name: "conWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                        input name: "conWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode if Already Off?", description: "", required: false, defaultValue: false, submitOnChange: true,
                                 image: getAppImg("restore_icon.png")
                     }
                     input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -4854,7 +4864,7 @@ def contactWatchPage() {
             }
             section(getDmtSectionDesc(conWatPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null), 
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null), 
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
@@ -4866,7 +4876,7 @@ def contactWatchPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
@@ -4900,78 +4910,103 @@ def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteg
 
 def conWatCheck() {
     //log.trace "conWatCheck..."
-    if (disableAutomation) { return }
-    else {
-        def curMode = conWatTstat.currentState("thermostatMode").value.toString()
-        def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
-
-        def modeOff = (curMode == "off") ? true : false
-        def lastMode = conWatRestoreMode ? (conWatRestoreAutoMode ? "auto" : (atomicState?.conWatRestoreMode ?: curMode)) : null
-        def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-        //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
-        //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
-        if(getConWatContactsOk()) {
-            if(modeOff && conWatRestoreOnClose && atomicState?.conWatTstatTurnedOff) {
-                if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5)) {
-                    if(lastMode && (lastMode != curMode)) {
-                        if(setTstatMode(conWatTstat, lastMode)) {
-                            atomicState?.conWatTstatOffRequested = false
-                            //atomicState.conWatTstatTurnedOff = false
-                            if(conWatTstatMir) { 
-                                conWatTstatMir?.each { tstat ->
-                                    setTstatMode(tstat, lastMode)
-                                    //log.debug("Restoring Mode (${lastMode}) to ${tstat}")
+    try {
+        if (disableAutomation) { return }
+        else {
+            def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
+            def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+            def modeOff = (curMode == "off") ? true : false
+            def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
+            def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
+            def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
+            //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
+            if(getConWatContactsOk()) {
+                if(okToRestore) {
+                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5)) {
+                        def lastMode = null
+                        if(conWatRestoreOnClose) {
+                            if(!atomicState?.conWatRestoreMode) {
+                                if(conWatRestoreAutoMode) {
+                                    lastMode = "auto"
+                                    LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                                 }
-                            }
-                            if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
-                            LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
-                            if(settings?."${getPagePrefix()}PushMsgOn") {
-                                sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
-                                        conWatNotifRecips, conWatNotifPhones, conWatUsePush)
-                            }
-                            if(settings?."${conWatPrefix()}AllowSpeechNotif" && conWatSpeechOnRestore) {
-                                speakSomething("'${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})", conWatPrefix())
+                            } else {
+                                lastMode = atomicState?.conWatRestoreMode
                             }
                         }
-                        else { LogAction("conWatCheck() | lastMode was not found...", "error", true) }
-                    }
-                }
-            } 
-        }
-        
-        if (!getConWatContactsOk()) {
-            if(!modeOff) {
-                if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
-                    if(conWatRestoreOnClose) { 
-                        atomicState?.conWatRestoreMode = curMode
-                        LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
-                    }
-                    log.debug("${openCtDesc} are Open: Turning Off ${conWatTstat}")
-                    atomicState?.conWatTstatTurnedOff = true
-                    atomicState?.conWatTstatOffRequested = true
-                    conWatTstat?.off()
-                    if(conWatTstatMir) { 
-                        conWatTstatMir?.each { tstat ->
-                            tstat?.off()
-                            log.debug("Mirrored Off Command to ${tstat}")
+                        if(lastMode != curMode) {
+                            if(setTstatMode(conWatTstat, lastMode)) {
+                                atomicState.conWatTstatTurnedOff = false
+                                atomicState?.conWatTstatOffRequested = false
+                                if(conWatTstatMir) { 
+                                    conWatTstatMir?.each { tstat ->
+                                        if(setTstatMode(tstat, lastMode)) {
+                                            LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
+                                        }
+                                    }
+                                }
+                                if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                                LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                                if(allowNotif) {
+                                    sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
+                                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                                    if(allowSpeech && speakOnRestore) {
+                                        def msg = "Restoring ${conWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL contacts have been Closed again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})"
+                                        sendTTS(msg)
+                                    }
+                                }
+                            } else { 
+                                LogAction("conWatCheck() | There was problem restoring the last mode to '...", "error", true) 
+                            }
+                        } else {
+                            LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                         }
                     }
-                    if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
-                    LogAction("conWatCheck: '${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
-                    if(settings?."${getPagePrefix()}PushMsgOn") {
-                        sendNofificationMsg("'${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", conWatNotifRecips, conWatNotifPhones, conWatUsePush)
+                } 
+            }
+            
+            if (!getConWatContactsOk()) {
+                if(!modeOff) {
+                    if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
+                        if(conWatRestoreOnClose) { 
+                            atomicState?.conWatRestoreMode = curMode
+                            LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                        }
+                        log.debug("${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'")
+                        atomicState?.conWatTstatTurnedOff = true
+                        atomicState?.conWatTstatOffRequested = true
+                        conWatTstat?.off()
+                        if(conWatTstatMir) { 
+                            conWatTstatMir?.each { tstat ->
+                                tstat?.off()
+                                log.debug("Mirrored Off Command to ${tstat}")
+                            }
+                        }
+                        if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                        LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
+                        if(allowNotif) {
+                            sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
+                                settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                            if(allowNotif && allowSpeech) {
+                                def msg = "${conWatTstat} has been turned OFF because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})"
+                                sendTTS(msg)
+                            }
+                        }
                     }
-                    if(settings?."${conWatPrefix()}AllowSpeechNotif") {
-                        speakSomething("'${conWatTstat.label}' has been turned off because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})", conWatPrefix())
-                    }
-                }
-            } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' Mode is already 'OFF'", "info", true) }
+                } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
+            }
         }
+    } catch (ex) {
+        LogAction("conWatCheck Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "conWatCheck")
     }
 }
 
 def conWatFollowupCheck() {
-    log.trace "conWatFollowupCheck..."
+    //log.trace "conWatFollowupCheck..."
     def curMode = conWatTstat?.currentThermostatMode.toString()
     def modeOff = (curMode == "off") ? true : false
     def conWatTstatReqOff = atomicState?.conWatTstatOffRequested ? true : false
@@ -4979,7 +5014,7 @@ def conWatFollowupCheck() {
 }
 
 def conWatTstatModeEvt(evt) {
-    log.trace "conWatTstatModeEvt... ${evt?.value}"
+    log.trace "conWatTstatModeEvt... '${evt?.displayName}' Mode is now (${evt?.value.toString().toUpperCase()})"
     if (disableAutomation) { return }
     else { 
         def modeOff = (evt?.value == "off") ? true : false
@@ -5081,7 +5116,7 @@ def nestModePresPage() {
         if(((nModeHomeModes && nModeAwayModes) && !nModePresSensor) || nModePresSensor) {
             section(getDmtSectionDesc(nModePrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
-                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc != "Tap to Configure..." ? "complete" : null), 
+                href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null), 
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
@@ -5090,7 +5125,7 @@ def nestModePresPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
@@ -5206,7 +5241,8 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = true
                 //parent?.setStructureAway(null, true) 
                 if(nModePushMsgOn) {
-                    sendNofificationMsg("$awayDesc Nest 'Away", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+                    sendNofificationMsg("$awayDesc Nest 'Away", "Info", 
+                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                 }
                 //runIn(20, "nModeFollowupCheck", [overwrite: true])
             }
@@ -5215,7 +5251,8 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = false
                 //parent?.setStructureAway(null, false) 
                 if(nModePushMsgOn) {
-                    sendNofificationMsg("$homeDesc Nest 'Home", "Info", nModeNotifRecips, nModeNotifPhones, nModeUsePush)
+                    sendNofificationMsg("$homeDesc Nest 'Home", "Info", 
+                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                 }
                 //runIn(20, "nModeFollowupCheck", [overwrite: true])
             } 
@@ -5256,9 +5293,10 @@ def tstatModePage() {
                     str += "Current Status:"
                     str += "\n• Temperature: (${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
                     str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
-                    str += "\n• Mode: (${ts ? (${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}) : "unknown"})"
+                    str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
-                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
+                    log.debug "tstatDesc: $tstatDesc"
+                    href "tModeTstatConfModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
                     paragraph "${str}", image: getAppImg("instruct_icon.png")
@@ -5276,12 +5314,12 @@ def tstatModePage() {
         }
 
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
 
-def confTstatModePage(params) {
+def tModeTstatConfModePage(params) {
     def devName
     def devId
     if (!params.devId && !params?.devName) { 
@@ -5293,7 +5331,7 @@ def confTstatModePage(params) {
         devId = params?.devId
         devName = params?.devName
     }
-    dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
+    dynamicPage(name: "tModeTstatConfModePage", title: "${devName} Configuration", install: false, uninstall: false) {
         def preName = "tMode_|${devId}|_Modes"
         section(" ") {
             input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
@@ -5306,6 +5344,8 @@ def confTstatModePage(params) {
                             submitOnChange: false, image: getAppImg("heat_icon.png")
                     input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
                             submitOnChange: false, image: getAppImg("cool_icon.png")
+                    input "${preName}_${md}_HvacMode", "enum", title: "(${md}) Hvac Mode)", required: true,  defaultValue: "heat-cool", metadata: [values:["heat-cool":"Auto", "cool":"Cool", "heat":"Heat"]], 
+                            submitOnChange: false, image: getAppImg("${settings?."${preName}_${md}_HvacMode".toString() ?: "mode_icon"}.png")
                 }
             }
         }
@@ -5316,22 +5356,27 @@ def getTstatModeDesc(tstat = null) {
     if(tModeTstats) {
         def dstr = ""
         def num = 0
+        def preName = null
         if(!tstat) {
             tModeTstats?.each { ts ->
                 num = num+1
-                def preName = getTstatModeInputName(ts)
+                preName = getTstatModeInputName(ts)
                 dstr += "${num > 1 ? "\n\n" : ""}${ts?.displayName}:"
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
-                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
+                        dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
+                        dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
                     }
                 }
             }
         } else {
-            def preName = getTstatModeInputName(tstat)
+            preName = getTstatModeInputName(tstat)
             if(settings?."${preName}") {
                 settings?."${preName}".each { md ->
-                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
+                    dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
+                    dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
                 }
             }
         }
@@ -5501,15 +5546,48 @@ def setNotificationPage(params) {
 def getNotifConfigDesc() {
     def pName = getPagePrefix()
     def str = ""
-    str += getRecipientDesc() ?: ""
+    str += (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
+            "Notification Status:" : ""
+    str += (settings?."${pName}NotifRecips") ? "\n • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
+    str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
+    str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
+    //str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
     str += (getNotifSchedDesc() ? "${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected..." : "")
-    str += (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ? "${schedDesc == "" ? "" : "\n"}Speech Devices: Active" : ""
-    def notifDesc = (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ? "${str}" : null
-    return notifDesc
+    str += getVoiceNotifConfigDesc() ? "${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}" : ""
+    return (str != "") ? "${str}" : null
 }
+
+def getVoiceNotifConfigDesc() {
+    def pName = getPagePrefix()
+    def str = ""
+    if(settings?."${pName}PushMsgOn") {
+        def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
+        def medias = getInputToStringDesc(settings?."${pName}SpeechMediaPlayer", true)
+        str += speaks ? "\n • Speech Devices:${speaks.size() > 1 ? "\n" : ""}${speaks}" : ""
+        str += medias ? "\n • Media Players:${medias.size() > 1 ? "\n" : ""}${medias}" : ""
+        str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n      Volume: (${settings?."${pName}SpeechVolumeLevel"})" : "" 
+        str += (medias && settings?."${pName}SpeechAllowResume") ? "\n      Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
+    }
+    return (str != "") ? "${str}" : null
+}
+
+def getInputToStringDesc(inpt, addSpace = null) {
+    def cnt = 0
+    def str = ""
+    if(inpt) {
+        inpt.sort().each { item ->
+            cnt = cnt+1
+            str += item ? (((cnt < 1) || (inpt?.size() > 1)) ? "\n      ${item}" : "${addSpace ? "      " : ""}${item}") : ""
+        }
+    }
+    //log.debug "str: $str"
+    return (str != "") ? "${str}" : null
+}
+
 
 def getNotifSchedDesc() { 
     def sun = getSunriseAndSunset()
+    //def schedInverted = settings?."${getPagePrefix()}DmtInvert"
     def startInput = settings?."${getPagePrefix()}qStartInput"
     def startTime = settings?."${getPagePrefix()}qStartTime"
     def stopInput = settings?."${getPagePrefix()}qStopInput"
@@ -5520,22 +5598,8 @@ def getNotifSchedDesc() {
     def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
     def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
     notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
-    def days = dayInput ? "" : null
-    def dcnt = 0
-    if(dayInput) {
-        dayInput.sort().each { 
-            dcnt = dcnt+1
-            days += ((dcnt < 1) || (dayInput?.size() > 1)) ? "\n      ${it}" : "${it}"
-        }
-    }
-    def modes = modeInput ? "" : null
-    def mcnt = 0
-    if(modeInput) {
-        modeInput.sort().each { 
-            mcnt = mcnt+1
-            modes += ((mcnt > 1) || (modeInput.size() > 1)) ? "\n      ${it}" : "${it}"
-        }
-    }
+    def days = getInputToStringDesc(dayInput)
+    def modes = getInputToStringDesc(modeInput)
     notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""} • Silent Day${isPluralString(dayInput)}: ${days}" : ""
     notifDesc += modes ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl || days) ? "\n" : ""} • Silent Mode${isPluralString(modeInput)}: ${modes}" : ""
     return (notifDesc != "") ? "${notifDesc}" : null
@@ -5606,7 +5670,7 @@ def setDayModeTimePage(params) {
     def pName = getPagePrefix()
     dynamicPage(name: "setDayModeTimePage", title: "Select Days, Times or Modes", uninstall: false) {
         def secDesc = settings["${pName}DmtInvert"] ? "Not" : "Only"
-        def invt = settings["${pName}DmtInvert"] ? true : false
+        def inverted = settings["${pName}DmtInvert"] ? true : false
         section("") {
             input "${pName}DmtInvert", "bool", title: "When Not in Any of These?...", defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
         }
@@ -5614,22 +5678,29 @@ def setDayModeTimePage(params) {
             def timeReq = (settings?."${pName}StartTime" || settings."${pName}StopTime") ? true : false
             input "${pName}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
             input "${pName}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
-            input "${pName}Days", "enum", title: "${invt ? "Not": "Only"} on These Days of the week", multiple: true, required: false,
+            input "${pName}Days", "enum", title: "${inverted ? "Not": "Only"} on These Days of the week", multiple: true, required: false,
                     options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], image: getAppImg("day_calendar_icon.png")
-            input "${pName}Modes", "mode", title: "${invt ? "Not": "Only"} in These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
+            input "${pName}Modes", "mode", title: "${inverted ? "Not": "Only"} in These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
         }
     }
 }
 
-def getDayModeTimeDesc(var) {
-    def pName = var
-    def ss = (settings["${pName}StartTime"] && settings["${pName}StopTime"]) ? "Start: ${time2Str(settings["${pName}StartTime"])} | Stop: ${time2Str(settings["${pName}StopTime"])}" : "" 
-    def dys = settings["${pName}Days"].toString().replaceAll("\\[|\\]", "")
-    def mds = settings["${pName}Modes"].toString().replaceAll("\\[|\\]", "")
-    def md = settings["${pName}Modes"] ? "Modes: (${mds})" : ""
-    def dy = settings?."${pName}Days" ? "Days: (${dys})" : ""
-    def confDesc = ((settings["${pName}StartTime"] || settings["${pName}StopTime"]) || settings["${pName}Modes"] || settings["${pName}Days"]) ? 
-            "${ss ? "$ss\n" : ""}${md ? "$md\n" : ""}${dy ? "$dy" : ""}\n\nTap to Modify..." : "Tap to Configure..."
+def getDayModeTimeDesc(pName) {
+    def startTime = settings?."${pName}StartTime"
+    def stopInput = settings?."${pName}StopInput"
+    def stopTime = settings?."${pName}StopTime"
+    def dayInput = settings?."${pName}Days"
+    def modeInput = settings?."${pName}Modes"
+    def inverted = settings?."${pName}DmtInvert" ?: null
+    def str = "" 
+    def days = getInputToStringDesc(dayInput)
+    def modes = getInputToStringDesc(modeInput)
+    str += ((startTime && stopTime) || modes || days) ? "${!inverted ? "When" : "When Not"}:" : ""
+    str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}"  : ""
+    str += days ? "${(startTime || stopTime) ? "\n" : ""} • Day${isPluralString(dayInput)}: ${days}" : ""
+    str += modes ? "${(startTime || stopTime || days) ? "\n" : ""} • Mode${isPluralString(modeInput)}: ${modes}" : ""
+    str += (str != "") ? "\n\nTap to Modify..." : ""
+    return str
 }
 
 def getDmtSectionDesc(autoType) {
@@ -5641,25 +5712,25 @@ def getDmtSectionDesc(autoType) {
 *************************************************************************************************/
 def autoScheduleOk(autoType) { 
     try {
-        def invt = settings?."${autoType}DmtInvert" ? true : false
+        def inverted = settings?."${autoType}DmtInvert" ? true : false
         def modeOk = true 
-        modeOk = (!settings?."${autoType}Modes" || ((isInMode(settings?."${autoType}Modes") && !invt) || (!isInMode(settings?."${autoType}Modes") && invt))) ? true : false
+        modeOk = (!settings?."${autoType}Modes" || ((isInMode(settings?."${autoType}Modes") && !inverted) || (!isInMode(settings?."${autoType}Modes") && inverted))) ? true : false
         //dayOk
         def dayOk = true
         def dayFmt = new SimpleDateFormat("EEEE")
             dayFmt.setTimeZone(getTimeZone())
         def today = dayFmt.format(new Date())
         def inDay = (today in settings?."${autoType}Days") ? true : false
-        dayOk = (!settings?."${autoType}Days" || ((inDay && !invt) || (!inDay && invt))) ? true : false
+        dayOk = (!settings?."${autoType}Days" || ((inDay && !inverted) || (!inDay && inverted))) ? true : false
         
         //scheduleTimeOk
         def timeOk = true
         if (settings?."${autoType}StartTime" && settings?."${autoType}StopTime") {
             def inTime = (timeOfDayIsBetween(settings?."${autoType}StartTime", settings?."${autoType}StopTime", new Date(), getTimeZone())) ? true : false
-            timeOk = ((inTime && !invt) || (!inTime && invt)) ? true : false
+            timeOk = ((inTime && !inverted) || (!inTime && inverted)) ? true : false
         }
         
-        log.debug "dayOk: $dayOk | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | invt: ${invt}"
+        LogAction("autoScheduleOk( dayOk: $dayOk | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | inverted: ${inverted})", "info", false)
         return (modeOk && dayOk && timeOk) ? true : false
     } catch (ex) { 
         LogAction("${autoType}-autoScheduleOk Exception: ${ex}", "error", true)
@@ -5766,7 +5837,7 @@ def setTstatMode(tstat, mode) {
             else if (mode == "cool") { tstat?.cool(); result = true }
             else if (mode == "off") { tstat?.off(); result = true }
             
-            if(result) { LogAction("${tstat?.label} has been set to ${mode}...", "info", true) }
+            if(result) { LogAction("setThermostatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
             else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
         } else { 
             LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
@@ -5795,8 +5866,8 @@ def longTimeMinEnum() {
 
 def longTimeSecEnum() {
     def vals = [
-        60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes", 
-        2700:"45 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
+        60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 
+        1800:"30 Minutes", 2700:"45 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 10:"10 Seconds(Testing)"
     ]
     return vals
 }
@@ -5850,30 +5921,41 @@ def getSunTimeState() {
     atomicState.sunriseTm = sunriseTm
 }
 
-def speakSomething(phrase, volume = null, autoPrefix){
-    if (settings["${autoPrefix}AllowSpeechNotif"]) {
-        if(settings["${autoPrefix}SpeechDevices"]) {
-            settings["${autoPrefix}SpeechDevices"].each {
-                it.speak(phrase)
+void sendTTS(txt) {
+    log.trace "sendTTS(data: ${txt})"
+    try {
+        def pName = getPagePrefix()
+        def msg = txt.toString().replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
+        def spks = settings?."${pName}SpeechDevices" 
+        def meds = settings?."${pName}SpeechMediaPlayer"
+        def res = settings?."${pName}SpeechAllowResume"
+        def vol = settings?."${pName}SpeechVolumeLevel"
+        log.debug "msg: $msg | speaks: $spks | medias: $meds | resume: $res | volume: $vol"
+        if (settings?."${pName}AllowSpeechNotif") {
+            if(spks) {
+                spks*.speak(msg)
             }
-        }
-        if(settings["${autoPrefix}SpeechMediaPlayer"]) {
-            settings["${autoPrefix}SpeechDevices"].each {
-                if(volume) {
-                    if(settings["${autoPrefix}SpeechAllowResume"]) {
-                        it.playTextandResume(phrase, volume.toInteger())
-                    } else {
-                        it.playText(phrase, volume.toInteger())
+            if(meds) {
+                meds?.each {
+                    if(res) {
+                        def currentStatus = it.latestValue('status')
+                        def currentTrack = it.latestState("trackData")?.jsonValue
+                        def currentVolume = it.latestState("level")?.integerValue ? it.currentState("level")?.integerValue : 0
+                        if(vol) {
+                            it?.playTextAndResume(msg, vol?.toInteger())
+                        } else { 
+                            it?.playTextAndResume(msg)
+                        }
                     }
-                } else {
-                    if(settings["${autoPrefix}SpeechAllowResume"]) {
-                        it.playTextandResume(phrase)
-                    } else {
-                        it.playText(phrase)
+                    else { 
+                        it?.playText(msg)
                     }
                 }
             }
         }
+    } catch (ex) {
+        LogAction("sendTTS Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "sendTTS")
     }
 }
 
