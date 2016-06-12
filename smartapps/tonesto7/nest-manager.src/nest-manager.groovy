@@ -119,7 +119,7 @@ preferences {
     page(name: "fanVentPage" )
     page(name: "nestModePresPage")
     page(name: "tstatModePage")
-    page(name: "confTstatModePage")
+    page(name: "tModeTstatConfModePage")
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
 
@@ -3633,10 +3633,10 @@ def mainAutoPage(params) {
                     extDesc += extTmpDiffVal ? "\n • Temp Threshold: (${extTmpDiffVal}°${atomicState?.tempUnit})" : ""
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
-                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: ${atomicState?.extTmpRestoreMode ?: "Not Set"}" : ""
+                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode ?: "Not Set"})" : ""
                     extDesc += extTmpRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
                     extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Filters: (autoScheduleOk(getPagePrefix())))" : ""
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
                     def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
                     href "extTempPage", title: "External Temps Config...", description: extTmpDesc ?: "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
@@ -3652,10 +3652,10 @@ def mainAutoPage(params) {
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: ${atomicState?.conWatRestoreMode ?: "Not Set"}" : ""
+                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ?: "Not Set"})" : ""
                     conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: True" : ""
                     conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Filters: (autoScheduleOk(getPagePrefix())))" : ""
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
                             "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
@@ -3678,7 +3678,7 @@ def mainAutoPage(params) {
                     nDesc += (nModeSwitch && !nModePresSensor) ? "\nUsing Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
                     nDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Filter: (autoScheduleOk(getPagePrefix()))" : ""
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
                     def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
                     href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
@@ -4624,7 +4624,7 @@ def extTempPage() {
             }
         }
         section("Help and Instructions:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("info.png")
         }
     }
 }
@@ -4876,7 +4876,7 @@ def contactWatchPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
@@ -4910,98 +4910,98 @@ def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteg
 
 def conWatCheck() {
     //log.trace "conWatCheck..."
-    if (disableAutomation) { return }
-    else {
-        def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
-        def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
-        def modeOff = (curMode == "off") ? true : false
-        def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-        def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
-        def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
-        def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-        def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
-        //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
-        //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
-        if(getConWatContactsOk()) {
-            if(okToRestore) {
-                if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5)) {
-                    def lastMode = null
-                    if(conWatRestoreOnClose) {
-                        if(!atomicState?.conWatRestoreMode) {
-                            if(conWatRestoreAutoMode) {
-                                lastMode = "auto"
-                                LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
+    try {
+        if (disableAutomation) { return }
+        else {
+            def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
+            def curNestPres = (getNestLocPres() == "home") ? "present" : "not present" //Use this to determine if thermostat can be turned back on.
+            def modeOff = (curMode == "off") ? true : false
+            def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
+            def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
+            def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
+            //log.debug "conWatTstatTurnedOff: ${atomicState?.conWatTstatTurnedOff} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
+            if(getConWatContactsOk()) {
+                if(okToRestore) {
+                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5)) {
+                        def lastMode = null
+                        if(conWatRestoreOnClose) {
+                            if(!atomicState?.conWatRestoreMode) {
+                                if(conWatRestoreAutoMode) {
+                                    lastMode = "auto"
+                                    LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
+                                }
+                            } else {
+                                lastMode = atomicState?.conWatRestoreMode
                             }
-                        } else {
-                            lastMode = atomicState?.conWatRestoreMode
                         }
-                    }
-                    if(lastMode != curMode) {
-                        if(setTstatMode(conWatTstat, lastMode)) {
-                            atomicState.conWatTstatTurnedOff = false
-                            atomicState?.conWatTstatOffRequested = false
-                            if(conWatTstatMir) { 
-                                conWatTstatMir?.each { tstat ->
-                                    if(setTstatMode(tstat, lastMode)) {
-                                        LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
+                        if(lastMode != curMode) {
+                            if(setTstatMode(conWatTstat, lastMode)) {
+                                atomicState.conWatTstatTurnedOff = false
+                                atomicState?.conWatTstatOffRequested = false
+                                if(conWatTstatMir) { 
+                                    conWatTstatMir?.each { tstat ->
+                                        if(setTstatMode(tstat, lastMode)) {
+                                            LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
+                                        }
                                     }
                                 }
-                            }
-                            if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
-                            LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
-                            if(allowNotif) {
-                                sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
-                                        settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                                log.debug "sent restore notification"
-                            
-                                if(allowSpeech && speakOnRestore) {
-                                    def msg = "Restoring ${conWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL contacts have been Closed again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})"
-                                    log.debug "speaking: $msg"
-                                    speakSomething(msg)
+                                if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                                LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                                if(allowNotif) {
+                                    sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", 
+                                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                                    if(allowSpeech && speakOnRestore) {
+                                        def msg = "Restoring ${conWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL contacts have been Closed again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})"
+                                        sendTTS(msg)
+                                    }
                                 }
+                            } else { 
+                                LogAction("conWatCheck() | There was problem restoring the last mode to '...", "error", true) 
                             }
-                        } else { 
-                            LogAction("conWatCheck() | There was problem restoring the last mode to '...", "error", true) 
+                        } else {
+                            LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                         }
-                    } else {
-                        LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                     }
-                }
-            } 
+                } 
+            }
+            
+            if (!getConWatContactsOk()) {
+                if(!modeOff) {
+                    if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
+                        if(conWatRestoreOnClose) { 
+                            atomicState?.conWatRestoreMode = curMode
+                            LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
+                        }
+                        log.debug("${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'")
+                        atomicState?.conWatTstatTurnedOff = true
+                        atomicState?.conWatTstatOffRequested = true
+                        conWatTstat?.off()
+                        if(conWatTstatMir) { 
+                            conWatTstatMir?.each { tstat ->
+                                tstat?.off()
+                                log.debug("Mirrored Off Command to ${tstat}")
+                            }
+                        }
+                        if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
+                        LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
+                        if(allowNotif) {
+                            sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
+                                settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                            if(allowNotif && allowSpeech) {
+                                def msg = "${conWatTstat} has been turned OFF because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})"
+                                sendTTS(msg)
+                            }
+                        }
+                    }
+                } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
+            }
         }
-        
-        if (!getConWatContactsOk()) {
-            if(!modeOff) {
-                if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
-                    if(conWatRestoreOnClose) { 
-                        atomicState?.conWatRestoreMode = curMode
-                        LogAction("Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
-                    }
-                    log.debug("${openCtDesc} ${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'")
-                    atomicState?.conWatTstatTurnedOff = true
-                    atomicState?.conWatTstatOffRequested = true
-                    conWatTstat?.off()
-                    if(conWatTstatMir) { 
-                        conWatTstatMir?.each { tstat ->
-                            tstat?.off()
-                            log.debug("Mirrored Off Command to ${tstat}")
-                        }
-                    }
-                    if(canSchedule()) { runIn(20, "conWatFollowupCheck", [overwrite: true]) }
-                    LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warning", true)
-                    if(allowNotif) {
-                        sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
-                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                    
-                        if(allowNotif && allowSpeech) {
-                            def msg = "${conWatTstat} has been turned OFF because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})"
-                            log.debug "speaking: $msg"
-                            speakSomething(msg)
-                        }
-                    }
-                }
-            } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
-        }
+    } catch (ex) {
+        LogAction("conWatCheck Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "conWatCheck")
     }
 }
 
@@ -5125,7 +5125,7 @@ def nestModePresPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
@@ -5296,7 +5296,7 @@ def tstatModePage() {
                     str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
                     log.debug "tstatDesc: $tstatDesc"
-                    href "confTstatModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
+                    href "tModeTstatConfModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
                     paragraph "${str}", image: getAppImg("instruct_icon.png")
@@ -5314,12 +5314,12 @@ def tstatModePage() {
         }
 
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
         }
     }
 }
 
-def confTstatModePage(params) {
+def tModeTstatConfModePage(params) {
     def devName
     def devId
     if (!params.devId && !params?.devName) { 
@@ -5331,7 +5331,7 @@ def confTstatModePage(params) {
         devId = params?.devId
         devName = params?.devName
     }
-    dynamicPage(name: "confTstatModePage", title: "${devName} Configuration", install: false, uninstall: false) {
+    dynamicPage(name: "tModeTstatConfModePage", title: "${devName} Configuration", install: false, uninstall: false) {
         def preName = "tMode_|${devId}|_Modes"
         section(" ") {
             input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
@@ -5344,7 +5344,8 @@ def confTstatModePage(params) {
                             submitOnChange: false, image: getAppImg("heat_icon.png")
                     input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
                             submitOnChange: false, image: getAppImg("cool_icon.png")
-                    input "${preName}_${md}_HvacMode", "enum", title: "(${md}) Hvac Mode)", required: true, options: ["auto", "cool", "heat"], submitOnChange: false, image: getAppImg("cool_icon.png")
+                    input "${preName}_${md}_HvacMode", "enum", title: "(${md}) Hvac Mode)", required: true,  defaultValue: "heat-cool", metadata: [values:["heat-cool":"Auto", "cool":"Cool", "heat":"Heat"]], 
+                            submitOnChange: false, image: getAppImg("${settings?."${preName}_${md}_HvacMode".toString() ?: "mode_icon"}.png")
                 }
             }
         }
@@ -5355,22 +5356,27 @@ def getTstatModeDesc(tstat = null) {
     if(tModeTstats) {
         def dstr = ""
         def num = 0
+        def preName = null
         if(!tstat) {
             tModeTstats?.each { ts ->
                 num = num+1
-                def preName = getTstatModeInputName(ts)
+                preName = getTstatModeInputName(ts)
                 dstr += "${num > 1 ? "\n\n" : ""}${ts?.displayName}:"
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
-                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                        dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
+                        dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
+                        dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
                     }
                 }
             }
         } else {
-            def preName = getTstatModeInputName(tstat)
+            preName = getTstatModeInputName(tstat)
             if(settings?."${preName}") {
                 settings?."${preName}".each { md ->
-                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                    dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
+                    dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
+                    dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
                 }
             }
         }
@@ -5915,29 +5921,41 @@ def getSunTimeState() {
     atomicState.sunriseTm = sunriseTm
 }
 
-void speakSomething(phrase, player, type = "media") {
-    log.trace "speakSomething(phrase: ${phrase})"
-    def autoPrefix = getPagePrefix()
-    def speaks = settings?."${autoPrefix}SpeechDevices" 
-    def medias = settings"${autoPrefix}SpeechMediaPlayer"
-    def resume = settings?."${autoPrefix}SpeechAllowResume"
-    def vol = settings?."${autoPrefix}SpeechVolumeLevel"
-    if (settings?."${autoPrefix}AllowSpeechNotif") {
-        if(speaks) {
-            speaks*.speak(phrase.toString())
-        }
-        if(medias) {
-            if(resume) {
-                if(vol) {
-                    medias*.playTextandResume(phrase?.toString(), vol?.toInteger())
-                } else { 
-                    medias*.playTextandResume(phrase?.toString()) 
+void sendTTS(txt) {
+    log.trace "sendTTS(data: ${txt})"
+    try {
+        def pName = getPagePrefix()
+        def msg = txt.toString().replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
+        def spks = settings?."${pName}SpeechDevices" 
+        def meds = settings?."${pName}SpeechMediaPlayer"
+        def res = settings?."${pName}SpeechAllowResume"
+        def vol = settings?."${pName}SpeechVolumeLevel"
+        log.debug "msg: $msg | speaks: $spks | medias: $meds | resume: $res | volume: $vol"
+        if (settings?."${pName}AllowSpeechNotif") {
+            if(spks) {
+                spks*.speak(msg)
+            }
+            if(meds) {
+                meds?.each {
+                    if(res) {
+                        def currentStatus = it.latestValue('status')
+                        def currentTrack = it.latestState("trackData")?.jsonValue
+                        def currentVolume = it.latestState("level")?.integerValue ? it.currentState("level")?.integerValue : 0
+                        if(vol) {
+                            it?.playTextAndResume(msg, vol?.toInteger())
+                        } else { 
+                            it?.playTextAndResume(msg)
+                        }
+                    }
+                    else { 
+                        it?.playText(msg)
+                    }
                 }
             }
-            else {
-                medias?.playText(phrase?.toString())
-            }
         }
+    } catch (ex) {
+        LogAction("sendTTS Exception: (${ex})", "error", true)
+        sendExceptionData(ex, "sendTTS")
     }
 }
 
