@@ -40,13 +40,15 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.2.2" }
-def appVerDate() { "6-10-2016" }
+def appVersion() { "2.3.0" }
+def appVerDate() { "6-11-2016" }
 def appVerInfo() {
     def str = ""
-    str += "V2.2.2 (June 10th, 2016):"
+
+    str += "V2.3.0 (June 11th, 2016):"
     str += "\n• UPDATED: Various UI Tweaks."
-    str += "\n\n• Vacant."
+    str += "\n• Lot's of bug fixes.  I througly tested contact, external automations."
+    str += "\n\n• Voice Notifications now work correctly with contact automation."
     
     str += "V2.2.1 (June 9th, 2016):"
     str += "\n• ADDED: App now supports Broadcast message from developer."
@@ -3633,8 +3635,8 @@ def mainAutoPage(params) {
                     extDesc += extTmpDiffVal ? "\n • Temp Threshold: (${extTmpDiffVal}°${atomicState?.tempUnit})" : ""
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
-                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode ?: "Not Set"})" : ""
-                    extDesc += extTmpRestoreAutoMode ? "\n • Restore Mode to Auto" : ""
+                    extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
+                    extDesc += extTmpRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
@@ -3652,8 +3654,8 @@ def mainAutoPage(params) {
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ?: "Not Set"})" : ""
-                    conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: True" : ""
+                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
+                    conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
                     conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
@@ -3699,7 +3701,7 @@ def mainAutoPage(params) {
 
             if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured())) {
                 section("Enable/Disable this Automation") {
-                    input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
+                    input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
                     if(!atomicState?.disableAutomation && disableAutomation) {
                         LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
                         atomicState?.disableAutomationDt = getDtNow()
@@ -5295,7 +5297,6 @@ def tstatModePage() {
                     str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
                     str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
-                    log.debug "tstatDesc: $tstatDesc"
                     href "tModeTstatConfModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
                             params: [devName: "${ts?.displayName}", devId: "${ts?.device.deviceNetworkId}"], 
                             state: ( getTstatConfigured(ts) ? "complete" : null ), image: getAppImg("thermostat_icon.png")
@@ -5340,12 +5341,14 @@ def tModeTstatConfModePage(params) {
             settings."${preName}"?.each { md -> 
                 section("(${md.toString().toUpperCase()}) Options:") {
                     def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    input "${preName}_${md}_HeatTemp", "decimal", title: "(${md}) Heat Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
-                            submitOnChange: false, image: getAppImg("heat_icon.png")
-                    input "${preName}_${md}_CoolTemp", "decimal", title: "(${md}) Cool Temp (°${atomicState?.tempUnit})", required: true, range: "50::80",
-                            submitOnChange: false, image: getAppImg("cool_icon.png")
-                    input "${preName}_${md}_HvacMode", "enum", title: "(${md}) Hvac Mode)", required: true,  defaultValue: "heat-cool", metadata: [values:["heat-cool":"Auto", "cool":"Cool", "heat":"Heat"]], 
-                            submitOnChange: false, image: getAppImg("${settings?."${preName}_${md}_HvacMode".toString() ?: "mode_icon"}.png")
+                    input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_CoolTemp"),
+                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+                    input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_HeatTemp"),
+                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
+                    def iconName = (settings?."${preName}_${md}_HvacMode") ? (settings?."${preName}_${md}_HvacMode" == "auto" ? "heat_cool" : settings?."${preName}_${md}_HvacMode".toString()) : "mode"
+                    log.debug "icon: $iconName"
+                    input "${preName}_${md}_HvacMode", "enum", title: "${md}\nSet Hvac Mode (Optional)", required: false,  defaultValue: null, metadata: [values:tModeHvacEnum()], 
+                            submitOnChange: true, image: getAppImg("${iconName}_icon.png")
                 }
             }
         }
@@ -5365,8 +5368,10 @@ def getTstatModeDesc(tstat = null) {
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
                         dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                        dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
-                        dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                        
+                        dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                        dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
+                            " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                     }
                 }
             }
@@ -5375,8 +5380,9 @@ def getTstatModeDesc(tstat = null) {
             if(settings?."${preName}") {
                 settings?."${preName}".each { md ->
                     dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                    dstr += "(M: ${settings?."${preName}_${md}_HvacMode"} | "
-                    dstr += "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit})"
+                    dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                    dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
+                            " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                 }
             }
         }
@@ -5414,7 +5420,7 @@ def isTstatModesConfigured() {
 }
 
 def tModeModeEvt(evt) { 
-    log.debug "tModeModeEvt: Mode is (${evt?.value})"
+    log.debug "tModeModeEvt: Location Mode is: (${evt?.value})"
     if (disableAutomation) { return }
     else {
         if(tModeDelay) {
@@ -5427,7 +5433,7 @@ def tModeModeEvt(evt) {
 }
 
 def checkTstatMode() {
-    log.trace "checkTstatMode..."
+    //log.trace "checkTstatMode..."
     try {
         if (disableAutomation) { return }
         //else if(!tModeScheduleOk()) { 
@@ -5435,26 +5441,32 @@ def checkTstatMode() {
         //} 
         else {
             def curStMode = location?.mode
-            log.debug "curStMode: $curStMode"
             def heatTemp = 0
             def coolTemp = 0
-            def tstatOperMode
             if (tModeTstats) {
                 tModeTstats?.each { ts -> 
                     def modes = settings?."${getTstatModeInputName(ts)}" ?: null
-                    log.debug "checkTstatModes modes: ${modes}"
                     if (modes && (curStMode in modes)) {
-                        tstatOperMode = ts?.currentThermostatMode.toString()
-                        if(tstatOperMode in ["heat", "auto"]) {
+                        def newHvacMode = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode" ? 
+                            (settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode" == "heat-cool" ? "auto" : settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HvacMode") : null 
+                        if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
+                            if(setTstatMode(ts, newHvacMode)) {
+                                sendEvent(device: ts, name: 'thermostatMode', value: newHvacMode, descriptionText: "HVAC mode is ${newHvacMode.toString().capitalize()}", displayed: true, isStateChange: true )
+                                LogAction("Setting Thermostat Mode to '${newHvacMode?.toString().capitalize()}' on ($ts)", "info", true)
+                            }
+                        }
+                        def tstatHvacMode = ts?.currentThermostatMode.toString()
+                        //if(tstatHvacMode in ["heat", "auto"]) {
                             heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
                             LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
                             ts?.setHeatingSetpoint(heatTemp.toInteger())
-                        }
-                        if(tstatOperMode in ["cool", "auto"]) {
+                        //}
+                        //if(tstatHvacMode in ["cool", "auto"]) {
                             coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
                             LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
                             ts?.setCoolingSetpoint(coolTemp.toInteger())
-                        }
+                        //}
+                        //log.debug "tStatModes: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode"
                     }
                 }
             }
@@ -5898,6 +5910,11 @@ def switchRunEnum() {
 
 def fanModeTrigEnum() {
     def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any Mode"]
+    return vals
+}
+
+def tModeHvacEnum() {
+    def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat"]
     return vals
 }
 
