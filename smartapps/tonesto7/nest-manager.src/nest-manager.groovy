@@ -115,7 +115,7 @@ preferences {
     page(name: "nameAutoPage", install: true, uninstall: true)
     page(name: "remSensorPage")
     page(name: "remSenTstatFanSwitchPage")
-    page(name: "remSensorTempsPage")
+    page(name: "remSenShowTempsPage")
     page(name: "extTempPage")
     page(name: "contactWatchPage")
     page(name: "fanVentPage" )
@@ -3916,7 +3916,7 @@ def remSensorPage() {
                         
                         def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
-                            href "remSensorTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
+                            href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                             //paragraph "Multiple temp sensors will return the average of those sensors.", image: getAppImg("i_icon.png")
                         } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
                     }
@@ -3930,7 +3930,7 @@ def remSensorPage() {
                             //paragraph " ", image: " "
                             def tmpVal = "Evening Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
-                                href "remSensorTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
+                                href "remSenShowTempsPage", title: "View Evening Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
                                 //paragraph "Multiple temp sensors will return the average temp of those sensors.", image: getAppImg("i_icon.png")
                             } else { paragraph "${tmpVal}", state: "complete", image: getAppImg("instruct_icon.png") }
                         }
@@ -3938,10 +3938,12 @@ def remSensorPage() {
                 }
                 if(remSensorDay && remSensorNight) {
                     section("Day/Evening Detection Options:") {
-                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("sunrise_icon.png")
+                        def inDesc = remSenUseSunAsMode ? "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}" : null
+                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: inDesc ?: "", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
+                                image: getAppImg("sunrise_icon.png")
                         if(remSenUseSunAsMode) {
                             getSunTimeState()
-                            paragraph "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}", state: "complete", image: getAppImg("blank_icon.png")
+                            //paragraph "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}", state: "complete", image: getAppImg("blank_icon.png")
                         } 
                         if(!remSenUseSunAsMode) { 
                             if(!checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
@@ -3964,7 +3966,7 @@ def remSensorPage() {
                     section("(Optional) Use Motion Sensors to Evaluate Temps:") {
                         input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
                         if(remSenMotion) {
-                            paragraph "Motion State: (${isMotionActive(remSenMotion) ? "Active" : "Not Active"})", image: " "
+                            paragraph "• Motion State: (${isMotionActive(remSenMotion) ? "Active" : "Not Active"})", state: "complete", image: getAppImg("instruct_icon.png")
                             input "remSenMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 60, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                             input "remSenMotionModes", "mode", title: "Use Motion in these Modes...", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
                         }
@@ -4264,22 +4266,28 @@ def remSenShowTempsPage() {
         if(remSensorDay) { 
             def dSenStr = !remSensorNight ? "Remote" : "Daytime"
             section("$dSenStr Sensor Temps:") {
+                def cnt = 0
+                def rCnt = remSensorDay?.size()
+                def str = ""
+                str += "Sensor Temp (average): (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})\n│"
                 remSensorDay?.each { t ->
-                    paragraph "${t?.label}: ${getDeviceTemp(t)}°${atomicState?.tempUnit}", image: getAppImg("temperature_icon.png")
+                    cnt = cnt+1
+                    str += "${(cnt >= 1) ? "${(cnt == rCnt) ? "\n└" : "\n├"}" : "\n└"} ${t?.label}: ${(t?.label.length() > 10) ? "\n${(rCnt == 1 || cnt == rCnt) ? "    " : "│"}└ " : ""}(${getDeviceTemp(t)}°${atomicState?.tempUnit})"
                 }
-            }
-            section("Average Temp of $dSenStr Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit}", image: getAppImg("instruct_icon.png")
+                paragraph "${str}", state: "complete", image: getAppImg("temperature_icon.png")
             }
         }
         if(remSensorNight) { 
             section("Night Sensor Temps:") {
+                def cnt = 0
+                def rCnt = remSensorNight?.size()
+                def str = ""
+                str += "Sensor Temp (average): ${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit}\n│"
                 remSensorNight?.each { ts ->
-                    paragraph "${ts?.label}: ${getDeviceTemp(ts)}°${atomicState?.tempUnit}", image: getAppImg("temperature_icon.png")
+                    cnt = cnt+1 
+                    str += "${(cnt >= 1) ? "${(cnt == rCnt) ? "\n└" : "\n├"}" : "\n└"} ${ts?.label}: ${(ts?.label.length() > 10) ? "\n${(rCnt == 1 || cnt == rCnt) ? "    " : "│"}└ " : ""}(${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
                 }
-            }
-            section("Average Temp of Night Sensors:") {
-                paragraph "Sensor Temp (average): ${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit}", image: getAppImg("instruct_icon.png")
+                paragraph "${str}", state: "complete", image: getAppImg("temperature_icon.png")
             }
         }
     }
