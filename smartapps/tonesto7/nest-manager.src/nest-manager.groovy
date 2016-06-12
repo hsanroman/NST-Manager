@@ -5345,10 +5345,8 @@ def tModeTstatConfModePage(params) {
                             range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
                     input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_HeatTemp"),
                             range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
-                    def iconName = (settings?."${preName}_${md}_HvacMode") ? (settings?."${preName}_${md}_HvacMode" == "auto" ? "heat_cool" : settings?."${preName}_${md}_HvacMode".toString()) : "mode"
-                    log.debug "icon: $iconName"
                     input "${preName}_${md}_HvacMode", "enum", title: "${md}\nSet Hvac Mode (Optional)", required: false,  defaultValue: null, metadata: [values:tModeHvacEnum()], 
-                            submitOnChange: true, image: getAppImg("${iconName}_icon.png")
+                            submitOnChange: true, image: getAppImg("mode_icon.png")
                 }
             }
         }
