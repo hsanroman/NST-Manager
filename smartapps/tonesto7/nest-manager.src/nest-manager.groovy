@@ -41,11 +41,11 @@ definition(
 }
 
 def appVersion() { "2.3.0" }
-def appVerDate() { "6-11-2016" }
+def appVerDate() { "6-13-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.3.0 (June 11th, 2016):"
+    str += "V2.3.0 (June 13th, 2016):"
     str += "\n• UPDATED: Various UI Tweaks."
     str += "\n• Lot's of bug fixes.  I througly tested contact, external automations."
     str += "\n\n• Voice Notifications now work correctly with contact automation."
@@ -919,9 +919,32 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
     log.trace "sendEvtUpdateToDevice($typeId, $type, $obj, $objVal)..."
     try {
         def devId
+        if(type == apiVar().rootTypes.tstat) {
+            def tDev = getChildDevice(typeId)
+            if(tDev) {
+                switch(obj) {
+                    case [apiVar()?.cmdObjs.targetF, apiVar()?.cmdObjs.targetC]:
+                        sendEvent(device: tDev, name:'targetTemperature', value: objVal, unit: state?.tempUnit, descriptionText: "Target Temperature is ${objVal}", displayed: false, isStateChange: true)
+                    break
+                    case [apiVar()?.cmdObjs.targetLowF, apiVar()?.cmdObjs.targetLowC]:
+                        sendEvent(device: tDev, name:'heatingSetpoint', value: objVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${objVal}" , displayed: disp, isStateChange: true, state: "heat")
+                    break
+                    case [apiVar()?.cmdObjs.targetHighF, apiVar()?.cmdObjs.targetHighC]:
+                        sendEvent(device: tDev, name:'coolingSetpoint', value: objVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${objVal}" , displayed: disp, isStateChange: true, state: "cool")
+                    break
+                    case [apiVar()?.cmdObjs.fanActive]:
+                        sendEvent(device: tDev, name: "thermostatFanMode", value: objVal, descriptionText: "Fan Mode is: ${objVal}", displayed: true, isStateChange: true, state: objVal)
+                    break
+                    case [apiVar()?.cmdObjs.hvacMode]:
+                        sendEvent(device: tDev, name: "thermostatMode", value: objVal, descriptionText: "HVAC mode is ${objVal} mode", displayed: true, isStateChange: true)
+                    break
+                }
+            }
+        }
+        //This handles away command events
         if(obj == apiVar()?.cmdObjs.away) {
-            def pres = (obJVal?.toString() == "home") ? "present" : "not present"
-            def nestPres = (obJVal?.toString() == "home") ? "home" : ((obJVal?.toString() == "auto-away") ? "auto-away" : "away")
+            def pres = (objVal?.toString() == "home") ? "present" : "not present"
+            def nestPres = (objVal?.toString() == "home") ? "home" : ((objVal?.toString() == "auto-away") ? "auto-away" : "away")
             def devIds = []
             if(presDevice) { devIds?.push(getNestPresId()) }
             if(atomicState?.thermostats) {
@@ -941,8 +964,7 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
                 }
             }
         }
-        //def dev = getChildDevice(typeId.toString())
-        //log.debug "dev: $dev"
+        
     } catch (ex) {
         LogAction("sendEvtUpdateToDevice Exception: ${ex}", "errorS", true)
         sendExceptionData(ex, "sendEvtUpdateToDevice")
