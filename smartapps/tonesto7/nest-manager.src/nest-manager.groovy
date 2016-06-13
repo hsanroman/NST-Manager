@@ -3592,9 +3592,9 @@ def mainAutoPage(params) {
                     def remSenDescStr = ""
                     remSenDescStr += remSenRuleType ? "Rule-Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}" : ""
                     remSenDescStr += (remSenEvalModes || remSenMotion || remSenSwitches) ? "\n\nRule Evaluation Triggers:" : ""
-                    remSenDescStr += remSenMotion ? ("\n • Motion Sensors: (${remSenMotion?.size()})\n└ Status: ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
+                    remSenDescStr += remSenMotion ? ("\n • Motion Sensors: (${remSenMotion?.size()})${remSenMotionModes ? "\n└ Mode Filters: ${remSenMotionModes ? "(${remSenMotionModes.size()})" : "(0)"}" : ""}\n└ Status: ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     remSenDescStr += remSenSwitches ? ("\n • Switches: (${remSenSwitches?.size()})\n└ Trigger Type: (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
-                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenMotion.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Active" : "Not Active"}" : ""
+                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Active" : "Not Active"}" : ""
                     
                     remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
                     remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
@@ -3876,7 +3876,7 @@ def remSensorPage() {
         
         section("Select the Allowed (Rule) Action Type:") {
             if(!remSenRuleType) { 
-                paragraph "(Rule) Actions will be used to determine what actions are taken when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
+                paragraph "(Rule) Actions will be used to determine the actions the automation can take when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
                           " out the temperatures in your home in an attempt to make it more comfortable...", image: getAppImg("instruct_icon.png")
             }
             input(name: "remSenRuleType", type: "enum", title: "(Rule) Action Type", options: remSenRuleEnum(), required: true, submitOnChange: true, image: getAppImg("rule_icon.png"))
@@ -3892,7 +3892,8 @@ def remSensorPage() {
                     paragraph "• Temp: (${tStatTemp})\n• Mode: (${tStatMode.toString().capitalize()})${(remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""}"+
                             "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})",
                             state: "complete", image: getAppImg("instruct_icon.png")
-                    input "remSenTstatsMir", "capability.thermostat", title: "Mirror Actions to these Thermostats", multiple: true, submitOnChange: true, required: false, image: getAppImg("thermostat_icon.png")
+                    input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
+                            image: getAppImg("thermostat_icon.png")
                     if(remSenTstatsMir && !dupTstat) { 
                         remSenTstatsMir?.each { t ->
                             paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
@@ -3901,7 +3902,7 @@ def remSensorPage() {
                 }
             }
             section("Turn On a Fan/Switch While your Thermostat is Running:") {
-                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: "${getRemSenTstatFanSwitchDesc()}", state: remSenTstatFanSwitches ? "complete" : null, image: getAppImg("fan_ventilation_icon.png")
+                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
             }
             if(remSenTstat) {
                 def dSenStr = !remSensorNight ? "Remote" : "Daytime"
@@ -3923,7 +3924,7 @@ def remSensorPage() {
                 }
                 if(remSensorDay && ((!remSenHeatTempsReq() || !remSenCoolTempsReq()) || (remSenDayHeatTemp && remSenDayCoolTemp))) {
                     section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
-                        input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
+                        input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", description: "Tap to configure...", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
                         if(remSensorNight) {
                             input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                             input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
@@ -3972,7 +3973,7 @@ def remSensorPage() {
                         }
                     }
                     section("(Optional) Use Switch Event(s) to Evaluate Temps:") {
-                        input "remSenSwitches", "capability.switch", title: "Select Switches", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
+                        input "remSenSwitches", "capability.switch", title: "Select Switches", description: "", required: false, multiple: true, submitOnChange: true, image: getAppImg("wall_switch_icon.png")
                         if(remSenSwitches) { 
                             input "remSenSwitchOpt", "enum", title: "Switch Event to Trigger Evaluation?", required: true, defaultValue: 2, metadata: [values:switchEnumVals()], submitOnChange: true, image: getAppImg("settings_icon.png")
                         }
@@ -3984,14 +3985,14 @@ def remSensorPage() {
                             paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
                             input "remSenTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
-                        input "remSenEvalModes", "mode", title: "Only Evaluate Actions in these Modes?", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
+                        input "remSenEvalModes", "mode", title: "Only Evaluate Actions in these Modes?", description: "", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
                         input "remSenWaitVal", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     }
                 }
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("help_icon.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -4079,11 +4080,13 @@ def isRemSenConfigured() {
 def remSenMotionEvt(evt) {
     log.debug "remSenMotionEvt: Motion Sensor (${evt?.displayName}) Motion is (${evt?.value})"
     if(disableAutomation) { return }
-    else if (remSenUseSunAsMode) { return}
+    //else if (remSenUseSunAsMode) { return}
     else {
         if(remSenMotionModes) {
-            if(isInMode(remSenMotionModes)) {
+            if(!isInMode(remSenMotionModes)) {
                 runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
+            } else {
+                LogAction("remSenMotionEvt: Skipping Motion Check Because the is Not one you selected", "info", true)
             }
         } else {
             runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
@@ -4202,11 +4205,12 @@ def remSenSunEvtHandler(evt) {
 }
 
 def remSenSwitchEvt(evt) {
-    def evtType = evt?.value.toString()
+    log.trace "remSenSwitchEvt: Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})"
+    def evtType = evt?.value?.toString()
     if(disableAutomation) { return }
     else if(remSenSwitches) {
-        def opt = remSenSwitchOpt?.toInteger()
-        switch(opt) {
+        def swOpt = settings?.remSenSwitchOpt
+        switch(swOpt.toInteger()) {
             case 0:
                 if(evtType == "off") { remSenEvtEval() }
                 break
@@ -4215,6 +4219,7 @@ def remSenSwitchEvt(evt) {
                 break
             case 2:
                 if(evtType in ["on", "off"]) { remSenEvtEval() }
+                break
             default:
                 LogAction("remSenSwitchEvt: Invalid Option Received...", "warn", true)
             break
@@ -4479,7 +4484,7 @@ def getRemSenModeOk() {
     else if (remSensorDayModes && remSensorNightModes) {
         result = (remSensorNight && getUseNightSensor()) ? (isInMode(remSensorNightModes) ? true : false) : (isInMode(remSensorDayModes) ? true : false)
     } 
-    log.debug "getRemSenModeOk: $result"
+    //log.debug "getRemSenModeOk: $result"
     return result
 }
 
@@ -4632,7 +4637,7 @@ def extTempPage() {
             }
         }
         section("Help and Instructions:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"View the Help and Instructions Page...", image: getAppImg("info.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -4884,7 +4889,7 @@ def contactWatchPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -5133,7 +5138,7 @@ def nestModePresPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -5321,7 +5326,7 @@ def tstatModePage() {
         }
 
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"Tap to View...", image: getAppImg("info.png")
+            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
