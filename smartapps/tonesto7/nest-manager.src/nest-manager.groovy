@@ -1358,12 +1358,6 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         }
     }
     catch (ex) {
-        if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("procNestApiCmd 'HttpResponseException' Exception: ${ex} ($type | $obj:$objVal)", "error", true)
-        }
-        if (ex.message.contains("Bad Request")) {
-            LogAction("procNestApiCmd 'Bad Request' Exception: ${ex} ($type | $obj:$objVal)", "error", true)
-        }
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true)
         sendExceptionData(ex, "procNestApiCmd")
         atomicState.apiIssues = true
