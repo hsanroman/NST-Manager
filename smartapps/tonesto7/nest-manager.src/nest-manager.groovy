@@ -1347,7 +1347,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
                 //attempts to update device event immediately after successful command.
                 increaseCmdCnt()
                 atomicState?.lastCmdSentStatus = "ok" 
-                sendEvtUpdateToDevice(typeId, type, obj, objVal)
+                //sendEvtUpdateToDevice(typeId, type, obj, objVal)
             }
             else if(resp.status == 400) {
                 LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
@@ -1374,9 +1374,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 def increaseCmdCnt() {
     try {
-        def cmdCnt = !atomicState?.apiCommandCnt ? 1 : atomicState?.apiCommandCnt.toInteger()
-        cmdCnt = cmdCnt+1
-        if(cmdCnt) { atomicState?.apiCommandCnt = cmdCnd?.toInteger() }
+        def cmdCnt = atomicState?.apiCommandCnt ?: 0
+        cmdCnt = cmdCnt?.toInteger()+1
+        log.debug "cmdCnt: $cmdCnt"
+        if(cmdCnt) { atomicState?.apiCommandCnt = cmdCnt?.toInteger() }
     } catch (ex) {
         LogAction("increaseCmdCnt Exception: ${ex}", "error", true)
         sendExceptionData(ex, "increaseCmdCnt")
