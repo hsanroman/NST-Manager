@@ -3609,15 +3609,16 @@ def mainAutoPage(params) {
                     def remSenDescStr = ""
                     remSenDescStr += remSenRuleType ? "Rule-Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}" : ""
                     remSenDescStr += (remSenEvalModes || remSenMotion || remSenSwitches) ? "\n\nRule Evaluation Triggers:" : ""
+                    remSenDescStr += remSenTempDiffDegrees ? ("\n • Temp Threshold: (${remSenTempDiffDegrees}°${atomicState?.tempUnit})") : ""
                     remSenDescStr += remSenMotion ? ("\n • Motion Sensors: (${remSenMotion?.size()})${remSenMotionModes ? "\n└ Mode Filters: ${remSenMotionModes ? "(${remSenMotionModes.size()})" : "(0)"}" : ""}\n└ Status: ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     remSenDescStr += remSenSwitches ? ("\n • Switches: (${remSenSwitches?.size()})\n└ Trigger Type: (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
-                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Active" : "Not Active"}" : ""
+                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Eval Blocked" : "Eval Allowed"}" : ""
                     
                     remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
                     remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
                     remSenDescStr += remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
                     remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
-                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""
+                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString() == "fanOn" ? "Fan On" : "Fan Auto"})" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
                     remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
@@ -4002,6 +4003,8 @@ def remSensorPage() {
                             paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
                             input "remSenTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
+                    }
+                    section("Rule Evaluation Options:") {
                         input "remSenEvalModes", "mode", title: "Only Evaluate Actions in these Modes?", description: "", multiple: true, required: false, submitOnChange: true, image: getAppImg("mode_icon.png")
                         input "remSenWaitVal", "number", title: "Wait Time between Evaluations (seconds)?", required: false, defaultValue: 60, submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     }
@@ -4156,7 +4159,7 @@ def remSenTstatFanSwitchCheck(evt) {
     try {
         def hvacFanOn = (evt.fan && evt.fan in ["fanOn", "fanCirculate"]) ? true : false
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
-        def remSenReqSetPoint = determRemSenReqSetpointTemp()
+        def remSenReqSetPoint = getRemSenReqSetpointTemp()
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
         def tempDiff = Math.abs(remSenReqSetPoint - curSenTemp)
         if(disableAutomation) { return }
@@ -4245,9 +4248,9 @@ def remSenSwitchEvt(evt) {
 }
 
 def remSenModeEvt(evt) {
-    log.debug "remSenModeEvt: Mode is (${evt?.value})"
-    if(disableAutomation) { return }
-    else { remSenEvtEval() }
+    log.trace "remSenModeEvt: Mode is (${evt?.value})"
+    //if(disableAutomation) { return }
+    //else { remSenEvtEval() }
 }
 
 def coolingSetpointHandler(evt) { log.debug "coolingSetpointHandler()" }
@@ -4328,7 +4331,7 @@ def getTimeAfterSunset() {
     return result
 }
 
-def determRemSenReqSetpointTemp() {
+def getRemSenReqSetpointTemp() {
     def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
     def operState = remSenTstat ? remSenTstat?.currentThermostatOperatingState.toString() : null
     def temp = 0.0
@@ -4349,7 +4352,7 @@ private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
-    if(getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60)) {
+    if(!isInMode(remSenEvalModes) && (getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 60))) {
         def schChkVal = ((remSenWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal - getLastRemSenEvalSec())
         runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
         LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in ($schChkVal seconds)", "info", true)
@@ -4357,20 +4360,22 @@ private remSenEvtEval() {
     } 
     else { 
         atomicState?.lastRemSenEval = getDtNow()
-        if(!modesOk(remSenEvalModes) && (!remSensorDay && !remSensorNight) || !remSenTstat || !getRemSenModeOk()) {
-            def noGoDesc = "${!modesOk(remSenEvalModes) ? "Ignoring Event the Current Mode was Selected to Prevent Evaluation" : ""}"+
-                    "${!remSensorDay && !remSensorNight ? "Missing Required Day or Night Sensor Selections..." : ""}"+
-                    "${!remSenTstat ? "Missing Required Thermostat device" : ""}"+
-                    "${!getRemSenModeOk() ? "Ignoring because this mode is not one of those selected for evaluation..." : ""}"
+        if(isInMode(remSenEvalModes) && (!remSensorDay && !remSensorNight) || !remSenTstat || !getRemSenModeOk()) {
+            def noGoDesc = ""
+            noGoDesc += isInMode(remSenEvalModes) ? "Ignoring Event the Current Mode was Selected to Prevent Evaluation" : ""
+            noGoDesc += !remSensorDay && !remSensorNight ? "Missing Required Day or Night Sensor Selections..." : ""
+            noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
+            noGoDesc += !getRemSenModeOk() ? "Ignoring because this mode is not one of those selected for evaluation..." : ""
             LogAction("Remote Sensor Evaluation Error: ${noGoDesc}", "error", true)
-        } else if (getRemSenModeOk()) {
-            log.info "remSenEvtEval:  Evaluating Event..."
+        } else if (!isInMode(remSenEvalModes) &&  getRemSenModeOk()) {
+            //log.info "remSenEvtEval:  Evaluating Event..."
             def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
             def tempChangeVal = !remSenTempChgVal ? 0 : remSenTempChgVal.toDouble()
             def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
             def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
+            def isFanOn = (curTstatFanMode in ["fanOn", "fanCirculate"]) ? true : false 
             def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
@@ -4391,70 +4396,99 @@ private remSenEvtEval() {
             if (hvacMode in ["cool","auto"]) {
                 //Changes Cool Setpoints
                 if ((remSenRuleType != "circ") && remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
+                    log.info "remSenEvtEval: Evaluating Cool/Auto Temp..."
                     if((curSenTemp - reqSenCoolSetPoint) >= threshold) {
                         LogAction("COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
-                        //LogAction("remSenTstat.setCoolingSetpoint(${curTstatTemp - tempChangeVal}), ON", "debug", true)
                     }
                     else if (((reqSenCoolSetPoint - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
                         LogAction("COOL - Setting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
-                        //LogAction("remSenTstat.setCoolingSetpoint(${curTstatTemp + tempChangeVal}), OFF", "debug", true)
                     } 
                 }
                 else if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
+                    log.info "remSenEvtEval: Evaluating Cool/Auto Fan..."
                     //LogAction("FAN(COOL): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})", "debug", false)
                     //LogAction("FAN(COOL): DiffOK (${getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)})", "debug", false)
-                    if( getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
-                        LogAction("Running ${remSenTstat} Fan for COOL Circulation...", "info", true)
+                    if (!isFanOn && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)) {
+                        LogAction("Activating ${remSenTstat} Fan for COOLING Circulation...", "info", true)
                         remSenTstat?.fanOn()
                         if(remSenTstatsMir) { 
-                            remSenTstatsMir.each { mt -> 
-                                LogAction("Mirroring $mt Fan Run for COOL Circulation...", "info", true)
+                            remSenTstatsMir?.each { mt -> 
+                                LogAction("Mirroring Primary Thermostat: Activating ${mt} Fan for COOLING Circulation...", "info", true)
                                 mt?.fanOn() 
                             }
                         }
                         atomicState?.lastRemSenFanRunDt = getDtNow()
+                    } 
+                    else {
+                        if (isFanOn) {
+                            if (!getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)) {
+                                LogAction("Turning OFF ${remSenTstat} Fan that was used for COOLING Circulation...", "info", true)
+                                remSenTstat?.fanAuto()
+                                if(remSenTstatsMir) { 
+                                    remSenTstatsMir?.each { mt -> 
+                                        LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for COOLING Circulation...", "info", true)
+                                        mt?.fanAuto() 
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             //Heat Functions....
             if (hvacMode in ["heat", "emergency heat", "auto"]) {
-                if((remSenRuleType != "circ") && remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
+                if ((remSenRuleType != "circ") && remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
+                    log.info "remSenEvtEval:  Evaluating Heat/Auto Temp..."
                     if ((reqSenHeatSetPoint - curSenTemp) >= threshold) {
                         LogAction("HEAT - Setting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + tempChangeVal) }
-                        //LogAction("remSenTstat.setHeatingSetpoint(${curTstatTemp + tempChangeVal}), ON", "debug", true)
                     }
                     else if (((curSenTemp - reqSenHeatSetPoint) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
                         LogAction("HEAT - Setting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - tempChangeVal) }
-                        //LogAction("remSenTstat.setHeatingSetpoint(${curTstatTemp - tempChangeVal}), OFF", "debug", true)
                     }
                 } 
                 if (remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
+                    log.info "remSenEvtEval: Evaluating Heat/Auto Fan..."
                     //LogAction("FAN(HEAT): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", true)
                     //LogAction("FAN(HEAT): DiffOK (${getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)})", "trace", true)
-                    if( getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold) && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) ) {
-                        LogAction("Running $remSenTstat Fan for HEAT Circulation...", "debug", true)
+                    if(!isFanOn && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)) {
+                        LogAction("Activating ${remSenTstat} Fan for HEATING Circulation...", "debug", true)
                         remSenTstat?.fanOn()
                         if(remSenTstatsMir) { 
-                            remSenTstatsMir.each { mt -> 
-                                LogAction("Mirroring $mt Fan Run for HEAT Circulation...", "debug", true)
+                            remSenTstatsMir?.each { mt -> 
+                                LogAction("Mirroring Primary Thermostat: Activating ${mt} Fan for HEATING Circulation...", "debug", true)
                                 mt?.fanOn() 
                             }
                         }
                         atomicState?.lastRemSenFanRunDt = getDtNow()
                     }
+                    else {
+                        if(isFanOn) {
+                            if (!getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)) {
+                                LogAction("Turning OFF ${remSenTstat} Fan that was used for HEATING Circulation...", "info", true)
+                                remSenTstat?.fanAuto()
+                                if(remSenTstatsMir) { 
+                                    remSenTstatsMir?.each { mt -> 
+                                        LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for HEATING Circulation...", "info", true)
+                                        mt?.fanAuto() 
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             } 
         }
         else {
+            LogAction("Skipping Evaluation: Location or Sensor Mode is not valid for Rule Evaluation...", "info", true)
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
             def reqSenCoolSetPoint = getRemSenCoolSetTemp()
             remSenTstat?.setHeatingSetpoint(reqSenHeatSetPoint)
@@ -4468,27 +4502,47 @@ private remSenEvtEval() {
 }
 
 def getRemSenTempOk(modeType, Double senTemp, Double curTemp, Double threshold) {
-    def tempDiff = (modeType == "heat") ? ((curTemp - senTemp) >= threshold) : ((senTemp - curTemp) >= threshold)
-    log.debug "getRemSenTempOk: ${tempDiff}"
+    def tempDiff = (modeType == "heat") ? ((curTemp - senTemp) > threshold) : ((senTemp - curTemp) > threshold)
+    //log.debug "getRemSenTempOk: ${tempDiff} | Heat: (${(curTemp - senTemp)}) | Cool: (${(senTemp - curTemp)})"
+    return tempDiff
 }
 
-def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp, Double threshold) {
-    def diff1 = Math.abs(senTemp - setTemp)?.round(1) >= threshHold
-    //def diffVal2 = Math.abs(setTemp - curTemp)?.round(1)
-    LogAction("getRemSenFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - setTemp).round(1)}) >= Threshold Temp: (${threshold}) ) - (Result: $diff1)", "debug", false)
-    //LogAction("getRemSenFanTempOk: ( Set Temp - Current Temp: (${Math.abs(setTemp - curTemp).round(1)}) < Threshold Temp: (${threshold}) ) - (Result: $diff2)", "debug", false)
-    return (diff1) ? true : false
+def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp, Double threshold, Boolean fanOn) {
+    def diffVal = Math.abs(senTemp - setTemp)?.round(1)
+    def diff = (diffVal > threshold) ? true : false
+    def diff2 = (diffVal < threshold+4.0) ? true : false
+    def diff3 = (senTemp != setTemp) ? true : false
+    log.debug "getRemSenFanTempOk Results (val: $diffVal): diff1: $diff | diff2: $diff2 | diff3: $diff3"
+    if(!diff2 && isFanOn) {
+        LogAction("getRemSenFanTempOk: Remote Sensor Temp Difference (${senTemp}) has risen Above the max temperature swing (${threshold+4}) for Fan-Only Circulation | Turning Thermostat Fan OFF...", "info", true)
+    }
+    if(!diff3 && isFanOn) {
+        LogAction("getRemSenFanTempOk: Remote Sensor Temp has reached the Desired Setpoint (${setTemp}°${atomicState?.tempUnit}) | Turning Thermostat Fan OFF...", "info", true)
+    }
+    //LogAction("getRemSenFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - setTemp).round(1)}) > Threshold Temp: (${threshold}) ) - (Result: 1: $diff | 2: $diff2 | 3: $diff3)", "debug", false)
+    return (diff && diff2 && diff3) ? true : false
 }
 
 def getRemSenFanRunOk(operState, fanState) { 
     //log.trace "getRemSenFanRunOk($operState, $fanState)"
+    def fanOn = (fanState == "fanOn" || fanState == "fanCirculate") ? true : false 
     def val = remSenTimeBetweenRuns?.toInteger() ?: 3600
-    def cond = ((remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && operState == "idle" && fanState == "auto") ? true : false
+    def cond = ((remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) && operState == "idle" && fanState == "fanAuto") ? true : false
     def timeSince = (getLastRemSenFanRunDtSec() > val)
-    if(!cond) { LogAction("Remote Sensor Fan Run Conditions not met!!! | RuleType: ${remSenRuleType} | OperatingState: ${operState} | FanMode: ${fanState}", "debug", true) }
+    if(!cond) { 
+        if (fanOn) {
+            LogAction("Remote Sensor Fan is Already Running!!! Skipping... | FanMode: ${fanState}", "info", true)
+        } 
+        else if (operState != "idle") {
+            LogAction("Remote Sensor Thermostat OperatingState is not Idle!!! Skipping... | OperatingState: ${operState}", "info", true)
+        }
+        else {
+            LogAction("Remote Sensor Fan Run Rule Type is not valid!!! Skipping... | RuleType: ${remSenRuleType}", "info", true) 
+        }
+    }
     if(!timeSince) { LogAction("Remote Sensor Fan Run Conditions not met!!! | Time Since Last Fan Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${val})", "debug", true) }
     def result = (timeSince && cond) ? true : false
-    LogAction("getRemSenFanRunOk(): cond: $cond | timeSince: $timeSince | val: $val | $result", "debug", true)
+    LogAction("getRemSenFanRunOk(): cond: ${cond} | timeSince: ${timeSince} | LastFanRunSec: ${val} | ${result}", "debug", true)
     return result
 }
 
@@ -4746,9 +4800,9 @@ def extTmpTempCheck() {
                         atomicState?.extTmpTstatTurnedOff = false
                         atomicState?.extTmpTstatOffRequested = false
                         runIn(20, "extTmpFollowupCheck", [overwrite: true])
-                        LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshhold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
+                        LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
                         if(extTmpPushMsgOn) {
-                            sendNofificationMsg("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshhold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info", 
+                            sendNofificationMsg("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info", 
                                     settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                         }
                     } else { 
