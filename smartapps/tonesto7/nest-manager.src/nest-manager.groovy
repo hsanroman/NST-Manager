@@ -4378,7 +4378,7 @@ private remSenEvtEval() {
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
             def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
-            def isFanOn = (curTstatFanMode in ["fanOn", "fanCirculate"]) ? true : false 
+            def fanOn = (curTstatFanMode == "fanOn" || curTstatFanMode == "fanCirculate") ? true : false 
             def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
@@ -4415,7 +4415,7 @@ private remSenEvtEval() {
                     log.info "remSenEvtEval: Evaluating Cool/Auto Fan..."
                     //LogAction("FAN(COOL): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})", "debug", false)
                     //LogAction("FAN(COOL): DiffOK (${getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)})", "debug", false)
-                    if (!isFanOn && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)) {
+                    if (getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold, fanOn)) {
                         LogAction("Activating ${remSenTstat} Fan for COOLING Circulation...", "info", true)
                         remSenTstat?.fanOn()
                         if(remSenTstatsMir) { 
@@ -4427,15 +4427,13 @@ private remSenEvtEval() {
                         atomicState?.lastRemSenFanRunDt = getDtNow()
                     } 
                     else {
-                        if (isFanOn) {
-                            if (!getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)) {
-                                LogAction("Turning OFF ${remSenTstat} Fan that was used for COOLING Circulation...", "info", true)
-                                remSenTstat?.fanAuto()
-                                if(remSenTstatsMir) { 
-                                    remSenTstatsMir?.each { mt -> 
-                                        LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for COOLING Circulation...", "info", true)
-                                        mt?.fanAuto() 
-                                    }
+                        if (!getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold, fanOn)) {
+                            LogAction("Turning OFF ${remSenTstat} Fan that was used for COOLING Circulation...", "info", true)
+                            remSenTstat?.fanAuto()
+                            if(remSenTstatsMir) { 
+                                remSenTstatsMir?.each { mt -> 
+                                    LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for COOLING Circulation...", "info", true)
+                                    mt?.fanAuto() 
                                 }
                             }
                         }
@@ -4462,7 +4460,7 @@ private remSenEvtEval() {
                     log.info "remSenEvtEval: Evaluating Heat/Auto Fan..."
                     //LogAction("FAN(HEAT): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", true)
                     //LogAction("FAN(HEAT): DiffOK (${getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)})", "trace", true)
-                    if(!isFanOn && getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)) {
+                    if(getRemSenFanRunOk(curTstatOperState, curTstatFanMode) && getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold, fanOn)) {
                         LogAction("Activating ${remSenTstat} Fan for HEATING Circulation...", "debug", true)
                         remSenTstat?.fanOn()
                         if(remSenTstatsMir) { 
@@ -4474,15 +4472,13 @@ private remSenEvtEval() {
                         atomicState?.lastRemSenFanRunDt = getDtNow()
                     }
                     else {
-                        if(isFanOn) {
-                            if (!getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold)) {
-                                LogAction("Turning OFF ${remSenTstat} Fan that was used for HEATING Circulation...", "info", true)
-                                remSenTstat?.fanAuto()
-                                if(remSenTstatsMir) { 
-                                    remSenTstatsMir?.each { mt -> 
-                                        LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for HEATING Circulation...", "info", true)
-                                        mt?.fanAuto() 
-                                    }
+                        if (!getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold, fanOn)) {
+                            LogAction("Turning OFF ${remSenTstat} Fan that was used for HEATING Circulation...", "info", true)
+                            remSenTstat?.fanAuto()
+                            if(remSenTstatsMir) { 
+                                remSenTstatsMir?.each { mt -> 
+                                    LogAction("Mirroring Primary Thermostat: Turning OFF ${mt} Fan that was used for HEATING Circulation...", "info", true)
+                                    mt?.fanAuto() 
                                 }
                             }
                         }
@@ -4515,11 +4511,12 @@ def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp,
     def diff = (diffVal > threshold) ? true : false
     def diff2 = (diffVal < threshold+4.0) ? true : false
     def diff3 = (senTemp != setTemp) ? true : false
+    
     log.debug "getRemSenFanTempOk Results (val: $diffVal): diff1: $diff | diff2: $diff2 | diff3: $diff3"
-    if(!diff2 && isFanOn) {
+    if(!diff2 && fanOn) {
         LogAction("getRemSenFanTempOk: Remote Sensor Temp Difference (${senTemp}) has risen Above the max temperature swing (${threshold+4}) for Fan-Only Circulation | Turning Thermostat Fan OFF...", "info", true)
     }
-    if(!diff3 && isFanOn) {
+    if(!diff3 && fanOn) {
         LogAction("getRemSenFanTempOk: Remote Sensor Temp has reached the Desired Setpoint (${setTemp}°${atomicState?.tempUnit}) | Turning Thermostat Fan OFF...", "info", true)
     }
     //LogAction("getRemSenFanTempOk: ( Sensor Temp - Set Temp: (${Math.abs(senTemp - setTemp).round(1)}) > Threshold Temp: (${threshold}) ) - (Result: 1: $diff | 2: $diff2 | 3: $diff3)", "debug", false)
