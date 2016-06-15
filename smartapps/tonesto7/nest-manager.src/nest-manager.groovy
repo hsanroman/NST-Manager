@@ -40,12 +40,12 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.3.1" }
-def appVerDate() { "6-14-2016" }
+def appVersion() { "2.3.2" }
+def appVerDate() { "6-15-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.3.1 (June 14th, 2016):"
+    str += "V2.3.2 (June 15th, 2016):"
     str += "\n\n• Remote Sensor bugfixes found by @scpickle."
 
     str += "V2.3.0 (June 13th, 2016):"
