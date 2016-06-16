@@ -3824,7 +3824,7 @@ def subscribeToEvents() {
                     if(remSenTstatFanSwitchTriggerType.toInteger() == 1) { subscribe(remSenTstat, "thermostatOperatingState", remSenTstatOperEvt) }
                 }
             }
-            if(remSenMotion) { subscribe(remSenMotion, "motionSensor", remSenMotionEvt) }
+            if(remSenMotion) { subscribe(remSenMotion, "motion", remSenMotionEvt) }
             if(remSenSwitches) { subscribe(remSenSwitches, "switch", remSenSwitchEvt) }
             if(remSenUseSunAsMode) {
                 subscribe(location, "sunset", remSenSunEvtHandler)
@@ -4101,17 +4101,20 @@ def isRemSenConfigured() {
 }
 
 def remSenMotionEvt(evt) {
-    log.debug "Remote Sensor Motion Event: ${evt?.displayName} Motion State is (${evt?.value.toString().toUpperCase()})"
+    LogAction("Remote Sensor Motion Event: ${evt?.displayName} Motion State is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     //else if (remSenUseSunAsMode) { return}
     else {
         if(remSenMotionModes) {
-            if(!isInMode(remSenMotionModes)) {
+            if(isInMode(remSenMotionModes) && remSenMotionDelayVal) {
+                LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
                 runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
             } else {
-                LogAction("remSenMotionEvt: Skipping Motion Check Because the is Not one you selected", "info", true)
+                LogAction("remSenMotionEvt: Skipping Motion Check because the current mode is not allowed", "info", true)
             }
-        } else {
+        } 
+        else {
+            LogAction("remSenMotionEvt: Scheduling Motion Check for (${remSenMotionDelayVal} Seconds)", "info", true)
             runIn(remSenMotionDelayVal.toInteger(), "remSenCheckMotion", [overwrite: true])
         }
     }
