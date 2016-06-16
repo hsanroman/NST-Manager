@@ -40,40 +40,52 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.3.2" }
-def appVerDate() { "6-15-2016" }
+def appVersion() { "2.3.3" }
+def appVerDate() { "6-16-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.3.2 (June 15th, 2016):"
-    str += "\n\n• Remote Sensor bugfixes found by @scpickle."
-
-    str += "V2.3.0 (June 13th, 2016):"
-    str += "\n• UPDATED: Various UI Tweaks."
-    str += "\n• Lot's of bug fixes.  I througly tested contact, external automations."
-    str += "\n\n• Voice Notifications now work correctly with contact automation."
+    str += "V2.3.3 (June 16th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Remote Sensor was changing setpoints when not in a valid mode to evaluate."
+    str += "\n • FIXED: Removed Thermostat Temp event from triggering Remote Sensor Rule evaluations."
+    str += "\n • FIXED: Found commented out code in Nest Mode Automation that was preventing presence changes."
+    str += "\n • Started working on bugfixes for Nest Mode Automation found by @scpickle."
     
-    str += "V2.2.1 (June 9th, 2016):"
-    str += "\n• ADDED: App now supports Broadcast message from developer."
-    str += "\n\n• UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
-
+    str += "\n\n\nV2.3.2 (June 15th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Fixed Motion Sensor Events in Remote Sensors."
+    str += "\n • FIXED: Remote Sensor bugfixes found by @scpickle."
+    
+    str += "\n\n\nV2.3.0 (June 13th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Various UI Tweaks."
+    str += "\n • FIXED: Lot's of bug fixes.  I througly tested contact, external automations."
+    str += "\n • FIXED: Voice Notifications now work correctly with contact automation."
+    
+    str += "\n\n\nV2.2.1 (June 9th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • ADDED: App now supports Broadcast message from developer."
+    str += "\n • UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
+    
     str += "\n\n\nV2.2.0 (June 8th, 2016):"
-    str += "\n• NEW: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser."
-    str += "\n\n• NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
-    str += "\n\n• NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
-    str += "\n\n• NEW: You can now select devices to send Speech Notifications for Contact Automations."
-    str += "\n\n• NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
-    str += "\n\n• ADDED: You can now use Day,Time,Mode filters in certain Nest Mode Automations."
-    str += "\n\n• ADDED: Ability to Disable each automations individually."
-    str += "\n\n• ADDED: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts."
-    str += "\n\n• UPDATED: There is new install setup now that flows much better and allows display of the important available options better to users."
-    str += "\n\n• UPDATED: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly."
-    str += "\n\n• NEW: Analytics have been added to the app to share installation data, it will also send generic exception error data. "
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • NEW: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser."
+    str += "\n • NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+    str += "\n • NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
+    str += "\n • NEW: You can now select devices to send Speech Notifications for Contact Automations."
+    str += "\n • NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
+    str += "\n • ADDED: You can now use Day,Time,Mode filters in certain Nest Mode Automations."
+    str += "\n • ADDED: Ability to Disable each automations individually."
+    str += "\n • ADDED: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts."
+    str += "\n • UPDATED: There is new install setup now that flows much better and allows display of the important available options better to users."
+    str += "\n • UPDATED: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly."
+    str += "\n • NEW: Analytics have been added to the app to share installation data, it will also send generic exception error data. "
     str += "  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out."
-    str += "\n\n• FIXED: Remote Sensor's Fan circulation should now work like it was intended."
-    str += "\n\n• FIXED: Nest Log Out function to actually take you back to auth screen after clearing token."
-    str += "\n\n• ADDED: View all Apps/Devices state data under diagnostics."
-    str += "\n\n• UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
+    str += "\n • FIXED: Remote Sensor's Fan circulation should now work like it was intended."
+    str += "\n • FIXED: Nest Log Out function to actually take you back to auth screen after clearing token."
+    str += "\n • ADDED: View all Apps/Devices state data under diagnostics."
+    str += "\n • UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
     return str
 }
@@ -3620,8 +3632,8 @@ def mainAutoPage(params) {
                     remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
                     remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
                     remSenDescStr += remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
-                    remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString()}/${remSenTstat?.currentThermostatMode.toString()})" : ""
-                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString() == "fanOn" ? "Fan On" : "Fan Auto"})" : ""
+                    remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString().capitalize()}/${remSenTstat?.currentThermostatMode.toString().capitalize()})" : ""
+                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
                     remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
@@ -3910,7 +3922,7 @@ def remSensorPage() {
                 }
                 if(remSenTstat) { 
                     getTstatCapabilities(remSenTstat, remSenPrefix())
-                    paragraph "• Temp: (${tStatTemp})\n• Mode: (${tStatMode.toString().capitalize()})${(remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString()})" : ""}"+
+                    paragraph "• Temp: (${tStatTemp})\n• Mode: (${tStatMode.toString().capitalize()})${(remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""}"+
                             "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})",
                             state: "complete", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
@@ -3923,7 +3935,7 @@ def remSensorPage() {
                 }
             }
             section("Turn On a Fan/Switch While your Thermostat is Running:") {
-                href "remSenTstatFanSwitchPage", title: "Turn On Fan/Switch with Thermostat?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
+                href "remSenTstatFanSwitchPage", title: "Control a Fan/Switch when Thermostat in Running?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
             }
             if(remSenTstat) {
                 def dSenStr = !remSensorNight ? "Remote" : "Daytime"
@@ -3982,11 +3994,11 @@ def remSensorPage() {
                     if(remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                         section("Fan Settings:") {
                             paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: getAppImg("instruct_icon.png")
-                            input "remSenTimeBetweenRuns", "enum", title: "Delay Between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                            input "remSenTimeBetweenRuns", "enum", title: "Wait Time between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                         }
                     }
                     section("(Optional) Use Motion Sensors to Evaluate Temps:") {
-                        input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
+                        input "remSenMotion", "capability.motionSensor", title: "Motion Sensors", required: false, multiple: true, submitOnChange: true, state: remSenMotion ? "complete" : null, image: getAppImg("motion_icon.png")
                         if(remSenMotion) {
                             paragraph "• Motion State: (${isMotionActive(remSenMotion) ? "Active" : "Not Active"})", state: "complete", image: getAppImg("instruct_icon.png")
                             input "remSenMotionDelayVal", "enum", title: "Delay before evaluating?", required: true, defaultValue: 60, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
@@ -4128,8 +4140,8 @@ def remSenTempSenEvt(evt) {
 
 def remSenTstatTempEvt(evt) {
     log.trace "Remote Sensor Thermostat Temp Event: ${evt?.displayName} Temperature is (${evt?.value}°${atomicState?.tempUnit})"
-    if(disableAutomation) { return }
-    else { remSenEvtEval() }
+    //if(disableAutomation) { return }
+    //else { remSenEvtEval() }
 }
 
 def remSenTstatModeEvt(evt) {
@@ -4376,6 +4388,7 @@ private remSenEvtEval() {
         } else if (!isInMode(remSenEvalModes) &&  getRemSenModeOk()) {
             //log.info "remSenEvtEval:  Evaluating Event..."
             def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
+            def thresholdMax = threshold+5.0
             def tempChangeVal = !remSenTempChgVal ? 0 : remSenTempChgVal.toDouble()
             def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
@@ -4386,13 +4399,14 @@ private remSenEvtEval() {
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
             def reqSenCoolSetPoint = getRemSenCoolSetTemp()
+            log.debug "reqSenCoolSetPoint: ${reqSenCoolSetPoint}"
             def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
             
             LogAction("remSenEvtEval: Remote Sensor Rule Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}", "trace", false)
-            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", false)
-            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: ($curTstatTemp) | HeatSetpoint: ($curHeatSetpoint) | CoolSetpoint: ($curCoolSetpoint) | HvacMode: ($hvacMode) | OperatingState: ($curTstatOperState) | FanMode: ($curTstatFanMode) )", "trace", false) 
-            LogAction("remSenEvtEval: Desired Temps - Heat: $reqSenHeatSetPoint | Cool: $reqSenCoolSetPoint", "trace", false)
-            LogAction("remSenEvtEval: Threshold Temp: $remSenTempDiffDegrees | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", false)
+            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", true)
+            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", true) 
+            LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", true)
+            LogAction("remSenEvtEval: Threshold Temp: ${remSenTempDiffDegrees} | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", true)
             
             if(hvacMode == "off") { 
                 LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
@@ -4401,23 +4415,50 @@ private remSenEvtEval() {
             //Cool Functions....
             if (hvacMode in ["cool","auto"]) {
                 //Changes Cool Setpoints
-                if ((remSenRuleType != "circ") && remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    if((curSenTemp - reqSenCoolSetPoint) >= threshold) {
-                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                if (remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
+                    if(curSenTemp - reqSenCoolSetPoint > threshold && !curSenTemp < curTstatTemp ) {
+                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
                     }
-                    else if (((reqSenCoolSetPoint - curSenTemp) >= threshold) && ((curTstatTemp - curCoolSetpoint) >= threshold)) {
-                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                    else if (reqSenCoolSetPoint - curSenTemp > threshold && curTstatTemp - curCoolSetpoint > threshold) {
+                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
-                    } 
+                    }
+                    else if (remSenRuleType == "Heat_Cool_Circ") {
+                        if (fanRunOk && fanTempOk) {
+                            LogAction("Remote Sensor: Activating '${remSenTstat?.displayName}' Fan for COOLING Circulation...", "info", true)
+                            remSenTstat?.fanOn()
+                            if(remSenTstatsMir) { 
+                                remSenTstatsMir?.each { mt -> 
+                                    LogAction("Remote Sensor: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan for COOLING Circulation...", "info", true)
+                                    mt?.fanOn() 
+                                }
+                            }
+                            atomicState?.lastRemSenFanRunDt = getDtNow()
+                            atomicState?.remSenFanIsRunning = true
+                        } 
+                        else {
+                            if (!fanTempOk && fanOn) {
+                                LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan that was used for COOLING Circulation...", "info", true)
+                                remSenTstat?.fanAuto()
+                                if(remSenTstatsMir) { 
+                                    remSenTstatsMir?.each { mt -> 
+                                        LogAction("Remote Sensor: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan that was used for COOLING Circulation...", "info", true)
+                                        mt?.fanAuto() 
+                                    }
+                                }
+                                atomicState?.remSenFanIsRunning = false
+                            }
+                        }
+                    }
                 }
-                else if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
+
+                //Checks if it should run the fan
+                else if (remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                     def fanRunOk = getRemSenFanRunOk(curTstatOperState, curTstatFanMode)
                     def fanTempOk = getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold, fanOn)
-                    //LogAction("FAN(COOL): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]})", "debug", false)
-                    //LogAction("FAN(COOL): DiffOK (${getRemSenFanTempOk("cool", curSenTemp, reqSenCoolSetPoint, curCoolSetpoint, threshold)})", "debug", false)
                     if (fanRunOk && fanTempOk) {
                         LogAction("Remote Sensor: Activating '${remSenTstat?.displayName}' Fan for COOLING Circulation...", "info", true)
                         remSenTstat?.fanOn()
@@ -4448,19 +4489,46 @@ private remSenEvtEval() {
 
             //Heat Functions....
             if (hvacMode in ["heat", "emergency heat", "auto"]) {
-                if ((remSenRuleType != "circ") && remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
-                    if ((reqSenHeatSetPoint - curSenTemp) >= threshold) {
+                if (remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
+                    if (reqSenHeatSetPoint - curSenTemp > threshold) {
                         LogAction("Remote Sensor: HEAT - Setting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + tempChangeVal) }
                     }
-                    else if (((curSenTemp - reqSenHeatSetPoint) >= threshold) && ((curHeatSetpoint - curTstatTemp) >= threshold)) {
+                    else if (curSenTemp - reqSenHeatSetPoint > threshold && curHeatSetpoint - curTstatTemp > threshold) {
                         LogAction("Remote Sensor: HEAT - Setting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - tempChangeVal) }
                     }
+                    else if (remSenRuleType == "Heat_Cool_Circ") {
+                        if(fanRunOk && fanTempOk) { 
+                            LogAction("Remote Sensor: Activating '${remSenTstat?.displayName}'' Fan for HEATING Circulation...", "debug", true)
+                            remSenTstat?.fanOn()
+                            if(remSenTstatsMir) { 
+                                remSenTstatsMir?.each { mt -> 
+                                    LogAction("Remote Sensor: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan for HEATING Circulation", "debug", true)
+                                    mt?.fanOn() 
+                                }
+                            }
+                            atomicState?.lastRemSenFanRunDt = getDtNow()
+                            atomicState?.remSenFanIsRunning = true
+                        }
+                        else {
+                            if (!fanTempOk && fanOn) {
+                                LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan that was used for HEATING Circulation", "info", true)
+                                remSenTstat?.fanAuto()
+                                if(remSenTstatsMir) { 
+                                    remSenTstatsMir?.each { mt -> 
+                                        LogAction("Remote Sensor: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan that was used for HEATING Circulation", "info", true)
+                                        mt?.fanAuto() 
+                                    }
+                                }
+                                atomicState?.remSenFanIsRunning = false
+                            }
+                        }
+                    }
                 } 
-                if (remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
+                else if (remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
                     def fanRunOk = getRemSenFanRunOk(curTstatOperState, curTstatFanMode)
                     def fanTempOk = getRemSenFanTempOk("heat", curSenTemp, reqSenHeatSetPoint, curHeatSetpoint, threshold, fanOn)
                     //LogAction("FAN(HEAT): Rule-Type: ${remSenRuleType} | RuleOk: (${remSenRuleType in ["Circ", "Heat_Circ", "Heat_Cool_Circ"]})", "trace", true)
@@ -4495,14 +4563,6 @@ private remSenEvtEval() {
         }
         else {
             LogAction("Remote Sensor: Skipping Evaluation... Location or Sensor Mode is not valid for Rule Evaluation...", "info", true)
-            def reqSenHeatSetPoint = getRemSenHeatSetTemp()
-            def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-            remSenTstat?.setHeatingSetpoint(reqSenHeatSetPoint)
-            remSenTstat?.setCoolingSetpoint(reqSenCoolSetPoint)
-            if(remSenTstatsMir) {
-                remSenTstatsMir*.setHeatingSetpoint(reqSenHeatSetPoint)
-                remSenTstatsMirror*.setCoolingSetpoint(reqSenCoolSetPoint)
-            }
         }
     }
 }
@@ -4526,7 +4586,7 @@ def getRemSenFanRunOk(operState, fanState) {
         LogAction("Remote Sensor: No Action Taken... The Thermostat Fan is Already Running for (${GetTimeDiffSeconds(atomicState?.lastRemSenFanRunDt)} Seconds)... | FanMode: ${fanState}", "info", true)
     }*/ 
     if (!operOk) {
-        LogAction("Remote Sensor: The Thermostat OperatingState is not Idle... Skipping... | OperatingState: ${operState}", "info", true)
+        LogAction("Remote Sensor: The Thermostat OperatingState is Currently (${operState?.toString().toUpperCase()})... Skipping!!!", "info", true)
     }
     if (!ruleOk) {
         LogAction("Remote Sensor: The Selected Rule-Type is not valid... Skipping... | RuleType: ${remSenRuleType}", "info", true) 
@@ -4538,28 +4598,25 @@ def getRemSenFanRunOk(operState, fanState) {
 }
 
 def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp, Double threshold, Boolean fanOn) {
-    def maxSwing = threshold+3.0
+    def maxFanSwing = threshold+2.0
     def diffVal = Math.abs(senTemp-setTemp)?.round(1)
-    def diff1 = (diffVal > threshold) ? true : false
-    def diff2 = (diffVal <= maxSwing) ? true : false
-    def diff3 = (senTemp != setTemp) ? true : false
-    LogAction("getRemSenFanTempOk - Results (val: ${diffVal}): diff1: $diff1 | diff2: $diff2 | diff3: $diff3 | fanOn: ${fanOn}", "debug", false)
+    def diff1 = (diffVal <= threshold) ? true : false
+    //def diff2 = (diffVal <= maxSwing) ? true : false
+    def diff2 = (senTemp != setTemp) ? true : false
+    LogAction("getRemSenFanTempOk - Results (val: ${diffVal}): diff1: $diff1 | diff2: $diff2 | fanOn: ${fanOn}", "debug", false)
     if(fanOn) {
-        if(!diff1 && diff2 && diff3) {
+        if(!diff1 && diff2) {
             LogAction("Remote Sensor: The Temperature Difference is Outside of Threshold Limits | Turning Thermostat Fan OFF", "info", true)
         }
-        if(!diff2 && diff1 && diff3) {
-            LogAction("Remote Sensor: The Max Temperature Difference (${maxSwing}°${atomicState?.tempUnit}) has been Reached for Fan Circulation | Turning Thermostat Fan OFF", "info", true)
-        }
-        if(!diff3 && diff1 && diff2) {
+        if(!diff2 && diff1) {
             LogAction("Remote Sensor: The Temp has now reached the Desired Setpoint (${setTemp}°${atomicState?.tempUnit}) | Turning Thermostat Fan OFF", "info", true)
         }
     } else {
-        if(diff1 && diff2 && diff3) {
+        if(diff1 && diff2) {
             LogAction("Remote Sensor: The Temperature Difference is within Threshold Limits | Turning Thermostat Fan ON", "info", true)
         }
     }
-    return (diff1 && diff2 && diff3) ? true : false
+    return (diff1 && diff2) ? true : false
 }
 
 def getRemSenModeOk() {
@@ -5251,11 +5308,11 @@ def isNestModesConfigured() {
 }
 
 def nModeModeEvt(evt) { 
-    log.debug "nModeModeEvt: Mode is (${evt?.value})"
+    LogAction("NestMode ST Location Mode Event: Location Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if (disableAutomation) { return }
     else if(!nModePresSensor && !nModeSwitch) {
         if(nModeDelay) {
-            LogAction("nModeWatcherEvt: Mode is ${evt?.value} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+            LogAction("NestMode ST Location Mode: Mode is ${evt?.value.toString().toUpperCase()} | A Mode Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
             runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
         } else {
             checkNestMode()
@@ -5264,10 +5321,10 @@ def nModeModeEvt(evt) {
 }
 
 def nModePresEvt(evt) {
-    log.trace "nModePresEvt: Presence is (${evt?.value})"
+    LogAction("NestMode Presence Event: Presence is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if (disableAutomation) { return }
     else if(nModeDelay) {
-        LogAction("nModePresEvt: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+        LogAction("NestMode Presence: ${!evt ? "A monitored presence device is " : "SWITCH '${evt?.displayName}' is "} (${evt?.value.toString().toUpperCase()}) | A Presence Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
         runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
     } else {
         checkNestMode()
@@ -5275,11 +5332,11 @@ def nModePresEvt(evt) {
 }
 
 def nModeSwitchEvt(evt) {
-    log.trace "nModeSwitchEvt: Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})"
+    LogAction("NestMode Switch Event: Switch (${evt?.displayName}) is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if (disableAutomation) { return }
     else if(nModeSwitch && !nModePresSensor) {
         if(nModeDelay) {
-            LogAction("nModeSwitchEvt: ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
+            LogAction("Nest Mode Switch: ${!evt ? "A monitored switch is " : "Switch (${evt?.displayName}) is "} (${evt?.value.toString().toUpperCase()}) | A Switch Check is scheduled for (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})", "info", true)
             runIn( nModeDelayVal.toInteger(), "checkNestMode", [overwrite: true] )
         } else {
             checkNestMode()
@@ -5296,11 +5353,11 @@ def nModeFollowupCheck() {
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
 
 def checkNestMode() {
-    //log.trace "checkNestMode..."
+    LogAction("checkNestMode...", "trace", false)
     try {
         if (disableAutomation) { return }
         else if(!nModeScheduleOk()) { 
-            LogAction("checkNestMode: Skipping because of Schedule Restrictions...")
+            LogAction("Check NestMode: Skipping because of Schedule Restrictions...", "info", true)
         } else {
             def curStMode = location?.mode
             def nestModeAway = (getNestLocPres() == "home") ? false : true
@@ -5337,24 +5394,28 @@ def checkNestMode() {
             }
             
             if (away) {
-                LogAction("$awayDesc Nest 'Away'", "info", true)
+                LogAction("${awayDesc} Nest 'Away'", "info", true)
                 atomicState?.nModeTstatLocAway = true
-                //parent?.setStructureAway(null, true) 
-                if(nModePushMsgOn) {
-                    sendNofificationMsg("$awayDesc Nest 'Away", "Info", 
-                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                if(parent?.setStructureAway(null, true)) { 
+                    if(nModePushMsgOn) {
+                        sendNofificationMsg("${awayDesc} Nest 'Away", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                    }
+                } else {
+                    LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                //runIn(20, "nModeFollowupCheck", [overwrite: true])
+                runIn(20, "nModeFollowupCheck", [overwrite: true])
             }
             else if (home) {
-                LogAction("$homeDesc Nest 'Home'", "info", true)
+                LogAction("${homeDesc} Nest 'Home'", "info", true)
                 atomicState?.nModeTstatLocAway = false
-                //parent?.setStructureAway(null, false) 
-                if(nModePushMsgOn) {
-                    sendNofificationMsg("$homeDesc Nest 'Home", "Info", 
-                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                if (parent?.setStructureAway(null, false)) { 
+                    if(nModePushMsgOn) {
+                        sendNofificationMsg("${homeDesc} Nest 'Home", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                    }
+                } else {
+                    LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
                 }
-                //runIn(20, "nModeFollowupCheck", [overwrite: true])
+                runIn(20, "nModeFollowupCheck", [overwrite: true])
             } 
             else {
                 LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
@@ -5804,8 +5865,8 @@ def getDayModeTimeDesc(pName) {
     def modes = getInputToStringDesc(modeInput)
     str += ((startTime && stopTime) || modes || days) ? "${!inverted ? "When" : "When Not"}:" : ""
     str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}"  : ""
-    str += days ? "${(startTime || stopTime) ? "\n" : ""} • Day${isPluralString(dayInput)}: ${days}" : ""
-    str += modes ? "${(startTime || stopTime || days) ? "\n" : ""} • Mode${isPluralString(modeInput)}: ${modes}" : ""
+    str += days ? "${(startTime || stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
+    str += modes ? "${(startTime || stopTime || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
     str += (str != "") ? "\n\nTap to Modify..." : ""
     return str
 }
