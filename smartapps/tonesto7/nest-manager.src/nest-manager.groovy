@@ -40,13 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.3.4" }
+def appVersion() { "2.3.5" }
 def appVerDate() { "6-17-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.3.4 (June 17th, 2016):"
+    str += "V2.3.5 (June 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Fixed a few UI inconsistencies."
     str += "\n • FIXED: Remote Sensor heat cool adjustment operations."
 
     str += "V2.3.3 (June 16th, 2016):"
@@ -359,7 +360,7 @@ def deviceSelectPage() {
 }
 
 def reviewSetupPage() {
-    return dynamicPage(name: "reviewSetupPage", title: "Review Setup", install: true, uninstall: atomicState?.isInstalled) {
+    return dynamicPage(name: "reviewSetupPage", title: "Setup Review", install: true, uninstall: atomicState?.isInstalled) {
         if(!atomicState?.newSetupComplete) { atomicState.newSetupComplete = true }
         section("Device Summary:") {
             def str = ""
@@ -388,7 +389,7 @@ def reviewSetupPage() {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            if (optInAppAnalytics) {
+            if (optInAppAnalytics != false) {
                 input(name: "mobileClientType", title:"Mobile Client Type?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
                                 image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
@@ -3112,7 +3113,7 @@ def infoPage () {
             paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)", state: "complete"
         }
         section("App Revision History:") {
-            href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("blank_icon.png")
+            href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("change_log_icon.png")
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
