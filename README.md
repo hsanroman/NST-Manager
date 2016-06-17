@@ -23,35 +23,40 @@ This is a Child-SmartApp that allows you to creat different types of automations
 * @desertblade
 * @E_sch
 
+## Testers
+* @scpickle
+
 ## Version Info
 __Latest App Version:__ 
 
-* Nest Manager - __*v2.2.0*__
+* Nest Manager - __*v2.5.0*__
 
 __Latest Device Versions:__
 
-* Nest Presence Device - __*v2.1.0*__
-* Nest Protect Device - __*v2.1.0*__
-* Nest Thermostat Device - __*v2.1.0*__
-* Nest Weather Device - __*v2.1.0*__
+* Nest Presence Device - __*v2.5.0*__
+* Nest Protect Device - __*v2.5.0*__
+* Nest Thermostat Device - __*v2.5.0*__
+* Nest Weather Device - __*v2.5.0*__
 
 ## What's New
 ***Manager App:***
- * **New**: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264
- * **New**: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
- * **New**: You can now select devices to send Speech Notifications for Contact Automations.
- * **New**: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.    
- * **Added**: You can now use Day,Time,Mode filters in certain Nest Mode Automations.
- * **Added**: Ability to Disable each automations individually.
- * **Added**: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts.
- * **Updated**: There is new install setup now that flows much better and allows display of the important available options better to users.
- * **Updated**: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly.
- * **New**: Analytics have been added to the app to share installation data, it will also send generic exception error data.  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics.
-   We will also be putting up a dashboard for users who are nerdy just to see the data mapped out.
- * **Fixed**: Remote Sensor's Fan circulation should now work like it was intended.
- * **Fixed**: Nest Log Out function to actually take you back to auth screen after clearing token.
- * **Added**: View all Apps/Devices state data under diagnostics.
- * **Other**: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list.
+ * **NEW**: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
+ * **NEW**: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
+ * **NEW**: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.
+ * **ADDED**: Ability to Disable each automations individually.
+ * **ADDED**: You can now receive Local Weather Alerts push notifications when the Nest Weather device is installed.
+ * **UPDATED**: There is new install setup now that flows much better and allows display of the important available options better to users.
+ * **UPDATED**: Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly.
+ * **NEW**: Analytics have been added to the app to share very basic generic installation data, it will also send generic exception error data. So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out.
+ * **FIXED**: Remote Sensor's Fan circulation should now work like it was intended.
+ * **FIXED**: Nest Log Out function to actually take you back to auth screen after clearing token.
+ * **ADDED**: You can now use Day, Time, Mode filters in most Nest Automations.
+ * **ADDED**: View all Apps/Devices state data under diagnostics.
+ * **ADDED**: Voice Notifications using Speech or MusicPlayer devices to Contact Automations Events work correctly with contact automation.
+ * **ADDED**: App now supports Broadcast message from developer.
+ * **NEW**: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser.
+ * **UPDATED**: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes.
+ * **UPDATED**: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list.
 
 ***Weather Device:***
  * **Updated** @desertblade remodeled the design to allow for modal popups for weather alerts, and forecast data.
@@ -90,6 +95,7 @@ __Latest Device Versions:__
  * [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) @Mike_Maxwell 
  * [SmartTiles](http://smarttiles.click/) @625alex 
  * [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204) @bravenel 
+ * [CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7) @ady264
  * Keep Me Cozy (I & II) (link) 
  * Routines
 
@@ -199,10 +205,14 @@ Please check the Help Page before posting questions in the community forum.
 **[Nest Manager Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)**
 
 _______
-### Feature Requests
- * We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.
- * There is a Google Form that will allow you to vote for the newest features. ***[Voting Form](https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform)***
+## Feature Requests
+ * We love new ideas so please head on over to GitHub and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.
+ * There is a Google Form that will allow you to vote for the newest features. 
 
+    ***[Voting Form](https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform)***
+
+    ***[Feedback Form](http://goo.gl/forms/jGdwJIfqQl456L1h1)***
+    
 _______
 ### Donations
  * While donations are very much appreciated they are not expected or required.  If you feel the need to do so :smile: here is the ***[donation link](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS)***
