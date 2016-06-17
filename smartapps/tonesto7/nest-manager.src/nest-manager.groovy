@@ -40,10 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.3.3" }
-def appVerDate() { "6-16-2016" }
+def appVersion() { "2.3.4" }
+def appVerDate() { "6-17-2016" }
 def appVerInfo() {
     def str = ""
+
+    str += "V2.3.4 (June 17th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Remote Sensor heat cool adjustment operations."
 
     str += "V2.3.3 (June 16th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -4399,24 +4403,23 @@ private remSenEvtEval() {
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
             def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-            log.debug "reqSenCoolSetPoint: ${reqSenCoolSetPoint}"
             def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
             
             LogAction("remSenEvtEval: Remote Sensor Rule Type: ${getEnumValue(remSenRuleEnum(), remSenRuleType)}", "trace", false)
-            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", true)
-            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", true) 
-            LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", true)
-            LogAction("remSenEvtEval: Threshold Temp: ${remSenTempDiffDegrees} | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", true)
+            LogAction("remSenEvtEval: Remote Sensor Temp: ${curSenTemp}", "trace", false)
+            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "trace", false) 
+            LogAction("remSenEvtEval: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "trace", false)
+            LogAction("remSenEvtEval: Threshold Temp: ${remSenTempDiffDegrees} | Change Temp Increments: ${remSenTempChgVal ?: "Not Set"}", "trace", false)
             
             if(hvacMode == "off") { 
                 LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
                 return 
-            }
-            //Cool Functions....
+            } 
             if (hvacMode in ["cool","auto"]) {
                 //Changes Cool Setpoints
                 if (remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    if(curSenTemp - reqSenCoolSetPoint > threshold && !curSenTemp < curTstatTemp ) {
+                    //if current the current request setpoint subtracted from the sensor temp
+                    if(curSenTemp - reqSenCoolSetPoint > threshold) {
                         LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
@@ -4426,6 +4429,7 @@ private remSenEvtEval() {
                         remSenTstat?.setCoolingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
                     }
+                    //Fan Actions
                     else if (remSenRuleType == "Heat_Cool_Circ") {
                         if (fanRunOk && fanTempOk) {
                             LogAction("Remote Sensor: Activating '${remSenTstat?.displayName}' Fan for COOLING Circulation...", "info", true)
@@ -4454,7 +4458,6 @@ private remSenEvtEval() {
                         }
                     }
                 }
-
                 //Checks if it should run the fan
                 else if (remSenRuleType in ["Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                     def fanRunOk = getRemSenFanRunOk(curTstatOperState, curTstatFanMode)
@@ -4598,9 +4601,10 @@ def getRemSenFanRunOk(operState, fanState) {
 }
 
 def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp, Double threshold, Boolean fanOn) {
-    def maxFanSwing = threshold+2.0
+    def actionVal = (remSenRuleType == "Circ") ? threshold+1.0 : threshold
+    def maxFanSwing = actionVal+2.0
     def diffVal = Math.abs(senTemp-setTemp)?.round(1)
-    def diff1 = (diffVal <= threshold) ? true : false
+    def diff1 = (diffVal <= actionVal) ? true : false
     //def diff2 = (diffVal <= maxSwing) ? true : false
     def diff2 = (senTemp != setTemp) ? true : false
     LogAction("getRemSenFanTempOk - Results (val: ${diffVal}): diff1: $diff1 | diff2: $diff2 | fanOn: ${fanOn}", "debug", false)
