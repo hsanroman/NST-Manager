@@ -14,7 +14,8 @@ This is a Child-SmartApp that allows you to creat different types of automations
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/automation_start.png" width="281" height="500">
 
 ### The Devices Types
-<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat3.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect2.PNG" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500">
 
 ## Author
 * @tonesto7
@@ -27,19 +28,20 @@ This is a Child-SmartApp that allows you to creat different types of automations
 * @scpickle
 
 ## Version Info
-__Latest App Version:__ 
+__Latest App Version:__ |
+----------- | -----------
+Nest Manager | __*v2.5.0*__
 
-* Nest Manager - __*v2.5.0*__
-
-__Latest Device Versions:__
-
-* Nest Presence Device - __*v2.5.0*__
-* Nest Protect Device - __*v2.5.0*__
-* Nest Thermostat Device - __*v2.5.0*__
-* Nest Weather Device - __*v2.5.0*__
+__Latest Device Versions:__ |
+----------- | -----------
+Nest Presence Device | __*v2.5.0*__
+Nest Protect Device | __*v2.5.0*__
+Nest Thermostat Device | __*v2.5.0*__
+Nest Weather Device | __*v2.5.0*__
 
 ## What's New
 ***Manager App:***
+
  * **NEW**: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
  * **NEW**: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
  * **NEW**: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.
@@ -92,12 +94,13 @@ __Latest Device Versions:__
  * The devices look great :smile:
 
 ## 3rd-Party SmartApp Compatibility (Confirmed)
- * [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) @Mike_Maxwell 
- * [SmartTiles](http://smarttiles.click/) @625alex 
- * [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204) @bravenel 
- * [CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7) @ady264
- * Keep Me Cozy (I & II) (link) 
- * Routines
+---------- | ----------
+ [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) | @Mike_Maxwell 
+ [SmartTiles](http://smarttiles.click/) | @625alex 
+ [Rule Machine (Rules and Custom Commands)](https://community.smartthings.com/t/rule-machine-version-1-9-released/43204) | @bravenel 
+ [CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7)  | @ady264
+ Keep Me Cozy (I & II) (link) | 
+ Routines | @smartthings
 
  
 ## Installation

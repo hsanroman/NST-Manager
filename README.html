@@ -301,7 +301,8 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <p>This is a Child-SmartApp that allows you to creat different types of automations for your HVAC systems.</p>
 <p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/automation_start.png" width="281" height="500"></p>
 <h3>The Devices Types</h3>
-<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
+<p><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat2.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_thermostat3.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect.PNG" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_protect2.PNG" width="281" height="500">
+<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_weather2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/ss_nest_pres_dev.png" width="281" height="500"></p>
 <h2>Author</h2>
 <ul>
 <li>@tonesto7</li>
@@ -311,35 +312,72 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>@desertblade</li>
 <li>@E_sch</li>
 </ul>
+<h2>Testers</h2>
+<ul>
+<li>@scpickle</li>
+</ul>
 <h2>Version Info</h2>
-<p><strong>Latest App Version:</strong> </p>
-<ul>
-<li>Nest Manager - <strong><em>v2.2.0</em></strong></li>
-</ul>
-<p><strong>Latest Device Versions:</strong></p>
-<ul>
-<li>Nest Presence Device - <strong><em>v2.1.0</em></strong></li>
-<li>Nest Protect Device - <strong><em>v2.1.0</em></strong></li>
-<li>Nest Thermostat Device - <strong><em>v2.1.0</em></strong></li>
-<li>Nest Weather Device - <strong><em>v2.1.0</em></strong></li>
-</ul>
+<table>
+<thead>
+<tr>
+	<th><strong>Latest App Version:</strong></th>
+	<th>&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+	<td>Nest Manager</td>
+	<td><strong><em>v2.5.0</em></strong></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+	<th><strong>Latest Device Versions:</strong></th>
+	<th>&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+	<td>Nest Presence Device</td>
+	<td><strong><em>v2.5.0</em></strong></td>
+</tr>
+<tr>
+	<td>Nest Protect Device</td>
+	<td><strong><em>v2.5.0</em></strong></td>
+</tr>
+<tr>
+	<td>Nest Thermostat Device</td>
+	<td><strong><em>v2.5.0</em></strong></td>
+</tr>
+<tr>
+	<td>Nest Weather Device</td>
+	<td><strong><em>v2.5.0</em></strong></td>
+</tr>
+</tbody>
+</table>
 <h2>What's New</h2>
-<p><strong><em>Manager App:</em></strong>
- * <strong>New</strong>: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264
- * <strong>New</strong>: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.
- * <strong>New</strong>: You can now select devices to send Speech Notifications for Contact Automations.
- * <strong>New</strong>: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.  <br />
- * <strong>Added</strong>: You can now use Day,Time,Mode filters in certain Nest Mode Automations.
- * <strong>Added</strong>: Ability to Disable each automations individually.
- * <strong>Added</strong>: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts.
- * <strong>Updated</strong>: There is new install setup now that flows much better and allows display of the important available options better to users.
- * <strong>Updated</strong>: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly.
- * <strong>New</strong>: Analytics have been added to the app to share installation data, it will also send generic exception error data.  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics.
-   We will also be putting up a dashboard for users who are nerdy just to see the data mapped out.
- * <strong>Fixed</strong>: Remote Sensor's Fan circulation should now work like it was intended.
- * <strong>Fixed</strong>: Nest Log Out function to actually take you back to auth screen after clearing token.
- * <strong>Added</strong>: View all Apps/Devices state data under diagnostics.
- * <strong>Other</strong>: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list.</p>
+<p><strong><em>Manager App:</em></strong></p>
+<ul>
+<li><strong>NEW</strong>: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264&quot;</li>
+<li><strong>NEW</strong>: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected.</li>
+<li><strong>NEW</strong>: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps.</li>
+<li><strong>ADDED</strong>: Ability to Disable each automations individually.</li>
+<li><strong>ADDED</strong>: You can now receive Local Weather Alerts push notifications when the Nest Weather device is installed.</li>
+<li><strong>UPDATED</strong>: There is new install setup now that flows much better and allows display of the important available options better to users.</li>
+<li><strong>UPDATED</strong>: Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly.</li>
+<li><strong>NEW</strong>: Analytics have been added to the app to share very basic generic installation data, it will also send generic exception error data. So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out.</li>
+<li><strong>FIXED</strong>: Remote Sensor's Fan circulation should now work like it was intended.</li>
+<li><strong>FIXED</strong>: Nest Log Out function to actually take you back to auth screen after clearing token.</li>
+<li><strong>ADDED</strong>: You can now use Day, Time, Mode filters in most Nest Automations.</li>
+<li><strong>ADDED</strong>: View all Apps/Devices state data under diagnostics.</li>
+<li><strong>ADDED</strong>: Voice Notifications using Speech or MusicPlayer devices to Contact Automations Events work correctly with contact automation.</li>
+<li><strong>ADDED</strong>: App now supports Broadcast message from developer.</li>
+<li><strong>NEW</strong>: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser.</li>
+<li><strong>UPDATED</strong>: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes.</li>
+<li><strong>UPDATED</strong>: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list.</li>
+</ul>
 <p><strong><em>Weather Device:</em></strong>
  * <strong>Updated</strong> @desertblade remodeled the design to allow for modal popups for weather alerts, and forecast data.</p>
 <h2>Links</h2>
@@ -373,13 +411,34 @@ The SmartApp and Device Handlers work together to provide integration to the Sma
 <li>The devices look great :smile:</li>
 </ul>
 <h2>3rd-Party SmartApp Compatibility (Confirmed)</h2>
-<ul>
-<li><a href="https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119">Keenect</a> @Mike_Maxwell </li>
-<li><a href="http://smarttiles.click/">SmartTiles</a> @625alex </li>
-<li><a href="https://community.smartthings.com/t/rule-machine-version-1-9-released/43204">Rule Machine (Rules and Custom Commands)</a> @bravenel </li>
-<li>Keep Me Cozy (I &amp; II) (link) </li>
-<li>Routines</li>
-</ul>
+<table>
+<tbody>
+<tr>
+	<td><a href="https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119">Keenect</a></td>
+	<td>@Mike_Maxwell</td>
+</tr>
+<tr>
+	<td><a href="http://smarttiles.click/">SmartTiles</a></td>
+	<td>@625alex</td>
+</tr>
+<tr>
+	<td><a href="https://community.smartthings.com/t/rule-machine-version-1-9-released/43204">Rule Machine (Rules and Custom Commands)</a></td>
+	<td>@bravenel</td>
+</tr>
+<tr>
+	<td><a href="https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7">CoRE</a></td>
+	<td>@ady264</td>
+</tr>
+<tr>
+	<td>Keep Me Cozy (I &amp; II) (link)</td>
+	<td></td>
+</tr>
+<tr>
+	<td>Routines</td>
+	<td>@smartthings</td>
+</tr>
+</tbody>
+</table>
 <h2>Installation</h2>
 <h3>Method 1: (Recommended)</h3>
 <p><em>Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Connect App, Presence, Protect and Thermostat devices.</em></p>
@@ -479,10 +538,14 @@ This feature will help you to view and export the logs (<em>also see the tip bel
 <p>Please check the Help Page before posting questions in the community forum. 
 <strong><a href="https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html">Nest Manager Help Page</a></strong></p>
 <hr />
-<h3>Feature Requests</h3>
+<h2>Feature Requests</h2>
 <ul>
-<li>We love new ideas so please head on over to github and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.</li>
-<li>There is a Google Form that will allow you to vote for the newest features. <strong><em><a href="https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform">Voting Form</a></em></strong></li>
+<li>We love new ideas so please head on over to GitHub and open an issue for the feature you would like to see.  This will help prioritize what is important and what is not.</li>
+<li>
+<p>There is a Google Form that will allow you to vote for the newest features. </p>
+<p><strong><em><a href="https://docs.google.com/forms/d/1bkGy14QyjLedpM31CQ4t6m7UIbxbNH8PCUAdB_-EB08/viewform">Voting Form</a></em></strong></p>
+<p><strong><em><a href="http://goo.gl/forms/jGdwJIfqQl456L1h1">Feedback Form</a></em></strong></p>
+</li>
 </ul>
 <hr />
 <h3>Donations</h3>
@@ -493,7 +556,7 @@ This feature will help you to view and export the logs (<em>also see the tip bel
 <h3>Nest API Documentation</h3>
 <p><a href="https://developer.nest.com/documentation/cloud/get-started">Nest Developer Documents</a></p>
 <p>To view the json returned from the API just get your authToken from the SmartApp state data and add it to this Url</p>
-<p><em>https://developer-api.nest.com/devices?auth=<strong>yourAuthTokenHere</strong></em></p>
+<p><em>https://developer-api.nest.com/devices?auth=__yourAuthTokenHere__</em></p>
 
 </body>
 </html>

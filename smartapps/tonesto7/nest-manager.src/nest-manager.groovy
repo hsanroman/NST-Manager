@@ -4606,7 +4606,7 @@ def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp,
     def actionVal = (remSenRuleType == "Circ") ? threshold+1.0 : threshold
     def maxFanSwing = actionVal+2.0
     def diffVal = Math.abs(senTemp-setTemp)?.round(1)
-    def diff1 = (diffVal <= actionVal) ? true : false
+    def diff1 = (diffVal < actionVal) ? true : false
     //def diff2 = (diffVal <= maxSwing) ? true : false
     def diff2 = (senTemp != setTemp) ? true : false
     LogAction("getRemSenFanTempOk - Results (val: ${diffVal}): diff1: $diff1 | diff2: $diff2 | fanOn: ${fanOn}", "debug", false)
