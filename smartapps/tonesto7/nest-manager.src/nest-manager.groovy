@@ -40,10 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.3.5" }
-def appVerDate() { "6-17-2016" }
+def appVersion() { "2.5.0" }
+def appVerDate() { "6-20-2016" }
 def appVerInfo() {
     def str = ""
+
+    str += "V2.5.0 (June 20th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • Version 2.5 Released to public."
 
     str += "V2.3.5 (June 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
