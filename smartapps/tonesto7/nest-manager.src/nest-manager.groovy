@@ -2682,6 +2682,7 @@ def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath) { return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
 def getHelpPageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html" }
+def getAutoHelpPageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help/nest-automations.html" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 
@@ -3780,7 +3781,7 @@ def initAutoApp() {
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
     def typeLabel = ""
-    def dis = disableAutomation ? "(Disabled)" : ""
+    def dis = disableAutomation ? "\n(Disabled)" : ""
     if (type == "remSen") { typeLabel = "${appName()} (RemoteSensor)${dis}" }
     else if (type == "extTmp") { typeLabel = "${appName()} (ExternalTemp)${dis}" }
     else if (type == "conWat") { typeLabel = "${appName()} (Contact)${dis}" }
@@ -4032,7 +4033,7 @@ def remSensorPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("help_icon.png")
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("help_icon.png")
         }
     }
 }
@@ -4786,7 +4787,7 @@ def extTempPage() {
             }
         }
         section("Help and Instructions:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -5038,7 +5039,7 @@ def contactWatchPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -5287,7 +5288,7 @@ def nestModePresPage() {
             }
         }
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }
@@ -5479,7 +5480,7 @@ def tstatModePage() {
         }
 
         section("Help:") {
-            href url:"${getHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
+            href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
         }
     }
 }

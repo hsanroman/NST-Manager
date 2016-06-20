@@ -3,11 +3,11 @@
 
 * Automation Allow you to create triggers that perform function for your heating and cooling comforts
 
-## 1. Remote Sensors
+## <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/remote_sensor_icon.png" width="32" height="32"> 1. Remote Sensors
 * No Documentation Available Yet.  I will update this once I finalize the app. 
 
 
-## 2. Door/Window Contact Watcher
+## <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/open_window.png" width="32" height="32"> 2. Door/Window Contact Watcher
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/contact_watch_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/contact_watch_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/contact_watch_3.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/contact_watch_4.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/contact_watch_5.png" width="281" height="500">
 
 * Select Contact(s) to monitor there open/close states. 
@@ -19,7 +19,7 @@
 * You can choose to use Push Notification for when the events actually occur.  This will use the recipients from the manager app and will honor the quiet time as well.
 
 
-## 3. External Temps Turn off Thermostat
+## <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/external_temp_icon.png" width="32" height="32"> 3. External Temps Turn off Thermostat
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp3.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp4.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp5.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/ext_temp6.png" width="281" height="500">
 
 * You can choose to use your local weather or select a external temp sensor. 
@@ -32,7 +32,7 @@
 * You can choose to use Push Notification for when the events actually occur.  This will use the recipients from the manager app and will honor the quiet time as well.
 
 
-## 4. Presence Mode Automation
+## <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_automation_icon.png" width="32" height="32"> 4. Presence Mode Automation
 Change Nest Home/Away based on SmartThings Modes 
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_3.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_4.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_5.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/nest_mode_6.png" width="281" height="500">
@@ -42,7 +42,7 @@ Change Nest Home/Away based on SmartThings Modes
 
 ----------
 
-## 5. Thermostat Mode Automations
+## <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/mode_setpoints_icon.png" width="32" height="32"> 5. Thermostat Mode Setpoint Automation
 Set Temp Setpoints based on ST Modes 
 
 <img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_1.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_2.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_3.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_4.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_5.png" width="281" height="500"><img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Screenshots/App/AutomationApp/tstat_modes_6.png" width="281" height="500">
