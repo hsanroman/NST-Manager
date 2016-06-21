@@ -40,13 +40,14 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.1" }
+def appVersion() { "2.5.2" }
 def appVerDate() { "6-21-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.1 (June 21st, 2016):"
+    str += "V2.5.2 (June 21st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Phantom Info: null push notification has been fixed."
     str += "\n • FIXED: Lot's of modifications to the remote sensor logic to hopefully address the fan circulation issues."
     str += "\n • FIXED: Modified the change log to format properly in the Manager application."
     str += "\n • I Changed Remote Sensor Evaluation Wait input from Decimal to Enum input."
