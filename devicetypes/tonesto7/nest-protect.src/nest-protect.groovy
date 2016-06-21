@@ -33,7 +33,7 @@ preferences {
             ])
 }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -724,6 +724,9 @@ def getInfoHtml() {
                         </div>
                         </div>
                 <table>
+                <col width="40%">
+                <col width="20%">
+                <col width="40%">
                 <thead>
                     <th>Network Status</th>
                     <th>Battery</th>

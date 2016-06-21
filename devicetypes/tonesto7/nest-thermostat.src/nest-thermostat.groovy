@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.0"}
+def devVer() { return "2.5.1"}
 
 // for the UI
 metadata {
@@ -1674,6 +1674,9 @@ def getInfoHtml() {
                 ${getCSS()}
                 </style>
                 <table>
+                <col width="40%">
+                <col width="20%">
+                <col width="40%">
                 <thead>
                     <th>Network Status</th>
                     <th>Leaf</th>
