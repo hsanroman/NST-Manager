@@ -48,8 +48,8 @@ def appVerInfo() {
     str += "V2.5.1 (June 21st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Lot's of modifications to the remote sensor logic to hopefully address the fan circulation issues."
-    str += "\n • FIXED: Fixed the changelogs to format properly ."
-    str += "\n • UPDATED: I Changed Remote Sensor Evaluation Wait input from number to enum input."
+    str += "\n • FIXED: Modified the change log to format properly in the Manager application."
+    str += "\n • I Changed Remote Sensor Evaluation Wait input from Decimal to Enum input."
 
     str += "\n\nV2.5.0 (June 20th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
