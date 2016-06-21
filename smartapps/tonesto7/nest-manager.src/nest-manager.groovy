@@ -1472,7 +1472,7 @@ def updateHandler() {
             sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
             atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater.updateVer.toInteger()]
         }
-        if(atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+        if(atomicState?.appData?.updater?.updateMsg != "" && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
             if(getLastUpdateMsgSec() > 86400) {
                 sendMsg("Info", "${atomicState?.updater?.updateMsg}")
                 atomicState?.lastUpdateMsgDt = getDtNow()
@@ -1682,7 +1682,7 @@ def getWebFileData() {
 
 def broadcastCheck() {
     if(atomicState?.isInstalled && atomicState?.appData.broadcast) {
-        if(atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
+        if(atomicState?.appData?.broadcast?.msgId != null && atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
             sendMsg(atomicState?.appData?.broadcast?.type.toString().capitalize(), atomicState?.appData?.broadcast?.message.toString(), null, null, null, true)
             atomicState?.lastBroadcastId = atomicState?.appData?.broadcast?.msgId
         }
