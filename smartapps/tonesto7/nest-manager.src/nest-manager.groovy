@@ -1,8 +1,3 @@
-/*
-    TODO:  
-    * (WIP) Implement Critical Updates mechanism using minimum version number to display message in device handlers
-    * Think about lifting the must install all device handlers requirement.  Maybe have it check each device type to determine if user can select those devices
-*/
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
@@ -41,12 +36,17 @@ definition(
 }
 
 def appVersion() { "2.5.2" }
-def appVerDate() { "6-21-2016" }
+def appVerDate() { "6-22-2016" }
 def appVerInfo() {
     def str = ""
 
+    str += "V2.5.2 (June 22nd, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • Minor Code cleanups."
+
     str += "V2.5.2 (June 21st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Minor Code cleanups."
     str += "\n • FIXED: Phantom Info: null push notification has been fixed."
     str += "\n • FIXED: Lot's of modifications to the remote sensor logic to hopefully address the fan circulation issues."
     str += "\n • FIXED: Modified the change log to format properly in the Manager application."
@@ -242,12 +242,9 @@ def mainPage() {
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: !setupComplete ? "reviewSetupPage" : "", install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
-            //paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
-                paragraph "An Update is Available for ${appName()}!!!\nCurrent: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\nPlease visit the IDE to update the code.",
-                        image: getAppImg("update_icon.png")
-                href url: stIdeLink(), style:"external", required: false, title:"Link to ST IDE",
-                        description:"Tap to Open in Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
+                href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!!!",
+                        description:"Current: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -774,9 +771,6 @@ def getApiData(type = null) {
                         atomicState?.structData = resp?.data
                         result = true
                     }
-                    else {
-                        //LogAction("API Structure Data HAS NOT Changed... Skipping Child Update...", "debug", true)
-                    }
                 } else {
                     LogAction("getApiStructureData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true)
                 }
@@ -793,9 +787,6 @@ def getApiData(type = null) {
                         LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.deviceData = resp?.data
                         result = true
-                    }
-                    else {
-                        //LogAction("API Device Data HAS NOT Changed... Skipping Child Update...", "debug", true)
                     }
                 } else {
                     LogAction("getApiDeviceData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true)
@@ -6134,7 +6125,7 @@ private def textAuthor()    { return "${appAuthor()}" }
 private def textNamespace() { return "${appNamespace()}" }
 private def textVerInfo()   { return "${appVerInfo()}" }
 private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
-private def stIdeLink()     { return "https://ide.smartthings.com" }
+private def stIdeLink()     { return "https://graph.api.smartthings.com" }
 private def textCopyright() { return "Copyright© 2016 - Anthony S." }
 private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
 private def textHelp()      { return "" }
