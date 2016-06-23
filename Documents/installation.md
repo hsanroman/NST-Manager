@@ -62,7 +62,7 @@ Once you have integration, the four pieces of code you might need will be availa
 
 **Name:** nest-manager
 
-![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/GitHubIntegration.jpg)
+![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/GithubIntegration.png)
 
 * Close the GitHub Repository Integration page
 *Next, click the **Update from Repo** button at the upper-right corner of the IDE
