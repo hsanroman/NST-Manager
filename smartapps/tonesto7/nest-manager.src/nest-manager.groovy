@@ -5427,6 +5427,7 @@ def tstatModePage() {
         
         if (tModeTstats) {
             tModeTstats?.each { ts ->
+                getTstatCapabilities(ts, tModePrefix(), true)
                 section("${ts?.displayName} Configuration:") {
                     def str = ""
                     str += "Current Status:"
@@ -5478,10 +5479,14 @@ def tModeTstatConfModePage(params) {
             settings."${preName}"?.each { md -> 
                 section("(${md.toString().toUpperCase()}) Options:") {
                     def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_CoolTemp"),
-                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
-                    input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_HeatTemp"),
-                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
+                    if(atomicState?."${preName}_${devId}_TstatCanHeat") {
+                        input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: false,
+                                range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+                    }
+                    if(atomicState?."${preName}_${devId}_TstatCanCool") {
+                        input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: false,
+                                range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
+                    }
                     input "${preName}_${md}_HvacMode", "enum", title: "${md}\nSet Hvac Mode (Optional)", required: false,  defaultValue: null, metadata: [values:tModeHvacEnum()], 
                             submitOnChange: true, image: getAppImg("mode_icon.png")
                 }
@@ -5913,7 +5918,7 @@ def checkModeDuplication(modeOne, modeTwo) {
     return result
 }
 
-def getTstatCapabilities(tstat, autoType) {
+def getTstatCapabilities(tstat, autoType, dyn = false) {
     try {
         def canCool = true
         def canHeat = true
@@ -5922,9 +5927,9 @@ def getTstatCapabilities(tstat, autoType) {
         if(tstat?.currentCanHeat) { canHeat = tstat?.currentCanHeat.toBoolean() }
         if(tstat?.currentHasFan) { hasFan = tstat?.currentHasFan.toBoolean() }
         
-        atomicState?."${autoType}TstatCanCool" = canCool
-        atomicState?."${autoType}TstatCanHeat" = canHeat
-        atomicState?."${autoType}TstatHasFan" = hasFan
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
     } catch (ex) { 
         sendExceptionData("${tstat} - ${autoType} | ${ex}", "getTstatCapabilities")
     }
