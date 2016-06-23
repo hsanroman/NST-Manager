@@ -5424,15 +5424,16 @@ def tstatModePage() {
         section("Select the Thermostats you would like to adjust:") {
             input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
         }
-        
         if (tModeTstats) {
             tModeTstats?.each { ts ->
                 getTstatCapabilities(ts, tModePrefix(), true)
+                def canHeat = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool"
                 section("${ts?.displayName} Configuration:") {
                     def str = ""
                     str += "Current Status:"
                     str += "\n• Temperature: (${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
-                    str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
+                    str += "\n• Setpoints: (${canHeat ? "H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}" : ""}/${canCool ? "C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit}" : ""})"
                     str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
                     href "tModeTstatConfModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
@@ -5472,19 +5473,21 @@ def tModeTstatConfModePage(params) {
     }
     dynamicPage(name: "tModeTstatConfModePage", title: "${devName} Configuration", install: false, uninstall: false) {
         def preName = "tMode_|${devId}|_Modes"
+        def canHeat = atomicState?."tMode_${devId}_TstatCanHeat"
+        def canCool = atomicState?."tMode_${devId}_TstatCanCool"
         section(" ") {
             input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
         }
         if (settings."${preName}") {
             settings."${preName}"?.each { md -> 
                 section("(${md.toString().toUpperCase()}) Options:") {
-                    def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    if(atomicState?."${preName}_${devId}_TstatCanHeat") {
-                        input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: false,
+                    def tempReq = ( canHeat && canCool || (!canCool && canHeat && !settings."${preName}_${md}_HeatTemp") || (canCool && !canHeat && !settings."${preName}_${md}_CoolTemp") ) ? true : false
+                    if(canHeat) {
+                        input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: tempReq,
                                 range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
                     }
-                    if(atomicState?."${preName}_${devId}_TstatCanCool") {
-                        input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: false,
+                    if(canCool) {
+                        input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: tempReq,
                                 range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
                     }
                     input "${preName}_${md}_HvacMode", "enum", title: "${md}\nSet Hvac Mode (Optional)", required: false,  defaultValue: null, metadata: [values:tModeHvacEnum()], 
@@ -5504,11 +5507,13 @@ def getTstatModeDesc(tstat = null) {
             tModeTstats?.each { ts ->
                 num = num+1
                 preName = getTstatModeInputName(ts)
+                def canHeat = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool"
                 dstr += "${num > 1 ? "\n\n" : ""}${ts?.displayName}:"
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
                         dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                        dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                        dstr += "(${canHeat ? "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit}" : ""}${canHeat && canCool ? " | " : ""}${canCool ? "❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}" : ""}"
                         dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
                             " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                     }
@@ -5517,9 +5522,11 @@ def getTstatModeDesc(tstat = null) {
         } else {
             preName = getTstatModeInputName(tstat)
             if(settings?."${preName}") {
+                def canHeat = atomicState?."tMode_${tstat?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${tstat?.device?.deviceNetworkId}_TstatCanCool"
                 settings?."${preName}".each { md ->
                     dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                    dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                    dstr += "(${canHeat ? "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit}" : ""}${canHeat && canCool ? " | " : ""}${canCool ? "❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}" : ""}"
                     dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
                             " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                 }
@@ -5595,16 +5602,16 @@ def checkTstatMode() {
                             }
                         }
                         def tstatHvacMode = ts?.currentThermostatMode.toString()
-                        //if(tstatHvacMode in ["heat", "auto"]) {
+                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat") {
                             heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
                             LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
                             ts?.setHeatingSetpoint(heatTemp.toInteger())
-                        //}
-                        //if(tstatHvacMode in ["cool", "auto"]) {
+                        }
+                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
                             coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
                             LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
                             ts?.setCoolingSetpoint(coolTemp.toInteger())
-                        //}
+                        }
                         //log.debug "tStatModes: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode"
                     }
                 }
