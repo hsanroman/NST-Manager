@@ -25,9 +25,9 @@
         }
     },
     "broadcast": {
-        "msgId": null,
-        "message": null,
-        "type": null
+        "msgId": "48vm9GiNju",
+        "message": "Nest Manager Broadcast: Please remember that after updating your code to v2.5 that you must update the device handler code as well.",
+        "type": "info"
     },
     "updater": {
         "updateVer": 1,
