@@ -186,6 +186,23 @@ When updates are available to the source code you will see the color change from
  * Modify any preferences you would like (Optional)
  * Tap on "**Done**"
 
+## Applying Updates
+Performing Updates using Git Integration is the fast method of updating
+
+Just Remember to perform the following before upgrading any existing code: 
+
+* Remove any existing configured Nest Automations.
+* Delete the Old Nest Automation app from the IDE.  
+* Update Nest Manager code to latest version
+* Update all Device Handler code to latest version
+* Open the Manager App and complete the setup review and press done.
+
+### Method 1: Using Git Integration
+    
+***Updating the SmartApp***
+
+
+
 ## Issues and Troubleshooting
 
 ### Issues

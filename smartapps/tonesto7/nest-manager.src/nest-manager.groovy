@@ -1,3 +1,6 @@
+/*
+    Modify the temp setpoint automation to look at the thermostat capabilities and only show setpoints for that thermostats capabilities.
+*/
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
@@ -3117,6 +3120,11 @@ def infoPage () {
         }
         section("App Revision History:") {
             href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("change_log_icon.png")
+        }
+        if(atomicState?.installationId) {
+            section("InstallationID:") {
+                paragraph "InstallationID:\n${atomicState?.installationId}"
+            }
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
