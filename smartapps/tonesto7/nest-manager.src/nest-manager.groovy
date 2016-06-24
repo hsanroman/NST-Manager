@@ -52,7 +52,7 @@ def appVerInfo() {
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • Minor Code cleanups."
 
-    str += "V2.5.2 (June 21st, 2016):"
+    str += "\n\nV2.5.2 (June 21st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Minor Code cleanups."
     str += "\n • FIXED: Phantom Info: null push notification has been fixed."
