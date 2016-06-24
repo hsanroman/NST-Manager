@@ -1,3 +1,6 @@
+/*
+    Modify the temp setpoint automation to look at the thermostat capabilities and only show setpoints for that thermostats capabilities.
+*/
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
@@ -35,12 +38,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.2" }
-def appVerDate() { "6-22-2016" }
+def appVersion() { "2.5.3" }
+def appVerDate() { "6-23-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.2 (June 22nd, 2016):"
+    str += "V2.5.3 (June 23rd, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Modified the Thermostat setpoint automation to only show heat/cool temps if the device support them."
+    str += "\n • ADDED: The Manager App will no longer update device data if it's version is not greater than a minimum version."
+
+    str += "\n\nV2.5.2 (June 22nd, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • Minor Code cleanups."
 
@@ -746,6 +754,10 @@ def postCmd() {
     poll()
 }
 
+
+def getMinTstatVersion() {
+
+}
 def getApiData(type = null) {
     //log.trace "getApiData($type)"
     LogAction("getApiData($type)", "info", false)
@@ -824,34 +836,54 @@ def updateChildData() {
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
-                             "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
-                LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
-                it.generateEvent(tData) //parse received message from parent
-                atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
-                return true
+                if(versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat) {
+                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
+                                "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
+                    LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
+                    it.generateEvent(tData) //parse received message from parent
+                    atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
+                    return true
+                } else { 
+                    LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    return false
+                }
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-                def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
-                             "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
-                LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
-                it.generateEvent(pData) //parse received message from parent
-                atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
-                return true
+                if(versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect) {
+                    def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
+                                "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
+                    LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
+                    it.generateEvent(pData) //parse received message from parent
+                    atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
+                    return true
+                } else { 
+                    LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    return false
+                }
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
-                LogTrace("UpdateChildData >> Presence id: ${devId}")
-                def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
-                it.generateEvent(pData)
-                atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
-                return true
+                if(versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence) {
+                    LogTrace("UpdateChildData >> Presence id: ${devId}")
+                    def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
+                    it.generateEvent(pData)
+                    atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
+                    return true
+                } else { 
+                    LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    return false
+                }
             }
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
-                LogTrace("UpdateChildData >> Weather id: ${devId}")
-                def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
-                return true
+                if(versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather) {
+                    LogTrace("UpdateChildData >> Weather id: ${devId}")
+                    def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
+                    it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
+                    atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
+                    return true
+                } else { 
+                    LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    return false
+                }
             }
             else if(devId == getNestPresId()) {
                 return true
@@ -1695,6 +1727,7 @@ def ver2IntArray(val) {
     def ver = val?.split("\\.")
     return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
+def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
@@ -1716,6 +1749,7 @@ def isAppUpdateAvail() {
         return true
     } else { return false }
 }
+
 def isPresUpdateAvail() {
     if(isNewUpdateAvail(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer)) {
         return true
@@ -1735,7 +1769,7 @@ def isTstatUpdateAvail() {
 }
 
 def isWeathUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.weather?.ver, atomicState?.weathAppVer)) {
+    if(isNewUpdateAvail(atomicState?.appData?.versions?.weather?.ver, atomicState?.weatAppVer)) {
         return true
     } else { return false }
 }
@@ -2846,6 +2880,10 @@ def isInMode(modeList) {
     return res
 }
 
+def minDevVersions() {
+    return ["thermostat":250, "protect":250, "presence":250, "weather":250]
+}
+
 def notifValEnum(allowCust = true) {
     def valsC = [
         60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes",
@@ -3117,6 +3155,11 @@ def infoPage () {
         }
         section("App Revision History:") {
             href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("change_log_icon.png")
+        }
+        if(atomicState?.installationId) {
+            section("InstallationID:") {
+                paragraph "InstallationID:\n${atomicState?.installationId}"
+            }
         }
         section("Licensing Info:") {
             paragraph "${textCopyright()}\n${textLicense()}"
@@ -5416,14 +5459,16 @@ def tstatModePage() {
         section("Select the Thermostats you would like to adjust:") {
             input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
         }
-        
         if (tModeTstats) {
             tModeTstats?.each { ts ->
+                getTstatCapabilities(ts, tModePrefix(), true)
+                def canHeat = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool"
                 section("${ts?.displayName} Configuration:") {
                     def str = ""
                     str += "Current Status:"
                     str += "\n• Temperature: (${getDeviceTemp(ts)}°${atomicState?.tempUnit})"
-                    str += "\n• Setpoints: (H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}/C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit})"
+                    str += "\n• Setpoints: (${canHeat ? "H: ${getTstatSetpoint(ts, "heat")}°${atomicState?.tempUnit}" : ""}/${canCool ? "C: ${getTstatSetpoint(ts, "cool")}°${atomicState?.tempUnit}" : ""})"
                     str += "\n• Mode: (${ts ? ("${ts?.currentThermostatOperatingState.toString().capitalize()}/${ts?.currentThermostatMode.toString().capitalize()}") : "unknown"})"
                     def tstatDesc = (settings?."${getTstatModeInputName(ts)}" ? "Configured Modes:${getTstatModeDesc(ts)}" : "")
                     href "tModeTstatConfModePage", title: "Select Modes and Setpoints...", description: ( getTstatConfigured(ts) ? "${tstatDesc}\n\nTap to Modify" : "Tap to Configure..."), 
@@ -5463,17 +5508,23 @@ def tModeTstatConfModePage(params) {
     }
     dynamicPage(name: "tModeTstatConfModePage", title: "${devName} Configuration", install: false, uninstall: false) {
         def preName = "tMode_|${devId}|_Modes"
+        def canHeat = atomicState?."tMode_${devId}_TstatCanHeat"
+        def canCool = atomicState?."tMode_${devId}_TstatCanCool"
         section(" ") {
             input "${preName}", "mode", title: "Select the Modes...", multiple: true, required: true, submitOnChange: true, image: getAppImg("mode_icon.png")
         }
         if (settings."${preName}") {
             settings."${preName}"?.each { md -> 
                 section("(${md.toString().toUpperCase()}) Options:") {
-                    def tempReq = ( settings."${preName}_${md}_HeatTemp" || settings."${preName}_${md}_CoolTemp" ) ? true : false
-                    input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_CoolTemp"),
-                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
-                    input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: (settings?."${preName}_${md}_HeatTemp"),
-                            range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
+                    def tempReq = ( canHeat && canCool || (!canCool && canHeat && !settings."${preName}_${md}_HeatTemp") || (canCool && !canHeat && !settings."${preName}_${md}_CoolTemp") ) ? true : false
+                    if(canHeat) {
+                        input "${preName}_${md}_HeatTemp", "decimal", title: "${md}\nSet Heat Temp (°${atomicState?.tempUnit})", required: tempReq,
+                                range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+                    }
+                    if(canCool) {
+                        input "${preName}_${md}_CoolTemp", "decimal", title: "${md}\nSet Cool Temp (°${atomicState?.tempUnit})", required: tempReq,
+                                range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",submitOnChange: true, image: getAppImg("cool_icon.png")
+                    }
                     input "${preName}_${md}_HvacMode", "enum", title: "${md}\nSet Hvac Mode (Optional)", required: false,  defaultValue: null, metadata: [values:tModeHvacEnum()], 
                             submitOnChange: true, image: getAppImg("mode_icon.png")
                 }
@@ -5491,11 +5542,13 @@ def getTstatModeDesc(tstat = null) {
             tModeTstats?.each { ts ->
                 num = num+1
                 preName = getTstatModeInputName(ts)
+                def canHeat = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool"
                 dstr += "${num > 1 ? "\n\n" : ""}${ts?.displayName}:"
                 if(settings?."${preName}") {
                     settings?."${preName}".each { md ->
                         dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                        dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                        dstr += "(${canHeat ? "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit}" : ""}${canHeat && canCool ? " | " : ""}${canCool ? "❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}" : ""}"
                         dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
                             " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                     }
@@ -5504,9 +5557,11 @@ def getTstatModeDesc(tstat = null) {
         } else {
             preName = getTstatModeInputName(tstat)
             if(settings?."${preName}") {
+                def canHeat = atomicState?."tMode_${tstat?.device?.deviceNetworkId}_TstatCanHeat"
+                def canCool = atomicState?."tMode_${tstat?.device?.deviceNetworkId}_TstatCanCool"
                 settings?."${preName}".each { md ->
                     dstr += "\n• ${md.toString().capitalize()}: ${md.length() > 10 ? "\n   " : ""}"
-                    dstr += "(♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit} | ❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}"
+                    dstr += "(${canHeat ? "♨ ${settings?."${preName}_${md}_HeatTemp"}°${atomicState?.tempUnit}" : ""}${canHeat && canCool ? " | " : ""}${canCool ? "❆ ${settings?."${preName}_${md}_CoolTemp"}°${atomicState?.tempUnit}" : ""}"
                     dstr += (settings?."${preName}_${md}_HvacMode" && (getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode") != "unknown")) ? 
                             " | M: ${getEnumValue(tModeHvacEnum(), settings?."${preName}_${md}_HvacMode")})" : ")"
                 }
@@ -5582,16 +5637,16 @@ def checkTstatMode() {
                             }
                         }
                         def tstatHvacMode = ts?.currentThermostatMode.toString()
-                        //if(tstatHvacMode in ["heat", "auto"]) {
+                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanHeat") {
                             heatTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_HeatTemp".toInteger()
                             LogAction("Setting Heat Setpoint to '${heatTemp}' on ($ts)", "info", true)
                             ts?.setHeatingSetpoint(heatTemp.toInteger())
-                        //}
-                        //if(tstatHvacMode in ["cool", "auto"]) {
+                        }
+                        if(atomicState?."tMode_${ts?.device?.deviceNetworkId}_TstatCanCool") {
                             coolTemp = settings?."tMode_|${ts?.device.deviceNetworkId}|_Modes_${curStMode}_CoolTemp".toInteger()
                             LogAction("Setting Cool Setpoint to '${coolTemp}' on ($ts)", "info", true)
                             ts?.setCoolingSetpoint(coolTemp.toInteger())
-                        //}
+                        }
                         //log.debug "tStatModes: $modes | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp | curStMode: $curStMode"
                     }
                 }
@@ -5905,7 +5960,7 @@ def checkModeDuplication(modeOne, modeTwo) {
     return result
 }
 
-def getTstatCapabilities(tstat, autoType) {
+def getTstatCapabilities(tstat, autoType, dyn = false) {
     try {
         def canCool = true
         def canHeat = true
@@ -5914,9 +5969,9 @@ def getTstatCapabilities(tstat, autoType) {
         if(tstat?.currentCanHeat) { canHeat = tstat?.currentCanHeat.toBoolean() }
         if(tstat?.currentHasFan) { hasFan = tstat?.currentHasFan.toBoolean() }
         
-        atomicState?."${autoType}TstatCanCool" = canCool
-        atomicState?."${autoType}TstatCanHeat" = canHeat
-        atomicState?."${autoType}TstatHasFan" = hasFan
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
+        atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
     } catch (ex) { 
         sendExceptionData("${tstat} - ${autoType} | ${ex}", "getTstatCapabilities")
     }
