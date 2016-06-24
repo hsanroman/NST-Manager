@@ -46,6 +46,7 @@ def appVerInfo() {
     str += "V2.5.4 (June 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Fixed null bug preventing child update on new installs."
+    str += "\n • FIXED: Automation Naming Bug."
 
     str += "\n\nV2.5.3 (June 23rd, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
