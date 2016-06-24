@@ -38,12 +38,16 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.3" }
-def appVerDate() { "6-23-2016" }
+def appVersion() { "2.5.4" }
+def appVerDate() { "6-24-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.3 (June 23rd, 2016):"
+    str += "V2.5.4 (June 24th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Fixed null bug preventing child update on new installs."
+
+    str += "\n\nV2.5.3 (June 23rd, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Modified the Thermostat setpoint automation to only show heat/cool temps if the device support them."
     str += "\n • ADDED: The Manager App will no longer update device data if it's version is not greater than a minimum version."
@@ -836,7 +840,7 @@ def updateChildData() {
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                if(versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat) {
+                if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
                                 "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
@@ -849,7 +853,7 @@ def updateChildData() {
                 }
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-                if(versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect) {
+                if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
@@ -862,7 +866,7 @@ def updateChildData() {
                 }
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
-                if(versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence) {
+                if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
                     LogTrace("UpdateChildData >> Presence id: ${devId}")
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
                     it.generateEvent(pData)
@@ -874,7 +878,7 @@ def updateChildData() {
                 }
             }
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
-                if(versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather) {
+                if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
                     LogTrace("UpdateChildData >> Weather id: ${devId}")
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
                     it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
