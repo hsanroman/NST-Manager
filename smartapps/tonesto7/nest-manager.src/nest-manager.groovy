@@ -46,6 +46,7 @@ def appVerInfo() {
     str += "V2.5.4 (June 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Fixed null bug preventing child update on new installs."
+    str += "\n • FIXED: Automation Naming Bug."
 
     str += "\n\nV2.5.3 (June 23rd, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -3830,13 +3831,20 @@ def initAutoApp() {
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
     def typeLabel = ""
+    def newLbl
     def dis = disableAutomation ? "\n(Disabled)" : ""
-    if (type == "remSen") { typeLabel = "${appName()} (RemoteSensor)${dis}" }
-    else if (type == "extTmp") { typeLabel = "${appName()} (ExternalTemp)${dis}" }
-    else if (type == "conWat") { typeLabel = "${appName()} (Contact)${dis}" }
-    else if (type == "nMode") { typeLabel = "${appName()} (NestMode)${dis}" }
-    else if (type == "tMode") { typeLabel = "${appName()} (TstatMode)${dis}" }
-    return typeLabel
+    if (type == "remSen")       { typeLabel = "${appName()} (RemoteSensor)" }
+    else if (type == "extTmp")  { typeLabel = "${appName()} (ExternalTemp)" }
+    else if (type == "conWat")  { typeLabel = "${appName()} (Contact)" }
+    else if (type == "nMode")   { typeLabel = "${appName()} (NestMode)" }
+    else if (type == "tMode")   { typeLabel = "${appName()} (TstatMode)" }
+    
+    if(app?.label.toString() != typeLabel) {
+        newLbl = app.label.toString()
+    } else {
+        newLbl = typeLabel
+    } 
+    return "${newLbl}${dis}"
 }
 
 def getAppStateData() {
