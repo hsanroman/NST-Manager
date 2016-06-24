@@ -838,55 +838,60 @@ def updateChildData() {
         def dbg = !childDebug ? false : true
         def nestTz = getNestTimeZone().toString()
         def api = !apiIssues() ? false : true
+        def devVerChkCnt = atomicState?.devVerChkCnt ?: 0
         getAllChildDevices().each {
             def devId = it.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
+                atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
                                 "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                     it.generateEvent(tData) //parse received message from parent
-                    atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
+                    //atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
                     return true
                 } else { 
-                    LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Thermostat Device Handler Code to latest version to resolve this issue...", "error", true)
                     return false
                 }
             }
             else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
+                atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
                 if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                     it.generateEvent(pData) //parse received message from parent
-                    atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
+                    //atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
                     return true
                 } else { 
-                    LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Protect Device Handler Code to latest version to resolve this issue...", "error", true)
                     return false
                 }
             }
             else if(atomicState?.presDevice && devId == getNestPresId()) {
+                atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
                     LogTrace("UpdateChildData >> Presence id: ${devId}")
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
                     it.generateEvent(pData)
-                    atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
+                    //atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
                     return true
                 } else { 
-                    LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Presence Device Handler Code to latest version to resolve this issue...", "error", true)
                     return false
                 }
             }
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
+                atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
                     LogTrace("UpdateChildData >> Weather id: ${devId}")
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
                     it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                    atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
+                    //atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
                     return true
                 } else { 
-                    LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Device Code to latest version to resolve this issue...", "error", true)
+                    LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Weather Device Handler Code to latest version to resolve this issue...", "error", true)
                     return false
                 }
             }
