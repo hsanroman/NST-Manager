@@ -28,16 +28,16 @@ This is a Child-SmartApp that allows you to creat different types of automations
 * @scpickle
 
 ## Version Info
-__Latest App Version:__ |
------------ | -----------
-Nest Manager | __*v2.5.4*__
+__SmartApp:__ | __Version:__ |
+:--- | :---: |
+Nest Manager | *v2.5.4* |
 
-__Latest Device Versions:__ |
------------ | -----------
-Nest Presence Device | __*v2.5.0*__
-Nest Protect Device | __*v2.5.2*__
-Nest Thermostat Device | __*v2.5.1*__
-Nest Weather Device | __*v2.5.0*__
+__Device:__ | Version: |
+:--- | :---: |
+Nest Presence Device | *v2.5.0* |
+Nest Protect Device | *v2.5.2* |
+Nest Thermostat Device | *v2.5.1* |
+Nest Weather Device | *v2.5.0* |
 
 ## What's New
 ***Manager App:***
@@ -94,12 +94,14 @@ Nest Weather Device | __*v2.5.0*__
  * The devices look great :smile:
 
 ## 3rd-Party SmartApp Compatibility (Confirmed)
----------- | ----------
- [Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) | @Mike_Maxwell 
- [SmartTiles](http://smarttiles.click/) | @625alex 
- [CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7) | @ady624 
- [Ask Alexa](https://community.smartthings.com/t/release-ask-alexa) | @MichaelS 
- Rule Machine (No Longer Available) | @bravenel 
+
+SmartApp | Author |
+:--- | :--- |
+[Keenect](https://community.smartthings.com/t/release-keenect-v1-2-0-optional-separate-vo-settings-for-cooling-vent-obstruction-auto-clear/39119) | @Mike_Maxwell |
+[SmartTiles](http://smarttiles.click/) | @625alex |
+[CoRE](https://community.smartthings.com/t/beta-milestone-1-core-communitys-own-rules-engine/48189?u=tonesto7) | @ady624 |
+[Ask Alexa](https://community.smartthings.com/t/release-ask-alexa) | @MichaelS |
+Rule Machine (No Longer Available) | @bravenel |
  
  
 ## New Installations
