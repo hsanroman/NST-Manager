@@ -20,18 +20,7 @@
  
 import java.text.SimpleDateFormat 
 
-preferences {
-    input (description: "Setting Operational Mode allows you to test different Nest Protects states. Once settings are saved hit refresh in Device Handler",
-           title: "Testing Mode", displayDuringSetup: false, type: "paragraph", element: "paragraph")
-    input("testMode", "enum", title: "Testing State", required: false, default: "off",
-            options: [
-                "off":"off",
-                "testSmoke":"Smoke Alert",
-                "testCO": "CO Alert",
-                "testWarnSmoke": "Smoke Warning",
-                "testWarnCO": "CO Warning"
-            ])
-}
+preferences { }
 
 def devVer() { return "2.5.2" }
 
@@ -182,28 +171,6 @@ def poll() {
 
 def refresh() {
     log.debug "refreshing parent..."
-    state?.testMode = (testMode == "off") ? null : testMode
-    if (state?.testMode) {
-        log.warn "Test mode is active: nest alarm state data will not be received until it is turned off"
-        switch (testMode) {
-            case "testSmoke" :
-                alarmStateEvent("", "emergency")
-                break
-            case "testCO":
-                alarmStateEvent("emergency", "")
-                break
-            case "testWarnSmoke" :
-                alarmStateEvent("", "warning")
-                break
-            case "testWarnCO":
-                alarmStateEvent("warning", "")
-                break
-            default:
-                state.testMode = false
-                log.warn "Test mode is inactive"
-                break   
-        }	
-    } 
     poll()
 }
 
@@ -217,6 +184,7 @@ def generateEvent(Map eventData) {
             state?.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
             state?.showProtActEvts = eventData?.showProtActEvts ? true : false
+            carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
             if(!results?.last_connection) { lastCheckinEvent(null) } 
             else { lastCheckinEvent(results?.last_connection) }
             lastTestedEvent(results?.last_manual_test_time)
@@ -225,9 +193,6 @@ def generateEvent(Map eventData) {
             onlineStatusEvent(results?.is_online.toString())
             batteryStateEvent(results?.battery_health.toString())
             testingStateEvent(results?.is_manual_test_active.toString())
-            carbonStateEvent(results?.co_alarm_state.toString())
-            smokeStateEvent(results?.smoke_alarm_state.toString())
-            if (!state?.testMode) { alarmStateEvent(results?.co_alarm_state.toString(), results?.smoke_alarm_state.toString()) }
             uiColorEvent(results?.ui_color_state.toString())
             softwareVerEvent(results?.software_version.toString())
             deviceVerEvent(eventData?.latestVer.toString())
@@ -398,39 +363,6 @@ def uiColorEvent(color) {
     }
 }
 
-def carbonStateEvent(carbon) {
-    try {
-        def carbonVal = device.currentState("nestCarbonMonoxide")?.value
-        def stcarbonVal = device.currentState("carbonMonoxide")?.value
-        //values in ST are tested, clear, detected
-        //values from nest are ok, warning, emergency
-        def stcarbonstatus = ""
-        switch (carbon) {
-            case "ok":
-                stcarbonstatus = "clear"
-                break
-            case "warning":
-                stcarbonstatus = "detected"
-                break
-            case "emergency":
-                stcarbonstatus = "detected"
-                break
-            default:
-                log.debug("Unknown Nest Carbon State is: ${carbon}")
-                break
-        }
-        if(!carbonVal.equals(carbon)) {
-            log.debug("Nest CO State is: (${carbon}) | Original State: (${carbonVal})")
-            sendEvent(name:'nestCarbonMonoxide', value: carbon, descriptionText: "Nest CO State is: ${carbon}",  displayed: true, isStateChange: true) 
-            sendEvent(name:'carbonMonoxide', value: stcarbonstatus, descriptionText: "CO State is: ${stcarbonstatus}",  displayed: true, isStateChange: true) 
-        } else { Logger("CO State: (${carbon}) | Original State: (${carbonVal})") }
-    } 
-    catch (ex) {
-        log.error "carbonStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "carbonStateEvent")
-    }
-}
-
 def onlineStatusEvent(online) {
     try {
         def isOn = device.currentState("onlineStatus")?.value
@@ -465,39 +397,6 @@ def batteryStateEvent(batt) {
     }
 }
 
-def smokeStateEvent(smoke) {
-    try {
-        def smokeVal = device.currentState("nestSmoke")?.value
-        def stsmokeVal = device.currentState("smoke")?.value
-        // ST values are detected, clear, tested
-        // Nest values are ok, warning, emergency
-        def stsmokestatus = ""
-        switch (smoke) {
-            case "ok":
-                stsmokestatus = "clear"
-                break
-            case "warning":
-                stsmokestatus = "detected"
-                break
-            case "emergency":
-                stsmokestatus = "detected"
-                break
-            default:
-                log.debug("Unknown Nest Smoke State is: ${smoke}")
-                break
-        }
-        if(!smokeVal.equals(smoke)) {
-            log.debug("Nest Smoke State is: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
-            sendEvent(name:'nestSmoke', value: smoke,  descriptionText: "Nest Smoke State is: ${smoke.toString().toUpperCase()}", displayed: true, isStateChange: true)
-            sendEvent(name:'smoke', value: stsmokestatus,  descriptionText: "Smoke State is: ${stsmokestatus}", displayed: true, isStateChange: true)
-        } else { Logger("Smoke State: (${smoke.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
-    } 
-    catch (ex) {
-        log.error "smokeStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "smokeStateEvent")
-    }
-}
-
 def testingStateEvent(test) {
     try {
         def testVal = device.currentState("isTesting")?.value
@@ -513,43 +412,39 @@ def testingStateEvent(test) {
     }
 }
 
- def alarmStateEvent(coState, smokeState) {
+ def carbonSmokeStateEvent(coState, smokeState) {
     try {
-        def testVal = device.currentState("isTesting")?.value
-        def alarmStateST = ""
+        def carbonVal = device.currentState("nestCarbonMonoxide")?.value
+        def smokeVal = device.currentState("nestSmoke")?.value
 
-        // ST values are detected, clear, tested
-        // Nest values are ok, warning, emergency
-
-        def stvalStr = "detected"
-        if (state?.testMode || testVal) { stvalStr = "tested"  }
-    
-        if ( smokeState == "emergency" ) {
-            alarmStateST = "smoke-emergency"
-            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-            sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-        } else if (coState == "emergency" ) {
-            alarmStateST = "co-emergency"
-            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-            sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-        } else if (smokeState == "warning" ) {
-            alarmStateST = "smoke-warning"
-            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
-            sendEvent( name: 'smoke', value: stvalStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )    
-        } else if (coState == "warning" ) {
-            alarmStateST = "co-warning"
-            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-            sendEvent( name: 'carbonMonoxide', value: stvalStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
-        } else {
-            alarmStateST = "ok"
+        def alarmStateST = "ok"
+        def smokeValStr = "clear"
+        def carbonValStr = "clear"
+           
+        if (smokeState == "emergency" || smokeState == "warning") {
+            alarmStateST = smokeState == "emergency" ? "smoke-emergency" : "smoke-warning"
+            smokeValStr = "detected"
         } 
-        
+        if (coState == "emergency" || coState == "warning") {
+            alarmStateST = coState == "emergency" ? "co-emergency" : "co-warning"
+            carbonValStr = "detected"
+        } 
+        if(!smokeVal.equals(smokeState)) {
+            log.debug("Nest Smoke State is: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
+            sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )      
+            sendEvent( name: 'smoke', value: smokeValStr, descriptionText: "Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true ) 
+        } else { Logger("Smoke State: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
+        if(!carbonVal.equals(coState)) {
+            sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true ) 
+            sendEvent( name: 'carbonMonoxide', value: carbonValStr, descriptionText: "CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true )      
+        } else { Logger("CO State: (${coState.toString().toUpperCase()}) | Original State: (${carbonVal.toString().toUpperCase()})") }
+
         log.info "alarmState: ${alarmStateST} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
         sendEvent( name: 'alarmState', value: alarmStateST, descriptionText: "Alarm: ${alarmStateST} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: state?.showProtActEvts )
     } 
     catch (ex) {
-        log.error "alarmStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", ex.toString(), "alarmStateEvent")
+        log.error "carbonSmokeStateEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", ex.toString(), "carbonSmokeStateEvent")
     }
 }
  
@@ -734,18 +629,15 @@ def getInfoHtml() {
                         </div>
                         </div>
                 <table>
-                <col width="40%">
-                <col width="20%">
-                <col width="40%">
+                <col width="50%">
+                <col width="50%">
                 <thead>
                     <th>Network Status</th>
-                    <th>Battery</th>
                     <th>API Status</th>
                 </thead>
                     <tbody>
                     <tr>
                         <td>${state?.onlineStatus.toString()}</td>
-                        <td>${battImg}</td>
                         <td>${state?.apiStatus}</td>
                     </tr>
                     
