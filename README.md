@@ -110,6 +110,7 @@ Thanks @MichaelS for letting me borrow from your Ask Alexa Install Instructions.
 _Enabling the GitHub Integration in your IDE is by far the easiest way to install and get the latest updates for Nest Manager App, Presence, Protect, Thermostat, and Weather devices._
 
 If you don't already have Git Integration setup please visit __*[GitHub Integration Instructions](http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html)*__
+
 **Git Integration is not currently available outside of US**
 
 For advanced users who have their SmartThings IDE integrated with GitHub, the installation and maintaining of code becomes very simple. This manual will not go into detail about setting up your IDE with GitHub; those instructions can be found on the SmartThings web site [[http://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=git]]
@@ -129,8 +130,8 @@ For advanced users who have their SmartThings IDE integrated with GitHub, the in
 ![](https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/images/GithubIntegration.png)
 
 * Close the GitHub Repository Integration page
-*Next, click the **Update from Repo** button at the upper-right corner of the IDE
-*On the right-hand column, scroll down to click the apps you want to install. This will typically be:
+* Next, click the **Update from Repo** button at the upper-right corner of the IDE
+* On the right-hand column, scroll down to click the apps you want to install. This will typically be:
 
     `**SmartApp**: smartapps/tonesto7/nest-manager.src/nest-manager.groovy`
     
@@ -227,14 +228,6 @@ Performing updates using Git Integration is the fastest method of updating.
 Just follow the same methods as the install by clicking on update from repo.
 
 If you don't have Git Integration you will just need to copy/paste the code from the source links above over each app/device and press **Save** the **Publish** for me. 
-
-Just Remember to perform the following before upgrading any existing code using the methods above: 
-
-* Remove any existing configured Nest Automations.
-* Delete the Old Nest Automation app from the IDE.  
-* Update Nest Manager code to latest version
-* Update all Device Handler code to latest version
-* Open the Manager App and complete the setup review and press done.
 
 -----
 ## Setting up Nest Manager App
