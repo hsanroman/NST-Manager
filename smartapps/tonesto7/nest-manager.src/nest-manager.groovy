@@ -1,6 +1,3 @@
-/*
-    Modify the temp setpoint automation to look at the thermostat capabilities and only show setpoints for that thermostats capabilities.
-*/
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7),                                                        |
@@ -38,12 +35,16 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.5" }
-def appVerDate() { "6-28-2016" }
+def appVersion() { "2.5.6" }
+def appVerDate() { "6-30-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.5 (June 28th, 2016):"
+    str += "V2.5.6 (June 30th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Modified the solution to workaround the Android Client install bug."
+
+    str += "\n\nV2.5.5 (June 26th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • WORKAROUND: Created solution to workaround the Android Client install bug."
     str += "\n • UPDATED: Added device version info to exception data that's sent to the developer."
@@ -131,6 +132,7 @@ preferences {
     //Manager Pages    
     page(name: "authPage")
     page(name: "mainPage")
+    page(name: "fillerPage")
     page(name: "deviceSelectPage")
     page(name: "reviewSetupPage")
     page(name: "changeLogPage")
@@ -257,26 +259,21 @@ def authPage() {
         if(atomicState?.isInstalled || atomicState?.nestStructures) {
             return mainPage() 
         } else {
-            return fillerPage()
-        }
-    }
-}
-
-def fillerPage() {
-    //log.trace "fillerPage"
-    //atomicState?.nestStructures = getNestStructures()
-    if(!atomicState?.nestStructures) {
-        return dynamicPage(name: "fillerPage", title: "Filler Page", refreshInterval: (!atomicState?.nestStructures ? 10 : null),
-                nextPage: (atomicState?.nestStructures ? "mainPage" : ""), install: false, uninstall: false) {
-            if(!atomicState?.nestStructures) { atomicState?.nestStructures = getNestStructures() }
-            section("") {
-                if(!atomicState?.nestStructures) {
-                    paragraph "No Location data found yet.  This page will refresh in 10 seconds... \nThis page is here to help fix the Android Client"
-                } 
+            return dynamicPage(name: "fillerPage", title: "Please Wait", content: "fillerPage", nextPage: (atomicState?.nestStructures ? "mainPage" : ""), 
+                    refreshInterval: (!atomicState?.nestStructures ? 2 : null), install: false, uninstall: false) {
+                if(!atomicState?.nestStructures) { 
+                    atomicState?.nestStructures = getNestStructures() 
+                    section("") {
+                        if(!atomicState?.nestStructures) {
+                            paragraph "No Location data found yet.  This page will refresh in 2 seconds... \nThis page is here to help fix the Android Client"
+                        } 
+                    }
+                }
+                else {
+                    return mainPage
+                }
             }
         }
-    } else {
-        return authPage()
     }
 }
 
@@ -298,7 +295,8 @@ def mainPage() {
             }
         }
         if(!atomicState?.isInstalled) {
-            def structs = getNestStructures()
+            atomicState?.nestStructures = getNestStructures()
+            def structs = atomicState?.nestStructures ?: getNestStructures()
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
             LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
             if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -368,8 +366,9 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
-        if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
-        def structs = atomicState?.nestStructures
+        //if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
+        atomicState?.nestStructures = getNestStructures()
+        def structs = atomicState?.nestStructures ?: getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
         if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -1855,7 +1854,7 @@ def getNestStructures() {
                 struct = thisstruct
             }
             if (ok2PollDevice()) { getApiData("dev") }
-        } else { LogAction("atomicState.structData is: ${atomicState?.structData}", "debug", true) }
+        } else { LogAction("Missing: atomicState.structData  ${atomicState?.structData}", "error", true) }
 
     } catch (ex) { 
         LogAction("getNestStructures Exception: ${ex}", "error", true)
@@ -2446,7 +2445,10 @@ def callback() {
             httpPost(uri: tokenUrl) { resp ->
                 atomicState.tokenExpires = resp?.data.expires_in
                 atomicState.authToken = resp?.data.access_token
-                if(atomicState?.authToken) { atomicState?.tokenCreatedDt = getDtNow() }
+                if(atomicState?.authToken) { 
+                    atomicState?.tokenCreatedDt = getDtNow() 
+                    atomicState?.nestStructures = getNestStructures()
+                }
             }
 
             if (atomicState?.authToken) {
