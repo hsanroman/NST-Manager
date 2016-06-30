@@ -2,21 +2,21 @@
 
 ### Nest Thermostat
 
-__Command:__ | __Values:__ | __Description__ |
+__Command__ | __Accepted Values__ | __Description__ |
 :---: | :---: | :---: |
-refresh() | none | Requests current data from parent |
-poll() | none | Requests current data from parent |
 away() | none | Sets the Nest Location Away |
 present()  | none | Sets the Nest Location Home |
-setPresence() | (string) "present", "away" | Set presennce based on steing value |
+setPresence() | none | Cycles between Present/Away |
 changeMode() | none | Cycles to next available mode |
-Nest Weather Device | *v2.5.0* |
+setThermostatMode(string) | "auto", "cool", "heat", "off", "emergency heat" | Changes Thermostat mode |
+heatingSetpointUp() | none | Increases heat setpoint temp 1 degree |
+heatingSetpointDown() | none | Decreases heat setpoint temp 1 degree |
+coolingSetpointUp() | none | Increases cool setpoint temp 1 degree |
+coolingSetpointDown() | none | Decreases cool setpoint temp 1 degree |
 
-        command "setThermostatMode"
-        command "levelUpDown"
-        command "levelUp"
-        command "levelDown"
-        command "heatingSetpointUp"
-        command "heatingSetpointDown"
-        command "coolingSetpointUp"
-        command "coolingSetpointDown"
+
+### Nest Presence
+
+__Command__ | __Values__ | __Description__ |
+:---: | :---: | :---: |
+setPresence() | none | Cycles between Present/Away |

@@ -296,8 +296,8 @@ img {
 <table>
 <thead>
 <tr>
-	<th align="center"><strong>Command:</strong></th>
-	<th align="center"><strong>Values:</strong></th>
+	<th align="center"><strong>Command</strong></th>
+	<th align="center"><strong>Accepted Values</strong></th>
 	<th align="center"><strong>Description</strong></th>
 </tr>
 </thead>
@@ -313,14 +313,56 @@ img {
 	<td align="center">Sets the Nest Location Home</td>
 </tr>
 <tr>
-	<td align="center">Nest Thermostat Device</td>
-	<td align="center"><em>v2.5.1</em></td>
-	<td align="center">&nbsp;</td>
+	<td align="center">setPresence()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles between Present/Away</td>
 </tr>
 <tr>
-	<td align="center">Nest Weather Device</td>
-	<td align="center"><em>v2.5.0</em></td>
-	<td align="center">&nbsp;</td>
+	<td align="center">changeMode()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles to next available mode</td>
+</tr>
+<tr>
+	<td align="center">setThermostatMode(string)</td>
+	<td align="center">&quot;auto&quot;, &quot;cool&quot;, &quot;heat&quot;, &quot;off&quot;, &quot;emergency heat&quot;</td>
+	<td align="center">Changes Thermostat mode</td>
+</tr>
+<tr>
+	<td align="center">heatingSetpointUp()</td>
+	<td align="center">none</td>
+	<td align="center">Increases heat setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">heatingSetpointDown()</td>
+	<td align="center">none</td>
+	<td align="center">Decreases heat setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">coolingSetpointUp()</td>
+	<td align="center">none</td>
+	<td align="center">Increases cool setpoint temp 1 degree</td>
+</tr>
+<tr>
+	<td align="center">coolingSetpointDown()</td>
+	<td align="center">none</td>
+	<td align="center">Decreases cool setpoint temp 1 degree</td>
+</tr>
+</tbody>
+</table>
+<h3>Nest Presence</h3>
+<table>
+<thead>
+<tr>
+	<th align="center"><strong>Command</strong></th>
+	<th align="center"><strong>Values</strong></th>
+	<th align="center"><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+	<td align="center">setPresence()</td>
+	<td align="center">none</td>
+	<td align="center">Cycles between Present/Away</td>
 </tr>
 </tbody>
 </table>
