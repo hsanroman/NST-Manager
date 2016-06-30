@@ -35,7 +35,7 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.6" }
+def appVersion() { "2.5.7" }
 def appVerDate() { "6-30-2016" }
 def appVerInfo() {
     def str = ""
@@ -4449,7 +4449,6 @@ private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
-    def modeOk = !remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes)) ? true : false
     def modeOk = (!remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes))) ? true : false
     if(modeOk && (getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 300))) {
         def schChkVal = ((remSenWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal - getLastRemSenEvalSec())
