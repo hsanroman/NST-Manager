@@ -40,12 +40,17 @@ def appVerDate() { "6-30-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.6 (June 30th, 2016):"
+    str += "V2.5.7 (June 30th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Android Client Installs should now work correctly. Without any special hacks (Sorry for the issues)"
+    str += "\n • UPDATED: Automation Naming was broken and should now work correctly."
+    str += "\n • FIXED: Remote Sensor Eval Only modes was set as don't evaluate when in the selected modes."
+    str += "\n • Lot's of little tweaks and cleanups."
+
+    str += "\n\nV2.5.5 (June 30th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Android Client Installs should now work correctly. Without any special hacks"
-    str += "\n • UPDATED: Automation Naming was broken and should now work correctly."
-    str += "\n • FIXED: Remote Sensor Eval Only modes truth was being inverted."
-
+    
     str += "\n\nV2.5.5 (June 26th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • WORKAROUND: Created solution to workaround the Android Client install bug."
@@ -2886,23 +2891,10 @@ def modesOk(modeEntry) {
     return res
 }
 
-def oldIsInMode(modeList) {
-    def res = false
-    if (modeList) {
-        modeList?.each { m ->
-            //log.debug "ST Mode: ${location?.mode} | M: $m"
-            if(m.toString() == location?.mode.toString()) { 
-                //log.debug "Is In Mode: ${location?.mode}"
-                res = true 
-            }
-        }  
-    }
-    return res
-}
-
 def isInMode(modeList) {
-    if (location?.mode in modeList) {
-        return true
+    if (modeList) {
+        //log.debug "mode (${location.mode}) in list: ${modeList} | result: (${location?.mode in modeList})"
+        return location.mode.toString() in modeList
     }
     return false
 }
@@ -3706,7 +3698,7 @@ def mainAutoPage(params) {
                     remSenDescStr += remSenTempDiffDegrees ? ("\n • Temp Threshold: (${remSenTempDiffDegrees}°${atomicState?.tempUnit})") : ""
                     remSenDescStr += remSenMotion ? ("\n • Motion Sensors: (${remSenMotion?.size()})${remSenMotionModes ? "\n└ Mode Filters: ${remSenMotionModes ? "(${remSenMotionModes.size()})" : "(0)"}" : ""}\n└ Status: ${isMotionActive(remSenMotion) ? "(Motion)" : "(No Motion)"}") : ""
                     remSenDescStr += remSenSwitches ? ("\n • Switches: (${remSenSwitches?.size()})\n└ Trigger Type: (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
-                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Eval Blocked" : "Eval Allowed"}" : ""
+                    remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Eval Allowed" : "Eval Blocked"}" : ""
                     
                     remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
                     remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
@@ -4457,23 +4449,23 @@ private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", true)
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { getSunTimeState() }
-    def modeOk = !remSenEvalModes || isInMode(remSenEvalModes) ? true : false
-    if(!modeOk && (getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 300))) {
+    def modeOk = !remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes)) ? true : false
+    def modeOk = (!remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes))) ? true : false
+    if(modeOk && (getLastRemSenEvalSec() < (remSenWaitVal?.toInteger() ?: 300))) {
         def schChkVal = ((remSenWaitVal - getLastRemSenEvalSec()) < 4) ? 4 : (remSenWaitVal - getLastRemSenEvalSec())
         runIn( schChkVal.toInteger(), "remSenEvtEval", [overwrite: true] )
-        LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in ($schChkVal seconds)", "info", true)
-        return 
+        LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
     } 
     else { 
         atomicState?.lastRemSenEval = getDtNow()
-        if(modeOk && (!remSensorDay && !remSensorNight) || !remSenTstat || !getRemSenModeOk()) {
+        if(!modeOk || (!remSensorDay && !remSensorNight) || !remSenTstat || !getRemSenModeOk()) {
             def noGoDesc = ""
-            noGoDesc += isInMode(remSenEvalModes) ? "Ignoring Event the Current Mode was Selected to Prevent Evaluation" : ""
+            noGoDesc += !modeOk ? "Ignoring Event the because Mode Filters were set and the current mode was not selected for Evaluation" : ""
             noGoDesc += !remSensorDay && !remSensorNight ? "Missing Required Day or Night Sensor Selections..." : ""
             noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
             noGoDesc += !getRemSenModeOk() ? "Ignoring because this mode is not one of those selected for evaluation..." : ""
-            LogAction("Remote Sensor Evaluation Error: ${noGoDesc}", "error", true)
-        } else if (!isInMode(remSenEvalModes) &&  getRemSenModeOk()) {
+            LogAction("Remote Sensor Evaluation Status: ${noGoDesc}", "warn", true)
+        } else if (modeOk && getRemSenModeOk()) {
             //log.info "remSenEvtEval:  Evaluating Event..."
             def threshold = !remSenTempDiffDegrees ? 0 : remSenTempDiffDegrees.toDouble()
             def thresholdMax = threshold+5.0
