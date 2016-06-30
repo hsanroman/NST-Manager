@@ -25,7 +25,7 @@
         },
         "weather": {
             "type": "rel",
-            "ver": "2.5.1"
+            "ver": "2.5.2"
         }
     },
     "token": {
