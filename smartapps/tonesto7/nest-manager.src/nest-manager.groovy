@@ -42,7 +42,9 @@ def appVerInfo() {
 
     str += "V2.5.6 (June 30th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Modified the solution to workaround the Android Client install bug."
+    str += "\n • UPDATED: Android Client Installs should now work correctly. Without any special hacks"
+    str += "\n • UPDATED: Automation Naming was broken and should now work correctly."
+    str += "\n • FIXED: Remote Sensor Eval Only modes truth was being inverted."
 
     str += "\n\nV2.5.5 (June 26th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -132,7 +134,6 @@ preferences {
     //Manager Pages    
     page(name: "authPage")
     page(name: "mainPage")
-    page(name: "fillerPage")
     page(name: "deviceSelectPage")
     page(name: "reviewSetupPage")
     page(name: "changeLogPage")
@@ -256,31 +257,14 @@ def authPage() {
         }
     } 
     else { 
-        if(atomicState?.isInstalled || atomicState?.nestStructures) {
-            return mainPage() 
-        } else {
-            return dynamicPage(name: "fillerPage", title: "Please Wait", content: "fillerPage", nextPage: (atomicState?.nestStructures ? "mainPage" : ""), 
-                    refreshInterval: (!atomicState?.nestStructures ? 2 : null), install: false, uninstall: false) {
-                if(!atomicState?.nestStructures) { 
-                    atomicState?.nestStructures = getNestStructures() 
-                    section("") {
-                        if(!atomicState?.nestStructures) {
-                            paragraph "No Location data found yet.  This page will refresh in 2 seconds... \nThis page is here to help fix the Android Client"
-                        } 
-                    }
-                }
-                else {
-                    return mainPage
-                }
-            }
-        }
+        return mainPage() 
     }
 }
 
 def mainPage() {
     //log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
-    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : ""), install: setupComplete, uninstall: false) {
+    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
@@ -295,8 +279,7 @@ def mainPage() {
             }
         }
         if(!atomicState?.isInstalled) {
-            atomicState?.nestStructures = getNestStructures()
-            def structs = atomicState?.nestStructures ?: getNestStructures()
+            def structs = getNestStructures()
             def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
             LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
             if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -366,9 +349,7 @@ def mainPage() {
 
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
-        //if (!atomicState?.thermostats && !atomicState?.protects && !atomicState?.presDevice && !atomicState?.weatherDevice) { atomicState?.nestStructures = getNestStructures() }
-        atomicState?.nestStructures = getNestStructures()
-        def structs = atomicState?.nestStructures ?: getNestStructures()
+        def structs = getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
         if (atomicState?.thermostats || atomicState?.protects || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
@@ -982,7 +963,7 @@ def ok2PollStruct() {
     def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
     def val = pollStrTime/9
     if (val > 60) { val = 50 }
-    return ( ((getLastStructPollSec() + val) > pollStrTime) ? true : false )
+    return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
 }
 
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) ? true : false }
@@ -1826,25 +1807,24 @@ def getNestStructures() {
     def thisstruct = [:]
     try {
         if(ok2PollStruct()) { getApiData("str") }
-
         if (atomicState?.structData) {
             def structs = atomicState?.structData
-            structs.eachWithIndex { struc, index ->
+            structs?.eachWithIndex { struc, index ->
                 def strucId = struc?.key
                 def strucData = struc?.value
 
                 def dni = [strucData?.structure_id].join('.')
                 struct[dni] = strucData?.name.toString()
 
-                if (strucData?.structure_id == settings?.structures) {
+                if (strucData?.structure_id.toString() == structures.toString()) {
                     thisstruct[dni] = strucData?.name.toString()
                 } else {
                     if (atomicState?.structures) {
-                        if (strucData?.structure_id == atomicState?.structures) {
+                        if (strucData?.structure_id?.toString() == atomicState?.structures?.toString()) {
                             thisstruct[dni] = strucData?.name.toString()
                         }
                     } else {
-                        if (!settings?.structures) {
+                        if (!structures) {
                             thisstruct[dni] = strucData?.name.toString()
                         }
                     }
@@ -1854,13 +1834,12 @@ def getNestStructures() {
                 struct = thisstruct
             }
             if (ok2PollDevice()) { getApiData("dev") }
-        } else { LogAction("Missing: atomicState.structData  ${atomicState?.structData}", "error", true) }
+        } else { LogAction("Missing: atomicState.structData  ${atomicState?.structData}", "warn", true) }
 
     } catch (ex) { 
         LogAction("getNestStructures Exception: ${ex}", "error", true)
         sendExceptionData(ex, "getNestStructures")
     }
-
     return struct
 }
 
@@ -2445,10 +2424,7 @@ def callback() {
             httpPost(uri: tokenUrl) { resp ->
                 atomicState.tokenExpires = resp?.data.expires_in
                 atomicState.authToken = resp?.data.access_token
-                if(atomicState?.authToken) { 
-                    atomicState?.tokenCreatedDt = getDtNow() 
-                    atomicState?.nestStructures = getNestStructures()
-                }
+                if(atomicState?.authToken) { atomicState?.tokenCreatedDt = getDtNow() }
             }
 
             if (atomicState?.authToken) {
@@ -2910,7 +2886,7 @@ def modesOk(modeEntry) {
     return res
 }
 
-def isInMode(modeList) {
+def oldIsInMode(modeList) {
     def res = false
     if (modeList) {
         modeList?.each { m ->
@@ -2922,6 +2898,13 @@ def isInMode(modeList) {
         }  
     }
     return res
+}
+
+def isInMode(modeList) {
+    if (location?.mode in modeList) {
+        return true
+    }
+    return false
 }
 
 def minDevVersions() {
@@ -3783,7 +3766,7 @@ def mainAutoPage(params) {
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
+                    conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
                     conDesc += conWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
                     conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
                             "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
@@ -3870,16 +3853,17 @@ def initAutoApp() {
 
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
+    def newName = appName() == "Nest Manager" ? "Nest Automations" : "${appName()}"
     def typeLabel = ""
     def newLbl
     def dis = disableAutomation ? "\n(Disabled)" : ""
-    if (type == "remSen")       { typeLabel = "${appName()} (RemoteSensor)" }
-    else if (type == "extTmp")  { typeLabel = "${appName()} (ExternalTemp)" }
-    else if (type == "conWat")  { typeLabel = "${appName()} (Contact)" }
-    else if (type == "nMode")   { typeLabel = "${appName()} (NestMode)" }
-    else if (type == "tMode")   { typeLabel = "${appName()} (TstatMode)" }
+    if (type == "remSen")       { typeLabel = "${newName} (RemoteSensor)" }
+    else if (type == "extTmp")  { typeLabel = "${newName} (ExternalTemp)" }
+    else if (type == "conWat")  { typeLabel = "${newName} (Contact)" }
+    else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
+    else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     
-    if(app?.label.toString() != typeLabel) {
+    if(app?.label.toString() != typeLabel && app?.label?.toString() != "Nest Manager") {
         newLbl = app.label.toString()
     } else {
         newLbl = typeLabel
