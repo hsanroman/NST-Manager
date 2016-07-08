@@ -35,12 +35,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.7" }
-def appVerDate() { "6-30-2016" }
+def appVersion() { "2.5.8" }
+def appVerDate() { "7-8-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.7 (June 30th, 2016):"
+    str += "V2.5.8 (July 8th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • FIXED: Added in app version info to exception data"
+    str += "\n • CHANGED: Default token now reverted to the original v1 token that has been updated to support the Nest Cam when released. "
+
+    str += "\n\nV2.5.7 (June 30th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Android Client Installs should now work correctly. Without any special hacks (Sorry for the issues)"
     str += "\n • UPDATED: Automation Naming was broken and should now work correctly."
@@ -2571,16 +2576,14 @@ def toQueryString(Map m) {
 }
 
 def clientId() {
-    //if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" }
-    if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
-    //if (!appSettings.clientId) { return "66f28a3c-9b5f-4678-b4d9-47b9687cd6fa" } //api v5 token
+    if (!appSettings.clientId) { return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" }
+    //if (!appSettings.clientId) { return "31aea46c-4048-4c2b-b6be-cac7fe305d4c" } //token with cam support
     else { return appSettings.clientId }
 }
 
 def clientSecret() {
-    //if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" }
-    if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" } //token with cam support
-    //if (!appSettings.clientSecret) {return "BHxtSbjUwVtKrRkLthxNlvpN7" } //api v5 token
+    if (!appSettings.clientSecret) {return "8iqT8X46wa2UZnL0oe3TbyOa0" }
+    //if (!appSettings.clientSecret) {return "FmO469GXfdSVjn7PhKnjGWZlm" } //token with cam support
     else { return appSettings.clientSecret }
 }
 
@@ -3539,7 +3542,7 @@ def removeInstallData() {
 def sendExceptionData(exMsg, methodName) {
     if (optInSendExceptions) {
         def appType = !parent ? "managerApp" : "automationApp"
-        def exData = ["methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+        def exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
         def results = new groovy.json.JsonOutput().toJson(exData)
         sendAnalyticExceptionData(results, "errorData/${appType}/${methodName}.json")
     }
