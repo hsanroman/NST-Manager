@@ -502,8 +502,9 @@ def getWeatherAlerts(weatData) {
                             state.walertMessage = state.walertMessage.replaceAll(/\n\n/, '<br>')
                             state.walertMessage = state.walertMessage.replaceAll(/\n/, ' ')
 
-                            if(state?.weatherAlertNotify) {
+                            if(state?.weatherAlertNotify && (alert?.message.toString() != state?.lastWeatherAlertNotif.toString())) {
                                 sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+                                state?.lastWeatherAlertNotif = alert?.message
                             }
                         }
                     }
