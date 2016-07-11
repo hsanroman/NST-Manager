@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.3" }
+def devVer() { return "2.5.4" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -163,7 +163,7 @@ def generateEvent(Map eventData) {
             
             getWeatherAstronomy(eventData?.data?.weatAstronomy?.sun_phase ? eventData?.data?.weatAstronomy : null)
             getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
-            getWeatherAlerts(eventData?.data?.weatAlerts?.alerts ? eventData?.data?.weatAlerts : null)
+            getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
             getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
         }
         lastUpdatedEvent()
