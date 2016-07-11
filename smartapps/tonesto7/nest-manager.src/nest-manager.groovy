@@ -35,12 +35,16 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.8" }
-def appVerDate() { "7-8-2016" }
+def appVersion() { "2.5.9" }
+def appVerDate() { "7-11-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.8 (July 8th, 2016):"
+    str += "V2.5.9 (July 11th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Minor update to remote sensor fan logic and now there debug info is much easier to understand."
+    
+    str += "\n\nV2.5.8 (July 8th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • FIXED: Added in app version info to exception data"
     str += "\n • CHANGED: Default token now reverted to the original v1 token that has been updated to support the Nest Cam when released. "
@@ -767,6 +771,9 @@ def forcedPoll(type = null) {
             LogAction("Forcing Update of Structure Data...", "info", true)
             getApiData("str")
         }
+        atomicState?.lastWebUpdDt = null
+        atomicState?.lastWeatherUpdDt = null
+        atomicState?.lastForecastUpdDt = null
         updateWebStuff(true)
     } else {
         LogAction("Too Soon to Force Data Update!!!!  It's only been (${lastFrcdPoll}) seconds of the minimum (${settings?.pollWaitVal})...", "debug", true)
@@ -4598,33 +4605,33 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curF
 }
 
 def getRemSenFanRunOk(operState, fanState) { 
-    //log.trace "getRemSenFanRunOk($operState, $fanState)"
-    def fanOn = (fanState == "fanOn" || fanState == "fanCirculate") ? true : false 
-    def waitVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
-    def ruleOk = (remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) ? true : false
-    def operOk = (operState == "idle") ? true : false
-    def fanOk = (fanState == "fanAuto") ? true : false
-    def timeSince = (getLastRemSenFanRunDtSec() > waitVal) ? true : false
+    log.trace "getRemSenFanRunOk($operState, $fanState)"
+    def fanAlreadyOn = (fanState in ["fanOn", "fanCirculate"]) ? true : false 
+    def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
+    def ruleTypeOk = (remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) ? true : false
+    def tstatOperStateOk = (operState == "idle") ? true : false
+    def fanModeOk = (fanState == "fanAuto") ? true : false
+    def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > waitTimeVal) ? true : false
      
-    if (!operOk) {
+    if (!tstatOperStateOk) {
         LogAction("Remote Sensor Fan Run: The Thermostat OperatingState is Currently (${operState?.toString().toUpperCase()})... Skipping!!!", "info", true)
     }
-    if (!ruleOk) {
+    if (!ruleTypeOk) {
         LogAction("Remote Sensor Fan Run: The Selected Rule-Type is not valid... Skipping... | RuleType: ${remSenRuleType}", "info", true) 
     }
-    if(!fanOn && !timeSince) { 
-        LogAction("Remote Sensor Fan Run: Required Conditions to Run Fan are not met!!! | The Time Since Last Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${waitVal} seconds)", "info", true) 
+    if(!fanAlreadyOn && !timeSince) { 
+        LogAction("Remote Sensor Fan Run: Required Conditions to Run Fan are not met!!! | The Time Since Last Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true) 
     }
     
-    def result = (timeSince && ruleOk && operOk && fanOk) ? true : false
-    def dbgStr = ""
-    dbgStr += " | RuleOk: (${ruleOk.toString().toUpperCase()})"
-    dbgStr += " | OperatingStateOk: (${operOk.toString().toUpperCase()})" 
-    dbgStr += " | FanOk: (${fanOk.toString().toUpperCase()})" 
-    dbgStr += " | TimeSinceOk: (${timeSince.toString().toUpperCase()})" 
-    dbgStr += " | LastFanRunSec: (${waitVal} Seconds)" 
-    dbgStr += " | Final Result: (${result.toString().toUpperCase()})"
-    LogAction("RemSenFanRunOk${dbgStr}", "debug", false)
+    def result = (timeSinceLastRunOk && ruleTypeOk && tstatOperStateOk && (fanModeOk && !fanAlreadyOn)) ? true : false
+    LogAction("RemSenFanRunOk Debug:", "debug", true)
+    LogAction(" ├ RuleTypeOk: (${ruleTypeOk.toString().toUpperCase()}) | (RuleType: $remSenRuleType) ", "debug", true)
+    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: $operState)", "debug", true) 
+    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: $fanState)", "debug", true)
+    LogAction(" ├ FanAlreadyOn: (${fanAlreadyOn.toString().toUpperCase()})", "debug", true) 
+    LogAction(" ├ TimeSinceOk: (${timeSinceLastRunOk.toString().toUpperCase()}) (${getLastRemSenFanRunDtSec()} Seconds > $waitTimeVal Seconds)", "debug", true) 
+    LogAction(" ├ LastFanRunSec: (${getLastRemSenFanRunDtSec()} Seconds)", "debug", true) 
+    LogAction(" ┌ Final Fan Run OK Result: (${result.toString().toUpperCase()})", "debug", true)
     return result
 }
 

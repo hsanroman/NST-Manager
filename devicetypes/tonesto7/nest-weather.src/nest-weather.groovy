@@ -161,12 +161,10 @@ def generateEvent(Map eventData) {
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
             
-            //log.debug "weatherCond: ${eventData.data?.weatAstronomy}"
-            
-            getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
-            getWeatherAstronomy(eventData?.data?.weatAstronomy?.sunset ? eventData?.data?.weatAstronomy : null)
+            getWeatherAstronomy(eventData?.data?.weatAstronomy?.sun_phase ? eventData?.data?.weatAstronomy : null)
             getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
             getWeatherAlerts(eventData?.data?.weatAlerts?.alerts ? eventData?.data?.weatAlerts : null)
+            getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
         }
         lastUpdatedEvent()
         //This will return all of the devices state data to the logs.
