@@ -4624,14 +4624,14 @@ def getRemSenFanRunOk(operState, fanState) {
     }
     
     def result = (timeSinceLastRunOk && ruleTypeOk && tstatOperStateOk && (fanModeOk && !fanAlreadyOn)) ? true : false
-    LogAction("RemSenFanRunOk Debug:", "debug", true)
-    LogAction(" ├ RuleTypeOk: (${ruleTypeOk.toString().toUpperCase()}) | (RuleType: $remSenRuleType) ", "debug", true)
-    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: $operState)", "debug", true) 
-    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: $fanState)", "debug", true)
-    LogAction(" ├ FanAlreadyOn: (${fanAlreadyOn.toString().toUpperCase()})", "debug", true) 
-    LogAction(" ├ TimeSinceOk: (${timeSinceLastRunOk.toString().toUpperCase()}) (${getLastRemSenFanRunDtSec()} Seconds > $waitTimeVal Seconds)", "debug", true) 
-    LogAction(" ├ LastFanRunSec: (${getLastRemSenFanRunDtSec()} Seconds)", "debug", true) 
-    LogAction(" ┌ Final Fan Run OK Result: (${result.toString().toUpperCase()})", "debug", true)
+    LogAction("RemSenFanRunOk Debug:", "debug", false)
+    LogAction(" ├ RuleTypeOk: (${ruleTypeOk.toString().toUpperCase()}) | (RuleType: $remSenRuleType) ", "debug", false)
+    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: $operState)", "debug", false) 
+    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: $fanState)", "debug", false)
+    LogAction(" ├ FanAlreadyOn: (${fanAlreadyOn.toString().toUpperCase()})", "debug", false) 
+    LogAction(" ├ TimeSinceOk: (${timeSinceLastRunOk.toString().toUpperCase()}) (${getLastRemSenFanRunDtSec()} Seconds > $waitTimeVal Seconds)", "debug", false) 
+    LogAction(" ├ LastFanRunSec: (${getLastRemSenFanRunDtSec()} Seconds)", "debug", false) 
+    LogAction(" ┌ Final Fan Run OK Result: (${result.toString().toUpperCase()})", "debug", false)
     return result
 }
 
