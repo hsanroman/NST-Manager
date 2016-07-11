@@ -43,6 +43,8 @@ def appVerInfo() {
     str += "V2.5.9 (July 11th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Minor update to remote sensor fan logic and now there debug info is much easier to understand."
+    str += "\n • UPDATED: Minor Tweaks to remote sensor temp logic debug logs so it's a little easier to understand."
+    str += "\n • UPDATED: The Weather Device is now required in order to use local weather with external temperature automation."
     
     str += "\n\nV2.5.8 (July 8th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -1713,6 +1715,10 @@ def getWAlertsData() {
             return atomicState?.curAlerts
         }
     }
+}
+
+def getWeatherDeviceInst() {
+    return atomicState?.weatherDevice ? true : false
 }
 
 def getWebFileData() {
@@ -3850,7 +3856,7 @@ def initAutoApp() {
     if(extTmpUseWeather && atomicState?.isExtTmpConfigured) { 
         updateWeather() 
     }
-    app.updateLabel("${getAutoTypeLabel()}")
+    app.updateLabel(getAutoTypeLabel())
 }
 
 def getAutoTypeLabel() {
@@ -3865,8 +3871,8 @@ def getAutoTypeLabel() {
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     
-    if(app?.label.toString() != typeLabel && app?.label?.toString() != "Nest Manager") {
-        newLbl = app.label.toString()
+    if(app?.label?.toString() != typeLabel && app?.label?.toString() != "Nest Manager") {
+        newLbl = app?.label?.toString()
     } else {
         newLbl = typeLabel
     } 
@@ -4503,23 +4509,21 @@ private remSenEvtEval() {
             if (hvacMode in ["cool","auto"]) {
                 //Changes Cool Setpoints
                 if (remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]) {
-                    def coolDiff1 = (curSenTemp - reqSenCoolSetPoint)
-                    def coolDiff2 = (reqSenCoolSetPoint - curSenTemp)
-                    def coolDiff3 = (curTstatTemp - curCoolSetpoint)
-                    //log.debug "coolDiff1: ${coolDiff1} | coolDiff2: ${coolDiff2} | coolDiff3: ${coolDiff3}"
-                    if(coolDiff1 > threshold) {
-                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
+                    if(curSenTemp - reqSenCoolSetPoint > threshold) {
+                        LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
+                        LogAction("Remote Sensor: COOL - (Sensor Temp: $curSenTemp - Sensor CoolSetpoint: $reqSenCoolSetPoint > Threshold: $threshold)=(${curSenTemp - reqSenCoolSetPoint > threshold})", "trace", false)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
                     }
-                    else if (coolDiff2 > threshold && coolDiff3 > threshold) {
-                        LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
+                    else if (reqSenCoolSetPoint - curSenTemp > threshold && curTstatTemp - curCoolSetpoint > threshold) {
+                        LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "info", true)
+                        LogAction("Remote Sensor: COOL - (Sensor CoolSetpoint: $reqSenCoolSetPoint - Current Sensor Temp: $curSenTemp > Threshold: $threshold)=(${reqSenCoolSetPoint - curSenTemp > threshold}) and (Tstat Temp: $curTstatTemp - Tstat CoolSetpoint: $curCoolSetpoint > Threshold: $threshold)=(${curTstatTemp - curCoolSetpoint > threshold})", "trace", false)
                         remSenTstat?.setCoolingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(curTstatTemp - tempChangeVal) }
                     }
                     else {
                         if(curCoolSetpoint != reqSenCoolSetPoint) {
-                            LogAction("Remote Sensor: COOL - Setting CoolSetpoint to (${(reqSenCoolSetPoint)}°${atomicState?.tempUnit})", "info", true)
+                            LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(reqSenCoolSetPoint)}°${atomicState?.tempUnit})", "info", true)
                             remSenTstat?.setCoolingSetpoint(reqSenCoolSetPoint)
                             if(remSenTstatsMirror) { remSenTstatsMirror*.setCoolingSetpoint(reqSenCoolSetPoint) }
                         }
@@ -4531,18 +4535,20 @@ private remSenEvtEval() {
             if (hvacMode in ["heat", "emergency heat", "auto"]) {
                 if (remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
                     if (reqSenHeatSetPoint - curSenTemp > threshold) {
-                        LogAction("Remote Sensor: HEAT - Setting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(curTstatTemp + tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                        LogAction("Remote Sensor: HEAT - (Sensor HeatSetpoint: $reqSenHeatSetPoint - Sensor Temp: $curSenTemp > Threshold: $threshold)=(${reqSenHeatSetPoint - curSenTemp > threshold})", "trace", false)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp + tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(curTstatTemp + tempChangeVal) }
                     }
                     else if (curSenTemp - reqSenHeatSetPoint > threshold && curHeatSetpoint - curTstatTemp > threshold) {
-                        LogAction("Remote Sensor: HEAT - Setting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                        LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(curTstatTemp - tempChangeVal)}°${atomicState?.tempUnit})", "debug", true)
+                        LogAction("Remote Sensor: HEAT - (Sensor Temp: $curSenTemp - Sensor HeatSetpoint: $reqSenHeatSetPoint > Threshold: $threshold)=(${curSenTemp - reqSenHeatSetPoint > threshold}) and (Tstat HeatSetpoint: $curHeatSetpoint - Tstat Temp: $curTstatTemp > Threshold: $threshold)-(${curHeatSetpoint - curTstatTemp > threshold})", "trace", false)
                         remSenTstat?.setHeatingSetpoint(curTstatTemp - tempChangeVal)
                         if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(curTstatTemp - tempChangeVal) }
                     }
                     else {
                         if(curHeatSetpoint != reqSenHeatSetPoint) {
-                            LogAction("Remote Sensor: HEAT - Setting HeatSetpoint to (${(reqSenHeatSetPoint)}°${atomicState?.tempUnit})", "debug", true)
+                            LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(reqSenHeatSetPoint)}°${atomicState?.tempUnit})", "debug", true)
                             remSenTstat?.setHeatingSetpoint(reqSenHeatSetPoint)
                             if(remSenTstatsMirror) { remSenTstatsMirror*.setHeatingSetpoint(reqSenHeatSetPoint) }
                         }
@@ -4654,12 +4660,11 @@ def getRemSenFanTempOk(hvacMode, Double senTemp, Double setTemp, Double curTemp,
             LogAction("Remote Sensor Fan Temp: The Temperature Difference is within the Threshold Limit | Turning Thermostat Fan ON", "info", true)
         }
     }
-    def dbgStr = ""
-    dbgStr += " | Result 1: (Threshold Val: ${threshVal} <= Temp Diff: ${diffVal}°${atomicState?.tempUnit}) is (${diff1.toString().toUpperCase()})"
-    dbgStr += " | Result 2: (Sensor Temp: ${senTemp}°${atomicState?.tempUnit} != Setpoint Temp: ${setTemp}°${atomicState?.tempUnit}) is (${diff2.toString().toUpperCase()})"
-    dbgStr += " | IsfanOn: (${fanOn.toString().toUpperCase()})"
-    dbgStr += " | Final Result: (${(diff1 && diff2).toString().toUpperCase()})"
-    LogAction("RemSenFanTempOk${dbgStr}", "debug", false)
+    LogAction("RemSenFanTempOk Debug:", "debug", false)
+    LogAction(" ├ Result 1: (Threshold Val: ${threshVal} <= Temp Diff: ${diffVal}°${atomicState?.tempUnit}) is (${diff1.toString().toUpperCase()})", "debug", false)
+    LogAction(" ├ Result 2: (Sensor Temp: ${senTemp}°${atomicState?.tempUnit} != Setpoint Temp: ${setTemp}°${atomicState?.tempUnit}) is (${diff2.toString().toUpperCase()})", "debug", false)
+    LogAction(" ├ FanAlreadyOn: (${fanOn.toString().toUpperCase()})", "debug", false)
+    LogAction(" ┌ Final Result: (${(diff1 && diff2).toString().toUpperCase()})", "debug", false)
     return (diff1 && diff2) ? true : false
 }
 
@@ -4770,18 +4775,22 @@ def extTempPage() {
     def pName = extTmpPrefix()
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false, nextPage: "mainAutoPage") {
         section("External Temps to use to Turn off the Thermostat Below:") {
-            input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-            if(extTmpUseWeather){
-                getExtConditions()
-                def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
-                def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
-                paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc} (${tmpVal}°${atomicState?.tempUnit})", state: "complete", image: getAppImg("instruct_icon.png")
-                input name: "extTmpWeatherUpdateVal", type: "enum", title: "Update Weather (in Minutes)?", defaultValue: 15, metadata: [values:longTimeMinEnum()], submitOnChange: true, required: wReq,
-                        image: getAppImg("reset_icon.png")
+            if(!parent?.getWeatherDeviceInst()) {
+                paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as an External Sensor!!!", required: true, state: null
+            } else {
+                input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
+                if(extTmpUseWeather){
+                    getExtConditions()
+                    def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
+                    def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
+                    paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc} (${tmpVal}°${atomicState?.tempUnit})", state: "complete", image: getAppImg("instruct_icon.png")
+                    input name: "extTmpWeatherUpdateVal", type: "enum", title: "Update Weather (in Minutes)?", defaultValue: 15, metadata: [values:longTimeMinEnum()], submitOnChange: true, required: wReq,
+                            image: getAppImg("reset_icon.png")
+                }
             }
             if(!extTmpUseWeather) {
                 def senReq = (!extTmpUseWeather && extTmpTstat) ? true : false
-                input "extTmpTempSensor", "capability.temperatureMeasurement", title: "Which Outside Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, 
+                input "extTmpTempSensor", "capability.temperatureMeasurement", title: "Select a Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, 
                         image: getAppImg("temperature_icon.png")
                 if(extTmpTempSensor) {
                     def tmpVal = "${extTmpTempSensor?.currentValue("temperature").toString()}"
