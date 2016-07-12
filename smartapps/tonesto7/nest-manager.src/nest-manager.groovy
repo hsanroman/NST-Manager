@@ -3865,6 +3865,7 @@ def initAutoApp() {
 
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
+    def appLbl = app?.label?.toString()
     def newName = appName() == "Nest Manager" ? "Nest Automations" : "${appName()}"
     def typeLabel = ""
     def newLbl
@@ -3875,8 +3876,8 @@ def getAutoTypeLabel() {
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     
-    if(app?.label?.toString() != typeLabel && app?.label?.toString() != "Nest Manager") {
-        newLbl = app?.label?.toString()
+    if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
+        newLbl = appLbl
     } else {
         newLbl = typeLabel
     } 
@@ -4667,7 +4668,7 @@ def getRemSenFanRunOk(operState, fanState) {
     if (!ruleTypeOk) {
         LogAction("Remote Sensor Fan Run: The Selected Rule-Type is not valid... Skipping... | RuleType: ${remSenRuleType}", "info", true) 
     }
-    if(!fanAlreadyOn && !timeSince) { 
+    if(!fanAlreadyOn && !timeSinceLastRunOk) { 
         LogAction("Remote Sensor Fan Run: Required Conditions to Run Fan are not met!!! | The Time Since Last Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true) 
     }
     
