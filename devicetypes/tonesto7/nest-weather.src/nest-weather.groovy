@@ -724,8 +724,7 @@ def getCSS(){
 
 def getWeatherIcon(weatherIcon) {
     try {
-        def url = "https://icons.wxug.com/i/c/v4/" + state?.curWeather?.current_observation?.icon + ".svg"
-        return getImgBase64(url, "svg+xml")
+        return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
     }
     catch (ex) {
         log.error "getWeatherIcon Exception: ${ex}"
