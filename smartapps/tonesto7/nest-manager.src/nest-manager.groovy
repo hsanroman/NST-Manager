@@ -4275,7 +4275,7 @@ def remSenTstatOperEvt(evt) {
 def remSenTstatFanSwitchCheck(evt) {
     LogAction("RemoteSensor Event | Fan Switch Trigger: ${evt?.displayName} is now (${evt?.value.toString().toUpperCase()})", "trace", false)
     try {
-        def hvacFanOn = (evt.fan && evt.fan in ["fanOn", "fanCirculate"]) ? true : false
+        def hvacFanOn = (evt.fan && evt.fan in ["on", "circulate"]) ? true : false
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
         def remSenReqSetPoint = getRemSenReqSetpointTemp()
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
@@ -4494,7 +4494,7 @@ private remSenEvtEval() {
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
             def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
-            def fanOn = (curTstatFanMode == "fanOn" || curTstatFanMode == "fanCirculate") ? true : false 
+            def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
             def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
             def reqSenHeatSetPoint = getRemSenHeatSetTemp()
@@ -4655,11 +4655,11 @@ def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curF
 
 def getRemSenFanRunOk(operState, fanState) { 
     log.trace "getRemSenFanRunOk($operState, $fanState)"
-    def fanAlreadyOn = (fanState in ["fanOn", "fanCirculate"]) ? true : false 
+    def fanAlreadyOn = (fanState in ["on", "circulate"]) ? true : false 
     def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
     def ruleTypeOk = (remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) ? true : false
     def tstatOperStateOk = (operState == "idle") ? true : false
-    def fanModeOk = (fanState == "fanAuto") ? true : false
+    def fanModeOk = (fanState == "auto") ? true : false
     def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > waitTimeVal) ? true : false
      
     if (!tstatOperStateOk) {
