@@ -40,7 +40,12 @@ def appVerDate() { "7-14-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.10 (July 12th, 2016):"
+    str += "V2.5.11 (July 14th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Merged in Eric's Updated logic for the remote sensor temps'"
+    str += "\n • FIXED: Updated the app version check to support patch version levels greater than 9'"
+
+    str += "\n\nV2.5.10 (July 12th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Started re-write of remote sensor temp logic."
 
@@ -1788,10 +1793,12 @@ def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitV
 
 def isNewUpdateAvail(newVer, curVer) {
     try {
-        def cVer = !curVer ? 100 : curVer?.toString().replaceAll("\\.", "").toInteger()
-        def nVer = !newVer ? 100 : newVer?.toString().replaceAll("\\.", "").toInteger()
+        def curLen = curVer?.length()
+        def newLen = newVer?.length()
+        def cVer = !curVer ? 100 : (curLen < newLen ? "${curVer?.toString().replaceAll("\\.", "")}0" : curVer?.toString().replaceAll("\\.", ""))
+        def nVer = !newVer ? 100 : (newLen < curLen ? "${newVer?.toString().replaceAll("\\.", "")}0" : newVer?.toString().replaceAll("\\.", ""))
         if(cVer) {
-            if (nVer > cVer) { return true }
+            if (nVer.toInteger() > cVer.toInteger()) { return true }
         } else { return false }
     } catch (ex) { 
         LogAction("isNewUpdateAvail Exception: ${ex}", "error", true)
@@ -4559,7 +4566,7 @@ private remSenEvtEval() {
             } 
 
             def modeOk = (!remSenEvalModes || (remSenEvalModes && isInMode(remSenEvalModes))) ? true : false
-            if(!modOk || !getRemSenModeOk()) { 
+            if(!modeOk || !getRemSenModeOk()) { 
                 noGoDesc = ""
                 noGoDesc += !modeOk ? "Mode Filters were set and the current mode was not selected for Evaluation" : ""
                 noGoDesc += !getRemSenModeOk() ? "This mode is not one of those selected for evaluation..." : ""
@@ -4582,7 +4589,7 @@ private remSenEvtEval() {
                         turnOn = true
                     }
 
-                    if(!modOk || !getRemSenModeOk()) { 
+                    if(!modeOk || !getRemSenModeOk()) { 
                         turnOff = true   // system should be off
                         turnOn = false
                     } 
@@ -4640,7 +4647,7 @@ private remSenEvtEval() {
                         turnOff = true
                     }
 
-                    if(!modOk || !getRemSenModeOk()) { 
+                    if(!modeOk || !getRemSenModeOk()) { 
                         turnOff = true   // system should be off
                         turnOn = false
                     } 
@@ -4654,14 +4661,14 @@ private remSenEvtEval() {
                         chg = true
                         LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn On Thermostat", "info", true)
                     } else {
-   // logic to decide if we need to nudge thermostat to keep it on or off
+                        // logic to decide if we need to nudge thermostat to keep it on or off
                         if (heatRunning) {
                             chgval = curTstatTemp + tempChangeVal
                         } else {
                             chgval = curTstatTemp - tempChangeVal
                         }
                         def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
-    log.debug "heatDiff1: ${heatDiff1}"
+                        log.debug "heatDiff1: ${heatDiff1}"
                         if (heatDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to maintain state", "info", true)
@@ -4682,7 +4689,7 @@ private remSenEvtEval() {
                 }
             }
 
-            if(!modOk || !getRemSenModeOk()) { 
+            if(!modeOk || !getRemSenModeOk()) { 
                 // with Nest, it automatically turns off fan so we don't need to turn it off;  ensure we don't turn it on again
                 return
             } 
