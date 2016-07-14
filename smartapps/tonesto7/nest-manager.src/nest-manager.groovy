@@ -5410,7 +5410,7 @@ def leakWatchPage() {
         }
         if(leakWatSensors && leakWatTstat) {
             section("Restore on Dry:") {
-                input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode on Dry?", description: "", required: false, defaultValue: false, submitOnChange: true,
+                input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode when Dry?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(leakWatRestoreOnDry) {
                     input name: "leakWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
