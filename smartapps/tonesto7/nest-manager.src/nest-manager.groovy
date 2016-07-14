@@ -662,7 +662,7 @@ def getInstAutoTypesDesc() {
     def tModeDesc = (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
     def disabDesc = (disCnt > 0) ? "\n• Disabled Automations ($nModeCnt)" : ""
     atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt]
-    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"		 +    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
+    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
 }
 
 def subscriber() {
