@@ -3687,14 +3687,14 @@ def selectAutoPage() {
             section("Turn Thermostat On/Off when a Door/Window is Opened:") {
                 href "mainAutoPage", title: "Contact Sensors...", description: "", params: [autoType: "conWat"], image: getAppImg("open_window.png")
             }
-            section("Turn Thermostat Off if a leak is detected:") {
-                href "mainAutoPage", title: "Leak Sensors...", description: "", params: [autoType: "leakWat"], image: getAppImg("leak_icon.png")
-            }
             section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                 href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
             }
             section("Set Thermostats Setpoints Based on ST Modes:") {
                 href "mainAutoPage", title: "Thermostat Mode Automations", description: "", params: [autoType: "tMode"], image: getAppImg("mode_setpoints_icon.png")
+            }
+            section("Turn Thermostat Off if a Water Leak is Detected:") {
+                href "mainAutoPage", title: "Leak Sensors...", description: "", params: [autoType: "leakWat"], image: getAppImg("leak_icon.png")
             }
         }
     }
@@ -3714,9 +3714,9 @@ def mainAutoPage(params) {
     if (autoType == "remSen" && !isRemSenConfigured()) { return remSensorPage() }
     else if (autoType == "extTmp" && !isExtTmpConfigured()) { return extTempPage() }
     else if (autoType == "conWat" && !isConWatConfigured()) { return contactWatchPage() }
-    else if (autoType == "leakWat" && !isLeakWatConfigured()) { return leakWatchPage() }
     else if (autoType == "nMode" && !isNestModesConfigured()) { return nestModePresPage() }
     else if (autoType == "tMode" && !isTstatModesConfigured()) { return tstatModePage() }
+    else if (autoType == "leakWat" && !isLeakWatConfigured()) { return leakWatchPage() }
     
     else { 
         // Main Page Entries
@@ -3807,27 +3807,6 @@ def mainAutoPage(params) {
                 } 
             } 
 
-            if(autoType == "leakWat" && !disableAutomation) { 
-                section("Turn Thermostat Off if a leak is detected:") {
-                    def leakDesc = ""
-                    leakDesc += leakWatTstat ? "${leakWatTstat?.label}\n • Temp: (${getDeviceTemp(leakWatTstat)}°${atomicState?.tempUnit})" : ""
-                    leakDesc += leakWatTstat ? "\n • Mode: (${leakWatTstat?.currentThermostatOperatingState.toString()}/${leakWatTstat?.currentThermostatMode.toString()})" : ""
-                    leakDesc += (leakWatSensors && leakWatTstat && leakWatSensorsDesc()) ? "\n\n${leakWatSensorsDesc()}" : ""
-                    leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
-                    //leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
-                    leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
-                    leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-                    leakDesc += leakWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
-                    leakDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
-                    leakDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
-                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
-                    leakDesc += (leakWatContacts && leakWatTstat) ? "\n\nTap to Modify..." : ""
-                    def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
-                    href "leakWatchPage", title: "Leak Sensors Config...", description: leakWatDesc ?: "Tap to Configure...", state: (leakWatDesc ? "complete" : null), image: getAppImg("leak_icon.png")
-                } 
-            }
-
             if(autoType == "nMode" && !disableAutomation) {
                 section("Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:") {
                     def nDesc = ""
@@ -3856,6 +3835,27 @@ def mainAutoPage(params) {
                     tDesc += tModeTstats ? "\n\nTap to Modify..." : ""
                     def tModeDesc = isTstatModesConfigured() ? "${tDesc}" : null
                     href "tstatModePage", title: "Thermostat Mode Automation Config", description: tModeDesc ?: "Tap to Configure...", state: (tModeDesc ? "complete" : null), image: getAppImg("mode_setpoints_icon.png")
+                } 
+            }
+
+            if(autoType == "leakWat" && !disableAutomation) { 
+                section("Turn Thermostat Off if a leak is detected:") {
+                    def leakDesc = ""
+                    leakDesc += leakWatTstat ? "${leakWatTstat?.label}\n • Temp: (${getDeviceTemp(leakWatTstat)}°${atomicState?.tempUnit})" : ""
+                    leakDesc += leakWatTstat ? "\n • Mode: (${leakWatTstat?.currentThermostatOperatingState.toString()}/${leakWatTstat?.currentThermostatMode.toString()})" : ""
+                    leakDesc += (leakWatSensors && leakWatTstat && leakWatSensorsDesc()) ? "\n\n${leakWatSensorsDesc()}" : ""
+                    leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
+                    //leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
+                    leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
+                    leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
+                    leakDesc += leakWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
+                    leakDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    leakDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
+                    leakDesc += (leakWatContacts && leakWatTstat) ? "\n\nTap to Modify..." : ""
+                    def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
+                    href "leakWatchPage", title: "Leak Sensors Config...", description: leakWatDesc ?: "Tap to Configure...", state: (leakWatDesc ? "complete" : null), image: getAppImg("leak_icon.png")
                 } 
             }
 
@@ -3908,9 +3908,9 @@ def getAutoTypeLabel() {
     if (type == "remSen")       { typeLabel = "${newName} (RemoteSensor)" }
     else if (type == "extTmp")  { typeLabel = "${newName} (ExternalTemp)" }
     else if (type == "conWat")  { typeLabel = "${newName} (Contact)" }
-    else if (type == "leakWat")  { typeLabel = "${newName} (LeakSensor)" }
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
+    else if (type == "leakWat")  { typeLabel = "${newName} (LeakSensor)" }
     
     if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
         newLbl = appLbl
@@ -3941,9 +3941,9 @@ def automationsInst() {
     atomicState.isRemSenConfigured = isRemSenConfigured() ? true : false
     atomicState.isExtTmpConfigured = isExtTmpConfigured() ? true : false
     atomicState.isConWatConfigured = isConWatConfigured() ? true : false
-    atomicState.isLeakWatConfigured = isLeakWatConfigured() ? true : false
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
+    atomicState.isLeakWatConfigured = isLeakWatConfigured() ? true : false
     atomicState?.isInstalled = true
 }
 
@@ -5461,7 +5461,7 @@ def leakWatchPage() {
      def dupTstat = checkThermostatDupe(leakWatTstat, leakWatTstatMir)
         section("When Leak is Detected, Turn Off this Thermostat") {
             def req = (leakWatSensors || leakWatTstat) ? true : false
-            input name: "leakWatSensors", type: "capability.waterSensor", title: "Which Leak Sensor(s)?", multiple: true, submitOnChange: true, required: req,
+            input name: "leakWatSensors", type: "capability.waterSensor", title: "Which Water Sensor(s)?", multiple: true, submitOnChange: true, required: req,
                     image: getAppImg("water_icon.png")
             if(leakWatSensors) {
                 paragraph "${leakWatSensorsDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
