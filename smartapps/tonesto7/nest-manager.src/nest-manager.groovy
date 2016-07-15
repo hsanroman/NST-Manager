@@ -3742,6 +3742,7 @@ def mainAutoPage(params) {
                     remSenDescStr += remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
                     remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString().capitalize()}/${remSenTstat?.currentThermostatMode.toString().capitalize()})" : ""
                     remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
+                    remSenDescStr += (remSenTstat) ? "\n• Presence: (${getTstatPresence(remSenTstat).toString().capitalize()})" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
                     remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
@@ -4078,7 +4079,7 @@ def remSensorPage() {
                 if(remSenTstat) { 
                     getTstatCapabilities(remSenTstat, remSenPrefix())
                     paragraph "• Temp: (${tStatTemp})\n• Mode: (${tStatMode.toString().capitalize()})${(remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""}"+
-                            "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})",
+                            "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})\n• Presence: (${getTstatPresence(remSenTstat).toString().capitalize()})",
                             state: "complete", image: getAppImg("instruct_icon.png")
                     input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
                             image: getAppImg("thermostat_icon.png")
@@ -4334,7 +4335,7 @@ def remSenTstatOperEvt(evt) {
     }
 }
 
-def remSenTstatFanSwitchCheck() {
+def remSenFanSwitchCheck() {
     LogAction("RemoteSensor Event | Fan Switch Check", "trace", false)
     try {
         if(disableAutomation) { return }
@@ -4342,7 +4343,7 @@ def remSenTstatFanSwitchCheck() {
 
         def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
         def hvacFanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
-//      def hvacFanOn = (evt.fan && evt.fan in ["on", "circulate"]) ? true : false
+        //def hvacFanOn = (evt.fan && evt.fan in ["on", "circulate"]) ? true : false
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
         def remSenReqSetPoint = getRemSenReqSetpointTemp()
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
