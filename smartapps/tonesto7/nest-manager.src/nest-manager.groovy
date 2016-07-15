@@ -5082,8 +5082,7 @@ def getExtTmpWeatherUpdVal() { return !extTmpWeatherUpdateVal ? 15 : extTmpWeath
 def extTmpTempCheck() {
     //log.trace "extTmpTempCheck..."
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
-    def curNestPres = "not present"
-    if (exTmpTstat) { curNestPres = exTmpTstat?.currentPresence } // get what thermostat thinks as commands go to it
+    def curNestPres = getTstatPresence(extTmpTstat)
     def modeOff = (curMode == "off") ? true : false
     def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatTurnedOff || (!atomicState?.extTmpTstatTurnedOff && extTmpRestoreAutoMode))) ? true : false
     
@@ -5304,8 +5303,7 @@ def conWatCheck() {
         if (disableAutomation) { return }
         else {
             def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
-            def curNestPres = "not present"
-            if (conWatTstat) { curNestPres = conWatTstat?.currentPresence } // get what thermostat thinks as commands go to it
+            def curNestPres = getTstatPresence(conWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
@@ -5541,8 +5539,7 @@ def leakWatCheck() {
         if (disableAutomation) { return }
         else {
             def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
-            def curNestPres = "not present"
-            if (leakWatTstat) { curNestPres = leakWatTstat?.currentPresence } // get what thermostat thinks as commands go to it
+            def curNestPres = getTstatPresence(leakWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
             def okToRestore = ((modeOff && leakWatRestoreOnDry) && (atomicState?.leakWatTstatTurnedOff )) ? true : false
@@ -6481,6 +6478,12 @@ def isPresenceHome(presSensor) {
         }
     } 
     return res
+}
+
+def getTstatPresence(tstat) {
+    def pres = "not present"  
+    if (tstat) { pres = tstat?.currentPresence }
+    return pres
 }
 
 def setTstatMode(tstat, mode) {
