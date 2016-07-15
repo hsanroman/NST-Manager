@@ -35,15 +35,15 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.5.11" }
-def appVerDate() { "7-14-2016" }
+def appVersion() { "2.5.12" }
+def appVerDate() { "7-15-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.5.11 (July 14th, 2016):"
+    str += "V2.5.12 (July 15th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Merged in Eric's Updated logic for the remote sensor temps'"
-    str += "\n • FIXED: Updated the app version check to support patch version levels greater than 9'"
+    str += "\n • UPDATED: Merged in Eric's Updated logic for the remote sensor temps."
+    str += "\n • FIXED: Redesigned the Code version check to be more robust and to support patch version levels greater than 9"
 
     str += "\n\nV2.5.10 (July 12th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -101,53 +101,6 @@ def appVerInfo() {
     str += "\n\nV2.5.0 (June 20th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • Version 2.5 Released to public."
-
-    str += "\n\nV2.3.5 (June 17th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Fixed a few UI inconsistencies."
-    str += "\n • FIXED: Remote Sensor heat cool adjustment operations."
-
-    str += "\n\nV2.3.3 (June 16th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • FIXED: Remote Sensor was changing setpoints when not in a valid mode to evaluate."
-    str += "\n • FIXED: Removed Thermostat Temp event from triggering Remote Sensor Rule evaluations."
-    str += "\n • FIXED: Found commented out code in Nest Mode Automation that was preventing presence changes."
-    str += "\n • Started working on bugfixes for Nest Mode Automation found by @scpickle."
-    
-    str += "\n\nV2.3.2 (June 15th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • FIXED: Fixed Motion Sensor Events in Remote Sensors."
-    str += "\n • FIXED: Remote Sensor bugfixes found by @scpickle."
-    
-    str += "\n\nV2.3.0 (June 13th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Various UI Tweaks."
-    str += "\n • FIXED: Lot's of bug fixes.  I througly tested contact, external automations."
-    str += "\n • FIXED: Voice Notifications now work correctly with contact automation."
-    
-    str += "\n\nV2.2.1 (June 9th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • ADDED: App now supports Broadcast message from developer."
-    str += "\n • UPDATED: Tapping on the Nest Manager version app top of page will now take you a Changelog page which displays those changes."
-    
-    str += "\n\nV2.2.0 (June 8th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • NEW: When updates are available there is a link in the smartapp that takes you directly to the IDE in your mobile browser."
-    str += "\n • NEW: Merged Manager and Automations into one codebase but it is still two apps... Thanks @ady264"
-    str += "\n • NEW: Thermostat ST Mode TempSetpoint Automation to select your thermostats and each mode to use for that thermostat and then choose the heat/cool setpoints for each mode. This is completely dynamic and will allow different setpoints for each thermostat selected."
-    str += "\n • NEW: You can now select devices to send Speech Notifications for Contact Automations."
-    str += "\n • NEW: Remote Sensors now allows selection of switches to run along with the thermostat to help with comfort. This support includes automation detection of devices that support 3-speeds, and allows setting speed based on individual threshold temps."    
-    str += "\n • ADDED: You can now use Day,Time,Mode filters in certain Nest Mode Automations."
-    str += "\n • ADDED: Ability to Disable each automations individually."
-    str += "\n • ADDED: When the Nest Weather device is installed you now have the option to receive push notifications for local weather alerts."
-    str += "\n • UPDATED: There is new install setup now that flows much better and allows display of the important available options better to users."
-    str += "\n • UPDATED: Child Device data updates have been modified to be much more efficient. All necessary data is sent at once eliminating the need for the devices to call back to the manager app constantly."
-    str += "\n • NEW: Analytics have been added to the app to share installation data, it will also send generic exception error data. "
-    str += "  So I can see trends among versions etc.  This data is completely transparent to you and can be disabled at any time.  I do not collect and identifiable data only the basics. We will also be putting up a dashboard for users who are nerdy just to see the data mapped out."
-    str += "\n • FIXED: Remote Sensor's Fan circulation should now work like it was intended."
-    str += "\n • FIXED: Nest Log Out function to actually take you back to auth screen after clearing token."
-    str += "\n • ADDED: View all Apps/Devices state data under diagnostics."
-    str += "\n • UPDATED: Lot's of tweaks and fixes for annoying UI bugs and to many subtle changes to list."
 
     return str
 }
@@ -1525,18 +1478,20 @@ def missedPollNotify() {
 def appUpdateNotify() {
     try {
         def appUpd = isAppUpdateAvail()
-        if(atomicState?.protects) { def pUpd = isProtUpdateAvail() }
-        if(atomicState?.presDevice) { def prUpd = isPresUpdateAvail() }
-        if(atomicState?.thermostats) { def tUpd = isTstatUpdateAvail() }
-        if(atomicState?.weatherDevice) { def wUpd = isWeathUpdateAvail() }
-        if((appUpd || pUpd || prUpd || tUpd || autoUpd || wUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
-            def appl = !appUpd ? "" : "Manager App: v${atomicState?.appData.versions.app.ver.toString()}, "
-            def prot = !pUpd ? "" : "Protect: v${atomicState?.appData.versions.protect.ver.toString()}, "
-            def pres = !prUpd ? "" : "Presence: v${atomicState?.appData.versions.presence.ver.toString()}, "
-            def tstat = !tUpd ? "" : "Thermostat: v${atomicState?.appData.versions.thermostat.ver.toString()}"
-            def weat = !wUpd ? "" : "Weather App: v${atomicState?.appData.versions.weather.ver.toString()}"
-            def now = new Date()
-            sendMsg("Info", "Update(s) are available: ${appl}${weat}${pres}${prot}${tstat}...  Please visit the IDE to Update your code...")
+        def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
+        def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
+        def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
+        def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
+        def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+        if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
+            def str = ""
+            str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.versions?.app?.ver?.toString()}, "
+            str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.versions?.protect?.ver?.toString()}, "
+            str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.versions?.camera?.ver?.toString()}, "
+            str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.versions?.presence?.ver?.toString()}, "
+            str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.versions?.thermostat?.ver?.toString()}"
+            str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.versions?.weather?.ver?.toString()}"
+            sendMsg("Info", "Update(s) are available: ${str}...  Please visit the IDE to Update your code...")
             atomicState?.lastUpdMsgDt = getDtNow()
         }
     } catch (ex) { 
@@ -1791,47 +1746,66 @@ def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toIn
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
-def isNewUpdateAvail(newVer, curVer) {
+def isCodeUpdateAvailable(newVer, curVer, type) {
     try {
-        def curLen = curVer?.length()
-        def newLen = newVer?.length()
-        def cVer = !curVer ? 100 : (curLen < newLen ? "${curVer?.toString().replaceAll("\\.", "")}0" : curVer?.toString().replaceAll("\\.", ""))
-        def nVer = !newVer ? 100 : (newLen < curLen ? "${newVer?.toString().replaceAll("\\.", "")}0" : newVer?.toString().replaceAll("\\.", ""))
-        if(cVer) {
-            if (nVer.toInteger() > cVer.toInteger()) { return true }
-        } else { return false }
-    } catch (ex) { 
-        LogAction("isNewUpdateAvail Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "isNewUpdateAvail")
+        def result = false
+        def latestVer 
+        def versions = [newVer, curVer]
+        if(newVer != curVer) {
+            latestVer = versions?.max { a, b -> 
+                def verA = a?.tokenize('.')
+                def verB = b?.tokenize('.')
+                def commonIndices = Math.min(verA?.size(), verB?.size())
+                for (int i = 0; i < commonIndices; ++i) {
+                    //log.debug "comparing $numA and $numB"
+                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+                    }
+                }
+                verA?.size() <=> verB?.size()
+            }
+            result = (latestVer == newVer) ? true : false
+        }
+        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+        return result
+    } catch (ex) {
+        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "isCodeUpdateAvailable")
     }
 }
 
 def isAppUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.app?.ver, appVersion())) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.app?.ver, appVersion(), "manager")) {
         return true
     } else { return false }
 }
 
 def isPresUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer)) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer, "presence")) {
         return true
     } else { return false }
 }
 
 def isProtUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.protect?.ver, atomicState?.pDevVer)) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.protect?.ver, atomicState?.pDevVer, "protect")) {
+        return true
+    } else { return false }
+}
+
+def isCamUpdateAvail() {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.camera?.ver, atomicState?.camDevVer, "camera")) {
         return true
     } else { return false }
 }
 
 def isTstatUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.thermostat?.ver, atomicState?.tDevVer)) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) {
         return true
     } else { return false }
 }
 
-def isWeathUpdateAvail() {
-    if(isNewUpdateAvail(atomicState?.appData?.versions?.weather?.ver, atomicState?.weatAppVer)) {
+def isWeatherUpdateAvail() {
+    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) {
         return true
     } else { return false }
 }
