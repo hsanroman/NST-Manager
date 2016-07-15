@@ -4334,7 +4334,7 @@ def remSenTstatOperEvt(evt) {
     }
 }
 
-def remSenFanSwitchCheck() {
+def remSenTstatFanSwitchCheck() {
     LogAction("RemoteSensor Event | Fan Switch Check", "trace", false)
     try {
         if(disableAutomation) { return }
