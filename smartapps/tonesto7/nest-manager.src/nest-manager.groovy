@@ -4193,7 +4193,7 @@ def initAutoApp() {
     scheduler()
     atomicState?.timeZone = !location?.timeZone ? parent?.getNestTimeZone() : null
     app.updateLabel(getAutoTypeLabel())
-            watchDogAutomation)_
+    watchDogAutomation()
 }
 
 def getAutoTypeLabel() {
