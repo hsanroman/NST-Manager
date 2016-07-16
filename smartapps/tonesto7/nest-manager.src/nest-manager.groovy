@@ -18,7 +18,6 @@
 import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
-import org.codehaus.groovy.grails.plugins.VersionComparator
 
 definition(
     name: "${textAppName()}",
