@@ -243,7 +243,7 @@ def mainPage() {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!!!",
-                        description:"Current: v${appVersion()} | New: ${atomicState?.appData?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
+                        description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -1566,12 +1566,12 @@ def appUpdateNotify() {
         def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
         if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
             def str = ""
-            str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.versions?.app?.ver?.toString()}, "
-            str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.versions?.protect?.ver?.toString()}, "
-            str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.versions?.camera?.ver?.toString()}, "
-            str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.versions?.presence?.ver?.toString()}, "
-            str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.versions?.thermostat?.ver?.toString()}"
-            str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.versions?.weather?.ver?.toString()}"
+            str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}, "
+            str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}, "
+            str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}, "
+            str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}, "
+            str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+            str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
             sendMsg("Info", "Update(s) are available: ${str}...  Please visit the IDE to Update your code...")
             atomicState?.lastUpdMsgDt = getDtNow()
         }
@@ -1857,37 +1857,37 @@ def isCodeUpdateAvailable(newVer, curVer, type) {
 }
 
 def isAppUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.app?.ver, appVersion(), "manager")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.app?.ver, appVersion(), "manager")) {
         return true
     } else { return false }
 }
 
 def isPresUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.presence?.ver, atomicState?.presDevVer, "presence")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.presence?.ver, atomicState?.presDevVer, "presence")) {
         return true
     } else { return false }
 }
 
 def isProtUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.protect?.ver, atomicState?.pDevVer, "protect")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.protect?.ver, atomicState?.pDevVer, "protect")) {
         return true
     } else { return false }
 }
 
 def isCamUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.camera?.ver, atomicState?.camDevVer, "camera")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.camera?.ver, atomicState?.camDevVer, "camera")) {
         return true
     } else { return false }
 }
 
 def isTstatUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) {
         return true
     } else { return false }
 }
 
 def isWeatherUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) {
         return true
     } else { return false }
 }
@@ -2960,11 +2960,11 @@ def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
 
-def latestTstatVer()    { return atomicState?.appData?.versions?.thermostat ?: "unknown" }
-def latestProtVer()     { return atomicState?.appData?.versions?.protect ?: "unknown" }
-def latestPresVer()     { return atomicState?.appData?.versions?.presence ?: "unknown" }
-def latestWeathVer()    { return atomicState?.appData?.versions?.weather ?: "unknown" }
-def latestCamVer()    { return atomicState?.appData?.versions?.camera ?: "unknown" }
+def latestTstatVer()    { return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
+def latestProtVer()     { return atomicState?.appData?.updater?.versions?.protect ?: "unknown" }
+def latestPresVer()     { return atomicState?.appData?.updater?.versions?.presence ?: "unknown" }
+def latestWeathVer()    { return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
+def latestCamVer()      { return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
 def getUse24Time()      { return useMilitaryTime ? true : false }
 
 //Returns app State Info
@@ -7312,7 +7312,7 @@ private def gitBranch()     { return "master" }
 private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{
-    def cur = atomicState?.appData?.versions?.app?.ver.toString()
+    def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
     def ver = (isAppUpdateAvail()) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
     return "${textAppName()}\n• ${ver}\n• ${textModified()}"
 }
