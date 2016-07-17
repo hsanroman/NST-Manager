@@ -117,7 +117,9 @@ preferences {
     page(name: "childDevDataPage")
     page(name: "managAppDataPage")
     page(name: "alarmTestPage")
-    page(name: "alarmCoTestStartPage")
+    page(name: "simulateSmokeEventPage")
+    page(name: "simulateCarbonEventPage")
+    page(name: "simulateBatteryEventPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "devPrefPage")
@@ -3479,7 +3481,7 @@ def nestInfoPage () {
         }
         if(atomicState?.protects || atomicState?.cameras) {
             section("Perform Alarm Event Tests:") {
-                href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("diag_icon.png")
+                href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
             }
         }
         section("Recent Command") {
@@ -3499,7 +3501,7 @@ def nestInfoPage () {
 }
 
 def alarmTestPage () {
-    dynamicPage(name: "alarmTestPage", refreshInterval: alarmCoTestDeviceDelay+1, install: false) {
+    dynamicPage(name: "alarmTestPage", refreshInterval: ((alarmCoTestDevice && atomicState?.isAlarmCoTestActive && alarmCoTestDeviceDelay) ? alarmCoTestDeviceDelay : 0), install: false, uninstall: false) {
         if(atomicState?.protects) {
             section("Select Carbon/Smoke Devices to Test:") {
                 input(name: "alarmCoTestDevice", title:"Select the Protects to Test", type: "enum", required: fals, multiple: false, submitOnChange: true, 
@@ -3507,43 +3509,89 @@ def alarmTestPage () {
                 if(alarmCoTestDevice) {
                     input "alarmCoTestDeviceDelay", "enum", title: "Delay time between Events?", required: true, defaultValue: 15, metadata: [values:shortTimeEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
-                    if(alarmCoTestDeviceSimSmoke) {
-                        atomicState?.isAlarmCoTestActive = true
-                        sendEvent(device: alarmCoTestDevice, name: 'smoke', value: "detected", descriptionText: "Sending Smoke Test 'DETECTED'", type: "physical", displayed: true, isStateChange: true )
-                    } else {
-                        atomicState?.isAlarmCoTestActive = false
-                        sendEvent(device: alarmCoTestDevice, name: 'smoke', value: "clear", descriptionText: "Sending Smoke Test 'CLEAR'", type: "physical", displayed: true, isStateChange: true )
-                    }
+                    if(alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimLowBatt) {
+                        href "simulateSmokeEventPage", title: "Simulate Smoke Event", description: null, state: null  
+                    } 
                     input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
-                    if(alarmCoTestDeviceSimCo) {
-                        atomicState?.isAlarmCoTestActive = true
-                        sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "detected", descriptionText: "Sending Smoke Test 'DETECTED'", type: "physical", displayed: true, isStateChange: true )
-                    } else {
-                        atomicState?.isAlarmCoTestActive = false
-                        sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "clear", descriptionText: "Sending Smoke Test 'CLEAR'", type: "physical", displayed: true, isStateChange: true )
-                    }
+                    if(alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimLowBatt) {
+                        href "simulateCarbonEventPage", title: "Simulate Carbon Event", description: null, state: null
+                    } 
                     input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
-                    
-                    href "alarmCoTestStartPage", title: "Begin Test", description: null, state: null
+                    if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
+                        href "simulateBatteryEventPage", title: "Simulate Battery Event", description: null, state: null
+                    } 
                 }
             }
         }
     }
 }
 
-def alarmCoTstatStart(dev) {
-    if(alarmCoTestDeviceSimSmoke) {
-        atomicState?.isAlarmCoTestActive = true
-        sendEvent(device: alarmCoTestDevice, name: 'smoke', value: "detected", descriptionText: "Sending Smoke Test 'DETECTED'", type: "physical", displayed: true, isStateChange: true )
-    } else {
-        atomicState?.isAlarmCoTestActive = false
-        sendEvent(device: alarmCoTestDevice, name: 'smoke', value: "clear", descriptionText: "Sending Smoke Test 'CLEAR'", type: "physical", displayed: true, isStateChange: true )
+def simulateSmokeEventPage() {
+    dynamicPage(name: "simulateSmokeEventPage", refreshInterval: ((alarmCoTestDevice && atomicState?.isAlarmCoTestActive && alarmCoTestDeviceDelay) ? alarmCoTestDeviceDelay : 0), install: false, uninstall: false) { 
+        if(alarmCoTestDeviceSimCo) { 
+            if(!atomicState?.isAlarmCoTestActive) {
+                LogAction("Sending Smoke 'Detected' Event to '$alarmCoTestDevice'", "info", true)
+                paragraph "Sending Smoke 'Detected' Event to '$alarmCoTestDevice'"
+                runIn(10, "simulateSmokeEventPage", [overwrite: true])
+                atomicState?.isAlarmCoTestActive = true
+                sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "detected", descriptionText: "Sending CO Test Event 'DETECTED'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                sendEvent(device: alarmCoTestDevice, name: 'alarmState', value: "smoke-emergency", descriptionText: "Sending AlarmState Smoke-Emergency Event", type: "PHYSICAL", displayed: true, isStateChange: true )
+            } else if (atomicState?.isAlarmCoTestActive) {
+                atomicState?.isAlarmCoTestActive = false
+                LogAction("Sending Smoke 'Clear' Event to '$alarmCoTestDevice'", "info", true)
+                paragraph "Sending Smoke 'Clear' Event to '$alarmCoTestDevice'"
+                sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "clear", descriptionText: "Sending CO Test Event 'CLEAR'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                sendEvent(device: alarmCoTestDevice, name: 'alarmState', value: "ok", descriptionText: "Clearing AlarmState", type: "PHYSICAL", displayed: true, isStateChange: true )
+            }
+        }
+    }
+}
+
+def simulateCarbonEventPage() {
+    dynamicPage(name: "simulateCarbonEventPage", refreshInterval: ((alarmCoTestDevice && atomicState?.isAlarmCoTestActive && alarmCoTestDeviceDelay) ? alarmCoTestDeviceDelay : 0), install: false, uninstall: false) { 
+        if(alarmCoTestDeviceSimCo) {
+            if(!atomicState?.isAlarmCoTestActive) {
+                LogAction("Sending Carbon 'Detected' Event to '$alarmCoTestDevice'", "info", true)
+                paragraph "Sending Carbon 'Detected' Event to '$alarmCoTestDevice'"
+                runIn(10, "simulateCarbonEventPage", [overwrite: true])
+                atomicState?.isAlarmCoTestActive = true
+                sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "detected", descriptionText: "Sending CO Test Event 'DETECTED'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                sendEvent(device: alarmCoTestDevice, name: 'alarmState', value: "co-emergency", descriptionText: "Sending AlarmState Co-Emergency Event", type: "PHYSICAL", displayed: true, isStateChange: true )
+            } else if (atomicState?.isAlarmCoTestActive) {
+                atomicState?.isAlarmCoTestActive = false
+                LogAction("Sending Carbon 'Clear' Event to '$alarmCoTestDevice'", "info", true)
+                paragraph "Sending Carbon 'Clear' Event to '$alarmCoTestDevice'"
+                sendEvent(device: alarmCoTestDevice, name: 'carbonMonoxide', value: "clear", descriptionText: "Sending CO Test Event 'CLEAR'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                sendEvent(device: alarmCoTestDevice, name: 'alarmState', value: "ok", descriptionText: "Clearing AlarmState", type: "PHYSICAL", displayed: true, isStateChange: true )
+            }
+        }
+    }
+}
+
+def simulateBatteryEventPage() {
+    dynamicPage(name: "simulateBatteryEventPage", refreshInterval: ((alarmCoTestDevice && atomicState?.isAlarmCoTestActive && alarmCoTestDeviceDelay) ? alarmCoTestDeviceDelay : 0), install: false, uninstall: false) { 
+        section("Testing...") {
+            if(alarmCoTestDeviceSimCo) { 
+                if(!atomicState?.isAlarmCoTestActive) {
+                    LogAction("Sending Battery 'Replace' Event to '$alarmCoTestDevice'", "info", true)
+                    paragraph "Sending Battery 'Replace' Event to '$alarmCoTestDevice'"
+                    runIn(10, "simulateBatteryEventPage", [overwrite: true])
+                    atomicState?.isAlarmCoTestActive = true
+                    sendEvent(device: alarmCoTestDevice, name: 'batteryState', value: "replace", descriptionText: "Sending Battery Event 'REPLACE'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                } else if (atomicState?.isAlarmCoTestActive) {
+                    atomicState?.isAlarmCoTestActive = false
+                    LogAction("Sending Battery 'Ok' Event to '$alarmCoTestDevice'", "info", true)
+                    paragraph "Sending Battery 'Ok' Event to '$alarmCoTestDevice'"
+                    sendEvent(device: alarmCoTestDevice, name: 'batteryState', value: "ok", descriptionText: "Sending Battery Event 'OK'", type: "PHYSICAL", displayed: true, isStateChange: true )
+                }
+            }
+        }
     }
 }
 
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
-        def noShow = [ "wheres", "thermostats", "smoke_co_alarms", "structure_id" ]
+        def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
         section("") {
             paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
         }

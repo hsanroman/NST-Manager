@@ -868,7 +868,7 @@ def getWeatherHtml() {
                     </div>		
                     <div class="row topBorder">
                     <div class="centerText offset-by-three six columns">
-                        <b>Station Id:</b> ${state?.curWeather?.current_observation?.station_id}
+                        <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b> 
                         <b>${state?.curWeather?.current_observation?.observation_time}</b>
                     </div>    
                     </div>
