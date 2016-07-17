@@ -4744,6 +4744,10 @@ def remSenCheckMotion() {
     if(isMotionActive(remSenMotion)) { scheduleAutomationEval() }
 }
 
+def isMotionActive(sensors) {
+    return sensors?.currentState("motion")?.value.contains("active") ? true : false
+}
+
 def remSenTempSenEvt(evt) {
     LogAction("RemoteSensor Event | Sensor Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
     if(disableAutomation) { return }
@@ -4825,10 +4829,6 @@ def remSenModeEvt(evt) {
 def coolingSetpointHandler(evt) { log.debug "coolingSetpointHandler()" }
 
 def heatingSetpointHandler(evt) { log.debug "heatingSetpointHandler()" }
-
-def isMotionActive(sensors) {
-    return sensors?.currentState("motion")?.value.contains("active") ? true : false
-}
 
 def getUseNightSensor() {
     def day = !remSensorDayModes ? false : isInMode(remSensorDayModes)
@@ -5016,6 +5016,10 @@ private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", false)
     if(disableAutomation) { return }
     else { 
+//
+// This automation could create a virtual Nest thermostat in ST, so users could control temp (with averaging) via this thermostat
+//    This would make it easier to adjust set points and to display status to the user
+//
         def home = false
         def away = false
         if (remSenTstat && getTstatPresence(remSenTstat) == "present") { home = true }
@@ -5103,7 +5107,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp + tempChangeVal
                         }
                         def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
-                        log.debug "coolDiff1: ${coolDiff1}"
+                        LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1}", "trace", false)
                         if (coolDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
@@ -5161,7 +5165,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp - tempChangeVal
                         }
                         def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
-                        log.debug "heatDiff1: ${heatDiff1}"
+                        LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1}", "trace", false)
                         if (heatDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to maintain state", "info", true)
@@ -5828,6 +5832,8 @@ def conWatCheck() {
 // Should consider not turning thermostat off, as much as setting it more toward away settings?
 // There should be monitoring of actual temps for min and max warnings given on/off automations
 //
+// Should have some check for stuck contacts
+//
     try {
         if (disableAutomation) { return }
         else {
@@ -5886,7 +5892,7 @@ def conWatCheck() {
                         } else {
                             LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                         }
-                    }
+                    } else { scheduleAutomationEval() }
                 } 
             }
             
@@ -5917,7 +5923,7 @@ def conWatCheck() {
                                 sendTTS(msg)
                             }
                         }
-                    }
+                    } else { scheduleAutomationEval() }
                 } else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
             }
         }
@@ -6090,6 +6096,8 @@ def leakWatCheck() {
 // There should be monitoring of actual temps for min and max warnings given on/off automations
 //   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
 //
+// Should have some check for stuck contacts
+//
     try {
         if (disableAutomation) { return }
         else {
@@ -6147,7 +6155,7 @@ def leakWatCheck() {
                         } else {
                             LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Modes", "info", true)
                         }
-                    }
+                    } else { scheduleAutomationEval() }
                 } 
             }
                
