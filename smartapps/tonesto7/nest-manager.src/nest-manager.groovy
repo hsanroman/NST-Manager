@@ -237,7 +237,7 @@ def authPage() {
 
 def mainPage() {
     //log.trace "mainPage"
-    def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
+    def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled || atomicState?.setupVersion != atomicState?.appData?.updater?.setupVersion) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
@@ -430,6 +430,7 @@ def deviceSelectPage() {
 def reviewSetupPage() {
     return dynamicPage(name: "reviewSetupPage", title: "Setup Review", install: true, uninstall: atomicState?.isInstalled) {
         if(!atomicState?.newSetupComplete) { atomicState.newSetupComplete = true }
+        atomicState?.setupVersion = appData?.updater?.setupVersion
         section("Device Summary:") {
             def str = ""
             str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
@@ -4485,6 +4486,10 @@ def runAutomationEval() {
         break
     }
 }
+
+/*
+    Add in dynamic remote sensor options > Select modes for the sensor and allow current choices and triggers for each
+*/
 
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
