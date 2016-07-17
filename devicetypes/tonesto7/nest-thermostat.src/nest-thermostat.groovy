@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.3"}
+def devVer() { return "2.5.4"}
 
 // for the UI
 metadata {
@@ -73,6 +73,11 @@ metadata {
         attribute "apiStatus", "string"
         attribute "hasLeaf", "string"
         attribute "debugOn", "string"
+        attribute "lowSafetyTemp", "string"
+        attribute "highSafetyTemp", "string"
+        attribute "tempLockOn", "string"
+        attribute "lockedTempMin", "string"
+        attribute "lockedTempMax", "string"
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
         attribute "nestPresence", "string"
@@ -263,7 +268,7 @@ def getTempColors() {
                 [value: 84, color: "#f1d801"],
                 [value: 92, color: "#d04e00"],
                 [value: 96, color: "#bc2323"]
-                ]
+            ]
         }
     }
     catch (ex) {
@@ -302,6 +307,7 @@ def generateEvent(Map eventData) {
             state.nestTimeZone = !location?.timeZone ? eventData.tz : null
             debugOnEvent(eventData?.debug ? true : false)
             tempUnitEvent(getTemperatureScale())
+            if(eventData?.data?.is_locked) { tempLockOnEvent(eventData?.data?.is_locked) }
             canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
             hasFan(eventData?.data?.has_fan.toString())
             presenceEvent(eventData?.pres.toString())
@@ -319,7 +325,8 @@ def generateEvent(Map eventData) {
             apiStatusEvent(eventData?.apiIssues)
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
             state?.cssUrl = eventData?.cssUrl.toString()
-        
+            if(eventData?.safetyTemps) { setSafetyTemps(eventData?.safetyTemps) } 
+
             def hvacMode = eventData?.data?.hvac_mode
             def tempUnit = state?.tempUnit
             switch (tempUnit) {
@@ -349,6 +356,7 @@ def generateEvent(Map eventData) {
                     thermostatSetpointEvent(targetTemp)
                     coolingSetpointEvent(coolingSetpoint)
                     heatingSetpointEvent(heatingSetpoint)
+                    if(eventData?.data?.locked_temp_min_c && eventData?.data?.locked_temp_max_c) { lockedTempEvent(eventData?.data?.locked_temp_min_c, eventData?.data?.locked_temp_max_c) }
                     break
                     
                 case "F":
@@ -377,6 +385,7 @@ def generateEvent(Map eventData) {
                     thermostatSetpointEvent(targetTemp)
                     coolingSetpointEvent(coolingSetpoint)
                     heatingSetpointEvent(heatingSetpoint)
+                    if(eventData?.data?.locked_temp_min_f && eventData?.data?.locked_temp_max_f) { lockedTempEvent(eventData?.data?.locked_temp_min_f, eventData?.data?.locked_temp_max_f) }
                     break
                 
                 default:
@@ -705,6 +714,43 @@ def operatingStateEvent(operatingState) {
     catch (ex) {
         log.error "operatingStateEvent Exception: ${ex}"
         parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "operatingStateEvent")
+    }
+}
+
+def tempLockOnEvent(isLocked) {
+    try {
+        def curState = device.currentState("tempLockOn")?.value
+        def newState = (isLocked?.toString() == "true") ? true : false
+        state?.hasLeaf = newState
+        if(curState != newState) {
+            log.debug("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
+            sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
+        } else { Logger("Temperature Lock is set to (${newState}) | Original State: (${curState})") }
+    }
+    catch (ex) {
+        log.error "tempLockOnEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "tempLockOnEvent")
+    }
+}
+
+def lockedTempEvent(Double minTemp, Double maxTemp) {
+    try {
+        def curMinTemp = device.currentState("lockedTempMin")?.doubleValue
+        def curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
+        //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+        if(curMinTemp != minTemp || curMaxTemp != maxTemp) {
+            log.debug("UPDATED | Temperature Lock Minimum is (${minTemp}) | Original Temp: (${curMinTemp})")
+            log.debug("UPDATED | Temperature Lock Maximum is (${maxTemp}) | Original Temp: (${curMaxTemp})")
+            sendEvent(name:'lockedTempMin', value: minTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Minimum is ${minTemp}" , displayed: true, isStateChange: true)
+            sendEvent(name:'lockedTempMax', value: maxTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Maximum is ${maxTemp}" , displayed: true, isStateChange: true)
+        } else { 
+            Logger("Temperature Lock Minimum is (${minTemp}) | Original Minimum Temp: (${curMinTemp})")
+            Logger("Temperature Lock Maximum is (${maxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+        }
+    }
+    catch (ex) {
+        log.error "lockedTempEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "lockedTempEvent")
     }
 }
 
