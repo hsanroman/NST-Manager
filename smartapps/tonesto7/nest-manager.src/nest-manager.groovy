@@ -44,6 +44,8 @@ def appVerInfo() {
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Merged in Eric's latest patches."
     str += "\n • UPDATED: External, Contact, Leak Automations now support safety temps to automatically restore the thermostat."
+    str += "\n • ADDED: Added Thermostat Safety temps for each nest thermostat"
+    str += "\n • ADDED: Lot's of other changes."
     
     str += "\n\nV2.6.5 (July 15th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -205,6 +207,10 @@ def authPage() {
     }
     updateWebStuff(true)
     setStateVar(true)
+    if (atomicState?.newSetupComplete) {
+        def result = ((atomicState?.appData?.updater?.setupVersion && !atomicState?.setupVersion) || (atomicState?.setupVersion?.toInteger() < atomicState?.appData?.updater?.setupVersion?.toInteger())) ? true : false
+        if(result) { atomicState?.newSetupComplete = null }
+    }
 
     def description
     def oauthTokenProvided = false
@@ -237,7 +243,7 @@ def authPage() {
 
 def mainPage() {
     //log.trace "mainPage"
-    def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled || atomicState?.setupVersion != atomicState?.appData?.updater?.setupVersion) ? false : true
+    def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
@@ -430,12 +436,16 @@ def deviceSelectPage() {
 def reviewSetupPage() {
     return dynamicPage(name: "reviewSetupPage", title: "Setup Review", install: true, uninstall: atomicState?.isInstalled) {
         if(!atomicState?.newSetupComplete) { atomicState.newSetupComplete = true }
-        atomicState?.setupVersion = appData?.updater?.setupVersion
+        atomicState?.setupVersion = atomicState?.appData?.updater?.setupVersion?.toInteger() ?: 0
         section("Device Summary:") {
             def str = ""
             str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
             str += getDevicesDesc() ?: ""
             paragraph "${str}"
+            if(atomicState?.thermostats) {
+                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "${getSafetyTempsDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+            }
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
@@ -510,12 +520,6 @@ def prefsPage() {
             label title:"Application Label (optional)", required:false
         }
     }
-}
-
-def devCustomizePageDesc() {
-    def str = ""
-    str += weathAlertNotif  ? "• Weather Alerts: Enabled" : ""
-    return (str != "") ? "${str}" : null
 }
 
 def automationsPage() {
@@ -812,7 +816,7 @@ def forcedPoll(type = null) {
 
 def postCmd() {
     //log.trace "postCmd()"
-    poll()
+    poll(true)
 }
 
 def getApiData(type = null) {
@@ -890,12 +894,13 @@ def updateChildData() {
         def dbg = !childDebug ? false : true
         def nestTz = getNestTimeZone()?.toString()
         def api = !apiIssues() ? false : true
-        getAllChildDevices().each {
+        getAllChildDevices()?.each { 
             def devId = it?.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
+                def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0), "max":(settings?."${devId}_safety_temp_max" ?: 0) ] 
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
-                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, 
+                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps,
                                 "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                     it.generateEvent(tData) //parse received message from parent
@@ -2849,6 +2854,7 @@ def setStateVar(frc = false) {
         def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
         if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) {
             if(!atomicState?.newSetupComplete) 	        { atomicState.newSetupComplete = false }
+            if(!atomicState?.setupVersion)              { atomicState?.setupVersion = 0 }
             if(!atomicState?.misPollNotifyWaitVal) 	    { atomicState.misPollNotifyWaitVal = 900 }
             if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
             if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
@@ -3313,6 +3319,8 @@ def devPrefPage() {
                 input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
                     description: tempChgWaitValDesc, submitOnChange: true)
                 atomicState.needChildUpd = true
+                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "Tap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
                 //paragraph "Nothing to see here yet!!!"
             }
         }
@@ -3336,6 +3344,13 @@ def devPrefPage() {
             }
         }
     }
+}
+
+def devCustomizePageDesc() {
+    def str = ""
+    str += weathAlertNotif  ? "• Weather Alerts: Enabled" : ""
+    str += getSafetyTempsDesc() ? "\n\n• Safefy Temps: ${getSafetyTempsDesc()}" : ""
+    return (str != "") ? "${str}" : null
 }
 
 def getDevicesDesc() {
@@ -3601,19 +3616,37 @@ def safetyTempsPage() {
         if(atomicState?.thermostats) {
             atomicState?.thermostats?.each { ts ->
                 def dev = getChildDevice(ts?.key)
-                def canHeat = dev?.currentState("canHeat").booleanValue ?: true
-                def canCool = dev?.currentState("canCool").booleanValue ?: true 
-                section("${dev?.displayName} Safety Temps:") {
+                def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
+                def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true 
+                section("${dev?.displayName} - Safety Temps:") {
                     if(canHeat) {
-                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${atomicState?.tempUnit})", submitOnChange: true, image: getAppImg("cool_icon.png")
+                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
+                        submitOnChange: true, image: getAppImg("cool_icon.png")
                     }
                     if(canCool) {
-                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed(°${atomicState?.tempUnit})", submitOnChange: true, image: getAppImg("heat_icon.png")
+                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed(°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
+                        submitOnChange: true, image: getAppImg("heat_icon.png")
                     }
                 }
             }
         }
     }
+}
+
+def getSafetyTempsDesc() {
+    def str = ""
+    def tstats = atomicState?.thermostats
+    if(tstats) {
+        tstats?.each { ts ->
+            def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
+            def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
+            str += ts ? "${ts?.value}:" : ""
+            str += minTemp ? "\n • Low Safety Temp: (${minTemp}°${getTemperatureScale()})" : ""
+            str += maxTemp ? "\n • High Safety Temp: (${maxTemp}°${getTemperatureScale()})" : ""
+            str += tstats?.size() > 1 ? "\n\n" : ""
+        }
+    }
+    return (str != "") ? "${str}" : null
 }
 
 def structInfoPage () {
@@ -4143,6 +4176,7 @@ def mainAutoPage(params) {
                     extDesc += extTmpTstat ? "\n • Temp: (${getDeviceTemp(extTmpTstat)}°${atomicState?.tempUnit})" : ""
                     extDesc += extTmpTstat ? "\n • Mode: (${extTmpTstat?.currentThermostatOperatingState.toString().capitalize()}/${extTmpTstat?.currentThermostatMode.toString().capitalize()})" : ""
                     extDesc += extTmpTstat ? "\n • Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    extDesc += extTmpTstat && getSafetyTemps(extTmpTstat) ? "\n • Safefy Temps: \n     • Min: ${getSafetyTemps(extTmpTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(extTmpTstat).max}°${atomicState?.tempUnit}" : ""
                     extDesc += ((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) ? "\n\nTrigger Status:" : ""
                     extDesc += (!extTmpUseWeather && extTmpTempSensor && extTmpTstat) ? "\n • Using Sensor: (${getExtTmpTemperature()}°${atomicState?.tempUnit})" : ""
                     extDesc += (extTmpUseWeather && !extTmpTempSensor && extTmpTstat) ? "\n • Using Weather: (${getExtTmpTemperature()}°${atomicState?.tempUnit})" : ""
@@ -4166,6 +4200,7 @@ def mainAutoPage(params) {
                     conDesc += conWatTstat ? "\n • Temp: (${getDeviceTemp(conWatTstat)}°${atomicState?.tempUnit})" : ""
                     conDesc += conWatTstat ? "\n • Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
                     conDesc += conWatTstat ? "\n • Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    conDesc += conWatTstat && getSafetyTemps(conWatTstat) ? "\n • Safefy Temps: \n     • Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                     conDesc += (conWatContacts && conWatTstat && conWatContactDesc()) ? "\n\n${conWatContactDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
@@ -4218,9 +4253,10 @@ def mainAutoPage(params) {
                     def leakDesc = ""
                     leakDesc += leakWatTstat ? "${leakWatTstat?.label}\n • Temp: (${getDeviceTemp(leakWatTstat)}°${atomicState?.tempUnit})" : ""
                     leakDesc += leakWatTstat ? "\n • Mode: (${leakWatTstat?.currentThermostatOperatingState.toString()}/${leakWatTstat?.currentThermostatMode.toString()})" : ""
+                    leakDesc += leakWatTstat && getSafetyTemps(leakWatTstat) ? "\n • Safefy Temps: \n     • Min: ${getSafetyTemps(leakWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(leakWatTstat).max}°${atomicState?.tempUnit}" : ""
                     leakDesc += (leakWatSensors && leakWatTstat && leakWatSensorsDesc()) ? "\n\n${leakWatSensorsDesc()}" : ""
                     leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
-                  //  leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
+                    //  leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
                     leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
                     leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
                     leakDesc += leakWatRestoreAutoMode ? "\n • Restore to Auto: (True)" : ""
@@ -4489,6 +4525,7 @@ def runAutomationEval() {
 
 /*
     Add in dynamic remote sensor options > Select modes for the sensor and allow current choices and triggers for each
+    maybe just allow toggle for advanced options
 */
 
 /******************************************************************************  
@@ -5470,7 +5507,8 @@ def extTempPage() {
                     str += extTmpTstat ? "Thermostat Status:" : ""
                     str += extTmpTstat ? "\n├ Temp: (${extTmpTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                     str += extTmpTstat ? "\n├ Mode: (${extTmpTstat?.currentThermostatOperatingState.toString().capitalize()}/${extTmpTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                    str += extTmpTstat ? "\n└ Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    str += extTmpTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    str += extTmpTstat && getSafetyTemps(extTmpTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(extTmpTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(extTmpTstat).max}°${atomicState?.tempUnit}" : ""
                     paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
                     input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp (°${atomicState?.tempUnit})?", defaultValue: 1.0, submitOnChange: true, required: true,
                             image: getAppImg("temp_icon.png")
@@ -5478,9 +5516,8 @@ def extTempPage() {
             }
         }
         if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) {
-            section("Restore Your Thermostat When there Safety Temperatures are Reached (optional):") {
-                input "${getPagePrefix()}MinimumTemp", "decimal", title: "Minimum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("cool_icon.png")
-                input "${getPagePrefix()}MaximumTemp", "decimal", title: "Maximum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+            section("Restoration Preferences (Optional):") {
+                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -5502,7 +5539,7 @@ def extTempPage() {
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true], 
+                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
@@ -5727,6 +5764,7 @@ def extTmpTempEvt(evt) {
 /*
     Adding in timer to restore mode
     Add alarm/siren notification options
+    Allow user to set different alert times for each stage 
     Allow custom alert voice messages
 
 */
@@ -5759,19 +5797,20 @@ def contactWatchPage() {
                 str += conWatTstat ? "\nThermostat Status:" : ""
                 str += conWatTstat ? "\n├ Temp: (${conWatTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                 str += conWatTstat ? "\n├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                str += conWatTstat ? "\n└ Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += conWatTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += conWatTstat && getSafetyTemps(conWatTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
         }
         if(conWatContacts && conWatTstat) {
-            section("Restore Your Thermostat when Safety Temperatures are Reached (optional):") {
-                input "${getPagePrefix()}MinimumTemp", "decimal", title: "Minimum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("cool_icon.png")
-                input "${getPagePrefix()}MaximumTemp", "decimal", title: "Maximum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+            section("Restoration Preferences (Optional):") {
+                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
             section("Delay Values:") {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-
+                input name: "conWatOffTimeout", type: "enum", title: "Off Timeout (in minutes)(optional)", defaultValue: null, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
                 input name: "conWatRestoreOnClose", type: "bool", title: "Restore Previous Mode on Close?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
                 if(conWatRestoreOnClose) {
@@ -5789,8 +5828,13 @@ def contactWatchPage() {
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true], 
+                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
+            }
+            if(getNotificationOptionsConf()) {
+                section("Notification Options:") {
+                    paragraph "notification preferences will go here"
+                }
             }
         }
         section("Help:") {
@@ -6027,15 +6071,15 @@ def leakWatchPage() {
                 def str = ""
                 str += leakWatTstat ? "Thermostat Status:" : ""
                 str += leakWatTstat ? "\n├ Mode: (${leakWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${leakWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                str += leakWatTstat ? "\n└ Presence: (${getTstatPresence(leakWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += leakWatTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(leakWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += leakWatTstat && getSafetyTemps(leakWatTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(leakWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(leakWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
             
         }
         if(leakWatSensors && leakWatTstat) {
-            section("Restore Your Thermostat When there Safety Temperatures are Reached (optional):") {
-                input "${getPagePrefix()}MinimumTemp", "decimal", title: "Minimum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("cool_icon.png")
-                input "${getPagePrefix()}MaximumTemp", "decimal", title: "Maximum Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90", submitOnChange: false, image: getAppImg("heat_icon.png")
+            section("Restoration Preferences (Optional):") {
+                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: false, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
             section("Restore on Dry:") {
                 input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode when Dry?", description: "", required: false, defaultValue: false, submitOnChange: true,
@@ -6050,7 +6094,7 @@ def leakWatchPage() {
                 }
             }
             section("Notifications:") {
-                href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true], 
+                href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
                 if(settings?."${pName}AllowSpeechNotif") {
                     input name: "leakWatSpeechOnRestore", type: "bool", title: "Speak on Mode Restoration?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
@@ -6757,12 +6801,13 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 def setNotificationPage(params) {   
     def pName = getPagePrefix()
     def allowSpeech = false
+    def allowAlarm = false
     def showSched = false
     if(params?.pName) {
         atomicState.curNotifPageData = params 
-        allowSpeech = params?.allowSpeech?.toBoolean(); showSched = params?.showSchedule?.toBoolean()
+        allowSpeech = params?.allowSpeech?.toBoolean(); showSched = params?.showSchedule?.toBoolean(); allowAlarm = params?.allowAlarm?.toBoolean()
     } else { 
-        allowSpeech = atomicState?.curNotifPageData?.allowSpeech; showSched = atomicState?.curNotifPageData?.showSchedule
+        allowSpeech = atomicState?.curNotifPageData?.allowSpeech; showSched = atomicState?.curNotifPageData?.showSchedule; allowAlarm = atomicState?.curNotifPageData?.allowAlarm
     } 
     dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
         section("Push Notification Preferences:") {
@@ -6838,6 +6883,18 @@ def setNotificationPage(params) {
                 }
             }
         }
+        if(allowAlarm) {
+            section("Alarm/Siren Device Preferences:") {
+                input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm/Siren Notitifications?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
+                        image: getAppImg("alarm_icon.png")
+                if(settings["${pName}AllowAlarmNotif"]) {
+                    input "${pName}AlarmDevice", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+                    if(settings?."${pName}AlarmDevice") {
+                        input "${pName}AlarmAlertType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -6871,6 +6928,7 @@ def getNotifConfigDesc() {
     //str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
     str += getNotifSchedDesc() ? ("${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected...") : ""
     str += getVoiceNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}") : ""
+    str += getAlarmNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${getAlarmNotifConfigDesc()}") : ""
     return (str != "") ? "${str}" : null
 }
 
@@ -6885,6 +6943,17 @@ def getVoiceNotifConfigDesc() {
         str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n      Volume: (${settings?."${pName}SpeechVolumeLevel"})" : "" 
         str += (medias && settings?."${pName}SpeechAllowResume") ? "\n      Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
         str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n • Custom Message: (${settings?."${pName}UseCustomSpeechNotifMsg".toString().capitalize()})" : ""
+    }
+    return (str != "") ? "${str}" : null
+}
+
+def getAlarmNotifConfigDesc() {
+    def pName = getPagePrefix()
+    def str = ""
+    if(settings["${pName}AllowAlarmNotif"]) {
+        def alarms = getInputToStringDesc(settings["${pName}AlarmDevice"], true)
+        str += alarms ? "\n • Alarm Devices:${alarms.size() > 1 ? "\n" : ""}${alarms}" : ""
+        str += (alarms && settings?."${pName}AlarmAlertType") ? "\n      AlertType: (${settings?."${pName}AlarmAlertType"})" : ""
     }
     return (str != "") ? "${str}" : null
 }
@@ -7102,13 +7171,26 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
     }
 }
 
-def getSafetyTempsOk(tstat) { 
-    if(settings?."${getPagePrefix()}MinimumTemp" || settings?."${getPagePrefix()}MaximumTemp") {
-        def curTemp = tstat?.currentTemperature?.toDouble()
-        if(curTemp < settings?."${getPagePrefix()}MinimumTemp" || curTemp > settings?."${getPagePrefix()}MaximumTemp") {
-            return false
-        } else { return true }
-    } else { return true }
+def getSafetyTemps(tstat) {
+    def minTemp = tstat?.currentValue("safetyTempMin") ?: 0
+    def maxTemp = tstat?.currentValue("safetyTempMax") ?: 0
+    if(minTemp || maxTemp) {
+        return ["min":minTemp, "max":maxTemp]
+    }
+    return null
+}
+
+def getSafetyTempsOk(tstat) {
+    if(settings?."${getPagePrefix()}UseSafetyTemps") {
+        def sTemps = getSafetyTemps(tstat) 
+        if(sTemps) {
+            def curTemp = tstat?.currentTemperature?.toDouble()
+            if(curTemp < sTemp?.min.toDouble() || curTemp > sTemps?.max?.toDouble()) {
+                return false
+            } 
+        } 
+    } 
+    return true
 }
 
 def getClosedContacts(contacts) {
@@ -7252,6 +7334,11 @@ def fanModeTrigEnum() {
 
 def tModeHvacEnum() {
     def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat"]
+    return vals
+}
+
+def alarmActionsEnum() {
+    def vals = ["siren":"Siren", "strobe":"Strobe", "both":"Both (Siren/Strobe)"]
     return vals
 }
 

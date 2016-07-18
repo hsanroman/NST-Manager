@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.4" }
+def devVer() { return "2.5.5" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -193,14 +193,43 @@ def getTimeZone() {
     return tz
 }
 
+def isCodeUpdateAvailable(newVer, curVer) {
+    try {
+        def result = false
+        def latestVer 
+        def versions = [newVer, curVer]
+        if(newVer != curVer) {
+            latestVer = versions?.max { a, b -> 
+                def verA = a?.tokenize('.')
+                def verB = b?.tokenize('.')
+                def commonIndices = Math.min(verA?.size(), verB?.size())
+                for (int i = 0; i < commonIndices; ++i) {
+                    //log.debug "comparing $numA and $numB"
+                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+                    }
+                }
+                verA?.size() <=> verB?.size()
+            }
+            result = (latestVer == newVer) ? true : false
+        }
+        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+        return result
+    } catch (ex) {
+        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
+        sendChildExceptionData("weather", devVer(), ex?.toString(), "isCodeUpdateAvailable")
+    }
+}
+
 def deviceVerEvent(ver) {
     try {
-        def curData = device.currentState("devTypeVer")?.value
+        def curData = device.currentState("devTypeVer")?.value.toString()
         def pubVer = ver ?: null
-        def dVer = devVer() ? devVer() : null
-        def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+        def dVer = devVer() ?: null
+        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
         state?.devTypeVer = newData
-        if(curData != newData) {
+        state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+        if(!curData?.equals(newData)) {
             Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
             sendEvent(name: 'devTypeVer', value: newData, displayed: false)
         } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -816,6 +845,7 @@ def forecastDay(day) {
 
 def getWeatherHtml() {
     try {
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Update Available!</h3>"
         def html = """
         <!DOCTYPE html>
         <html>
@@ -831,6 +861,7 @@ def getWeatherHtml() {
             <style type="text/css">
             ${getCSS()}
             </style>
+                ${updateAvail}
                 <div class="container">
                 <h4>Current Weather Conditions</h4>
                 <h3><a href="#openModal">${state?.walert}</a></h3>

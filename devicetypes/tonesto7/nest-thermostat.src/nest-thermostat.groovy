@@ -455,12 +455,13 @@ def isCodeUpdateAvailable(newVer, curVer) {
 
 def deviceVerEvent(ver) {
     try {
-        def curData = device.currentState("devTypeVer")?.value
+        def curData = device.currentState("devTypeVer")?.value.toString()
         def pubVer = ver ?: null
         def dVer = devVer() ?: null
-        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
         state?.devTypeVer = newData
-        if(curData != newData) {
+        state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+        if(!curData?.equals(newData)) {
             Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
             sendEvent(name: 'devTypeVer', value: newData, displayed: false)
         } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -1762,6 +1763,7 @@ def getInfoHtml() {
     try {
         def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" : 
                         "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Update Available!</h3>"
         def html = """
         <!DOCTYPE html>
         <html>
@@ -1777,6 +1779,7 @@ def getInfoHtml() {
                 <style type="text/css">
                 ${getCSS()}
                 </style>
+                ${updateAvail}
                 <table>
                 <col width="40%">
                 <col width="20%">
