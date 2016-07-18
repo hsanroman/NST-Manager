@@ -6066,8 +6066,14 @@ def conWatTstatTempEvt(evt) {
     LogAction("conWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
-        if(evt?.value.toDouble() < conWatMinimumTemp?.toDouble() || evt?.value.toDouble() > conWatMaximumTemp?.toDouble()) {
-            scheduleAutomationEval()
+        if(settings?."${getPagePrefix()}UseSafetyTemps") {
+            def sTemps = getSafetyTemps(settings?."${getPagePrefix()}Tstat")
+            log.debug "sTemps: $sTemps"
+            if(sTemps) {
+                if(evt?.value.toDouble() < sTemps?.min?.toDouble() || evt?.value.toDouble() > sTemps?.max?.toDouble()) {
+                    scheduleAutomationEval()
+                }
+            }
         }
     }
 }
@@ -7262,9 +7268,11 @@ def getSafetyHumidity(tstat) {
 
 def getSafetyTempsOk(tstat) {
     if(settings?."${getPagePrefix()}UseSafetyTemps") {
-        def sTemps = getSafetyTemps(tstat) 
+        def sTemps = getSafetyTemps(tstat)
+        //log.debug "sTempsOk: $sTemps"
         if(sTemps) {
             def curTemp = tstat?.currentTemperature?.toDouble()
+            log.debug "curTemp: ${curTemp}"
             if(curTemp < sTemp?.min.toDouble() || curTemp > sTemps?.max?.toDouble()) {
                 return false
             } 
