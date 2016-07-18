@@ -442,10 +442,6 @@ def reviewSetupPage() {
             str += !atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"
             str += getDevicesDesc() ?: ""
             paragraph "${str}"
-            if(atomicState?.thermostats) {
-                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "${getSafetyTempsDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
-                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
-            }
             if(atomicState?.weatherDevice) {
                 if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
@@ -538,6 +534,17 @@ def automationsPage() {
             def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
+        }
+        def hideSect
+        section("Automation Global Preferences:", hideable: true, hidden: false) {
+            if(atomicState?.thermostats) {
+                href "safetyTempsPage", title: "Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "${getSafetyTempsDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+                input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
+                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
+                input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
+                        submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+            }
         }
     }
 }
@@ -3319,9 +3326,6 @@ def devPrefPage() {
                 input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay\nDefault is (4 sec)", required: false, defaultValue: 4, metadata: [values:waitValEnum()],
                     description: tempChgWaitValDesc, submitOnChange: true)
                 atomicState.needChildUpd = true
-                href "safetyTempsPage", title: "Configure Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "Tap to Modify..." : " Tap to configure..."), 
-                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
-                //paragraph "Nothing to see here yet!!!"
             }
         }
         if(atomicState?.protects) {
@@ -3640,7 +3644,8 @@ def getSafetyTempsDesc() {
         tstats?.each { ts ->
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
-            str += ts ? "${ts?.value}:" : ""
+            str += "Safety Temps:"
+            str += ts ? "\n${ts?.value}:" : ""
             str += minTemp ? "\n • Low Safety Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • High Safety Temp: (${maxTemp}°${getTemperatureScale()})" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
@@ -4590,8 +4595,10 @@ def remSensorPage() {
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
                         def tempStr = !remSensorNight ? "" : "Day "
-                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
-                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
+                        input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                                submitOnChange: true, required: remSenHeatTempsReq(), image: getAppImg("heat_icon.png")
+                        input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                                submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         
                         def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
@@ -4604,8 +4611,10 @@ def remSensorPage() {
                     section("(Optional) Choose a second set of Temperature Sensor(s) to use in the Evening instead of the Thermostat's...") {
                         input "remSensorNight", "capability.temperatureMeasurement", title: "Evening Temp Sensors", description: "Tap to configure...", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
                         if(remSensorNight) {
-                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
-                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                            input "remSenNightHeatTemp", "decimal", title: "Desired Evening Heat Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                                    submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
+                            input "remSenNightCoolTemp", "decimal", title: "Desired Evening Cool Temp (°${atomicState?.tempUnit})", range: (atomicState?.tempUnit == "C") ? "10..32" : "50..90",
+                                    submitOnChange: true, required: ((remSensorNight && remSenCoolTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
                             //paragraph " ", image: " "
                             def tmpVal = "Evening Temp${(remSensorNight?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorNight)}°${atomicState?.tempUnit})"
                             if(remSensorNight.size() > 1) {
