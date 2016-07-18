@@ -98,7 +98,7 @@ metadata {
             state "default", action:"tempDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
         }
         standardTile("tempUp", "device.temperature", width: 2, height: 2, decoration: "flat") {
-            state "default", action:"tempUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
+            state "default", action:"tempUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_up.png"
         }
 
         valueTile("heatingSetpoint", "device.heatingSetpoint", width: 2, height: 2, decoration: "flat") {
