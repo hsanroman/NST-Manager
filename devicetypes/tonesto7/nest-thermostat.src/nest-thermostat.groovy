@@ -815,6 +815,7 @@ def safetyHumidityEvent(safetyHum) {
         //def curMinHum = device.currentState("safetyHumidityMin")?.integerValue
         def curMaxHum = device.currentState("safetyHumidityMax")?.integerValue
         //def newMinHum = safetyHum?.min.toInteger() ?: 0
+        //def newMaxHum = safetyHum?.max.toInteger() ?: 0
         def newMaxHum = safetyHum?.toInteger() ?: 0
         if(curMaxHum != newMaxHum) {
             //log.debug("UPDATED | Safety Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")

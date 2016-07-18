@@ -877,10 +877,12 @@ def updateChildData() {
         getAllChildDevices()?.each { 
             def devId = it?.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-                def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0), "max":(settings?."${devId}_safety_temp_max" ?: 0) ] 
+                def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0), "max":(settings?."${devId}_safety_temp_max" ?: 0) ]
+                //def safetyHumidity = [ "min":(settings?."${devId}_safety_humidity_min" ?: 0), "max":(settings?."${devId}_safety_humidity_max" ?: 0) ]
+                def safetyHumidity = settings?."${devId}_safety_humidity_max" ?: 0 
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
-                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps,
+                    def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "safetyHumidity":safetyHumidity,
                                 "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                     it.generateEvent(tData) //parse received message from parent
@@ -7178,9 +7180,10 @@ def getSafetyTemps(tstat) {
 }
 
 def getSafetyHumidity(tstat) {
+    //def minHumidity = tstat?.currentValue("safetyHumidityMin") ?: 0
     def maxHumidity = tstat?.currentValue("safetyHumidityMax") ?: 0
-    
     if(maxHum) {
+        //return ["min":minHumidity, "max":maxHumidity]
         return maxHum
     }
     return null
