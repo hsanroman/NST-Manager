@@ -73,8 +73,8 @@ metadata {
         attribute "apiStatus", "string"
         attribute "hasLeaf", "string"
         attribute "debugOn", "string"
-        attribute "lowSafetyTemp", "string"
-        attribute "highSafetyTemp", "string"
+        attribute "safetyTempMin", "string"
+        attribute "safetyTempMax", "string"
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
@@ -307,7 +307,7 @@ def generateEvent(Map eventData) {
             state.nestTimeZone = !location?.timeZone ? eventData.tz : null
             debugOnEvent(eventData?.debug ? true : false)
             tempUnitEvent(getTemperatureScale())
-            if(eventData?.data?.is_locked) { tempLockOnEvent(eventData?.data?.is_locked) }
+            if(eventData?.data?.is_locked) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
             canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
             hasFan(eventData?.data?.has_fan.toString())
             presenceEvent(eventData?.pres.toString())
@@ -325,7 +325,7 @@ def generateEvent(Map eventData) {
             apiStatusEvent(eventData?.apiIssues)
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
             state?.cssUrl = eventData?.cssUrl.toString()
-            if(eventData?.safetyTemps) { setSafetyTemps(eventData?.safetyTemps) } 
+            if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) } 
 
             def hvacMode = eventData?.data?.hvac_mode
             def tempUnit = state?.tempUnit
@@ -425,12 +425,40 @@ def getTimeZone() {
     }
 }
 
+def isCodeUpdateAvailable(newVer, curVer) {
+    try {
+        def result = false
+        def latestVer 
+        def versions = [newVer, curVer]
+        if(newVer != curVer) {
+            latestVer = versions?.max { a, b -> 
+                def verA = a?.tokenize('.')
+                def verB = b?.tokenize('.')
+                def commonIndices = Math.min(verA?.size(), verB?.size())
+                for (int i = 0; i < commonIndices; ++i) {
+                    //log.debug "comparing $numA and $numB"
+                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+                    }
+                }
+                verA?.size() <=> verB?.size()
+            }
+            result = (latestVer == newVer) ? true : false
+        }
+        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+        return result
+    } catch (ex) {
+        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
+        sendChildExceptionData("thermostat", devVer(), ex?.toString(), "isCodeUpdateAvailable")
+    }
+}
+
 def deviceVerEvent(ver) {
     try {
         def curData = device.currentState("devTypeVer")?.value
         def pubVer = ver ?: null
-        def dVer = devVer() ? devVer() : null
-        def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+        def dVer = devVer() ?: null
+        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
         state?.devTypeVer = newData
         if(curData != newData) {
             Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
@@ -719,10 +747,10 @@ def operatingStateEvent(operatingState) {
 
 def tempLockOnEvent(isLocked) {
     try {
-        def curState = device.currentState("tempLockOn")?.value
-        def newState = (isLocked?.toString() == "true") ? true : false
+        def curState = device.currentState("tempLockOn")?.value.toString()
+        def newState = isLocked?.toString()
         state?.hasLeaf = newState
-        if(curState != newState) {
+        if(!curState?.equals(newState)) {
             log.debug("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
             sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
         } else { Logger("Temperature Lock is set to (${newState}) | Original State: (${curState})") }
@@ -751,6 +779,30 @@ def lockedTempEvent(Double minTemp, Double maxTemp) {
     catch (ex) {
         log.error "lockedTempEvent Exception: ${ex}"
         parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "lockedTempEvent")
+    }
+}
+
+def safetyTempsEvent(safetyTemps) {
+    try {
+        def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
+        def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
+        def newMinTemp = safetyTemps?.min.toDouble() ?: 0
+        def newMaxTemp = safetyTemps?.max.toDouble() ?: 0
+        
+        //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+        if(curMinTemp != newMinTemp || curMaxTemp != newMaxTemp) {
+            log.debug("UPDATED | Safety Temperature Minimum is (${newMinTemp}) | Original Temp: (${curMinTemp})")
+            log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}) | Original Temp: (${curMaxTemp})")
+            sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}" , displayed: true, isStateChange: true)
+            sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}" , displayed: true, isStateChange: true)
+        } else { 
+            Logger("Temperature Lock Minimum is (${newMinTemp}) | Original Minimum Temp: (${curMinTemp})")
+            Logger("Temperature Lock Maximum is (${newMaxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+        }
+    }
+    catch (ex) {
+        log.error "safetyTempsEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "safetyTempsEvent")
     }
 }
 
