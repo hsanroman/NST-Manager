@@ -3637,17 +3637,19 @@ def safetyValuesPage() {
     }
 }
 
-def getSafetyTempsDesc() {
+def getSafetyValuesDesc() {
     def str = ""
     def tstats = atomicState?.thermostats
     if(tstats) {
         tstats?.each { ts ->
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
+            def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
             str += "Safety Temps:"
             str += ts ? "\n${ts?.value}:" : ""
-            str += minTemp ? "\n • Low Safety Temp: (${minTemp}°${getTemperatureScale()})" : ""
-            str += maxTemp ? "\n • High Safety Temp: (${maxTemp}°${getTemperatureScale()})" : ""
+            str += minTemp ? "\n • Minimum Temp: (${minTemp}°${getTemperatureScale()})" : ""
+            str += maxTemp ? "\n • Maximum Temp: (${maxTemp}°${getTemperatureScale()})" : ""
+            str += maxHum ? "\n • Maximum Humidity: (${maxTemp}%)" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
     }
