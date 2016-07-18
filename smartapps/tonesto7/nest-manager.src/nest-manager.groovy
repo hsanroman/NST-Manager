@@ -127,7 +127,7 @@ preferences {
     page(name: "simulateSmokeEventPage")
     page(name: "simulateCarbonEventPage")
     page(name: "simulateBatteryEventPage")
-    page(name: "safetyTempsPage")
+    page(name: "safetyValuesPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
     page(name: "devPrefPage")
