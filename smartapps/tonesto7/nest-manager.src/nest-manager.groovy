@@ -337,47 +337,6 @@ def mainPage() {
     }
 }
 
-def buttonsPage() {
-    dynamicPage(name: "buttonsPage", title: "Every 'button' type") {
-        section("Simple Buttons") {
-            paragraph "If there are an odd number of buttons, the last button will span the entire view area."
-            buttons(name: "buttons1", title: "1 button", buttons: [
-                    [label: "bar", action: "bar"]
-            ])
-            buttons(name: "buttons2", title: "2 buttons", buttons: [
-                    [label: "foo", action: "foo"],
-                    [label: "bar", action: "bar"]
-            ])
-            buttons(name: "buttons3", title: "3 buttons", buttons: [
-                    [label: "foo", action: "foo"],
-                    [label: "bar", action: "bar"],
-                    [label: "baz", action: "baz"]
-            ])
-            buttons(name: "buttonsWithImage", title: "This element has an image and a long title.", description: "I am setting long title and descriptions to test the offset", image: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png", buttons: [
-                    [label: "foo", action: "foo"],
-                    [label: "bar", action: "bar"]
-            ])
-        }
-        section("Colored Buttons") {
-            buttons(name: "buttonsColoredSpecial", title: "special strings", description: "SmartThings highly recommends using these colors", buttons: [
-                    [label: "complete", action: "bar", backgroundColor: "complete"],
-                    [label: "required", action: "bar", backgroundColor: "required"]
-            ])
-            buttons(name: "buttonsColoredHex", title: "hex values work", buttons: [
-                    [label: "bg: #000dff", action: "foo", backgroundColor: "#000dff"],
-                    [label: "fg: #ffac00", action: "foo", color: "#ffac00"],
-                    [label: "both fg and bg", action: "foo", color: "#ffac00", backgroundColor: "#000dff"]
-            ])
-            buttons(name: "buttonsColoredString", title: "strings work too", buttons: [
-                    [label: "green", action: "foo", backgroundColor: "green"],
-                    [label: "red", action: "foo", backgroundColor: "red"],
-                    [label: "both fg and bg", action: "foo", color: "red", backgroundColor: "green"]
-            ])
-        }
-    }
-
-}
-
 def deviceSelectPage() {
     return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
         def structs = getNestStructures()
@@ -536,7 +495,7 @@ def automationsPage() {
             paragraph "${rText}"//, required: true, state: null
         }
         def hideSect
-        section("Automation Global Preferences:", hideable: true, hidden: false) {
+        section("Global Preferences:", hideable: true, hidden: false) {
             if(atomicState?.thermostats) {
                 href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
                 state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
@@ -3624,13 +3583,13 @@ def safetyValuesPage() {
                 section("${dev?.displayName} - Safety Temps:") {
                     if(canHeat) {
                         input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
-                        submitOnChange: true, image: getAppImg("cool_icon.png")
+                        submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
                     }
                     if(canCool) {
                         input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
-                        submitOnChange: true, image: getAppImg("heat_icon.png")
+                        submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
                     }
-                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Maximum Humidity Allowed (%)", range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
+                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Maximum Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
                 }
             }
         }
@@ -3645,8 +3604,7 @@ def getSafetyValuesDesc() {
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
             def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
-            str += "Safety Temps:"
-            str += ts ? "\n${ts?.value}:" : ""
+            str += ts ? "(${ts?.value}) Safety Values:" : ""
             str += minTemp ? "\n • Minimum Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • Maximum Temp: (${maxTemp}°${getTemperatureScale()})" : ""
             str += maxHum ? "\n • Maximum Humidity: (${maxTemp}%)" : ""
