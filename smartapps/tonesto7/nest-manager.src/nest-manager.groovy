@@ -3596,7 +3596,7 @@ def safetyValuesPage() {
                 def dev = getChildDevice(ts?.key)
                 def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
                 def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true 
-                section("${dev?.displayName} - Safety Temps:") {
+                section("${dev?.displayName} - Safety Values:") {
                     if(canHeat) {
                         input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
@@ -5808,7 +5808,7 @@ def contactWatchPage() {
             section("Delay Values:") {
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "conWatOffTimeout", type: "enum", title: "Off Timeout (in minutes)(optional)", defaultValue: null, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
+                input name: "conWatOffTimeout", type: "enum", title: "Auto Restore (in minutes)(optional)", defaultValue: null, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 input name: "conWatRestoreOnClose", type: "bool", title: "Restore Previous Mode on Close?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("restore_icon.png")
