@@ -25,6 +25,8 @@ metadata {
         command "heatDown"
         command "coolUp"
         command "coolDown"
+        command "humidityUp"
+        command "humidityDown"
         command "setTemperature", ["number"]
         command "changePresence"
         command "safetyHumidityMaxUp"
@@ -121,6 +123,16 @@ metadata {
             state "default", action:"coolUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
         }
 
+        valueTile("humidity", "device.humidity", width: 2, height: 2, decoration: "flat") {
+            state "default", label:'Humidity\n${currentValue}', unit: "%", backgroundColor:"#ffffff"
+        }
+        standardTile("humidityDown", "device.humidity", width: 2, height: 2, decoration: "flat") {
+            state "default", action:"humidityDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+        }
+        standardTile("humidityUp", "device.humidity", width: 2, height: 2, decoration: "flat") {
+            state "default", action:"humidityUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+        }
+
         standardTile("mode", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
             state "off", action:"thermostat.heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png"
             state "heat", action:"thermostat.cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png"
@@ -214,6 +226,7 @@ metadata {
             "mode", "fanMode", "operatingState",
             "heatingSetpoint", "heatDown", "heatUp",
             "coolingSetpoint", "coolDown", "coolUp", 
+            "humidity", "humidityDown", "humidityUp", 
             "nestPresence", "filler", "filler",
             "safetyTempMin", "safetyTempMinDown", "safetyTempMinUp",
             "safetyTempMax", "safetyTempMaxDown", "safetyTempMaxUp",
@@ -276,10 +289,10 @@ def evaluate(temp, heatingSetpoint, coolingSetpoint) {
         else if (coolingSetpoint - temp >= threshold && !heating) {
             idle = true
         }
-        sendEvent(name: "thermostatSetpoint", value: coolingSetpoint)
+        sendEvent(name: "thermostatSetpoint", value: coolingSetpoint, unit: getTemperatureScale())
     }
     else {
-        sendEvent(name: "thermostatSetpoint", value: heatingSetpoint)
+        sendEvent(name: "thermostatSetpoint", value: heatingSetpoint, unit: getTemperatureScale())
     }
     if (idle && !heating && !cooling) {
         sendEvent(name: "thermostatOperatingState", value: "idle")
@@ -288,13 +301,13 @@ def evaluate(temp, heatingSetpoint, coolingSetpoint) {
 
 def setHeatingSetpoint(Double degreesF) {
     log.debug "setHeatingSetpoint($degreesF)"
-    sendEvent(name: "heatingSetpoint", value: degreesF)
+    sendEvent(name: "heatingSetpoint", value: degreesF, unit: getTemperatureScale())
     evaluate(device.currentValue("temperature"), degreesF, device.currentValue("coolingSetpoint"))
 }
 
 def setCoolingSetpoint(Double degreesF) {
     log.debug "setCoolingSetpoint($degreesF)"
-    sendEvent(name: "coolingSetpoint", value: degreesF)
+    sendEvent(name: "coolingSetpoint", value: degreesF, unit: getTemperatureScale())
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), degreesF)
 }
 
@@ -351,7 +364,7 @@ def poll() {
 def tempUp() {
     def ts = device.currentState("temperature")
     def value = ts ? ts.integerValue + 1 : 72
-    sendEvent(name:"temperature", value: value)
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
     log.debug "temperature is now: (${value})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
@@ -359,14 +372,14 @@ def tempUp() {
 def tempDown() {
     def ts = device.currentState("temperature")
     def value = ts ? ts.integerValue - 1 : 72
-    sendEvent(name:"temperature", value: value)
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
     log.debug "temperature is now: (${value})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def setTemperature(value) {
     def ts = device.currentState("temperature")
-    sendEvent(name:"temperature", value: value)
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
     log.debug "temperature is now: (${value})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
@@ -374,7 +387,7 @@ def setTemperature(value) {
 def heatUp() {
     def ts = device.currentState("heatingSetpoint")
     def value = ts ? ts.integerValue + 1 : 68
-    sendEvent(name:"heatingSetpoint", value: value)
+    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale())
     log.debug "heatingSetpoint is now: (${value})"
     evaluate(device.currentValue("temperature"), value, device.currentValue("coolingSetpoint"))
 }
@@ -382,7 +395,7 @@ def heatUp() {
 def heatDown() {
     def ts = device.currentState("heatingSetpoint")
     def value = ts ? ts.integerValue - 1 : 68
-    sendEvent(name:"heatingSetpoint", value: value)
+    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale())
     log.debug "heatingSetpoint is now: (${value})"
     evaluate(device.currentValue("temperature"), value, device.currentValue("coolingSetpoint"))
 }
@@ -391,7 +404,7 @@ def heatDown() {
 def coolUp() {
     def ts = device.currentState("coolingSetpoint")
     def value = ts ? ts.integerValue + 1 : 76
-    sendEvent(name:"coolingSetpoint", value: value)
+    sendEvent(name:"coolingSetpoint", value: value, unit: getTemperatureScale())
     log.debug "coolingSetpoint is now: (${value})"
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), value)
 }
@@ -402,6 +415,20 @@ def coolDown() {
     sendEvent(name:"coolingSetpoint", value: value)
     log.debug "coolingSetpoint is now: (${value})"
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), value)
+}
+
+def humidityUp() {
+    def ts = device.currentState("humidity")
+    def value = ts ? ts.integerValue + 1 : 76
+    sendEvent(name:"humidity", unit: "%", value: value)
+    log.debug "humidity is now: (${value})"
+}
+
+def humidityDown() {
+    def ts = device.currentState("humidity")
+    def value = ts ? ts.integerValue - 1 : 76
+    sendEvent(name:"humidity", unit: "%", value: value)
+    log.debug "humidity is now: (${value})"
 }
 
 def changePresence() {
@@ -426,68 +453,68 @@ def safetyTempMinUp() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue + 1 : 72
     log.debug "safetyTempMin is now: (${value})"
-    sendEvent(name: 'safetyTempMin', value: value, descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMinDown() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "safetyTempMin is now: (${value})"
-    sendEvent(name:'safetyTempMin', value: value,descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name:'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMaxUp() {
     def ts = device.currentState("safetyTempMax")
     def value = ts ? ts.integerValue + 1 : 72
     log.debug "safetyTempMax is now: (${value})"
-    sendEvent(name:'safetyTempMax', value: value, descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name:'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMaxDown() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "safetyTempMax is now: (${value})"
-    sendEvent(name: 'safetyTempMax', value: value, descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
 }
 
 def safetyHumidityMaxUp() {
     def ts = device.currentState("safetyHumidityMax")
     def value = ts ? ts.integerValue + 1 : 72
     log.debug "safetyHumidityMax is now: (${value})"
-    sendEvent(name: 'safetyHumidityMax', value: value, descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
 }
 
 def safetyHumidityMaxDown() {
     def ts = device.currentState("safetyHumidityMax")
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "safetyHumidityMax is now: (${value})"
-    sendEvent(name: 'safetyHumidityMax', value: value, descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMinUp() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue + 1 : 72
     log.debug "lockedTempMin is now: (${value})"
-    sendEvent(name: 'lockedTempMin', value: value, descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMinDown() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "lockedTempMin is now: (${value})"
-    sendEvent(name:'lockedTempMin', value: value, descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name:'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMaxUp() {
     def ts = device.currentState("lockedTempMax")
     def value = ts ? ts.integerValue + 1 : 72
     log.debug "lockedTempMax is now: (${value})"
-    sendEvent(name: 'lockedTempMax', value: value, descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMaxDown() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "lockedTempMax is now: (${value})"
-    sendEvent(name: 'lockedTempMax', value: value, descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
+    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
 }
