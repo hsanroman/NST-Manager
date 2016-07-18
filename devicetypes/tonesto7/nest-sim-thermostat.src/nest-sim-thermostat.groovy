@@ -240,30 +240,30 @@ metadata {
 }
 
 def installed() {
-    sendEvent(name: "temperature", value: 72, unit: "F")
-    sendEvent(name: "heatingSetpoint", value: 70, unit: "F")
-    sendEvent(name: "thermostatSetpoint", value: 70, unit: "F")
-    sendEvent(name: "coolingSetpoint", value: 76, unit: "F")
-    sendEvent(name: "thermostatMode", value: "off")
-    sendEvent(name: "thermostatFanMode", value: "auto")
-    sendEvent(name: "thermostatOperatingState", value: "idle")
-    sendEvent(name: "humidity", value: 53, unit: "%")
-    sendEvent(name: "presence", value: "present")
-    sendEvent(name: "nestPresence", value: "home")
-    sendEvent(name: "safetyTempMin", value: 60, unit: "F")
-    sendEvent(name: "safetyTempMax", value: 85, unit: "F")
-    sendEvent(name: "safetyHumidityMax", value: 80, unit: "%")
-    //sendEvent(name: "safetyHumidityMin", value: 15, unit: "%")
-    sendEvent(name: "tempLockOn", value: false)
-    sendEvent(name: "lockedTempMin", value: 60, unit: "F")
-    sendEvent(name: "lockedTempMax", value: 80, unit: "F")
+    sendEvent(name: "temperature", value: 72, unit: getTemperatureScale(), descriptionText: "Temperature is: (72°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "heatingSetpoint", value: 70, unit: getTemperatureScale(), descriptionText: "Heating Setpoint is: (70°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "thermostatSetpoint", value: 70, unit: getTemperatureScale(), descriptionText: "Thermostat Setpoint is: (70°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "coolingSetpoint", value: 76, unit: getTemperatureScale(), descriptionText: "Cooling Setpoint is: (76°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode is: (Off)", displayed: false, isStateChange: true)
+    sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Thermostat Fan Mode is: (Auto)", displayed: false, isStateChange: true)
+    sendEvent(name: "thermostatOperatingState", value: "idle", descriptionText: "Thermostat Operating State is: (Idle)", displayed: false, isStateChange: true)
+    sendEvent(name: "humidity", value: 53, unit: "%", descriptionText: "Relative Humidity is: (53%)", displayed: false, isStateChange: true)
+    sendEvent(name: "presence", value: "present", descriptionText: "Presence is: (Present)", displayed: false, isStateChange: true)
+    sendEvent(name: "nestPresence", value: "home", descriptionText: "Nest Presence is: (Home)", displayed: false, isStateChange: true)
+    sendEvent(name: "safetyTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "safetyTempMax", value: 85, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (85°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "safetyHumidityMax", value: 80, unit: "%", descriptionText: "Safety Humidity Max is: (80%)", displayed: false, isStateChange: true)
+    //sendEvent(name: "safetyHumidityMin", value: 15, unit: "%", descriptionText: "Safety Humidity Min is: (15%)", displayed: false, isStateChange: true)
+    sendEvent(name: "tempLockOn", value: false, descriptionText: "Nest Temp Lock is: (Off)", displayed: false, isStateChange: true)
+    sendEvent(name: "lockedTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: "lockedTempMax", value: 80, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (80°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def parse(String description) {
 }
 
 def evaluate(temp, heatingSetpoint, coolingSetpoint) {
-    log.debug "evaluate($temp, $heatingSetpoint, $coolingSetpoint"
+    //log.debug "${device?.displayName} evaluate(Temp: $temp°${getTemperatureScale()}, HeatSetpoint: $heatingSetpoint°${getTemperatureScale()}, CoolSetpoint: $coolingSetpoint°${getTemperatureScale()})"
     def threshold = 1.0
     def current = device.currentValue("thermostatOperatingState")
     def mode = device.currentValue("thermostatMode")
@@ -301,60 +301,60 @@ def evaluate(temp, heatingSetpoint, coolingSetpoint) {
 
 def setHeatingSetpoint(Double degreesF) {
     log.debug "setHeatingSetpoint($degreesF)"
-    sendEvent(name: "heatingSetpoint", value: degreesF, unit: getTemperatureScale())
+    sendEvent(name: "heatingSetpoint", value: degreesF, unit: getTemperatureScale(), descriptionText: "Heating Setpoint is: ($value°${getTemperatureScale()})", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), degreesF, device.currentValue("coolingSetpoint"))
 }
 
 def setCoolingSetpoint(Double degreesF) {
     log.debug "setCoolingSetpoint($degreesF)"
-    sendEvent(name: "coolingSetpoint", value: degreesF, unit: getTemperatureScale())
+    sendEvent(name: "coolingSetpoint", value: degreesF, unit: getTemperatureScale(), descriptionText: "Cooling Setpoint is: ($value°${getTemperatureScale()})", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), degreesF)
 }
 
 def setThermostatMode(String value) {
-    sendEvent(name: "thermostatMode", value: value)
+    sendEvent(name: "thermostatMode", value: value, descriptionText: "Thermostat Mode is: ($value)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def setThermostatFanMode(String value) {
-    sendEvent(name: "thermostatFanMode", value: value)
+    sendEvent(name: "thermostatFanMode", value: value, descriptionText: "Thermostat Fan is: ($value)", displayed: false, isStateChange: true)
 }
 
 def off() {
-    sendEvent(name: "thermostatMode", value: "off")
+    sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode is: (Off)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def heat() {
-    sendEvent(name: "thermostatMode", value: "heat")
+    sendEvent(name: "thermostatMode", value: "heat", descriptionText: "Thermostat Mode is: (Heat)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def auto() {
-    sendEvent(name: "thermostatMode", value: "auto")
+    sendEvent(name: "thermostatMode", value: "auto", descriptionText: "Thermostat Mode is: (Auto)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def emergencyHeat() {
-    sendEvent(name: "thermostatMode", value: "emergency heat")
+    sendEvent(name: "thermostatMode", value: "emergency heat", descriptionText: "Thermostat Mode is: (Emergency Heat)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def cool() {
-    sendEvent(name: "thermostatMode", value: "cool")
+    sendEvent(name: "thermostatMode", value: "cool", descriptionText: "Thermostat Mode is: (Cool)", displayed: false, isStateChange: true)
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def fanOn() {
-    sendEvent(name: "thermostatFanMode", value: "on")
+    sendEvent(name: "thermostatFanMode", value: "on", descriptionText: "Thermostat Fan is: (On)", displayed: false, isStateChange: true)
 }
 
 def fanAuto() {
-    sendEvent(name: "thermostatFanMode", value: "auto")
+    sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Thermostat Fan is: (Auto)", displayed: false, isStateChange: true)
 }
 
 def fanCirculate() {
-    sendEvent(name: "thermostatFanMode", value: "circulate")
+    sendEvent(name: "thermostatFanMode", value: "circulate", descriptionText: "Thermostat Fan is: (Circulate)", displayed: false, isStateChange: true)
 }
 
 def poll() {
@@ -364,39 +364,39 @@ def poll() {
 def tempUp() {
     def ts = device.currentState("temperature")
     def value = ts ? ts.integerValue + 1 : 72
-    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
-    log.debug "temperature is now: (${value})"
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale(), descriptionText: "Temperature is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "Ambient Temperature is now: (${value}°${getTemperatureScale()})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def tempDown() {
     def ts = device.currentState("temperature")
     def value = ts ? ts.integerValue - 1 : 72
-    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
-    log.debug "temperature is now: (${value})"
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale(), descriptionText: "Temperature is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "temperature is now: (${value}°${getTemperatureScale()})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def setTemperature(value) {
     def ts = device.currentState("temperature")
-    sendEvent(name:"temperature", value: value, unit: getTemperatureScale())
-    log.debug "temperature is now: (${value})"
+    sendEvent(name:"temperature", value: value, unit: getTemperatureScale(), descriptionText: "Temperature is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "temperature is now: (${value}°${getTemperatureScale()})"
     evaluate(value, device.currentValue("heatingSetpoint"), device.currentValue("coolingSetpoint"))
 }
 
 def heatUp() {
     def ts = device.currentState("heatingSetpoint")
     def value = ts ? ts.integerValue + 1 : 68
-    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale())
-    log.debug "heatingSetpoint is now: (${value})"
+    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale(), descriptionText: "Heating Setpoint is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "heatingSetpoint is now: (${value}°${getTemperatureScale()})"
     evaluate(device.currentValue("temperature"), value, device.currentValue("coolingSetpoint"))
 }
 
 def heatDown() {
     def ts = device.currentState("heatingSetpoint")
     def value = ts ? ts.integerValue - 1 : 68
-    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale())
-    log.debug "heatingSetpoint is now: (${value})"
+    sendEvent(name:"heatingSetpoint", value: value, unit: getTemperatureScale(), descriptionText: "Heating Setpoint is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "heatingSetpoint is now: (${value}°${getTemperatureScale()})"
     evaluate(device.currentValue("temperature"), value, device.currentValue("coolingSetpoint"))
 }
 
@@ -404,31 +404,31 @@ def heatDown() {
 def coolUp() {
     def ts = device.currentState("coolingSetpoint")
     def value = ts ? ts.integerValue + 1 : 76
-    sendEvent(name:"coolingSetpoint", value: value, unit: getTemperatureScale())
-    log.debug "coolingSetpoint is now: (${value})"
+    sendEvent(name:"coolingSetpoint", value: value, unit: getTemperatureScale(), descriptionText: "Cooling Setpoint is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "Cool Setpoint is now: (${value}°${getTemperatureScale()})"
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), value)
 }
 
 def coolDown() {
     def ts = device.currentState("coolingSetpoint")
     def value = ts ? ts.integerValue - 1 : 76
-    sendEvent(name:"coolingSetpoint", value: value)
-    log.debug "coolingSetpoint is now: (${value})"
+    sendEvent(name:"coolingSetpoint", value: value, descriptionText: "Cooling Setpoint is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    log.debug "Cool Setpoint is now: (${value}°${getTemperatureScale()})"
     evaluate(device.currentValue("temperature"), device.currentValue("heatingSetpoint"), value)
 }
 
 def humidityUp() {
     def ts = device.currentState("humidity")
     def value = ts ? ts.integerValue + 1 : 76
-    sendEvent(name:"humidity", unit: "%", value: value)
-    log.debug "humidity is now: (${value})"
+    sendEvent(name:"humidity", unit: "%", value: value, descriptionText: "Relative Humidity is: (${value}%)", displayed: false, isStateChange: true)
+    log.debug "Relative Humidity is now: (${value}%)"
 }
 
 def humidityDown() {
     def ts = device.currentState("humidity")
     def value = ts ? ts.integerValue - 1 : 76
-    sendEvent(name:"humidity", unit: "%", value: value)
-    log.debug "humidity is now: (${value})"
+    sendEvent(name:"humidity", unit: "%", value: value, descriptionText: "Relative Humidity is: (${value}%)", displayed: false, isStateChange: true)
+    log.debug "Relative Humidity is now: (${value}%)"
 }
 
 def changePresence() {
@@ -436,8 +436,8 @@ def changePresence() {
     def nPres = device?.currentState("nestPresence")?.stringValue
     def newPres = (pres == "present") ? "not present" : "present"
     def newNestPres = (pres == "present") ? "away" : "home"
-    log.debug "nestPresence is now: ${newNestPres}"
-    log.debug "presence is now: ${newPres}"
+    log.debug "Nest Presence is now: (${newNestPres})"
+    log.debug "Presence is now: (${newPres})"
     sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
     sendEvent(name: 'presence', value: newPres, descriptionText: "Device is: ${newPres}", displayed: false, isStateChange: true, state: newPres )
 }
@@ -445,76 +445,90 @@ def changePresence() {
 def changeTempLock() {
     def cur = device.currentState("tempLockOn")?.stringValue
     def newS = (cur.toString() == "true") ? false : true
-    log.debug "tempLock is now: (${newS == true ? "On" : "Off"})"
-    sendEvent(name: 'tempLockOn', value: newS, descriptionText: "Temp Lock is: ${newS}", displayed: false, isStateChange: true, state: newS )
+    log.debug "Nest Temp Lock is now: (${newS == true ? "On" : "Off"})"
+    sendEvent(name: 'tempLockOn', value: newS, descriptionText: "Nest Temp Lock is: ${newS == true ? "On" : "Off"}", displayed: false, isStateChange: true, state: newS )
 }
 
 def safetyTempMinUp() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue + 1 : 72
-    log.debug "safetyTempMin is now: (${value})"
-    sendEvent(name: 'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Temp Minimum is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name: 'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Minimum is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMinDown() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue - 1 : 72
-    log.debug "safetyTempMin is now: (${value})"
-    sendEvent(name:'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Temp Minimum is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name:'safetyTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Minimum is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMaxUp() {
     def ts = device.currentState("safetyTempMax")
     def value = ts ? ts.integerValue + 1 : 72
-    log.debug "safetyTempMax is now: (${value})"
-    sendEvent(name:'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Temp Maximum is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name:'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Maximum is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def safetyTempMaxDown() {
     def ts = device.currentState("safetyTempMin")
     def value = ts ? ts.integerValue - 1 : 72
-    log.debug "safetyTempMax is now: (${value})"
-    sendEvent(name: 'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Temp Maximum is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name: 'safetyTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Safety Temp Maximum is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+}
+
+def safetyHumidityMinUp() {
+    def ts = device.currentState("safetyHumidityMin")
+    def value = ts ? ts.integerValue + 1 : 15
+    log.debug "Safety Humidity Min is now: (${value}%)"
+    sendEvent(name: 'safetyHumidityMin', value: value, unit: "%", descriptionText: "Safety Humidity Min is: (${value}%)", displayed: false, isStateChange: true)
+}
+
+def safetyHumidityMinDown() {
+    def ts = device.currentState("safetyHumidityMin")
+    def value = ts ? ts.integerValue - 1 : 15
+    log.debug "Safety Humidity Min is now: (${value}%)"
+    sendEvent(name: 'safetyHumidityMin', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value}%)", displayed: false, isStateChange: true)
 }
 
 def safetyHumidityMaxUp() {
     def ts = device.currentState("safetyHumidityMax")
     def value = ts ? ts.integerValue + 1 : 72
-    log.debug "safetyHumidityMax is now: (${value})"
-    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Humidity Max is now: (${value}%)"
+    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value}%)", displayed: false, isStateChange: true)
 }
 
 def safetyHumidityMaxDown() {
     def ts = device.currentState("safetyHumidityMax")
     def value = ts ? ts.integerValue - 1 : 72
-    log.debug "safetyHumidityMax is now: (${value})"
-    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Safety Humidity Max is now: (${value}%)"
+    sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value}%)", displayed: false, isStateChange: true)
 }
 
 def lockedTempMinUp() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue + 1 : 72
-    log.debug "lockedTempMin is now: (${value})"
-    sendEvent(name: 'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Locked Temp Min is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name: 'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMinDown() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue - 1 : 72
-    log.debug "lockedTempMin is now: (${value})"
-    sendEvent(name:'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Locked Temp Min is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name:'lockedTempMin', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMaxUp() {
     def ts = device.currentState("lockedTempMax")
     def value = ts ? ts.integerValue + 1 : 72
-    log.debug "lockedTempMax is now: (${value})"
-    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Locked Temp Max is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMaxDown() {
     def ts = device.currentState("lockedTempMin")
     def value = ts ? ts.integerValue - 1 : 72
-    log.debug "lockedTempMax is now: (${value})"
-    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value})", displayed: false, isStateChange: true)
+    log.debug "Locked Temp Max is now: (${value}°${getTemperatureScale()})"
+    sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
