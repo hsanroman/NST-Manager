@@ -11,9 +11,11 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+
+def devVer() { return "1.0.0"}
+
 metadata {
-    
-    definition (name: "Nest Sim Thermostat", namespace: "tonesto7", author: "A. Santilli") {
+    definition (name: "Nest Sim Thermostat", namespace: "tonesto7", author: "Anthony S.") {
         capability "Thermostat"
         capability "Relative Humidity Measurement"
         
