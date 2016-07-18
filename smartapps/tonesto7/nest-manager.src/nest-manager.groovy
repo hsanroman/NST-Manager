@@ -538,7 +538,7 @@ def automationsPage() {
         def hideSect
         section("Automation Global Preferences:", hideable: true, hidden: false) {
             if(atomicState?.thermostats) {
-                href "safetyTempsPage", title: "Thermostat Safety Temps?", description: (getSafetyTempsDesc() ? "${getSafetyTempsDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
+                href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
                 state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
@@ -3353,7 +3353,6 @@ def devPrefPage() {
 def devCustomizePageDesc() {
     def str = ""
     str += weathAlertNotif  ? "• Weather Alerts: Enabled" : ""
-    str += getSafetyTempsDesc() ? "\n\n• Safefy Temps: ${getSafetyTempsDesc()}" : ""
     return (str != "") ? "${str}" : null
 }
 
@@ -3615,8 +3614,8 @@ def simulateBatteryEventPage() {
     }
 }
 
-def safetyTempsPage() {
-    dynamicPage(name: "safetyTempsPage", title: "Configure your Thermostat Safety Temps", uninstall: false) {
+def safetyValuesPage() {
+    dynamicPage(name: "safetyValuesPage", title: "Configure Location Safety Values", uninstall: false) {
         if(atomicState?.thermostats) {
             atomicState?.thermostats?.each { ts ->
                 def dev = getChildDevice(ts?.key)
@@ -3628,9 +3627,10 @@ def safetyTempsPage() {
                         submitOnChange: true, image: getAppImg("cool_icon.png")
                     }
                     if(canCool) {
-                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed(°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
+                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
                         submitOnChange: true, image: getAppImg("heat_icon.png")
                     }
+                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Maximum Humidity Allowed (%)", range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
                 }
             }
         }
