@@ -539,7 +539,7 @@ def automationsPage() {
         section("Automation Global Preferences:", hideable: true, hidden: false) {
             if(atomicState?.thermostats) {
                 href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
-                state: (getSafetyTempsDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+                state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                 input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
