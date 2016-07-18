@@ -75,6 +75,8 @@ metadata {
         attribute "debugOn", "string"
         attribute "safetyTempMin", "string"
         attribute "safetyTempMax", "string"
+        attribute "safetyHumidityMax", "string"
+        //attribute "safetyHumidityMin", "string"
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
@@ -325,7 +327,8 @@ def generateEvent(Map eventData) {
             apiStatusEvent(eventData?.apiIssues)
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
             state?.cssUrl = eventData?.cssUrl.toString()
-            if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) } 
+            if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
+            if(eventData?.safetyHumidity) { safetyHumidityEvent(eventData?.safetyHumidity) } 
 
             def hvacMode = eventData?.data?.hvac_mode
             def tempUnit = state?.tempUnit
@@ -797,8 +800,30 @@ def safetyTempsEvent(safetyTemps) {
             sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}" , displayed: true, isStateChange: true)
             sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}" , displayed: true, isStateChange: true)
         } else { 
-            Logger("Temperature Lock Minimum is (${newMinTemp}) | Original Minimum Temp: (${curMinTemp})")
-            Logger("Temperature Lock Maximum is (${newMaxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+            Logger("Safety Temperature Minimum is  (${newMinTemp}) | Original Minimum Temp: (${curMinTemp})")
+            Logger("Safety Temperature Maximum is  (${newMaxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+        }
+    }
+    catch (ex) {
+        log.error "safetyTempsEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("thermostat", devVer(), ex.toString(), "safetyTempsEvent")
+    }
+}
+
+def safetyHumidityEvent(safetyHum) {
+    try {
+        //def curMinHum = device.currentState("safetyHumidityMin")?.integerValue
+        def curMaxHum = device.currentState("safetyHumidityMax")?.integerValue
+        //def newMinHum = safetyHum?.min.toInteger() ?: 0
+        def newMaxHum = safetyHum?.toInteger() ?: 0
+        if(curMaxHum != newMaxHum) {
+            //log.debug("UPDATED | Safety Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
+            log.debug("UPDATED | Safety Humidity Maximum is (${newMaxHum}) | Original Humidity: (${curMaxHum})")
+            //sendEvent(name:'safetyHumidityMin', value: newMinHum, unit: "%", descriptionText: "Safety Humidity Minimum is ${newMinHum}" , displayed: true, isStateChange: true)
+            sendEvent(name:'safetyHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}" , displayed: true, isStateChange: true)
+        } else { 
+            //Logger("Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
+            Logger("Humidity Maximum is (${newMaxHum}) | Original Maximum Humidity: (${curMaxHum})") 
         }
     }
     catch (ex) {

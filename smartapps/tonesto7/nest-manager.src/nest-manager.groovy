@@ -495,14 +495,14 @@ def automationsPage() {
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
         }
-        section() {
+        section("Global Automation Preferences:") {
             def descStr = ""
             descStr += getSafetyValuesDesc() ?: ""
             descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\nDesired Temps:" : ""
             descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
             descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
-            href "automationGlobalPrefsPage", title: "Global Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
+            href "automationGlobalPrefsPage", title: "Configure These Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
     }
 }
@@ -7167,6 +7167,15 @@ def getSafetyTemps(tstat) {
     return null
 }
 
+def getSafetyHumidity(tstat) {
+    def maxHumidity = tstat?.currentValue("safetyHumidityMax") ?: 0
+    
+    if(maxHum) {
+        return maxHum
+    }
+    return null
+}
+
 def getSafetyTempsOk(tstat) {
     if(settings?."${getPagePrefix()}UseSafetyTemps") {
         def sTemps = getSafetyTemps(tstat) 
@@ -7178,6 +7187,14 @@ def getSafetyTempsOk(tstat) {
         } 
     } 
     return true
+}
+
+def getGlobalDesiredHeatTemp() {
+    return parent?.settings?.locDesiredHeatTemp.toDouble() ?: null
+}
+
+def getGlobalDesiredCoolTemp() {
+    return parent?.settings?.locDesiredCoolTemp.toDouble() ?: null
 }
 
 def getClosedContacts(contacts) {
