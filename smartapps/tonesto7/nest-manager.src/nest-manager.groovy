@@ -136,6 +136,7 @@ preferences {
     page(name: "uninstallPage")
     page(name: "custWeatherPage")
     page(name: "automationsPage")
+    page(name: "automationGlobalPrefsPage")
     
     //Automation Pages
     page(name: "selectAutoPage" )
@@ -494,8 +495,21 @@ def automationsPage() {
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
         }
-        def hideSect
-        section("Global Preferences:", hideable: true, hidden: false) {
+        section() {
+            def descStr = ""
+            descStr += getSafetyValuesDesc() ?: ""
+            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\nDesired Temps:" : ""
+            descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
+            descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
+            def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
+            href "automationGlobalPrefsPage", title: "Global Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
+        }
+    }
+}
+
+def automationGlobalPrefsPage() {
+    dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
+        section("Global Preferences:") {
             if(atomicState?.thermostats) {
                 href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
                 state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
