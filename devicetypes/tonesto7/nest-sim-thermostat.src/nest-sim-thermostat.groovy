@@ -247,7 +247,7 @@ def installed() {
     sendEvent(name: "thermostatMode", value: "off", descriptionText: "Thermostat Mode is: (Off)", displayed: false, isStateChange: true)
     sendEvent(name: "thermostatFanMode", value: "auto", descriptionText: "Thermostat Fan Mode is: (Auto)", displayed: false, isStateChange: true)
     sendEvent(name: "thermostatOperatingState", value: "idle", descriptionText: "Thermostat Operating State is: (Idle)", displayed: false, isStateChange: true)
-    sendEvent(name: "humidity", value: 53, unit: "%", descriptionText: "Relative Humidity is: (53%)", displayed: false, isStateChange: true)
+    sendEvent(name: "humidity", value: 40, unit: "%", descriptionText: "Relative Humidity is: (40%)", displayed: false, isStateChange: true)
     sendEvent(name: "presence", value: "present", descriptionText: "Presence is: (Present)", displayed: false, isStateChange: true)
     sendEvent(name: "nestPresence", value: "home", descriptionText: "Nest Presence is: (Home)", displayed: false, isStateChange: true)
     sendEvent(name: "safetyTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Safety Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
