@@ -14,6 +14,18 @@
 |    ### every use case                                                                     |
 *********************************************************************************************/
 
+/*
+    ITEMS TO COMPLETE
+    Nest Cam DTH
+    Complete automation auto restore timeout function and apply to external temp and leak Watcher
+    Complete contact automation 2-stage alert system and integrate the new alarm device into that.
+    Look into storing events and action data for graphing.
+
+    Create instructions on how to create individual nest tokens
+    Update documentation with new features/functions
+
+*/
+
 import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
@@ -5908,7 +5920,7 @@ def conWatCheck(timeOut = false) {
             def curNestPres = getTstatPresence(conWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-            def safetyOk = getSafetyTempsOk(conWatTstat)
+            def safetyOk //= getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
@@ -5962,7 +5974,11 @@ def conWatCheck(timeOut = false) {
                         } else { LogAction("conWatCheck() | Skipping Restore Mode is the same as Current Mode", "info", true) }
                     } else { scheduleAutomationEval() }
                 } else {
-                    if (modeOff) { LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) }
+                    if (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatTurnedOff) { LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) }
+                    else if (!modeOff && conWatRestoreOnClose && !atomicState?.conWatTstatTurnedOff) {
+                        LogAction("conWatCheck() | Unable to restore settings because previous mode was not found.", "warn", true)
+                    }
+                    else if (!conWatRestoreOnClose && !modeOff) { LogAction("conWatCheck() | Skipping Restore since it is not enabled.", "warn", true) }
                 }
             }
             
