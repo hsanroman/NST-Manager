@@ -895,7 +895,7 @@ def forecastDay(day) {
 
 def getWeatherHtml() {
     try {
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Update Available!</h3>"
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def html = """
         <!DOCTYPE html>
         <html>

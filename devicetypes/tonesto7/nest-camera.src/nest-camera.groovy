@@ -610,7 +610,7 @@ def getInfoHtml() {
         def pubVidId = getPublicVideoId()
         def pubSnapUrl = state?.snapshot_url
 
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Update Available!</h3>"
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         log.debug "pubVidId: $pubVidId"
         def html = """
         <!DOCTYPE html>

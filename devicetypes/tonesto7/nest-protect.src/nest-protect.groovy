@@ -634,7 +634,7 @@ def getInfoHtml() {
         def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
         def testVal = device.currentState("isTesting")?.value 
         def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Update Available!</h3>"
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def html = """
         <!DOCTYPE html>
         <html>
