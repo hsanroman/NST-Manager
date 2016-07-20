@@ -47,8 +47,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.6.6" }
-def appVerDate() { "7-17-2016" }
+def appVersion() { "2.6.7" }
+def appVerDate() { "7-20-2016" }
 def appVerInfo() {
     def str = ""
 
@@ -891,11 +891,12 @@ def updateChildData() {
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
                 def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0), "max":(settings?."${devId}_safety_temp_max" ?: 0) ]
                 //def safetyHumidity = [ "min":(settings?."${devId}_safety_humidity_min" ?: 0), "max":(settings?."${devId}_safety_humidity_max" ?: 0) ]
-                def safetyHumidity = settings?."${devId}_safety_humidity_max" ?: 0 
+                def safetyHumidity = settings?."${devId}_safety_humidity_max" ?: 0
+                def safetyDewpoint = settings?."${devId}_safety_dewpoint_max" ?: 0 
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "safetyHumidity":safetyHumidity,
-                                "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
+                                "safetyDewpoint":safetyDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
                     LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                     it.generateEvent(tData) //parse received message from parent
                     //atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
@@ -3610,14 +3611,15 @@ def safetyValuesPage() {
                 def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true 
                 section("${dev?.displayName} - Safety Values:") {
                     if(canHeat) {
-                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Minimum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
+                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
                     }
                     if(canCool) {
-                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Maximum Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
+                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Allowed (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90", 
                         submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
                     }
-                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Maximum Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
+                    input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Max. Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
+                    input "${dev?.deviceNetworkId}_safety_dewpoint_max", "number", title: "Max. Dewpoint Allowed (%)", required: false,  range: "30..70", submitOnChange: true, image: getAppImg("dewpoint_icon.png")
                 }
             }
         }
@@ -3632,10 +3634,12 @@ def getSafetyValuesDesc() {
             def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
             def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
             def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
+            def maxDew = settings?."${ts?.key}_safety_dewpoint_max" ?: 0
             str += ts ? "(${ts?.value}) Safety Values:" : ""
-            str += minTemp ? "\n • Minimum Temp: (${minTemp}°${getTemperatureScale()})" : ""
-            str += maxTemp ? "\n • Maximum Temp: (${maxTemp}°${getTemperatureScale()})" : ""
-            str += maxHum ? "\n • Maximum Humidity: (${maxTemp}%)" : ""
+            str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
+            str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
+            str += maxHum ? "\n • Max. Humidity: (${maxTemp}%)" : ""
+            str += maxDew ? "\n • Max. Humidity: (${maxDew}%)" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
     }
@@ -5921,7 +5925,7 @@ def conWatCheck(timeOut = false) {
             def curNestPres = getTstatPresence(conWatTstat)
             def modeOff = (curMode == "off") ? true : false
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-            def safetyOk //= getSafetyTempsOk(conWatTstat)
+            def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatTurnedOff || (!atomicState?.conWatTstatTurnedOff && conWatRestoreAutoMode))) ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
@@ -7271,6 +7275,16 @@ def getSafetyHumidity(tstat) {
     if(maxHum) {
         //return ["min":minHumidity, "max":maxHumidity]
         return maxHum
+    }
+    return null
+}
+
+def getSafetyDewpoint(tstat) {
+    //def minHumidity = tstat?.currentValue("safetyHumidityMin") ?: 0
+    def maxDew = tstat?.currentValue("safetyDewpointMax") ?: 0
+    if(maxDew) {
+        //return ["min":minHumidity, "max":maxHumidity]
+        return maxDew
     }
     return null
 }
