@@ -615,8 +615,9 @@ private estimateDewPoint(double rh,double t) {
     def t1 = t * 9.0/5.0 + 32
     def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t1) / (243.04 + t1) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t1) / (243.04 + t1) ) ) 
     dp1 = (dp1 - 32) * 5.0/9.0
-    log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)}" 
-    return dp1.round(1)
+    def ave = (dp + dp1)/2
+    log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}" 
+    return ave.round(1)
 }
 
 
