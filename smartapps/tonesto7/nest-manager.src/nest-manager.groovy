@@ -52,7 +52,12 @@ def appVerDate() { "7-20-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V2.6.6 (July 17th, 2016):"
+    str += "V2.6.7 (July 17th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Merged in Eric's latest patches."
+    str += "\n • UPDATED: Added in support for Dew point."
+
+    str += "\n\nV2.6.6 (July 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Merged in Eric's latest patches."
     str += "\n • UPDATED: External, Contact, Leak Automations now support safety temps to automatically restore the thermostat."
@@ -3619,7 +3624,8 @@ def safetyValuesPage() {
                         submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
                     }
                     input "${dev?.deviceNetworkId}_safety_humidity_max", "number", title: "Max. Humidity Allowed (%)", required: false,  range: "10..80", submitOnChange: true, image: getAppImg("humidity_icon.png")
-                    input "${dev?.deviceNetworkId}_safety_dewpoint_max", "number", title: "Max. Dewpoint Allowed (%)", required: false,  range: "30..70", submitOnChange: true, image: getAppImg("dewpoint_icon.png")
+                    input "${dev?.deviceNetworkId}_safety_dewpoint_max", "decimal", title: "Max. Dewpoint Allowed (60-66 °${getTemperatureScale()})", required: false,  range: (atomicState?.tempUnit == "C") ? "15..19" : "60..66", 
+                            submitOnChange: true, image: getAppImg("dewpoint_icon.png")
                 }
             }
         }
@@ -3631,15 +3637,15 @@ def getSafetyValuesDesc() {
     def tstats = atomicState?.thermostats
     if(tstats) {
         tstats?.each { ts ->
-            def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0
-            def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0
+            def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0.0
+            def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0.0
             def maxHum = settings?."${ts?.key}_safety_humidity_max" ?: 0
-            def maxDew = settings?."${ts?.key}_safety_dewpoint_max" ?: 0
+            def maxDew = settings?."${ts?.key}_safety_dewpoint_max" ?: 0.0
             str += ts ? "(${ts?.value}) Safety Values:" : ""
             str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
             str += maxHum ? "\n • Max. Humidity: (${maxTemp}%)" : ""
-            str += maxDew ? "\n • Max. Humidity: (${maxDew}%)" : ""
+            str += maxDew ? "\n • Max. Dewpoint: (${maxDew}°${getTemperatureScale()})" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
     }

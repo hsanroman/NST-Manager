@@ -775,11 +775,11 @@ def lockedTempEvent(Double minTemp, Double maxTemp) {
         if(curMinTemp != minTemp || curMaxTemp != maxTemp) {
             log.debug("UPDATED | Temperature Lock Minimum is (${minTemp}) | Original Temp: (${curMinTemp})")
             log.debug("UPDATED | Temperature Lock Maximum is (${maxTemp}) | Original Temp: (${curMaxTemp})")
-            sendEvent(name:'lockedTempMin', value: minTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Minimum is ${minTemp}" , displayed: true, isStateChange: true)
-            sendEvent(name:'lockedTempMax', value: maxTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Maximum is ${maxTemp}" , displayed: true, isStateChange: true)
+            sendEvent(name:'lockedTempMin', value: minTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Minimum is ${minTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+            sendEvent(name:'lockedTempMax', value: maxTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Maximum is ${maxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
         } else { 
-            Logger("Temperature Lock Minimum is (${minTemp}) | Original Minimum Temp: (${curMinTemp})")
-            Logger("Temperature Lock Maximum is (${maxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+            Logger("Temperature Lock Minimum is (${minTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
+            Logger("Temperature Lock Maximum is (${maxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})") 
         }
     }
     catch (ex) {
@@ -797,13 +797,13 @@ def safetyTempsEvent(safetyTemps) {
         
         //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
         if(curMinTemp != newMinTemp || curMaxTemp != newMaxTemp) {
-            log.debug("UPDATED | Safety Temperature Minimum is (${newMinTemp}) | Original Temp: (${curMinTemp})")
-            log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}) | Original Temp: (${curMaxTemp})")
-            sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}" , displayed: true, isStateChange: true)
+            log.debug("UPDATED | Safety Temperature Minimum is (${newMinTemp}${state?.tempUnit}) | Original Temp: (${curMinTemp}${state?.tempUnit})")
+            log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}${state?.tempUnit}) | Original Temp: (${curMaxTemp}${state?.tempUnit})")
+            sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+            sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
         } else { 
-            Logger("Safety Temperature Minimum is  (${newMinTemp}) | Original Minimum Temp: (${curMinTemp})")
-            Logger("Safety Temperature Maximum is  (${newMaxTemp}) | Original Maximum Temp: (${curMaxTemp})") 
+            Logger("Safety Temperature Minimum is  (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
+            Logger("Safety Temperature Maximum is  (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})") 
         }
     }
     catch (ex) {
@@ -821,12 +821,12 @@ def safetyHumidityEvent(safetyHum) {
         def newMaxHum = safetyHum?.toInteger() ?: 0
         if(curMaxHum != newMaxHum) {
             //log.debug("UPDATED | Safety Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
-            log.debug("UPDATED | Safety Humidity Maximum is (${newMaxHum}) | Original Humidity: (${curMaxHum})")
+            log.debug("UPDATED | Safety Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
             //sendEvent(name:'safetyHumidityMin', value: newMinHum, unit: "%", descriptionText: "Safety Humidity Minimum is ${newMinHum}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}" , displayed: true, isStateChange: true)
+            sendEvent(name:'safetyHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
         } else { 
             //Logger("Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
-            Logger("Humidity Maximum is (${newMaxHum}) | Original Maximum Humidity: (${curMaxHum})") 
+            Logger("Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)") 
         }
     }
     catch (ex) {
@@ -846,7 +846,7 @@ def safetyDewpointEvent(safetyDew) {
             //log.debug("UPDATED | Safety Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
             log.debug("UPDATED | Safety Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
             //sendEvent(name:'safetyDewpointMin', value: newMinDew, unit: "%", descriptionText: "Safety Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyDewpointMax', value: newMaxDew, unit: "%", descriptionText: "Safety Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
+            sendEvent(name:'safetyDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Safety Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
         } else { 
             //Logger("Humidity Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
             Logger("Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})") 
