@@ -1,6 +1,7 @@
 /**
  *  Nest Cam
  *	Authors: Anthony S. (@tonesto7), Ben W. (@desertblade), Eric S. (@E_Sch)
+ *  A Big Thanks go out to Greg (@ghesp) for your help getting the video working.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -22,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.0.3" }
+def devVer() { return "0.0.4" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -90,6 +91,13 @@ metadata {
             }
         }
         carouselTile("cameraDetails", "device.image", width: 6, height: 2) { }
+
+        standardTile("isStreaming", "device.isStreaming", width: 1, height: 1) {
+            state("on", label: "Streaming", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
+            state("off", label: "Off", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+            state("unavailable", label: "Unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
+        }
+
         standardTile("take", "device.image", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
             state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
@@ -126,7 +134,7 @@ metadata {
         }
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 14)
         
-    main "videoPlayer"
+    main "isStreaming"
     details(["devInfoHtml", "refresh"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
     }
@@ -180,7 +188,7 @@ def generateEvent(Map eventData) {
             if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {     
-                lastEventDataEvent(results?.last_event)
+                //lastEventDataEvent(results?.last_event)
             }
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -296,10 +304,11 @@ def lastOnlineEvent(dt) {
     }
 }
 
-def isStreamingEvent(on) {
+def isStreamingEvent(isStreaming) {
     try {
         def isOn = device.currentState("isStreaming")?.value
-        def val = on ? "On" : "Off"
+        def isOnline = device.currentState("onlineStatus")?.value
+        def val = (isStreaming.toBoolean() == true) ? "on" : (!isOnline == "Online" ? "unavailable" : "off")
         state?.isStreaming = val
         if(!isOn.equals(val)) { 
             log.debug("UPDATED | Streaming Video Status is: (${val}) | Original State: (${isOn})")
@@ -380,15 +389,29 @@ def lastEventDataEvent(data) {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
             tf.setTimeZone(getTimeZone())
-        def newStart = data?.start_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" : "Not Available"
-        def newEnd = data?.end_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" : "Not Available"
-        def curStart = device.currentState("lastEventStart")?.value
-        def curEnd = device.currentState("lastEventEnd")?.value
+        
+        def curStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventStart")?.stringValue))
+        def curEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventEnd")?.stringValue))
+        
+        def startDt = data?.start_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" : "Not Available"
+        def endDt = data?.end_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" : "Not Available"
+        
+        state.lastEventStartDt = startDt
+        state.lastEventEndDt = endDt
         state?.lastEventData = data
-        if(!curStart.equals(newStart) || !curEnd.equals(newEnd)) {
+
+        def newStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))
+        def newEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))
+        
+        log.debug "curStart: ${curStart}"
+        log.debug "newStart: ${newStart}"
+        log.debug "curStop: ${curEnd}"
+        log.debug "newStop: ${newEnd}"
+        
+        if(curStart != newStart || curEnd != newEnd) {
             log.debug("UPDATED | Last Event Start Time: (${newStart}) | Original State: (${curStart})")
             sendEvent(name: 'lastEventStart', value: newStart, descriptionText: "Last Event Start is now ${newStart}", displayed: false)
-            log.debug("UPDATED | Last Event Start Time: (${newEnd}) | Original State: (${curEnd})")
+            log.debug("UPDATED | Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
             sendEvent(name: 'lastEventEnd', value: newEnd, descriptionText: "Last Event End is now ${newEnd}", displayed: false)
         } else { 
             log.debug("Last Event Start Time: (${newStart}) | Original State: (${curStart})")
@@ -476,7 +499,24 @@ def getPublicVideoId() {
         return vidId[3].toString()
     }
 }
- 
+
+//this scrapes the public nest cam page for its unique id for using in render html tile
+def getUUID(pubVidId) {
+    def params = [
+        uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
+    ]
+    try {
+        httpGet(params) { resp ->
+            
+            def uuid = (test =~ /uuid=(\w*)/)[0][1]
+            return uuid ?: null
+            log.debug "uuid: $uuid"
+        }
+    } catch (e) {
+        log.error "something went wrong: $e"
+    }
+}
+
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
@@ -524,27 +564,6 @@ def log(message, level = "trace") {
     return null
 }
 
-def getSmokeImg() {
-    try {
-        def smokeVal = device.currentState("nestSmoke")?.value
-        switch(smokeVal) {
-            case "warn":
-                return getImgBase64(getImg("smoke_warn_tile.png"), "png")
-                break
-            case "emergency":
-                return getImgBase64(getImg("smoke_emergency_tile.png"), "png")
-                break
-            default:
-                return getImgBase64(getImg("smoke_clear_tile.png"), "png")
-                break
-        }
-    } 
-    catch (ex) {
-        log.error "getSmokeImg Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getSmokeImg")
-    }
-}
-
 def getImgBase64(url,type) {
     try {
         def params = [ 
@@ -574,7 +593,6 @@ def getImgBase64(url,type) {
     }
 }
 
-def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
 def getImg(imgName) { 
     try {
         return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" 
@@ -603,15 +621,17 @@ def getCSS(){
 
 def getInfoHtml() {
     try {
-        //def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" : 
-        //        "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
-        //def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
-        //def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
+        def camUUID = getUUID(getPublicVideoId())
+        def camImgUrl = "https://nexusapi.dropcam.com/get_image?uuid=${camUUID}&width=100%"
+        def camPlaylistUrl = "https://stream-alfa.dropcam.com:443/nexus_aac/${camUUID}/playlist.m3u8"
+        
+        def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
-        def pubSnapUrl = state?.snapshot_url
+        
+        def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        log.debug "pubVidId: $pubVidId"
+        
         def html = """
         <!DOCTYPE html>
         <html>
@@ -629,25 +649,65 @@ def getInfoHtml() {
                 </style>
                 ${updateAvail}
                 <div>
-                    <iframe type="text/html" frameborder="0" width="380" height="311" src="//video.nest.com/embedded/live/${pubVidId.toString()}?autoplay=1"></iframe>
-                    <img src="${pubSnapUrl}" width="380" height="311"/>
+                    <video width="410" controls
+                        id="nest-video"
+                        class="video-js vjs-default-skin"
+                        poster="${camImgUrl}"
+                        data-video-url="${pubVidUrl}"
+                        data-video-title="">
+                        <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+                    </video>
+                </div>
+                <div>
+                    <img src="${pubSnapUrl}" width="100%"/>
                 </div>
                 <table>
                 <col width="50%">
                 <col width="50%">
                 <thead>
-                    <th>Network Status</th>
-                    <th>API Status</th>
+                  <th>Last Event Start</th>
+                  <th>Last Event End</th>
                 </thead>
-                    <tbody>
-                    <tr>
-                        <td>${state?.onlineStatus.toString()}</td>
-                        <td>${state?.apiStatus}</td>
-                    </tr>
-                    
-                    
-                    </tbody>
-                    </table>
+                  <tbody>
+                     <tr>
+                         <td>${state?.lastEventStartDt.toString()}</td>
+                         <td>${state?.lastEventEndDt.toString()}</td>
+                     </tr>
+                  </tbody>
+                </table>
+
+                <table>
+                <col width="33%">
+                <col width="33%">
+                <col width="33%">
+                <thead>
+                  <th>Public Share</th>
+                  <th>Audio Input</th>
+                  <th>Video History</th>
+                </thead>
+                  <tbody>
+                     <tr>
+                         <td>${state?.publicShareEnabled.toString()}</td>
+                         <td>${state?.audioInputEnabled.toString()}</td>
+                         <td>${state?.videoHistoryEnabled.toString()}</td>
+                     </tr>
+                  </tbody>
+                </table>
+
+                <table>
+                <col width="50%">
+                <col width="50%">
+                <thead>
+                  <th>Network Status</th>
+                  <th>API Status</th>
+                </thead>
+                  <tbody>
+                     <tr>
+                         <td>${state?.onlineStatus.toString()}</td>
+                         <td>${state?.apiStatus}</td>
+                     </tr>
+                  </tbody>
+                </table>
                     
                 <p class="centerText">
                     <a href="#openModal" class="button">More info</a>
