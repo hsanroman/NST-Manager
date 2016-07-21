@@ -201,6 +201,7 @@ def generateEvent(Map eventData) {
             if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
             if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
+            if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             if(results?.last_event) {
                 //lastEventDataEvent(results?.last_event)
                 //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
@@ -753,11 +754,12 @@ def getInfoHtml() {
         def apiServer = getAPIServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        log.debug(camImgUrl)
         def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
+        def animationUrl = state?.animation_url
+        log.debug(animationUrl)
 
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
@@ -777,21 +779,44 @@ def getInfoHtml() {
             <body>
                 <style type="text/css">
                     ${getCSS()}
+                    .toggles {
+                      text-align: center;
+                    }
+                    .dual-header {
+                      transition: all ease 2s;
+                    }
                 </style>
                 ${updateAvail}
                 <script type="text/javascript">
                     <!--
-                        function toggle_visibility(id) {
+                        window.onload=function(){
+                          document.getElementById('liveStream').style.display = 'block';
+                          document.getElementById('still').style.display = 'none';
+                          document.getElementById('animation').style.display = 'none';
+                        }
 
-                        var e = document.getElementById(id);
-                        if(e.style.display == 'block')
-                            e.style.display = 'none';
-                        else
-                            e.style.display = 'block';
+                        function toggle_visibility(id) {
+                          var ls = document.getElementById('liveStream');
+                          var sl = document.getElementById('still');
+                          var an = document.getElementById('animation');
+
+                          if(id == 'liveStream'){
+                            ls.style.display = 'block';
+                            sl.style.display = 'none';
+                            an.style.display = 'none';
+                          } else if(id == 'still') {
+                              ls.style.display = 'none';
+                              sl.style.display = 'block';
+                              an.style.display = 'none';
+                          } else {
+                            ls.style.display = 'none';
+                            sl.style.display = 'none';
+                            an.style.display = 'block';
+                          }
                         }
                     //-->
                 </script>
-                <div class="dual-header" id="primary">
+                <div class="dual-header" id="liveStream">
                     <video width="410" controls
                         id="nest-video"
                         class="video-js vjs-default-skin"
@@ -801,11 +826,17 @@ def getInfoHtml() {
                         <source src="${camPlaylistUrl}" type="application/x-mpegURL">
                     </video>
                 </div>
-                <div class="dual-header" id="secondary">
+                <div class="dual-header" id="still">
                     <img src="${pubSnapUrl}" width="100%"/>
                 </div>
-                <a href="#" onclick="toggle_visibility('primary');" class="button">Video</a>
-                <a href="#" onclick="toggle_visibility('secondary');" class="button">Picture</a>
+                <div class="dual-header" id="animation">
+                    <img src="${animationUrl}" width="100%"/>
+                </div>
+                <div class="toggles">
+                  <a href="#" onclick="toggle_visibility('liveStream');" class="button">Video</a>
+                  <a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>
+                  <a href="#" onclick="toggle_visibility('animation');" class="button">Last Event</a>
+                </div>
                 <table>
                 <col width="50%">
                 <col width="50%">
