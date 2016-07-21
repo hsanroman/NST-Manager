@@ -1108,7 +1108,7 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
 
 def setCamStreaming(child, streamOn) {
     def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-    def val = streamOn.toBoolean()
+    def val = streamOn.toBoolean() ? true : false
     LogAction("Nest Manager(setCamStreaming) - Setting Camera${!devId ? "" : " ${devId}"} Streaming to: (${val ? "On" : "Off"})", "debug", true)
     if(childDebug && child) { child?.log("setCamStreaming( devId: ${devId}, StreamOn: ${val})") }
     try {
@@ -3382,7 +3382,7 @@ def debugPrefPage() {
 def getAppDebugDesc() {
     def str = ""
     str += isAppDebug() ? "App Debug: (${debugStatus()})${advAppDebug ? "(Trace)" : ""}" : ""
-    str += isChildDebug() ? "${isAppDebug() ? "\n" : ""}• Device Debug: (${deviceDebugStatus()})" : ""
+    str += isChildDebug() ? "${isAppDebug() ? "\n" : ""}Device Debug: (${deviceDebugStatus()})" : ""
     return (str != "") ? "${str}" : null
 }
 
