@@ -742,7 +742,19 @@ def getInfoHtml() {
                     ${getCSS()}
                 </style>
                 ${updateAvail}
-                <div>
+                <script type="text/javascript">
+                    <!--
+                        function toggle_visibility(id) {
+                        
+                        var e = document.getElementById(id);
+                        if(e.style.display == 'block')
+                            e.style.display = 'none';
+                        else
+                            e.style.display = 'block';
+                        }
+                    //-->
+                </script>
+                <div class="dual-header" id="primary">
                     <video width="410" controls
                         id="nest-video"
                         class="video-js vjs-default-skin"
@@ -752,9 +764,11 @@ def getInfoHtml() {
                         <source src="${camPlaylistUrl}" type="application/x-mpegURL">
                     </video>
                 </div>
-                <div>
+                <div class="dual-header" id="secondary">
                     <img src="${pubSnapUrl}" width="100%"/>
                 </div>
+                <a href="#" onclick="toggle_visibility('primary');" class="button">Video</a>
+                <a href="#" onclick="toggle_visibility('secondary');" class="button">Picture</a>
                 <table>
                 <col width="50%">
                 <col width="50%">
