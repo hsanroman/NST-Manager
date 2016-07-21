@@ -716,7 +716,7 @@ def getCSS(){
 def getInfoHtml() {
     try {
         def camUUID = getUUID(getPublicVideoId())
-        def camImgUrl = "https://nexusapi.dropcam.com/get_image?uuid=${camUUID}&width=100%"
+        def camImgUrl = "https://nexusapi.dropcam.com/get_image?uuid=${camUUID}&width=410"
         def camPlaylistUrl = "https://stream-alfa.dropcam.com:443/nexus_aac/${camUUID}/playlist.m3u8"
         
         def pubVidUrl = state?.public_share_url

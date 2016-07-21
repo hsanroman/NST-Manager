@@ -343,7 +343,7 @@ def mainPage() {
             section("Preferences:") {
                 def descStr = ""
                 descStr += getAppNotifConfDesc() ?: ""
-                descStr += getAppDebugDesc() ? "${getAppNotifConfDesc() ? "\n" : ""}${getAppDebugDesc() ?: ""}" : ""
+                descStr += getAppDebugDesc() ? "${getAppNotifConfDesc() ? "\n\n" : ""}${getAppDebugDesc() ?: ""}" : ""
                 def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
                 href "prefsPage", title: "Preferences", description: prefDesc, state: ((pushStatus() || isAppDebug() || isChildDebug()) ? "complete" : null), image: getAppImg("settings_icon.png")
             }
@@ -1042,7 +1042,7 @@ private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSe
 def apiVar() {
     def api = [
         rootTypes:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata" ],
-        cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f",
+        cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
                       targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
                       fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ],
         hvacModes: 	[ heat:"heat", cool:"cool", heatCool:"heat-cool", off:"off" ]
@@ -1099,7 +1099,6 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
                 }
             }
         }
-        
     } catch (ex) {
         LogAction("sendEvtUpdateToDevice Exception: ${ex}", "errorS", true)
         sendExceptionData(ex, "sendEvtUpdateToDevice")
@@ -1139,6 +1138,22 @@ def setStructureAway(child, value) {
         LogAction("setStructureAway Exception: ${ex}", "debug", true)
         sendExceptionData(ex, "setStructureAway")
         if (childDebug && child) { child?.log("setStructureAway Exception: ${ex}", "error") }
+        return false
+    }
+}
+
+def setTstatLabel(child, label) {
+    def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
+    def val = label
+    LogAction("Nest Manager(setTstatLabel) - Setting Thermostat${!devId ? "" : " ${devId}"} Label to: (${val ? "On" : "Auto"})", "debug", true)
+    if(childDebug && child) { child?.log("setTstatLabel( devId: ${devId}, newLabel: ${val})") }
+    try {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setLabel, val, devId)
+    }
+    catch (ex) {
+        LogAction("setTstatLabel Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "setTstatLabel")
+        if(childDebug) { child?.log("setTstatLabel Exception: ${ex}", "error") }
         return false
     }
 }
@@ -1520,7 +1535,7 @@ def increaseCmdCnt() {
     try {
         def cmdCnt = atomicState?.apiCommandCnt ?: 0
         cmdCnt = cmdCnt?.toInteger()+1
-        LogAction("cmdCnt: $cmdCnt", "info", false)
+        LogAction("Api CmdCnt: $cmdCnt", "info", false)
         if(cmdCnt) { atomicState?.apiCommandCnt = cmdCnt?.toInteger() }
     } catch (ex) {
         LogAction("increaseCmdCnt Exception: ${ex}", "error", true)
