@@ -562,22 +562,7 @@ def getPublicVideoId() {
     }
 }
 
-//this scrapes the public nest cam page for its unique id for using in render html tile
-def getUUID(pubVidId) {
-    def params = [
-        uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
-    ]
-    try {
-        httpGet(params) { resp ->
-            def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
-            log.debug "uuid: $uuid"
-            return uuid ?: null
-        }
-    } catch (ex) {
-        log.error "getUUID Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getUUID")
-    }
-}
+
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
@@ -683,7 +668,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getImgBase64")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getImgBase64")
     }
 }
 
@@ -693,7 +678,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getImg")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getImg")
     }
 }
 
@@ -709,7 +694,24 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getCSS")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getCSS")
+    }
+}
+
+//this scrapes the public nest cam page for its unique id for using in render html tile
+def getUUID(pubVidId) {
+    def params = [
+        uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
+    ]
+    try {
+        httpGet(params) { resp ->
+            def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
+            log.debug "uuid: $uuid"
+            return uuid ?: null
+        }
+    } catch (ex) {
+        log.error "getUUID Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getUUID")
     }
 }
 
@@ -719,18 +721,17 @@ def getLiveStreamHost(camUUID) {
           uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
       ]
       httpGet(params)  { resp ->
-        def stream = (resp?.data?.items.live_stream_host)
-        def stream1 = stream.toString().replaceAll("\\[|\\]", "")
-        return stream1 ?: null
+        def stream = resp?.data?.items.live_stream_host.toString().replaceAll("\\[|\\]", "")
+        return stream ?: null
       }
   }
   catch (ex) {
-      log.error "Failed to load camera server - Exception: ${ex}"
-      parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getCSS")
+      log.error "getLiveStreamHost Exception: ${ex}"
+      parent?.sendChildExceptionData("camera", devVer(), ex, "getLiveStreamHost")
   }
 }
 
-def getAPIServer(camUUID) {
+def getCamApiServer(camUUID) {
   try {
       def params = [
           uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
@@ -742,15 +743,15 @@ def getAPIServer(camUUID) {
       }
   }
   catch (ex) {
-      log.error "Failed to load API server - Exception: ${ex}"
-      parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getCSS")
+      log.error "getCamApiServer Exception: ${ex}"
+      parent?.sendChildExceptionData("camera", devVer(), ex, "getCamApiServer")
   }
 }
 
 def getInfoHtml() {
     try {
-        def camUUID = getUUID(getPublicVideoId())
-        def apiServer = getAPIServer(camUUID)
+        def camUUID = getCamUUID(getPublicVideoId())
+        def apiServer = getCamApiServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
         log.debug(camImgUrl)
@@ -892,7 +893,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getInfoHtml")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getInfoHtml")
     }
 }
 
