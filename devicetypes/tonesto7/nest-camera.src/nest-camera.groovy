@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.0.5" }
+def devVer() { return "0.0.6" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -146,7 +146,7 @@ metadata {
             state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
         }
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 14)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 9)
 
     main "isStreamingStatus"
     details(["devInfoHtml", "isStreaming", "motion", "sound", "refresh"])
@@ -201,12 +201,12 @@ def generateEvent(Map eventData) {
             if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
             if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
-            if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             if(results?.last_event) {
                 lastEventDataEvent(results?.last_event)
-                //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
+                if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
                 //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
                 //if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
+                if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -217,7 +217,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "generateEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "generateEvent")
     }
 }
 
@@ -230,11 +230,16 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() {
-    def tz = null
-    if (location?.timeZone) { tz = location?.timeZone }
-    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
-    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
-    return tz
+    try {
+        def tz = null
+        if (location?.timeZone) { tz = location?.timeZone }
+        else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+        if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+        return tz
+    } catch (ex) {
+        LogAction("getTimeZone Exception: ${ex}", "error", true)
+        sendChildExceptionData("camera", devVer(), ex.message, "getTimeZone")
+    }
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
@@ -261,7 +266,7 @@ def isCodeUpdateAvailable(newVer, curVer) {
         return result
     } catch (ex) {
         LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendChildExceptionData("camera", devVer(), ex, "isCodeUpdateAvailable")
+        sendChildExceptionData("camera", devVer(), ex.message, "isCodeUpdateAvailable")
     }
 }
 
@@ -280,7 +285,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "deviceVerEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "deviceVerEvent")
     }
 }
 
@@ -299,7 +304,7 @@ def lastCheckinEvent(checkin) {
     }
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "lastCheckinEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastCheckinEvent")
     }
 }
 
@@ -318,7 +323,7 @@ def lastOnlineEvent(dt) {
     }
     catch (ex) {
         log.error "lastOnlineEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "lastOnlineEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastOnlineEvent")
     }
 }
 
@@ -336,7 +341,7 @@ def isStreamingEvent(isStreaming) {
     }
     catch (ex) {
         log.error "isStreamingEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "isStreamingEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "isStreamingEvent")
     }
 }
 
@@ -352,7 +357,7 @@ def audioInputEnabledEvent(on) {
     }
     catch (ex) {
         log.error "audioInputEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "audioInputEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "audioInputEnabledEvent")
     }
 }
 
@@ -368,7 +373,7 @@ def videoHistEnabledEvent(on) {
     }
     catch (ex) {
         log.error "videoHistEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "videoHistEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "videoHistEnabledEvent")
     }
 }
 
@@ -384,7 +389,7 @@ def publicShareEnabledEvent(on) {
     }
     catch (ex) {
         log.error "publicShareEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "publicShareEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "publicShareEnabledEvent")
     }
 }
 
@@ -399,35 +404,35 @@ def softwareVerEvent(ver) {
     }
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "softwareVerEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "softwareVerEvent")
     }
 }
 
 def lastEventDataEvent(data) {
     try {
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
+        def tf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
             tf.setTimeZone(getTimeZone())
+        def curStart = device.currentState("lastEventStart")?.value.toString()
+        def curEnd =  device.currentState("lastEventEnd")?.value.toString()
+        log.debug "lastEvt| curStart: ${device.currentState("lastEventStart")?.value.toString()} | curEnd: ${device.currentState("lastEventEnd")?.value.toString()}"
+        log.debug "lastEvt| start: ${data?.start_time} | end: ${data?.end_time}"
+        
+        def curStartDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventStart")?.value.toString())
+        def curEndDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventEnd")?.value.toString())
+        def newStartDt = tf.parse(data?.start_time.toString())
+        def newEndDt = tf.parse(data?.start_time.toString())
 
-        def curStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventStart")?.stringValue))
-        def curEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventEnd")?.stringValue))
+        log.debug "lastEvt| curStartDt: $curStartDt | curEndDt: $curEndDt"
+        log.debug "lastEvt| newStartDt: $newStartDt | newEndDt: $newEndDt"
+        def newStart = "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" ?: "Not Available"
+        def newEnd = "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" ?: "Not Available"
 
-        def startDt = data?.start_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" : "Not Available"
-        def endDt = data?.end_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" : "Not Available"
-
-        state.lastEventStartDt = startDt
-        state.lastEventEndDt = endDt
+        log.debug "lastEvt| new start: $newStart | new end: $newEnd"
+        state.lastEventStartDt = newStart
+        state.lastEventEndDt = newEnd
         state?.lastEventData = data
 
-        def newStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))
-        def newEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))
-
-        log.debug "curStart: ${curStart}"
-        log.debug "newStart: ${newStart}"
-        log.debug "curStop: ${curEnd}"
-        log.debug "newStop: ${newEnd}"
-
-        if(curStart != newStart || curEnd != newEnd) {
+        if(curStartDt != newStartDt || curEndDt != newEndDt) {
             log.debug("UPDATED | Last Event Start Time: (${newStart}) | Original State: (${curStart})")
             sendEvent(name: 'lastEventStart', value: newStart, descriptionText: "Last Event Start is now ${newStart}", displayed: false)
             log.debug("UPDATED | Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
@@ -439,23 +444,22 @@ def lastEventDataEvent(data) {
     }
     catch (ex) {
         log.error "lastEventDataEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex, "lastEventDataEvent")
+        //parent?.sendChildExceptionData("camera", ex.message, "lastEventDataEvent")
     }
 }
 
 def zoneMotionEvent(data) {
     try {
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat()
-            //tf.setTimeZone(getTimeZone())
+        def tf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            tf.setTimeZone(getTimeZone())
         def isMotion = device.currentState("motion")?.stringValue
-        def startDt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(data?.start_time)
-            startDt.setTimeZone(getTimeZone())
-        def newDt = tf.format(startDt)
-        log.debug "startDt: $newDt"
-        def endDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))
-        //def isBtwn = timeOfDayIsBetween(startDt, endDt, new Date(), getTimeZone())
-        log.debug "hasMotion: ${data?.has_motion} | start: $startDt | end: $endDt | isBtwn: $isBtwn"
+        
+        def newStart = tf.parse(data?.start_time)
+        def newEnd = tf.parse(data?.end_time)
+        log.debug "MotEvt| newStart: $newStart | newEnd: $newEnd"
+        
+        def isBtwn = timeOfDayIsBetween(newStart, newEnd, new Date(), getTimeZone())
+        log.debug "MotEvt| hasMotion: ${data?.has_motion} | start: $newStart | end: $newEnd | isBtwn: $isBtwn"
         def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
         if(!isMotion.equals(val)) {
             log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
@@ -464,7 +468,7 @@ def zoneMotionEvent(data) {
     }
     catch (ex) {
         log.error "zoneMotionEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "zoneMotionEvent")
+        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "zoneMotionEvent")
     }
 }
 
@@ -479,12 +483,18 @@ def zoneSoundEvent(sound) {
     }
     catch (ex) {
         log.error "zoneSoundEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "zoneSoundEvent")
+        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "zoneSoundEvent")
     }
 }
 
 def activityZoneEvent(zones) {
     log.trace "activityZoneEvent($zones)..."
+    try {
+
+    } catch (ex) {
+        log.error "activityZoneEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", ex.message, "activityZoneEvent")
+    }
 }
 
 def debugOnEvent(debug) {
@@ -500,7 +510,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex, "debugOnEvent")
+        parent?.sendChildExceptionData("camera", ex.message, "debugOnEvent")
     }
 }
 
@@ -516,7 +526,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "apiStatusEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "apiStatusEvent")
     }
 }
 
@@ -536,7 +546,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "lastUpdatedEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastUpdatedEvent")
     }
 }
 
@@ -552,14 +562,19 @@ def onlineStatusEvent(online) {
     }
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "onlineStatusEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "onlineStatusEvent")
     }
 }
 
 def getPublicVideoId() {
-    if(state?.public_share_url) {
-        def vidId = state?.public_share_url.tokenize('/')
-        return vidId[3].toString()
+    try {
+        if(state?.public_share_url) {
+            def vidId = state?.public_share_url.tokenize('/')
+            return vidId[3].toString()
+        }
+    } catch (ex) {
+        log.error "getPublicVideoId Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getPublicVideoId")
     }
 }
 
@@ -574,7 +589,7 @@ def streamingOn() {
         sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
     } catch (ex) {
         log.error "streamingOn Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "streamingOn")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "streamingOn")
     }
 }
 
@@ -585,7 +600,7 @@ def streamingOff() {
         sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
     } catch (ex) {
         log.error "streamingOff Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "streamingOff")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "streamingOff")
     }
 }
 
@@ -599,6 +614,56 @@ def off() {
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
+
+def formatDt(dt, mdy = false) {
+    //log.trace "formatDt($dt, $mdy)..."
+    try {
+        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd H:m:s z yyyy"
+        def tf = new SimpleDateFormat(formatVal)
+        if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+        else {
+            LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+        }
+        return tf.format(dt)
+    }
+    catch (ex) {
+        log.error "formatDt Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", ex.message, "formatDt")
+    }
+}
+
+def formatParseDt(dt, mdy = false) {
+    //log.trace "formatParseDt($dt, $mdy)..."
+    try {
+        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd H:m:s z yyyy"
+        def tf = new SimpleDateFormat(formatVal)
+        if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+        else {
+            LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+        }
+        return Date.parse(formatVal, tf.format(Date.parse(formatVal, dt)))
+    }
+    catch (ex) {
+        log.error "formatParseDt Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", ex.message, "formatParseDt")
+    }
+}
+
+def parseDt(dt) {
+    //log.trace "parseDt($dt)..."
+    try {
+        return Date.parse("E MMM dd H:m:s z yyyy", dt)
+    } catch (ex) {
+        log.error "parseDt Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", ex.message, "parseDt")
+    }
+}
+
+def epochToTime(tm) {
+    def tf = new SimpleDateFormat("h:mm a")
+        tf?.setTimeZone(getTimeZone())
+    return tf.format(tm)
+}
 
 // Local Application Logging
 def Logger(msg, logType = "debug") {
@@ -669,7 +734,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getImgBase64")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getImgBase64")
     }
 }
 
@@ -679,7 +744,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getImg")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getImg")
     }
 }
 
@@ -695,7 +760,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getCSS")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCSS")
     }
 }
 
@@ -712,7 +777,7 @@ def getCamUUID(pubVidId) {
         }
     } catch (ex) {
         log.error "getUUID Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getUUID")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getUUID")
     }
 }
 
@@ -728,25 +793,25 @@ def getLiveStreamHost(camUUID) {
   }
   catch (ex) {
       log.error "getLiveStreamHost Exception: ${ex}"
-      parent?.sendChildExceptionData("camera", devVer(), ex, "getLiveStreamHost")
+      parent?.sendChildExceptionData("camera", devVer(), ex.message, "getLiveStreamHost")
   }
 }
 
 def getCamApiServer(camUUID) {
-  try {
-      def params = [
-          uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
-      ]
-      httpGet(params)  { resp ->
-        def apiServer = (resp?.data?.items.nexus_api_http_server)
-        def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
-        return apiServer1 ?: null
-      }
-  }
-  catch (ex) {
-      log.error "getCamApiServer Exception: ${ex}"
-      parent?.sendChildExceptionData("camera", devVer(), ex, "getCamApiServer")
-  }
+    try {
+        def params = [
+            uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
+        ]
+        httpGet(params)  { resp ->
+            def apiServer = (resp?.data?.items.nexus_api_http_server)
+            def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
+            return apiServer1 ?: null
+        }
+    }
+    catch (ex) {
+        log.error "getCamApiServer Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamApiServer")
+    }
 }
 
 def getInfoHtml() {
@@ -755,13 +820,13 @@ def getInfoHtml() {
         def apiServer = getCamApiServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        log.debug(camImgUrl)
+        log.debug "CamImgUrl: $camImgUrl"
         def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
         def animationUrl = state?.animation_url
-        log.debug(animationUrl)
+        log.debug "Animation URL: $animationUrl"
 
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
@@ -848,8 +913,8 @@ def getInfoHtml() {
                 </thead>
                   <tbody>
                      <tr>
-                         <td>${state?.lastEventStartDt.toString()}</td>
-                         <td>${state?.lastEventEndDt.toString()}</td>
+                         <td>${state?.lastEventStartDt}</td>
+                         <td>${state?.lastEventEndDt}</td>
                      </tr>
                   </tbody>
                 </table>
@@ -925,7 +990,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex, "getInfoHtml")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getInfoHtml")
     }
 }
 
