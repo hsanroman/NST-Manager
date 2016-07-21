@@ -19,30 +19,32 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
  
-import java.text.SimpleDateFormat 
+import java.text.SimpleDateFormat
+//import org.apache.http.client.utils
 
 preferences { }
 
-def devVer() { return "0.0.4" }
+def devVer() { return "0.0.5" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
-        capability "Image Capture"
         capability "Sensor"
         capability "Switch"
-        capability "Switch Level"
         capability "Motion Sensor"
+        capability "Sound Sensor"
         capability "Refresh"
         capability "Notification"
         //capability "Configuration"
-        capability "Video Camera"
-        capability "Video Capture"
+        capability "Image Capture"
+        //capability "Video Camera"
+        //capability "Video Capture"
         
         command "refresh"
         command "poll"
         command "log", ["string","string"]
         command "streamingOn"
         command "streamingOff"
+        command "changeStreaming"
         
         attribute "softwareVer", "string"
         attribute "lastConnection", "string"
@@ -92,16 +94,28 @@ metadata {
         }
         carouselTile("cameraDetails", "device.image", width: 6, height: 2) { }
 
-        standardTile("isStreaming", "device.isStreaming", width: 1, height: 1) {
-            state("on", label: "Streaming", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
-            state("off", label: "Off", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+        standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
+            state("on", label: "Streaming", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
+            state("off", label: "Off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
             state("unavailable", label: "Unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
         }
-
+        standardTile("isStreaming", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
+            state("on", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_stream_btn_icon.png")
+            state("off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
+            state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
+        }
         standardTile("take", "device.image", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
             state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
             state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
+        }
+        standardTile("motion", "device.motion", width: 2, height: 2) {
+            state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
+            state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
+        }
+        standardTile("sound", "device.sound", width: 2, height: 2) {
+            state "detected", label:'Noise', icon:"st.sound.sound.detected", backgroundColor:"#53a7c0"
+            state "not detected", label:'Quiet', icon:"st.sound.sound.notdetected", backgroundColor:"#ffffff"
         }
         standardTile("filler", "device.filler", width: 2, height: 2){
             state("default", label:'')
@@ -134,8 +148,8 @@ metadata {
         }
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 14)
         
-    main "isStreaming"
-    details(["devInfoHtml", "refresh"])
+    main "isStreamingStatus"
+    details(["devInfoHtml", "isStreaming", "motion", "sound", "refresh"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
     }
 }
@@ -172,7 +186,7 @@ def generateEvent(Map eventData) {
             //log.debug "results: $results"
             state?.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
-            isStreamingEvent(results?.is_streaming?.toString())
+            isStreamingEvent(results?.is_streaming)
             videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
             publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
             if(!results?.last_is_online_change) { lastCheckinEvent(null) } 
@@ -189,6 +203,9 @@ def generateEvent(Map eventData) {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {     
                 //lastEventDataEvent(results?.last_event)
+                //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
+                //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
+                //if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
             }
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -199,7 +216,7 @@ def generateEvent(Map eventData) {
     } 
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "generateEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "generateEvent")
     }
 }
 
@@ -243,7 +260,7 @@ def isCodeUpdateAvailable(newVer, curVer) {
         return result
     } catch (ex) {
         LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendChildExceptionData("camera", devVer(), ex?.toString(), "isCodeUpdateAvailable")
+        sendChildExceptionData("camera", devVer(), ex, "isCodeUpdateAvailable")
     }
 }
 
@@ -262,7 +279,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "deviceVerEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "deviceVerEvent")
     }
 }
 
@@ -281,7 +298,7 @@ def lastCheckinEvent(checkin) {
     } 
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "lastCheckinEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "lastCheckinEvent")
     }
 }
 
@@ -300,24 +317,25 @@ def lastOnlineEvent(dt) {
     } 
     catch (ex) {
         log.error "lastOnlineEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "lastOnlineEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "lastOnlineEvent")
     }
 }
 
 def isStreamingEvent(isStreaming) {
+    //log.trace "isStreamingEvent($isStreaming)..."
     try {
         def isOn = device.currentState("isStreaming")?.value
         def isOnline = device.currentState("onlineStatus")?.value
         def val = (isStreaming.toBoolean() == true) ? "on" : (!isOnline == "Online" ? "unavailable" : "off")
-        state?.isStreaming = val
+        state?.isStreaming = val == "on" ? true : false
         if(!isOn.equals(val)) { 
-            log.debug("UPDATED | Streaming Video Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video Status is: ${val}", displayed: true, isStateChange: true, state: val)
+            log.debug("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
+            sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
     } 
     catch (ex) {
         log.error "isStreamingEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "isStreamingEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "isStreamingEvent")
     }
 }
 
@@ -333,7 +351,7 @@ def audioInputEnabledEvent(on) {
     } 
     catch (ex) {
         log.error "audioInputEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "audioInputEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "audioInputEnabledEvent")
     }
 }
 
@@ -349,7 +367,7 @@ def videoHistEnabledEvent(on) {
     } 
     catch (ex) {
         log.error "videoHistEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "videoHistEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "videoHistEnabledEvent")
     }
 }
 
@@ -365,7 +383,7 @@ def publicShareEnabledEvent(on) {
     } 
     catch (ex) {
         log.error "publicShareEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "publicShareEnabledEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "publicShareEnabledEvent")
     }
 }
 
@@ -380,7 +398,7 @@ def softwareVerEvent(ver) {
     } 
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "softwareVerEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "softwareVerEvent")
     }
 }
 
@@ -424,6 +442,50 @@ def lastEventDataEvent(data) {
     }
 }
 
+def zoneMotionEvent(data) {
+    try {
+        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+        def tf = new SimpleDateFormat()
+            //tf.setTimeZone(getTimeZone())
+        def isMotion = device.currentState("motion")?.stringValue
+        def startDt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(data?.start_time)
+            startDt.setTimeZone(getTimeZone())
+        def newDt = tf.format(startDt)
+        log.debug "startDt: $newDt"
+        def endDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))
+        //def isBtwn = timeOfDayIsBetween(startDt, endDt, new Date(), getTimeZone())
+        log.debug "hasMotion: ${data?.has_motion} | start: $startDt | end: $endDt | isBtwn: $isBtwn"
+        def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
+        if(!isMotion.equals(val)) { 
+            log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
+            sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
+        } else { Logger("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
+    } 
+    catch (ex) {
+        log.error "zoneMotionEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "zoneMotionEvent")
+    }
+}
+
+def zoneSoundEvent(sound) {
+    try {
+        def isSound = device.currentState("sound")?.stringValue
+        def val = sound == "true" ? "detected" : "not detected"
+        if(!isSound.equals(val)) { 
+            log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
+            sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
+        } else { Logger("Sound Sensor is: (${val}) | Original State: (${isSound})") }
+    } 
+    catch (ex) {
+        log.error "zoneSoundEvent Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "zoneSoundEvent")
+    }
+}
+
+def activityZoneEvent(zones) {
+    log.trace "activityZoneEvent($zones)..."
+}
+
 def debugOnEvent(debug) {
     try {
         def val = device.currentState("debugOn")?.value
@@ -453,7 +515,7 @@ def apiStatusEvent(issue) {
     } 
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "apiStatusEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "apiStatusEvent")
     }
 }
 
@@ -473,7 +535,7 @@ def lastUpdatedEvent() {
     } 
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "lastUpdatedEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "lastUpdatedEvent")
     }
 }
 
@@ -489,7 +551,7 @@ def onlineStatusEvent(online) {
     } 
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "onlineStatusEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex, "onlineStatusEvent")
     }
 }
 
@@ -507,19 +569,51 @@ def getUUID(pubVidId) {
     ]
     try {
         httpGet(params) { resp ->
-            
-            def uuid = (test =~ /uuid=(\w*)/)[0][1]
-            return uuid ?: null
+            def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
             log.debug "uuid: $uuid"
+            return uuid ?: null
         }
-    } catch (e) {
-        log.error "something went wrong: $e"
+    } catch (ex) {
+        log.error "getUUID Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "getUUID")
+    }
+}
+/************************************************************************************************
+|									DEVICE COMMANDS     										|
+*************************************************************************************************/
+def streamingOn() {
+    try {
+        log.trace "streamingOn..."
+        parent?.setCamStreaming(this, "true")
+        sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+    } catch (ex) {
+        log.error "streamingOn Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "streamingOn")
     }
 }
 
+def streamingOff() {
+    try {
+        log.trace "streamingOff..."
+        parent?.setCamStreaming(this, "false")
+        sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+    } catch (ex) {
+        log.error "streamingOff Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex, "streamingOff")
+    }
+}
+
+def on() {
+    streamingOn()
+}
+
+def off() {
+    streamingOff()
+}
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
+
 // Local Application Logging
 def Logger(msg, logType = "debug") {
      if(state?.debug) { 
@@ -681,7 +775,7 @@ def getInfoHtml() {
                 <col width="33%">
                 <col width="33%">
                 <thead>
-                  <th>Public Share</th>
+                  <th>Public Video</th>
                   <th>Audio Input</th>
                   <th>Video History</th>
                 </thead>
