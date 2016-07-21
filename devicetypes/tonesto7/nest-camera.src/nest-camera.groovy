@@ -736,8 +736,8 @@ def getAPIServer(camUUID) {
           uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
       ]
       httpGet(params)  { resp ->
-        def apiServer = (resp?.data?.nexus_api_http_server)
-        def apiServer1 = stream.toString().replaceAll("\\[|\\]", "")
+        def apiServer = (resp?.data?.items.nexus_api_http_server)
+        def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
         return apiServer1 ?: null
       }
   }
@@ -753,6 +753,7 @@ def getInfoHtml() {
         def apiServer = getAPIServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
+        log.debug(camImgUrl)
         def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
         def pubVidUrl = state?.public_share_url
