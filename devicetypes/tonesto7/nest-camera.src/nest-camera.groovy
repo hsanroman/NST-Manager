@@ -203,7 +203,7 @@ def generateEvent(Map eventData) {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             if(results?.last_event) {
-                //lastEventDataEvent(results?.last_event)
+                lastEventDataEvent(results?.last_event)
                 //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
                 //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
                 //if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
@@ -700,7 +700,7 @@ def getCSS(){
 }
 
 //this scrapes the public nest cam page for its unique id for using in render html tile
-def getUUID(pubVidId) {
+def getCamUUID(pubVidId) {
     def params = [
         uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
     ]
