@@ -18,7 +18,7 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
- 
+
 import java.text.SimpleDateFormat
 //import org.apache.http.client.utils
 
@@ -38,14 +38,14 @@ metadata {
         capability "Image Capture"
         //capability "Video Camera"
         //capability "Video Capture"
-        
+
         command "refresh"
         command "poll"
         command "log", ["string","string"]
         command "streamingOn"
         command "streamingOff"
         command "changeStreaming"
-        
+
         attribute "softwareVer", "string"
         attribute "lastConnection", "string"
         attribute "lastOnline", "string"
@@ -62,11 +62,11 @@ metadata {
         attribute "devTypeVer", "string"
         attribute "onlineStatus", "string"
     }
-    
+
     simulator {
         // TODO: define status and reply messages here
     }
-            
+
     tiles(scale: 2) {
         multiAttributeTile(name: "videoPlayer", type: "videoPlayer", width: 6, height: 4) {
             tileAttribute("device.switch5", key: "CAMERA_STATUS") {
@@ -147,7 +147,7 @@ metadata {
             state "false", 	label: 'Debug:\n${currentValue}'
         }
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 14)
-        
+
     main "isStreamingStatus"
     details(["devInfoHtml", "isStreaming", "motion", "sound", "refresh"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
@@ -173,7 +173,7 @@ def poll() {
 }
 
 def refresh() {
-    log.debug "refreshing parent..." 
+    log.debug "refreshing parent..."
     poll()
 }
 
@@ -189,7 +189,7 @@ def generateEvent(Map eventData) {
             isStreamingEvent(results?.is_streaming)
             videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
             publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
-            if(!results?.last_is_online_change) { lastCheckinEvent(null) } 
+            if(!results?.last_is_online_change) { lastCheckinEvent(null) }
             else { lastCheckinEvent(results?.last_is_online_change?.toString()) }
             apiStatusEvent(eventData?.apiIssues)
             debugOnEvent(eventData?.debug ? true : false)
@@ -201,7 +201,7 @@ def generateEvent(Map eventData) {
             if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
             if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
-            if(results?.last_event) {     
+            if(results?.last_event) {
                 //lastEventDataEvent(results?.last_event)
                 //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
                 //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
@@ -213,7 +213,7 @@ def generateEvent(Map eventData) {
         lastUpdatedEvent()
         //log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
         return null
-    } 
+    }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "generateEvent")
@@ -228,7 +228,7 @@ def getDeviceStateData() {
     return getState()
 }
 
-def getTimeZone() { 
+def getTimeZone() {
     def tz = null
     if (location?.timeZone) { tz = location?.timeZone }
     else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
@@ -239,10 +239,10 @@ def getTimeZone() {
 def isCodeUpdateAvailable(newVer, curVer) {
     try {
         def result = false
-        def latestVer 
+        def latestVer
         def versions = [newVer, curVer]
         if(newVer != curVer) {
-            latestVer = versions?.max { a, b -> 
+            latestVer = versions?.max { a, b ->
                 def verA = a?.tokenize('.')
                 def verB = b?.tokenize('.')
                 def commonIndices = Math.min(verA?.size(), verB?.size())
@@ -295,7 +295,7 @@ def lastCheckinEvent(checkin) {
             Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
             sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
         } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
-    } 
+    }
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "lastCheckinEvent")
@@ -314,7 +314,7 @@ def lastOnlineEvent(dt) {
             Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
             sendEvent(name: 'lastOnline', value: lastOnl, displayed: true, isStateChange: true)
         } else { Logger("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
-    } 
+    }
     catch (ex) {
         log.error "lastOnlineEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "lastOnlineEvent")
@@ -328,11 +328,11 @@ def isStreamingEvent(isStreaming) {
         def isOnline = device.currentState("onlineStatus")?.value
         def val = (isStreaming.toBoolean() == true) ? "on" : (!isOnline == "Online" ? "unavailable" : "off")
         state?.isStreaming = val == "on" ? true : false
-        if(!isOn.equals(val)) { 
+        if(!isOn.equals(val)) {
             log.debug("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
             sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
-    } 
+    }
     catch (ex) {
         log.error "isStreamingEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "isStreamingEvent")
@@ -344,11 +344,11 @@ def audioInputEnabledEvent(on) {
         def isOn = device.currentState("audioInputEnabled")?.value
         def val = on ? "Enabled" : "Disabled"
         state?.audioInputEnabled = val
-        if(!isOn.equals(val)) { 
+        if(!isOn.equals(val)) {
             log.debug("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
             sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Audio Input Status is: (${val}) | Original State: (${isOn})") }
-    } 
+    }
     catch (ex) {
         log.error "audioInputEnabledEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "audioInputEnabledEvent")
@@ -360,11 +360,11 @@ def videoHistEnabledEvent(on) {
         def isOn = device.currentState("videoHistoryEnabled")?.value
         def val = on ? "Enabled" : "Disabled"
         state?.videoHistoryEnabled = val
-        if(!isOn.equals(val)) { 
+        if(!isOn.equals(val)) {
             log.debug("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
             sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Video History Status is: (${val}) | Original State: (${isOn})") }
-    } 
+    }
     catch (ex) {
         log.error "videoHistEnabledEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "videoHistEnabledEvent")
@@ -376,11 +376,11 @@ def publicShareEnabledEvent(on) {
         def isOn = device.currentState("publicShareEnabled")?.value
         def val = on ? "Enabled" : "Disabled"
         state?.publicShareEnabled = val
-        if(!isOn.equals(val)) { 
+        if(!isOn.equals(val)) {
             log.debug("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
             sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
-    } 
+    }
     catch (ex) {
         log.error "publicShareEnabledEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "publicShareEnabledEvent")
@@ -395,7 +395,7 @@ def softwareVerEvent(ver) {
             log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
             sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
         } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
-    } 
+    }
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "softwareVerEvent")
@@ -407,35 +407,35 @@ def lastEventDataEvent(data) {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
             tf.setTimeZone(getTimeZone())
-        
+
         def curStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventStart")?.stringValue))
         def curEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventEnd")?.stringValue))
-        
+
         def startDt = data?.start_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" : "Not Available"
         def endDt = data?.end_time ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" : "Not Available"
-        
+
         state.lastEventStartDt = startDt
         state.lastEventEndDt = endDt
         state?.lastEventData = data
 
         def newStart = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))
         def newEnd = tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))
-        
+
         log.debug "curStart: ${curStart}"
         log.debug "newStart: ${newStart}"
         log.debug "curStop: ${curEnd}"
         log.debug "newStop: ${newEnd}"
-        
+
         if(curStart != newStart || curEnd != newEnd) {
             log.debug("UPDATED | Last Event Start Time: (${newStart}) | Original State: (${curStart})")
             sendEvent(name: 'lastEventStart', value: newStart, descriptionText: "Last Event Start is now ${newStart}", displayed: false)
             log.debug("UPDATED | Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
             sendEvent(name: 'lastEventEnd', value: newEnd, descriptionText: "Last Event End is now ${newEnd}", displayed: false)
-        } else { 
+        } else {
             log.debug("Last Event Start Time: (${newStart}) | Original State: (${curStart})")
             log.debug("Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
         }
-    } 
+    }
     catch (ex) {
         log.error "lastEventDataEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", ex, "lastEventDataEvent")
@@ -456,11 +456,11 @@ def zoneMotionEvent(data) {
         //def isBtwn = timeOfDayIsBetween(startDt, endDt, new Date(), getTimeZone())
         log.debug "hasMotion: ${data?.has_motion} | start: $startDt | end: $endDt | isBtwn: $isBtwn"
         def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
-        if(!isMotion.equals(val)) { 
+        if(!isMotion.equals(val)) {
             log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
             sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
-    } 
+    }
     catch (ex) {
         log.error "zoneMotionEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "zoneMotionEvent")
@@ -471,11 +471,11 @@ def zoneSoundEvent(sound) {
     try {
         def isSound = device.currentState("sound")?.stringValue
         def val = sound == "true" ? "detected" : "not detected"
-        if(!isSound.equals(val)) { 
+        if(!isSound.equals(val)) {
             log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
             sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
         } else { Logger("Sound Sensor is: (${val}) | Original State: (${isSound})") }
-    } 
+    }
     catch (ex) {
         log.error "zoneSoundEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "zoneSoundEvent")
@@ -496,7 +496,7 @@ def debugOnEvent(debug) {
             log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
             sendEvent(name: 'debugOn', value: dVal, displayed: false)
         } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
-    } 
+    }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", ex, "debugOnEvent")
@@ -508,11 +508,11 @@ def apiStatusEvent(issue) {
         def curStat = device.currentState("apiStatus")?.value
         def newStat = issue ? "Issues" : "Ok"
         state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) { 
+        if(!curStat.equals(newStat)) {
             log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
             sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
         } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
-    } 
+    }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "apiStatusEvent")
@@ -532,7 +532,7 @@ def lastUpdatedEvent() {
             Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
             sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
         }
-    } 
+    }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "lastUpdatedEvent")
@@ -544,11 +544,11 @@ def onlineStatusEvent(online) {
         def isOn = device.currentState("onlineStatus")?.value
         def val = online ? "Online" : "Offline"
         state?.onlineStatus = val
-        if(!isOn.equals(val)) { 
+        if(!isOn.equals(val)) {
             log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
             sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
         } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
-    } 
+    }
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex, "onlineStatusEvent")
@@ -616,7 +616,7 @@ def off() {
 
 // Local Application Logging
 def Logger(msg, logType = "debug") {
-     if(state?.debug) { 
+     if(state?.debug) {
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -635,7 +635,7 @@ def Logger(msg, logType = "debug") {
                 break
         }
      }
- } 
+ }
 // Print log message from parent
 def log(message, level = "trace") {
     switch (level) {
@@ -654,13 +654,13 @@ def log(message, level = "trace") {
         default:
             log.error "PARENT_Log>> " + message
             break
-    }            
+    }
     return null
 }
 
 def getImgBase64(url,type) {
     try {
-        def params = [ 
+        def params = [
             uri: url,
             contentType: 'image/$type'
         ]
@@ -679,7 +679,7 @@ def getImgBase64(url,type) {
                 //log.debug "resp: ${s}"
                 return s ? "data:image/${type};base64,${s.toString()}" : null
             }
-        }	
+        }
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
@@ -687,9 +687,9 @@ def getImgBase64(url,type) {
     }
 }
 
-def getImg(imgName) { 
+def getImg(imgName) {
     try {
-        return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" 
+        return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
@@ -699,7 +699,7 @@ def getImg(imgName) {
 
 def getCSS(){
     try {
-        def params = [ 
+        def params = [
             uri: state?.cssUrl.toString(),
             contentType: 'text/css'
         ]
@@ -713,19 +713,55 @@ def getCSS(){
     }
 }
 
+def getLiveStreamHost(camUUID) {
+  try {
+      def params = [
+          uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
+      ]
+      httpGet(params)  { resp ->
+        def stream = (resp?.data?.items.live_stream_host)
+        def stream1 = stream.toString().replaceAll("\\[|\\]", "")
+        return stream1 ?: null
+      }
+  }
+  catch (ex) {
+      log.error "Failed to load camera server - Exception: ${ex}"
+      parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getCSS")
+  }
+}
+
+def getAPIServer(camUUID) {
+  try {
+      def params = [
+          uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
+      ]
+      httpGet(params)  { resp ->
+        def apiServer = (resp?.data?.nexus_api_http_server)
+        def apiServer1 = stream.toString().replaceAll("\\[|\\]", "")
+        return apiServer1 ?: null
+      }
+  }
+  catch (ex) {
+      log.error "Failed to load API server - Exception: ${ex}"
+      parent?.sendChildExceptionData("camera", devVer(), ex.toString(), "getCSS")
+  }
+}
+
 def getInfoHtml() {
     try {
         def camUUID = getUUID(getPublicVideoId())
-        def camImgUrl = "https://nexusapi.dropcam.com/get_image?uuid=${camUUID}&width=410"
-        def camPlaylistUrl = "https://stream-alfa.dropcam.com:443/nexus_aac/${camUUID}/playlist.m3u8"
-        
+        def apiServer = getAPIServer(camUUID)
+        def liveStreamURL = getLiveStreamHost(camUUID)
+        def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
+        def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
+
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
-        
+
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        
+
         def html = """
         <!DOCTYPE html>
         <html>
@@ -745,7 +781,7 @@ def getInfoHtml() {
                 <script type="text/javascript">
                     <!--
                         function toggle_visibility(id) {
-                        
+
                         var e = document.getElementById(id);
                         if(e.style.display == 'block')
                             e.style.display = 'none';
@@ -816,7 +852,7 @@ def getInfoHtml() {
                      </tr>
                   </tbody>
                 </table>
-                    
+
                 <p class="centerText">
                     <a href="#openModal" class="button">More info</a>
                 </p>
