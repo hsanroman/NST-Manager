@@ -203,7 +203,7 @@ def generateEvent(Map eventData) {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
                 lastEventDataEvent(results?.last_event)
-                if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
+                //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
                 //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
                 //if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
@@ -410,56 +410,45 @@ def softwareVerEvent(ver) {
 
 def lastEventDataEvent(data) {
     try {
-        def tf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+        def tf = new SimpleDateFormat("E MMM dd H:m:s z yyyy")
             tf.setTimeZone(getTimeZone())
-        def curStart = device.currentState("lastEventStart")?.value.toString()
-        def curEnd =  device.currentState("lastEventEnd")?.value.toString()
-        log.debug "lastEvt| curStart: ${device.currentState("lastEventStart")?.value.toString()} | curEnd: ${device.currentState("lastEventEnd")?.value.toString()}"
-        log.debug "lastEvt| start: ${data?.start_time} | end: ${data?.end_time}"
-        
-        def curStartDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventStart")?.value.toString())
-        def curEndDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", device.currentState("lastEventEnd")?.value.toString())
-        def newStartDt = tf.parse(data?.start_time.toString())
-        def newEndDt = tf.parse(data?.start_time.toString())
+        def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd H:m:s z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
+        def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd H:m:s z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
+        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
 
-        log.debug "lastEvt| curStartDt: $curStartDt | curEndDt: $curEndDt"
-        log.debug "lastEvt| newStartDt: $newStartDt | newEndDt: $newEndDt"
-        def newStart = "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time))}" ?: "Not Available"
-        def newEnd = "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time))}" ?: "Not Available"
-
-        log.debug "lastEvt| new start: $newStart | new end: $newEnd"
         state.lastEventStartDt = newStart
         state.lastEventEndDt = newEnd
         state?.lastEventData = data
 
         if(curStartDt != newStartDt || curEndDt != newEndDt) {
-            log.debug("UPDATED | Last Event Start Time: (${newStart}) | Original State: (${curStart})")
-            sendEvent(name: 'lastEventStart', value: newStart, descriptionText: "Last Event Start is now ${newStart}", displayed: false)
-            log.debug("UPDATED | Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
-            sendEvent(name: 'lastEventEnd', value: newEnd, descriptionText: "Last Event End is now ${newEnd}", displayed: false)
+            log.debug("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
+            sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is now ${newStartDt}", displayed: false)
+            log.debug("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
+            sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is now ${newEndDt}", displayed: false)
         } else {
-            log.debug("Last Event Start Time: (${newStart}) | Original State: (${curStart})")
-            log.debug("Last Event End Time: (${newEnd}) | Original State: (${curEnd})")
+            log.debug("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
+            log.debug("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
         }
     }
     catch (ex) {
         log.error "lastEventDataEvent Exception: ${ex}"
-        //parent?.sendChildExceptionData("camera", ex.message, "lastEventDataEvent")
+        parent?.sendChildExceptionData("camera", ex.message, "lastEventDataEvent")
     }
 }
 
 def zoneMotionEvent(data) {
     try {
-        def tf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+        def tf = new SimpleDateFormat("E MMM dd H:m:s z yyyy")
             tf.setTimeZone(getTimeZone())
         def isMotion = device.currentState("motion")?.stringValue
         
-        def newStart = tf.parse(data?.start_time)
-        def newEnd = tf.parse(data?.end_time)
-        log.debug "MotEvt| newStart: $newStart | newEnd: $newEnd"
+        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+        log.debug "MotEvt| newStartDt: $newStartDt | newEnd: $newEndDt"
         
-        def isBtwn = timeOfDayIsBetween(newStart, newEnd, new Date(), getTimeZone())
-        log.debug "MotEvt| hasMotion: ${data?.has_motion} | start: $newStart | end: $newEnd | isBtwn: $isBtwn"
+        def isBtwn = timeOfDayIsBetween(newStartDt, newEndDt, new Date(), getTimeZone())
+        log.debug "MotEvt| hasMotion: ${data?.has_motion} | start: $newStartDt | end: $newEndDt | isBtwn: $isBtwn"
         def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
         if(!isMotion.equals(val)) {
             log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
