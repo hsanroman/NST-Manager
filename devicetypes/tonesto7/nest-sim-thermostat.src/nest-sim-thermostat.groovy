@@ -12,7 +12,7 @@
  *
  */
 
-def devVer() { return "1.0.0"}
+def devVer() { return "1.0.1"}
 
 metadata {
     definition (name: "Nest Sim Thermostat", namespace: "tonesto7", author: "Anthony S.") {
@@ -31,6 +31,9 @@ metadata {
         command "changePresence"
         command "safetyHumidityMaxUp"
         command "safetyHumidityMaxDown"
+        command "comfortDewpointMaxUp"
+        command "comfortDewpointMaxDown"
+
         command "safetyTempMinUp"
         command "safetyTempMinDown"
         command "safetyTempMaxUp"
@@ -47,6 +50,8 @@ metadata {
         attribute "safetyTempMax", "string"
         attribute "safetyHumidityMax", "string"
         //attribute "safetyHumidityMin", "string"
+        attribute "comfortHumidityMax", "string"
+
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
@@ -190,6 +195,16 @@ metadata {
         standardTile("safetyHumidityMaxUp", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
             state "default", action:"safetyHumidityMaxUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
         }
+        
+        valueTile("comfortDewpointMax", "device.comfortDewpointMax", width: 2, height: 2, decoration: "flat") {
+            state "default", label:'Dewpoint Max\n${currentValue}', unit: "%", backgroundColor:"#ffffff"
+        }
+        standardTile("comfortDewpointMaxDown", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
+            state "default", action:"comfortDewpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+        }
+        standardTile("comfortDewpointMaxUp", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
+            state "default", action:"comfortDewpointMaxUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
+        }
 
         standardTile("tempLocked", "device.tempLockOn", width: 2, height: 2, decoration: "flat") {
             state "true", action:"changeTempLock", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/lock_icon.png"
@@ -254,6 +269,7 @@ def installed() {
     sendEvent(name: "safetyTempMax", value: 85, unit: getTemperatureScale(), descriptionText: "Safety Temp Max is: (85°${getTemperatureScale()})", displayed: false, isStateChange: true)
     sendEvent(name: "safetyHumidityMax", value: 80, unit: "%", descriptionText: "Safety Humidity Max is: (80%)", displayed: false, isStateChange: true)
     //sendEvent(name: "safetyHumidityMin", value: 15, unit: "%", descriptionText: "Safety Humidity Min is: (15%)", displayed: false, isStateChange: true)
+    sendEvent(name: "comfortDewpointMax", value: 65, unit: getTemperatureScale(), descriptionText: "Comfort Dew Point Max is: (65°${getTemperatureScale()})", displayed: false, isStateChange: true)
     sendEvent(name: "tempLockOn", value: false, descriptionText: "Nest Temp Lock is: (Off)", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMax", value: 80, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (80°${getTemperatureScale()})", displayed: false, isStateChange: true)
@@ -503,6 +519,20 @@ def safetyHumidityMaxDown() {
     def value = ts ? ts.integerValue - 1 : 72
     log.debug "Safety Humidity Max is now: (${value}%)"
     sendEvent(name: 'safetyHumidityMax', value: value, unit: "%", descriptionText: "Safety Humidity Max is: (${value}%)", displayed: false, isStateChange: true)
+}
+
+def comfortDewpointMaxUp() {
+    def ts = device.currentState("comfortDewpointMax")
+    def value = ts ? ts.integerValue + 1 : 72
+    log.debug "Comfort Dew Point Max is now: (${value}%)"
+    sendEvent(name: 'comfortDewpointMax', value: value, unit: getTemperatureScale(), descriptionText: "Comfort Dew Point Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
+}
+
+def comfortDewpointMaxDown() {
+    def ts = device.currentState("comfortDewpointMax")
+    def value = ts ? ts.integerValue - 1 : 72
+    log.debug "Comfort Dew Point Max is now: (${value}%)"
+    sendEvent(name: 'comfortDewpointMax', value: value, unit: getTemperatureScale(), descriptionText: "Comfort Dew Point Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def lockedTempMinUp() {
