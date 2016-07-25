@@ -200,7 +200,7 @@ metadata {
             state "default", label:'Dewpoint Max\n${currentValue}', unit: "%", backgroundColor:"#ffffff"
         }
         standardTile("comfortDewpointMaxDown", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
-            state "default", action:"comfortDewpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
+            state "default", action:"comfortDewpointMaxDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
         }
         standardTile("comfortDewpointMaxUp", "device.safetyHumidityMax", width: 2, height: 2, decoration: "flat") {
             state "default", action:"comfortDewpointMaxUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
@@ -524,15 +524,15 @@ def safetyHumidityMaxDown() {
 
 def comfortDewpointMaxUp() {
     def ts = device.currentState("comfortDewpointMax")
-    def value = ts ? ts.integerValue + 1 : 72
-    log.debug "Comfort Dew Point Max is now: (${value}%)"
+    def value = ts ? ts.integerValue + 1 : 60
+    log.debug "Comfort Dew Point Max is now: (${value}°${getTemperatureScale()})"
     sendEvent(name: 'comfortDewpointMax', value: value, unit: getTemperatureScale(), descriptionText: "Comfort Dew Point Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
 def comfortDewpointMaxDown() {
     def ts = device.currentState("comfortDewpointMax")
-    def value = ts ? ts.integerValue - 1 : 72
-    log.debug "Comfort Dew Point Max is now: (${value}%)"
+    def value = ts ? ts.integerValue - 1 : 60
+    log.debug "Comfort Dew Point Max is now: (${value}°${getTemperatureScale()})"
     sendEvent(name: 'comfortDewpointMax', value: value, unit: getTemperatureScale(), descriptionText: "Comfort Dew Point Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
 
