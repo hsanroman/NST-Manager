@@ -246,6 +246,7 @@ metadata {
             "safetyTempMin", "safetyTempMinDown", "safetyTempMinUp",
             "safetyTempMax", "safetyTempMaxDown", "safetyTempMaxUp",
             "safetyHumidityMax", "safetyHumidityMaxDown", "safetyHumidityMaxUp",
+            "comfortDewpointMax", "comfortDewpointMaxDown", "comfortDewpointMaxUp",
             "tempLocked", "filler", "filler",
             "lockedTempMin", "lockedTempMinDown", "lockedTempMinUp",
             "lockedTempMax", "lockedTempMaxDown", "lockedTempMaxUp"
