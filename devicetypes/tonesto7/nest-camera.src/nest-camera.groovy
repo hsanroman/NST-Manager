@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.0.6" }
+def devVer() { return "0.0.7" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -417,8 +417,8 @@ def lastEventDataEvent(data) {
         def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
         def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
 
-        state.lastEventStartDt = newStartDt
-        state.lastEventEndDt = newEndDt
+        state.lastEventStartDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", newStartDt), true)
+        state.lastEventEndDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", newEndDt), true)
         state?.lastEventData = data
 
         if(curStartDt != newStartDt || curEndDt != newEndDt) {
@@ -761,7 +761,7 @@ def getCamUUID(pubVidId) {
     try {
         httpGet(params) { resp ->
             def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
-            log.debug "uuid: $uuid"
+            //log.debug "uuid: $uuid"
             return uuid ?: null
         }
     } catch (ex) {
@@ -809,18 +809,20 @@ def getInfoHtml() {
         def apiServer = getCamApiServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        log.debug "CamImgUrl: $camImgUrl"
+        //log.debug "CamImgUrl: $camImgUrl"
         def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
         def animationUrl = state?.animation_url
-        log.debug "Animation URL: $animationUrl"
+        //log.debug "Animation URL: $animationUrl"
 
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-
+        def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>"""
+        def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
         def html = """
         <!DOCTYPE html>
         <html>
@@ -835,44 +837,10 @@ def getInfoHtml() {
             <body>
                 <style type="text/css">
                     ${getCSS()}
-                    .toggles {
-                      text-align: center;
-                    }
-                    .dual-header {
-                      transition: all ease 2s;
-                    }
                 </style>
-                ${updateAvail}
-                <script type="text/javascript">
-                    <!--
-                        window.onload=function(){
-                          document.getElementById('liveStream').style.display = 'block';
-                          document.getElementById('still').style.display = 'none';
-                          document.getElementById('animation').style.display = 'none';
-                        }
-
-                        function toggle_visibility(id) {
-                          var ls = document.getElementById('liveStream');
-                          var sl = document.getElementById('still');
-                          var an = document.getElementById('animation');
-
-                          if(id == 'liveStream'){
-                            ls.style.display = 'block';
-                            sl.style.display = 'none';
-                            an.style.display = 'none';
-                          } else if(id == 'still') {
-                              ls.style.display = 'none';
-                              sl.style.display = 'block';
-                              an.style.display = 'none';
-                          } else {
-                            ls.style.display = 'none';
-                            sl.style.display = 'none';
-                            an.style.display = 'block';
-                          }
-                        }
-                    //-->
-                </script>
-                <div class="dual-header" id="liveStream">
+                <script src="https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"></script>
+                   ${updateAvail}
+                <div class="hideable" id="liveStream">
                     <video width="410" controls
                         id="nest-video"
                         class="video-js vjs-default-skin"
@@ -882,16 +850,16 @@ def getInfoHtml() {
                         <source src="${camPlaylistUrl}" type="application/x-mpegURL">
                     </video>
                 </div>
-                <div class="dual-header" id="still">
+                <div class="hideable" id="still" style="display:none">
                     <img src="${pubSnapUrl}" width="100%"/>
                 </div>
-                <div class="dual-header" id="animation">
+                <div class="hideable" id="animation" style="display:none">
                     <img src="${animationUrl}" width="100%"/>
                 </div>
-                <div class="toggles">
-                  <a href="#" onclick="toggle_visibility('liveStream');" class="button">Video</a>
-                  <a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>
-                  <a href="#" onclick="toggle_visibility('animation');" class="button">Last Event</a>
+                <div class="centerText">
+                  ${vidBtn}
+                  ${imgBtn}
+                  ${lastEvtBtn}
                 </div>
                 <table>
                 <col width="50%">
@@ -907,7 +875,7 @@ def getInfoHtml() {
                      </tr>
                   </tbody>
                 </table>
-
+​
                 <table>
                 <col width="33%">
                 <col width="33%">
@@ -925,7 +893,7 @@ def getInfoHtml() {
                      </tr>
                   </tbody>
                 </table>
-
+​
                 <table>
                 <col width="50%">
                 <col width="50%">
@@ -940,7 +908,7 @@ def getInfoHtml() {
                      </tr>
                   </tbody>
                 </table>
-
+​
                 <p class="centerText">
                     <a href="#openModal" class="button">More info</a>
                 </p>

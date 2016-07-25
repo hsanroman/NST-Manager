@@ -5996,6 +5996,8 @@ def contactWatchPage() {
                     }
                     input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
+                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Wait Before Restoring Again (Optional)", defaultValue: 600, metadata: [values:longTimeMinEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
                 }
             }
 
@@ -6007,14 +6009,6 @@ def contactWatchPage() {
             section("Notifications:") {
                 href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
-            }
-            if(getNotificationOptionsConf()) {
-                section("Notification Options:") {
-                    paragraph "notification preferences will go here"
-                    // Add Alert 1 after set time
-
-                    // Add Alert 2 After Set time
-                }
             }
         }
         section("Help:") {
@@ -6047,8 +6041,10 @@ def conWatContactOk() { return (!conWatContacts && !conWatTstat) ? false : true 
 def conWatScheduleOk() { return autoScheduleOk(conWatPrefix()) }
 def getConWatOpenDtSec() { return !atomicState?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatOpenDt).toInteger() }
 def getConWatCloseDtSec() { return !atomicState?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatCloseDt).toInteger() }
+def getConWatRestoreDelayBetweenDtSec() { return !atomicState?.conWatRestoredDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatRestoredDt).toInteger() }
 def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toInteger()) }
 def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteger()) }
+def getConWatRestoreDelayBetweenVal() { return !conWatRestoreDelayBetween ? 600 : conWatRestoreDelayBetween.toInteger() }
 
 def conWatCheck(timeOut = false) {
     //log.trace "conWatCheck..."
@@ -6068,14 +6064,16 @@ def conWatCheck(timeOut = false) {
             def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
+            def timeOutOk = timeOut && atomicState?.timeOutScheduled ? true : false
             def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+            def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
-            if(getConWatContactsOk() || !safetyOk || timeOut) {
-                if(okToRestore) {
-                    if(timeOut || !safetyOk || (getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5))) {
+            if(getConWatContactsOk() || timeOutOk || !safetyOk) {
+                if(okToRestore || timeOutOk || !safetyOk) {
+                    if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOutOk || !safetyOk) {
                         def lastMode = null
                         if(!atomicState?.conWatRestoreMode) {
                             if(conWatRestoreAutoMode) {
@@ -6083,52 +6081,61 @@ def conWatCheck(timeOut = false) {
                                 LogAction("conWatCheck: Setting Last Mode to 'Auto' because previous mode wasn't found and you said too do this", "info", true)
                             }
                         } else { lastMode = atomicState?.conWatRestoreMode }
-                        if(lastMode && ((lastMode != curMode) || timeOut || !safetyOk)) {
+                        if((lastMode && (lastMode != curMode)) || timeOutOk || !safetyOk) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(conWatTstat, lastMode)) {
                                 if(conWatTstatMir) { 
-                                    conWatTstatMir?.each { tstat ->
-                                        if(setTstatMode(tstat, lastMode)) {
-                                            LogAction("Mirroring Restoring Mode (${lastMode}) to ${tstat}", "info", true)
-                                        }
+                                    if(setMultipleTstatMode(conWatTstatMir, lastMode)) {
+                                        LogAction("Mirroring (${lastMode}) Restore to ${conWatTstatMir}", "info", true)
                                     }
                                 }
-                                atomicState?.conWatRestoreMode = null
+                                //atomicState?.conWatRestoreMode = null
                                 atomicState?.conWatTstatOffRequested = false
                                 unschedTimeoutRestore()
+                                
                                 if(!safetyOk) {
-                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)    
-                                } else { 
-                                    if (timeOut) {
-                                        LogAction("Restoring '${conWatTstat?.label}' to '${lastMode.toUpperCase()}' mode because the (${getEnumValue(longTimeMinEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
-                                    } else {
-                                        LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
-                                    }
+                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' mode because Global Safefy Values have been reached...", "info", true)    
+                                } 
+                                else if (timeOutOk) {
+                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' mode because the (${getEnumValue(longTimeMinEnum(), conWatOffTimeout)}) Timeout has been reached...", "info", true)
                                 }
+                                else {
+                                    LogAction("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "info", true)
+                                }
+
                                 if(allowNotif) {
-                                    if(!timeOut && safetyOk) {
-                                        sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                                    if(!timeOutOk && safetyOk) {
+                                        sendNofificationMsg("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info", settings?."${getPagePrefix()}NofifRecips",        settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                                         if(allowSpeech && speakOnRestore) {
                                             def msg = voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")
                                             sendTTS(msg)
                                         }
+                                        if(allowAlarm) {
+                                            
+                                        }
                                     }
                                 }
-                            } else { LogAction("conWatCheck() | There was problem restoring the last mode to ...", "error", true) }
-                        } else { LogAction("conWatCheck() | Skipping Restore Mode is the same as Current Mode", "info", true) }
+                            } else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
+                        } else { if(!timeOutOk && safetyOk) { LogAction("conWatCheck() | Skipping...Restore Mode is the same as Current Mode", "info", true) } }
                     } else { scheduleAutomationEval() }
-                } else {
-                    if (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) { LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) }
-                    else if (!modeOff && conWatRestoreOnClose && !atomicState?.conWatTstatOffRequested) {
+                } 
+                
+                else {
+                    if (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) { 
+                        LogAction("conWatCheck() | Unable to restore settings okToRestore is false", "warn", true) 
+                    }
+                    else if (modeOff && conWatRestoreOnClose && !atomicState?.conWatRestoreMode) {
                         LogAction("conWatCheck() | Unable to restore settings because previous mode was not found.", "warn", true)
                     }
-                    else if (!conWatRestoreOnClose && !modeOff) { LogAction("conWatCheck() | Skipping Restore since it is not enabled.", "warn", true) }
+                    else if (!conWatRestoreOnClose && !modeOff) { 
+                        LogAction("conWatCheck() | Skipping Restore since it is not enabled.", "warn", true) 
+                    }
                 }
             }
             
-            if (!getConWatContactsOk() && safetyOk && !timeOut) {
-                if(!modeOff && (conWatRestoreOnClose || conWatRestoreAutoMode)) {
-                    if(getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) {
+            if (!getConWatContactsOk() && safetyOk) {
+                if(!modeOff && conWatRestoreOnClose) {
+                    if((getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) && (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2))) {
                         if(conWatRestoreOnClose) {
                             atomicState?.conWatRestoreMode = curMode
                             LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
@@ -6139,9 +6146,8 @@ def conWatCheck(timeOut = false) {
                             atomicState?.conWatTstatOffRequested = true
             
                             if(conWatTstatMir) { 
-                                conWatTstatMir?.each { tstat ->
-                                    tstat.off()
-                                    LogAction("conWatCheck: Mirrored Off Command to ${tstat}", "debug", true)
+                                setMultipleTstatMode(conWatTstatMir, "off") {
+                                    LogAction("Mirroring (${lastMode}) Mode to ${conWatTstatMir}", "info", true)
                                 }
                             }
                             scheduleTimeoutRestore()
@@ -6155,10 +6161,19 @@ def conWatCheck(timeOut = false) {
                                 }
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
-                    } else { scheduleAutomationEval() }
+                    } else { 
+                        if (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2)) {
+                            LogAction("conWatCheck() | Skipping change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
+                        }
+                        scheduleAutomationEval() 
+                    }
                 } else {
-                    if (!(conWatRestoreOnClose || conWatRestoreAutoMode)) { LogAction("conWatCheck() | Skipping off change because '${conWatTstat?.label}' because mode cannot be restored", "warn", true) }
-                    else { LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true) }
+                    if (!(conWatRestoreOnClose || conWatRestoreAutoMode)) { 
+                        LogAction("conWatCheck() | Skipping off change because '${conWatTstat?.label}' because mode cannot be restored", "warn", true) 
+                    }
+                    else { 
+                        LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", false) 
+                    }
                 }
             }
         }
@@ -6168,11 +6183,27 @@ def conWatCheck(timeOut = false) {
     }
 }
 
+def sendEventPushNotifications(message, type) {
+    if(allowNotif) {
+        sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+    }
+}
+
+def sendEventVoiceNotifications(vMsg) {
+    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+    if(allowNotif && allowSpeech) {
+        def msg = voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg")
+        sendTTS(msg)
+    }
+}
+
 def scheduleTimeoutRestore() {
     def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
-    if(timeOutVal) { 
-        runIn(timeOutVal, "restoreAfterTimeOut", [overwrite: true])
-        LogAction("TimeOut Mode Restoration Scheduled for (${getEnumValue(longTimeMinEnum(), settings?."${getPagePrefix()}OffTimeout")})")
+    if(timeOutVal && !atomicState?.timeOutScheduled) { 
+        runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
+        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeMinEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
         atomicState?.timeOutScheduled = true
     }
 }
@@ -6181,7 +6212,7 @@ def unschedTimeoutRestore() {
     def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
     if(timeOutVal && atomicState?.timeOutScheduled) {
         unschedule("restoreAfterTimeOut")
-        LogAction("Scheduled TimeOut Mode Restoration has been cancelled because all Trigger are now clear...", "info", true)
+        LogAction("The Scheduled Mode Restoration Timeout has been cancelled because all Triggers are now clear...", "info", true)
     }
     atomicState?.timeOutScheduled = false
 }
@@ -7108,6 +7139,49 @@ def setNotificationPage(params) {
                 }
             }
         }
+        if(getPagePrefix() in ["conWat"]) {
+            section("Notification Alert Options (1):") {
+                paragraph ""
+                input name: "${pName}_Alert_Delay_1", type: "enum", title: "First Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
+                
+                if(settings?."${pName}_Alert_Delay_1") {
+                    if(settings?."${pName}PushMsgOn") {
+                        input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                    }
+                    if(settings?."${pName}AllowSpeechNotif") {
+                        input "${pName}_Alert_1_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                    }
+                    if(settings?."${pName}AllowAlarmNotif") {
+                        input "${pName}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+                        if(settings?."${pName}_Alert_1_Use_Alarm" && settings?."${pName}AlarmDevice") {
+                            input "${pName}_Alert_1_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, 
+                                    required: false, image: getAppImg("instruction_icon.png")
+                        }
+                    }
+                }
+            }
+            if(settings?."${pName}_Alert_Delay_1") {
+                section("Notification Alert Options (2):") {
+                    input name: "${pName}_Alert_Delay_2", type: "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
+                    if(settings?."${pName}_Alert_Delay_2") {
+                        if(settings?."${pName}PushMsgOn") {
+                            input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                        }
+                        if(settings?."${pName}AllowSpeechNotif") {
+                            input "${pName}_Alert_2_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                        }
+                        if(settings?."${pName}AllowAlarmNotif") {
+                            input "${pName}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+                            if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevice") {
+                                input "${pName}_Alert_2_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -7142,6 +7216,7 @@ def getNotifConfigDesc() {
     str += getNotifSchedDesc() ? ("${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected...") : ""
     str += getVoiceNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}") : ""
     str += getAlarmNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${getAlarmNotifConfigDesc()}") : ""
+    str += getAlertNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Alert Status:${getAlertNotifConfigDesc()}") : ""
     return (str != "") ? "${str}" : null
 }
 
@@ -7156,6 +7231,25 @@ def getVoiceNotifConfigDesc() {
         str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n      Volume: (${settings?."${pName}SpeechVolumeLevel"})" : "" 
         str += (medias && settings?."${pName}SpeechAllowResume") ? "\n      Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
         str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n • Custom Message: (${settings?."${pName}UseCustomSpeechNotifMsg".toString().capitalize()})" : ""
+    }
+    return (str != "") ? "${str}" : null
+}
+
+def getAlertNotifConfigDesc() {
+    def pName = getPagePrefix()
+    def str = ""
+    if(settings["${pName}_Alert_Delay_1"] || settings["${pName}_Alert_Delay_2"]) {
+        
+        str += settings["${pName}_Alert_Delay_1"] ? "\n • Alert (1) Status:\n${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_Delay_1"])}" : ""
+        
+        str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push:${settings["${pName}_Alert_1_Send_Push"]}" : ""
+        str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech:${settings["${pName}_Alert_1_Use_Speech"]}" : ""
+        str += settings["${pName}_Alert_1_Use_Alarm"] ? "\n  • Use Alarm:${settings["${pName}_Alert_1_Use_Alarm"]}" : ""
+        
+        str += settings["${pName}_Alert_Delay_2"] ? "${settings["${pName}_Alert_Delay_1"] ? "\n" : ""}\n • Alert (2) Status:\n${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_Delay_2"])}" : ""
+        str += settings["${pName}_Alert_2_Send_Push"] ? "\n  • Send Push:${settings["${pName}_Alert_2_Send_Push"]}" : ""
+        str += settings["${pName}_Alert_2_Use_Speech"] ? "\n  • Use Speech:${settings["${pName}_Alert_2_Use_Speech"]}" : ""
+        str += settings["${pName}_Alert_2_Use_Alarm"] ? "\n  • Use Alarm:${settings["${pName}_Alert_2_Use_Alarm"]}" : ""
     }
     return (str != "") ? "${str}" : null
 }
@@ -7518,6 +7612,26 @@ def setTstatMode(tstat, mode) {
     catch (ex) { 
         LogAction("setTstatMode() Exception | ${ex}", "error", true)
         sendExceptionData(ex, "setTstatMode")
+    }
+    return result
+}
+
+def setMultipleTstatMode(tstats, mode) { 
+    def result = false
+    try {
+        if(tstats && md) {
+            tstats?.each { ts ->
+                if(setTstatMode(ts, mode)) {
+                    LogAction("Setting ${ts} Mode to (${mode})", "info", true)
+                    result = true
+                } else {
+                    return false
+                }
+            }
+        }
+    } catch (ex) { 
+        LogAction("setMultipleTstatMode() Exception | ${ex}", "error", true)
+        sendExceptionData(ex, "setMultipleTstatMode")
     }
     return result
 }
