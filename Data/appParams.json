@@ -9,7 +9,7 @@
         },
         "thermostat": {
             "type": "rel",
-            "ver": "2.5.3"
+            "ver": "2.5.6"
         },
         "protect": {
             "type": "rel",
@@ -25,7 +25,7 @@
         },
         "weather": {
             "type": "rel",
-            "ver": "2.5.3"
+            "ver": "2.5.6"
         }
     },
     "token": {
