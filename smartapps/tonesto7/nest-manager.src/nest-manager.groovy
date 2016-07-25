@@ -6007,7 +6007,7 @@ def contactWatchPage() {
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
+                href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
@@ -6152,6 +6152,8 @@ def conWatCheck(timeOut = false) {
                             }
                             scheduleTimeoutRestore()
                             LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
+                            
+                            
                             if(allowNotif) {
                                 sendNofificationMsg("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info", 
                                     settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
@@ -6185,7 +6187,15 @@ def conWatCheck(timeOut = false) {
 
 def sendEventPushNotifications(message, type) {
     if(allowNotif) {
-        sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+        if(settings["${getPagePrefix()}_Alert_1_Send_Push"] || settings["${getPagePrefix()}_Alert_2_Send_Push"]) {
+            if(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"]) {
+                sendNofificationMsg(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+            } else {
+                sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+            }
+        } else {
+            sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+        }
     }
 }
 
@@ -7148,15 +7158,40 @@ def setNotificationPage(params) {
                 if(settings?."${pName}_Alert_Delay_1") {
                     if(settings?."${pName}PushMsgOn") {
                         input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                        if(settings["${pName}_Alert_1_Send_Push"]) {
+                            input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                            if(settings["${pName}_Alert_1_Send_Custom_Push"]) {
+                                
+                                input "${pName}_Alert_1_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+                            }
+                        }
                     }
                     if(settings?."${pName}AllowSpeechNotif") {
                         input "${pName}_Alert_1_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                        if(settings["${pName}_Alert_1_Use_Speech"]) {
+                            input "${pName}_Alert_1_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                            if(settings["${pName}_Alert_1_Send_Custom_Speech"]) {
+                                input "${pName}_Alert_1_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+                            }
+                        }
                     }
                     if(settings?."${pName}AllowAlarmNotif") {
                         input "${pName}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
                         if(settings?."${pName}_Alert_1_Use_Alarm" && settings?."${pName}AlarmDevice") {
                             input "${pName}_Alert_1_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, 
                                     required: false, image: getAppImg("instruction_icon.png")
+                        }
+                    }
+                    if(settings["${pName}_Alert_1_Send_Custom_Speech"] || settings["${pName}_Alert_1_Send_Custom_Push"]) {
+                        if(pName in ["conWat", "extTmp"]) {
+                            def str = ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • DeviceName: %devicename%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
+                            str += (pName == "conWat") ? "\n • Open Contact: %opencontact%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
+                            str += (pName == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
+                            paragraph "These Variables are accepted: ${str}", state: "complete", image: getAppImg("instruct_icon.png")
                         }
                     }
                 }
@@ -7168,15 +7203,40 @@ def setNotificationPage(params) {
                     if(settings?."${pName}_Alert_Delay_2") {
                         if(settings?."${pName}PushMsgOn") {
                             input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                            if(settings["${pName}_Alert_2_Send_Push"]) {
+                                input "${pName}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+                                if(settings["${pName}_Alert_2_Send_Custom_Push"]) {
+                                    input "${pName}_Alert_2_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+                                }
+                            }
                         }
                         if(settings?."${pName}AllowSpeechNotif") {
                             input "${pName}_Alert_2_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                            if(settings["${pName}_Alert_2_Use_Speech"]) {
+                                input "${pName}_Alert_2_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                                if(settings["${pName}_Alert_2_Send_Custom_Speech"]) {
+                                    input "${pName}_Alert_2_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+                                }
+                            }
                         }
                         if(settings?."${pName}AllowAlarmNotif") {
                             input "${pName}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
                             if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevice") {
                                 input "${pName}_Alert_2_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
                             }
+                        }
+                    }
+                    
+                    if(settings["${pName}_Alert_2_Send_Custom_Speech"] || settings["${pName}_Alert_2_Send_Custom_Push"]) {
+                        if(pName in ["conWat", "extTmp"]) {
+                            def str = ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • DeviceName: %devicename%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
+                            str += (pName == "conWat") ? "\n • Open Contact: %opencontact%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
+                            str += (pName in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
+                            str += (pName == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
+                            paragraph "These Variables are accepted: ${str}", state: "complete", image: getAppImg("instruct_icon.png")
                         }
                     }
                 }
