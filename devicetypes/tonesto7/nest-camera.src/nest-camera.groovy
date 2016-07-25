@@ -410,15 +410,15 @@ def softwareVerEvent(ver) {
 
 def lastEventDataEvent(data) {
     try {
-        def tf = new SimpleDateFormat("E MMM dd H:m:s z yyyy")
+        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
             tf.setTimeZone(getTimeZone())
-        def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd H:m:s z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
-        def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd H:m:s z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
+        def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
+        def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
         def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
         def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
 
-        state.lastEventStartDt = newStart
-        state.lastEventEndDt = newEnd
+        state.lastEventStartDt = newStartDt
+        state.lastEventEndDt = newEndDt
         state?.lastEventData = data
 
         if(curStartDt != newStartDt || curEndDt != newEndDt) {
@@ -427,8 +427,8 @@ def lastEventDataEvent(data) {
             log.debug("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
             sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is now ${newEndDt}", displayed: false)
         } else {
-            log.debug("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
-            log.debug("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
+            Logger("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
+            Logger("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
         }
     }
     catch (ex) {
@@ -439,7 +439,7 @@ def lastEventDataEvent(data) {
 
 def zoneMotionEvent(data) {
     try {
-        def tf = new SimpleDateFormat("E MMM dd H:m:s z yyyy")
+        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
             tf.setTimeZone(getTimeZone())
         def isMotion = device.currentState("motion")?.stringValue
         
@@ -607,7 +607,7 @@ def off() {
 def formatDt(dt, mdy = false) {
     //log.trace "formatDt($dt, $mdy)..."
     try {
-        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd H:m:s z yyyy"
+        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
         def tf = new SimpleDateFormat(formatVal)
         if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
         else {
@@ -624,7 +624,7 @@ def formatDt(dt, mdy = false) {
 def formatParseDt(dt, mdy = false) {
     //log.trace "formatParseDt($dt, $mdy)..."
     try {
-        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd H:m:s z yyyy"
+        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
         def tf = new SimpleDateFormat(formatVal)
         if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
         else {
