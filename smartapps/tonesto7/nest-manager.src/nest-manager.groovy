@@ -514,10 +514,12 @@ def automationsPage() {
         }
         section("Global Automation Preferences:") {
             def descStr = ""
-            descStr += getSafetyValuesDesc() ?: ""
-            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\nDesired Temps:" : ""
+            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "Desired Temps:" : ""
             descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
             descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
+            descStr += (comfortDewpointMax) ? "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
+            descStr += comfortDewpointMax ? "\n • Max Dew Point: ($comfortDewpointMax${getTemperatureScale()})" : ""
+            descStr += "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
@@ -526,17 +528,74 @@ def automationsPage() {
 
 def automationGlobalPrefsPage() {
     dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
-        section("Global Preferences:") {
-            if(atomicState?.thermostats) {
-                href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
-                state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
+        if(atomicState?.thermostats) {
+            section("Comfort Preferences:") {
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                 input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("cool_icon.png")
+                
+                def trange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
+                def wDev = getChildDevice(getNestWeatherId())
+                def curDewPnt = wDev ? "${wDev.currentValue("dewpoint")}°${getTemperatureScale()}" : 0
+                input "comfortDewpointMax", "decimal", title: "Max. Dewpoint Allowed (${trange} °${getTemperatureScale()})", required: false,  range: trange, 
+                        description: "Current Dew Point: (${curDewPnt})", submitOnChange: true, image: getAppImg("dewpoint_icon.png")
+                href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"embedded", required: false, title: "What is Dew Point?", 
+                        description:"", state: "complete", icon: getAppImg("question_icon.png")
+            }
+            section("Safety Preferences:") {
+                href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
+                state: (getSafetyValuesDesc() ? "complete" : null), image: getAppImg("thermostat_icon.png")
             }
         }
     }
+}
+
+def safetyValuesPage() {
+    dynamicPage(name: "safetyValuesPage", title: "Configure Location Safety Values", uninstall: false) {
+        if(atomicState?.thermostats) {
+            atomicState?.thermostats?.each { ts ->
+                def dev = getChildDevice(ts?.key)
+                def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
+                def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true 
+                // need to ensure they are not the same (if not 0)
+                section("${dev?.displayName} - Safety Values:") {
+                    def srange = (getTemperatureScale() == "C") ? "10..32" : "50..90"
+                    if(canHeat) {
+                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange,
+                                submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
+                    }
+                    if(canCool) {
+                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange, 
+                                submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
+                    }
+                    def hrange = "10..80"
+                    input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Allowed (${hrange} %)", required: false,  range: hrange,
+                            submitOnChange: true, image: getAppImg("humidity_icon.png")
+                }
+            }
+        }
+    }
+}
+
+def getSafetyValuesDesc() {
+    def str = ""
+    def tstats = atomicState?.thermostats
+    if(tstats) {
+        tstats?.each { ts ->
+            def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0.0
+            def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0.0
+            def maxHum = settings?."${ts?.key}_comfort_humidity_max" ?: 80
+            def maxDew = settings?."${ts?.key}_comfort_dewpoint_max" ?: 0.0
+            str += ts ? "(${ts?.value}) Safety Values:" : ""
+            str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
+            str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
+            str += maxHum ? "\n • Max. Humidity: (${maxHum}%)" : ""
+            str += maxDew ? "\n • Max. Dewpoint: (${maxDew}°${getTemperatureScale()})" : ""
+            str += tstats?.size() > 1 ? "\n\n" : ""
+        }
+    }
+    return (str != "") ? "${str}" : null
 }
 
 def custWeatherPage() {
@@ -903,7 +962,7 @@ def updateChildData() {
                 def safetyTemps = [ "min":(settings?."${devId}_safety_temp_min" ?: 0.0), "max":(settings?."${devId}_safety_temp_max" ?: 0.0) ]
                 //def comfortHumidity = [ "min":(settings?."${devId}_safety_humidity_min" ?: 0), "max":(settings?."${devId}_comfort_humidity_max" ?: 0) ]
                 def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
-                def comfortDewpoint = settings?."${devId}_comfort_dewpoint_max" ?: 0.0 
+                def comfortDewpoint = settings?.comfortDewpointMax ?: 0.0 
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
@@ -3628,56 +3687,6 @@ def simulateBatteryEventPage() {
     }
 }
 
-def safetyValuesPage() {
-    dynamicPage(name: "safetyValuesPage", title: "Configure Location Safety Values", uninstall: false) {
-        if(atomicState?.thermostats) {
-            atomicState?.thermostats?.each { ts ->
-                def dev = getChildDevice(ts?.key)
-                def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
-                def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true 
-// need to ensure they are not the same (if not 0)
-                section("${dev?.displayName} - Safety Values:") {
-                    def srange = (getTemperatureScale() == "C") ? "10..32" : "50..90"
-                    if(canHeat) {
-                        input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange,
-                                submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
-                    }
-                    if(canCool) {
-                        input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange, 
-                                submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
-                    }
-                    def hrange = "10..80"
-                    input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Allowed (${hrange} %)", required: false,  range: hrange,
-                            submitOnChange: true, image: getAppImg("humidity_icon.png")
-                    def trange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
-                    input "${dev?.deviceNetworkId}_comfort_dewpoint_max", "decimal", title: "Max. Dewpoint Allowed (${trange} °${getTemperatureScale()})", required: false,  range: trange, 
-                            submitOnChange: true, image: getAppImg("dewpoint_icon.png")
-                }
-            }
-        }
-    }
-}
-
-def getSafetyValuesDesc() {
-    def str = ""
-    def tstats = atomicState?.thermostats
-    if(tstats) {
-        tstats?.each { ts ->
-            def minTemp = settings?."${ts?.key}_safety_temp_min" ?: 0.0
-            def maxTemp = settings?."${ts?.key}_safety_temp_max" ?: 0.0
-            def maxHum = settings?."${ts?.key}_comfort_humidity_max" ?: 80
-            def maxDew = settings?."${ts?.key}_comfort_dewpoint_max" ?: 0.0
-            str += ts ? "(${ts?.value}) Safety Values:" : ""
-            str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
-            str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
-            str += maxHum ? "\n • Max. Humidity: (${maxHum}%)" : ""
-            str += maxDew ? "\n • Max. Dewpoint: (${maxDew}°${getTemperatureScale()})" : ""
-            str += tstats?.size() > 1 ? "\n\n" : ""
-        }
-    }
-    return (str != "") ? "${str}" : null
-}
-
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
         def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
@@ -5685,7 +5694,7 @@ def extTmpTempOk() {
         def extTemp = getExtTmpTemperature()
         def tempDiff = Math.abs(extTemp - intTemp)
         def curMode = extTmpTstat.currentThermostatMode.toString()
-        def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
+        def dpLimit = getComfortDewpoint() ?: (getTemperatureScale() == "C" ? 19 : 66)
         def curDp = getExtTmpDewPoint()
         def diffThresh = getExtTmpTempDiffVal()
         def dpOk = (curDp < dpLimit) ? true : false
@@ -7393,8 +7402,8 @@ def getComfortHumidity(tstat) {
     return null
 }
 
-def getComfortDewpoint(tstat) {
-    def maxDew = tstat?.currentValue("comfortDewpointMax") ?: 0
+def getComfortDewpoint() {
+    def maxDew = parent?.settings?.comfortDewpointMax ?: 0
     if(maxDew) {
         //return ["min":minHumidity, "max":maxHumidity]
         return maxDew.toDouble()
