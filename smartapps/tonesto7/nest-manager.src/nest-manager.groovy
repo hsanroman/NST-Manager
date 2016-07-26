@@ -154,9 +154,6 @@ preferences {
     page(name: "custWeatherPage")
     page(name: "automationsPage")
     page(name: "automationGlobalPrefsPage")
-    page(name: "backupSendManagerDataPage")
-    page(name: "backupRemoveManagerDataPage")
-    page(name: "backupPage")
     
     //Automation Pages
     page(name: "selectAutoPage" )
@@ -178,6 +175,9 @@ preferences {
     //shared pages
     page(name: "setNotificationPage")
     page(name: "setNotificationTimePage")
+    page(name: "backupSendDataPage")
+    page(name: "backupRemoveDataPage")
+    page(name: "backupPage")
 }
 
 mappings {
@@ -497,36 +497,6 @@ def prefsPage() {
         }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
-        }
-    }
-}
-
-def backupPage() {
-    return dynamicPage(name: "backupPage", title: "", nextPage: "prefsPage", install: false) {
-        section("") {
-            href "backupSendManagerDataPage", title: "Send Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
-            href "backupRemoveManagerDataPage", title: "Remove Backup Data", description: "Tap to configure...", image: getAppImg("uninstall_icon.png")
-        }
-    }
-}
-
-def backupSendManagerDataPage() {
-    return dynamicPage(name: "backupSendManagerDataPage", title: "", nextPage: "prefsPage", install: false) {
-        section("") {
-            paragraph "Sending Backup Data to Firebase..."
-            if(sendManagerBackupData()) {
-                paragraph "Backup Data sent Successfully..."
-            }
-        }
-    }
-}
-def backupRemoveManagerDataPage() {
-    return dynamicPage(name: "backupRemoveManagerDataPage", title: "", nextPage: "prefsPage", install: false) {
-        section("") {
-            paragraph "Removing Backed Up App Data from Firebase..."
-            if(removeManagerBackupData()) {
-                paragraph "Backup Data Removed Successfully..."
-            }
         }
     }
 }
@@ -4220,6 +4190,48 @@ def removeAutomationBackupData(childId) {
     return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
 }
 
+def backupPage() {
+    return dynamicPage(name: "backupPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            href "backupSendDataPage", title: "Send Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+            href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to configure...", image: getAppImg("uninstall_icon.png")
+        }
+    }
+}
+
+def backupSendDataPage() {
+    return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            paragraph "Sending Backup Data to Firebase..."
+            if(!parent) {
+                if(sendManagerBackupData()) {
+                    paragraph "${app?.label.toString().capitalize()} Backup Data sent Successfully..."
+                }
+            } else {
+                if(backupConfigToFirebase()) {
+                    paragraph "${app?.label.toString().capitalize()} Backup Data sent Successfully..."
+                }
+            }
+        }
+    }
+}
+def backupRemoveDataPage() {
+    return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            paragraph "Removing Backed Up App Data from Firebase..."
+            if(!parent) {
+                if(removeManagerBackupData()) {
+                    paragraph "Nest Manager Backup Data Deleted Successfully..."
+                }
+            } else {
+                if(backupConfigToFirebase()) {
+                    paragraph "${app?.label.toString().capitalize()} Backup Data Deleted Successfully..."
+                }
+            }
+        }
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /********************************************************************************************
 |    Application Name: Nest Automations                                                   	|
@@ -4432,6 +4444,9 @@ def mainAutoPage(params) {
                         atomicState?.disableAutomationDt = null
                     }
                 }
+                section("Backup Data (Experimental):") {
+                    href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+                }
                 section("Debug Options") {
                     input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
                     atomicState?.showDebug = showDebug
@@ -4458,7 +4473,6 @@ def initAutoApp() {
     scheduler()
     app.updateLabel(getAutoTypeLabel())
     watchDogAutomation()
-    backupConfigToFirebase()
 }
 
 def uninstallAutomationApp() {
@@ -4648,7 +4662,7 @@ def backupConfigToFirebase() {
     }
     def result = ["${app?.id}":["settingsData":setData.toString(), "stateData":stateData.toString()]]
     def resultJson = new groovy.json.JsonOutput().toJson(result)
-    parent?.sendAutomationBackupData(resultJson)
+    return parent?.sendAutomationBackupData(resultJson)
 }
 
 def getLastAutomationSchedSec() { return !atomicState?.lastAutomationSchedDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAutomationSchedDt).toInteger() }
