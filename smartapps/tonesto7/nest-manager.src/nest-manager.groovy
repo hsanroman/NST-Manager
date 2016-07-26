@@ -5863,7 +5863,7 @@ def extTmpTempOk() {
                 if (extTempHigh) { retval = false; tempOk = false }
             }
             if (modeHeat || oldMode == "heat") {
-                str = "less than than"
+                str = "less than"
                 if (extTempLow) { retval = false; tempOk = false }
             }
             if (modeAuto) { retval = false; str = "in supported mode" } // no point in turning off if in auto mode
@@ -6212,11 +6212,8 @@ def conWatCheck(timeOut = false) {
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
             if(getConWatContactsOk() || timeOut || !safetyOk) {
-                unschedule("alarm0FollowUp")
-                unschedule("alarm1FollowUp")
-                unschedule("alarm2FollowUp")
-                alarm3FollowUp()
-
+                alarmEvtSchedCleanup()
+                
                 if(okToRestore) {
                     if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
                         def lastMode = null
@@ -6294,13 +6291,10 @@ def conWatCheck(timeOut = false) {
                             }
                             LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
                             
-                            
                             if(allowNotif) {
                                 sendEventPushNotifications("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info")
                                 sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg"))
                                 scheduleAlarmOn()
-//                                if(getAlarmEvtNumber() > 0) { sendEventAlarmAction(getAlarmEvtNumber()) }
-                                
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
                     } else { 
@@ -6322,222 +6316,6 @@ def conWatCheck(timeOut = false) {
     } catch (ex) {
         LogAction("conWatCheck Exception: (${ex})", "error", true)
         sendExceptionData(ex, "conWatCheck")
-    }
-}
-
-def sendEventPushNotifications(message, type) {
-    if(allowNotif) {
-        if(settings["${getPagePrefix()}_Alert_1_Send_Push"] || settings["${getPagePrefix()}_Alert_2_Send_Push"]) {
-            if(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"]) {
-                sendNofificationMsg(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-            } else {
-                sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-            }
-        } else {
-            sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-        }
-    }
-}
-
-def sendEventVoiceNotifications(vMsg) {
-    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
-    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
-    if(allowNotif && allowSpeech) {
-        sendTTS(vMsg)
-    }
-}
-
-def scheduleAlarmOn() {
-    def timeVal = getAlert1DelayVal()
-    if (timeVal > 0) {
-        schedule(timeVal, "alarm0FollowUp", [overwrite: true] )
-    }
-}
-
-def alarm0FollowUp() {
-    def timeVal = getAlert1AlarmEvtOffVal()
-    if (timeVal > 0 && sendEventAlarmAction(1)) {
-        schedule(timeVal, "alarm1FollowUp", [overwrite: true] )
-    }
-}
-
-def alarm1FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
-    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt1RuntimeDtSec >= (getAlert1AlarmEvtOffVal() - 2))
-    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"]
-    //if(okToTurnOff) {
-        aDev?.off()
-    //}
-    def timeVal = getAlert2DelayVal()
-    if (timeVal > 0) {
-        schedule(timeVal, "alarm2FollowUp", [overwrite: true] )
-    }
-}
-
-def alarm2FollowUp() {
-    def timeVal = getAlert2AlarmEvtOffVal()
-    if (timeVal > 0 && sendEventAlarmAction(2)) {
-        schedule(timeVal, "alarm3FollowUp", [overwrite: true] )
-    }
-}
-
-def alarm3FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
-    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt2RuntimeDtSec >= (getAlert2AlarmEvtOffVal() - 2))
-    //def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"]
-    //if(okToTurnOff) {
-        aDev?.off()
-    //}
-}
-
-/*
-def getAlarmEvtNumber() {
-    def evtNum = 0
-    try {
-        def alert1Delay = getAlert1AlarmEvtOffVal()
-        def alert2Delay = getAlert2AlarmEvtOffVal()
-        def curOffTime = 0
-        switch (getPagePrefix()) {
-            case "conWat":
-                curOffTime = getConWatOpenDtSec()
-                break
-            case "extTmp":
-                curOffTime = getExtTmpBadDtSec()
-                break
-        }
-//ERS
-        if(curOffTime > 0 && (alert1Delay > curOffTime) && (alert1Delay < alert2Delay)) {
-            evtNum = 1
-        }
-        else if(curOffTime > 0 && (alert2Delay > curOffTime) && (alert2Delay > alert2Delay)) {
-            evtNum = 2
-        }
-    } catch (ex) {
-        LogAction("getAlarmEvtNumber Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "getAlarmEvtNumber")
-    }
-    return evtNum
-}
-*/
-
-def sendEventAlarmAction(evtNum) {
-    try {
-        def resval = false
-        def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
-        def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
-        if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
-            if(canSchedule()) {
-                resval = true
-                def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
-                def aDev = settings["${getPagePrefix()}AlarmDevices"]
-                switch (alarmType) {
-                    case "both":
-                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                        aDev?.both()
-                        break
-                    case "siren":
-                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                        aDev?.siren()
-                        break
-                    case "strobe":
-                        atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
-                        aDev?.strobe()
-                        break
-                    default:
-                        resval = false
-                        break
-                }
-            }
-        }
-    } catch (ex) {
-        LogAction("sendEventAlarmAction Exception: ($evtNum) - (${ex})", "error", true)
-        sendExceptionData(ex, "sendEventAlarmAction")
-    }
-   return resval
-}
-
-def alarmAlertEvt(evt) {
-    log.trace "alarmAlertEvt(${evt})"
-/*
-    if (evt.value != "off") {
-        def evtNum = getAlarmEvtNumber()
-        def timeVal = 0
-        switch(evtNum) {
-            case 1:
-                timeVal = getAlert1DelayVal()
-                break
-            case 2:
-                timeVal = getAlert2DelayVal()
-                break
-        }
-        if(canSchedule() && timeVal > 0) {
-            schedule(timeVal, "alarmEvt${evtNum}FollowUp", [overwrite: true] )
-        }
-    }
-*/
-}
-
-def getAlert1DelayVal() { return !settings["${getPagePrefix()}_Alert_1_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_1_Delay"].toInteger()) }
-def getAlert2DelayVal() { return !settings["${getPagePrefix()}_Alert_2_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_2_Delay"].toInteger()) }
-
-def getAlert1AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"].toInteger()) }
-def getAlert2AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"].toInteger()) }
-
-def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt1StartDt).toInteger() }
-def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
-
-/*
-def alarmEvt1FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
-    def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt1RuntimeDtSec >= (getAlert1AlarmEvtOffVal() - 2))
-    if(okToTurnOff) {
-        aDev?.off()
-    }
-}
-
-def alarmEvt2FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
-    def okToTurnOff = aDev.currentAlarm in ["both", "siren", "strobe"] && (getAlarmEvt2RuntimeDtSec >= (getAlert2AlarmEvtOffVal() - 2))
-    if(okToTurnOff) {
-        aDev?.off()
-    }
-}
-*/
-
-def scheduleTimeoutRestore() {
-    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
-    if(timeOutVal && !atomicState?.timeOutScheduled) { 
-        runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
-        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
-        atomicState?.timeOutScheduled = true
-    }
-}
-
-def unschedTimeoutRestore() {
-    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
-    if(timeOutVal && atomicState?.timeOutScheduled) {
-        unschedule("restoreAfterTimeOut")
-        LogAction("The Scheduled Mode Restoration Timeout has been cancelled because all Triggers are now clear...", "info", true)
-    }
-    atomicState?.timeOutScheduled = false
-}
-
-def restoreAfterTimeOut() {
-    def pName = getPagePrefix()
-    if(settings?."${pName}OffTimeout") {
-        switch(pName) {
-            case "conWat":
-                atomicState?.timeOutScheduled = false
-                conWatCheck(true)
-                break
-            case "leakWat":
-                //leakWatCheck(true)
-                break
-            case "extTmp":
-                //extTmpCheck(true)
-                break
-        }
     }
 }
 
@@ -7789,6 +7567,156 @@ def autoScheduleOk(autoType) {
 /************************************************************************************************
 |							GLOBAL Code | Logging AND Diagnostic							    |
 *************************************************************************************************/
+
+def sendEventPushNotifications(message, type) {
+    if(allowNotif) {
+        if(settings["${getPagePrefix()}_Alert_1_Send_Push"] || settings["${getPagePrefix()}_Alert_2_Send_Push"]) {
+            if(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"]) {
+                sendNofificationMsg(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+            } else {
+                sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+            }
+        } else {
+            sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+        }
+    }
+}
+
+def sendEventVoiceNotifications(vMsg) {
+    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+    if(allowNotif && allowSpeech) {
+        sendTTS(vMsg)
+    }
+}
+
+def scheduleAlarmOn() {
+    def timeVal = getAlert1DelayVal()
+    if (timeVal > 0) {
+        schedule(timeVal, "alarm0FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm0FollowUp() {
+    def timeVal = getAlert1AlarmEvtOffVal()
+    if (timeVal > 0 && sendEventAlarmAction(1)) {
+        schedule(timeVal, "alarm1FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm1FollowUp() {
+    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+        aDev?.off()
+    def timeVal = getAlert2DelayVal()
+    if (timeVal > 0) {
+        schedule(timeVal, "alarm2FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm2FollowUp() {
+    def timeVal = getAlert2AlarmEvtOffVal()
+    if (timeVal > 0 && sendEventAlarmAction(2)) {
+        schedule(timeVal, "alarm3FollowUp", [overwrite: true] )
+    }
+}
+
+def alarm3FollowUp() {
+    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+        aDev?.off()
+}
+
+def alarmEvtSchedCleanup() {
+    LogAction("Cleaning Up Alarm Event Schedules...", "info", true)
+    def items = ["alarm0FollowUp","alarm1FollowUp", "alarm2FollowUp"]
+    items.each { 
+        unschedule("$it")
+    }
+    alarm3FollowUp()
+}
+
+def sendEventAlarmAction(evtNum) {
+    try {
+        def resval = false
+        def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+        def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
+        if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
+            resval = true
+            def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
+            def aDev = settings["${getPagePrefix()}AlarmDevices"]
+            switch (alarmType) {
+                case "both":
+                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                    aDev?.both()
+                    break
+                case "siren":
+                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                    aDev?.siren()
+                    break
+                case "strobe":
+                    atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                    aDev?.strobe()
+                    break
+                default:
+                    resval = false
+                    break
+            }
+        }
+    } catch (ex) {
+        LogAction("sendEventAlarmAction Exception: ($evtNum) - (${ex})", "error", true)
+        sendExceptionData(ex, "sendEventAlarmAction")
+    }
+   return resval
+}
+
+def alarmAlertEvt(evt) {
+    log.trace "alarmAlertEvt: ${evt.displayName} Alarm State is Now (${evt.value})"
+}
+
+def getAlert1DelayVal() { return !settings["${getPagePrefix()}_Alert_1_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_1_Delay"].toInteger()) }
+def getAlert2DelayVal() { return !settings["${getPagePrefix()}_Alert_2_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_2_Delay"].toInteger()) }
+
+def getAlert1AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"].toInteger()) }
+def getAlert2AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"].toInteger()) }
+
+def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt1StartDt).toInteger() }
+def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
+
+def scheduleTimeoutRestore() {
+    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
+    if(timeOutVal && !atomicState?.timeOutScheduled) { 
+        runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
+        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
+        atomicState?.timeOutScheduled = true
+    }
+}
+
+def unschedTimeoutRestore() {
+    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
+    if(timeOutVal && atomicState?.timeOutScheduled) {
+        unschedule("restoreAfterTimeOut")
+        LogAction("The Scheduled Mode Restoration Timeout has been cancelled because all Triggers are now clear...", "info", true)
+    }
+    atomicState?.timeOutScheduled = false
+}
+
+def restoreAfterTimeOut() {
+    def pName = getPagePrefix()
+    if(settings?."${pName}OffTimeout") {
+        switch(pName) {
+            case "conWat":
+                atomicState?.timeOutScheduled = false
+                conWatCheck(true)
+                break
+            case "leakWat":
+                //leakWatCheck(true)
+                break
+            case "extTmp":
+                //extTmpCheck(true)
+                break
+        }
+    }
+}
 
 def checkThermostatDupe(tstatOne, tstatTwo) {
     def result = false
