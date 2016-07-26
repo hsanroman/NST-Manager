@@ -47,8 +47,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.6.8" }
-def appVerDate() { "7-24-2016" }
+def appVersion() { "2.6.9" }
+def appVerDate() { "7-26-2016" }
 def appVerInfo() {
     def str = ""
 
@@ -563,15 +563,15 @@ def safetyValuesPage() {
                     def srange = (getTemperatureScale() == "C") ? "10..32" : "50..90"
                     if(canHeat) {
                         input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange,
-                                submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
+                                submitOnChange: true, required: false, image: getAppImg("heat_icon.png")
                     }
                     if(canCool) {
                         input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Allowed (${srange} °${getTemperatureScale()})", range: srange, 
-                                submitOnChange: true, required: false,  image: getAppImg("heat_icon.png")
+                                submitOnChange: true, required: false,  image: getAppImg("cool_icon.png")
                     }
-                    def hrange = "10..80"
+                    /*def hrange = "10..80"
                     input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Allowed (${hrange} %)", required: false,  range: hrange,
-                            submitOnChange: true, image: getAppImg("humidity_icon.png")
+                            submitOnChange: true, image: getAppImg("humidity_icon.png")*/
                 }
             }
         }
@@ -5544,9 +5544,6 @@ def extTempPage() {
                     def wReq = (extTmpTstat && !extTmpTempSensor) ? true : false
                     def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
                     paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc} (${tmpVal}°${atomicState?.tempUnit})", state: "complete", image: getAppImg("instruct_icon.png")
-// not used anymore
-                    input name: "extTmpWeatherUpdateVal", type: "enum", title: "Update Weather (in Minutes)?", defaultValue: 15, metadata: [values:longTimeMinEnum()], submitOnChange: true, required: wReq,
-                            image: getAppImg("reset_icon.png")
                 }
             }
             if(!extTmpUseWeather) {
@@ -5735,7 +5732,7 @@ def extTmpTempOk() {
             if (!dpOk) { retval = false }
             LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
         }
-        LogAction("extTmpTempOk: Inside Temp: ${intTemp} is ${tempOk ? "" : "Not"} ${str} $diffThresh of Outside Temp: ${extTemp} or dewpoint (${curDp}) is ${dpOk ? "ok" : "too high"}", "info", true)
+        LogAction("extTmpTempOk: Inside Temp: (${intTemp}°${atomicState?.tempUnit}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${atomicState?.tempUnit}) or Dewpoint: (${curDp}°${atomicState?.tempUnit}) is ${dpOk ? "ok" : "too high"}", "info", true)
         return retval
     } catch (ex) { 
         LogAction("getExtTmpTempOk Exception: ${ex}", "error", true)
@@ -5749,14 +5746,11 @@ def getExtTmpGoodDtSec() { return !atomicState?.extTmpTempGoodDt ? 100000 : GetT
 def getExtTmpBadDtSec() { return !atomicState?.extTmpTempBadDt ? 100000 : GetTimeDiffSeconds(atomicState?.extTmpTempBadDt).toInteger() }
 def getExtTmpOffDelayVal() { return !extTmpOffDelay ? 300 : extTmpOffDelay.toInteger() }
 def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toInteger() }
-//def getExtTmpWeatherUpdVal() { return !extTmpWeatherUpdateVal ? 15 : extTmpWeatherUpdateVal?.toInteger() }
 
 def extTmpTempCheck() {
     //log.trace "extTmpTempCheck..."
     if(disableAutomation) { return }
-//
-// Should consider not turning thermostat off, as much as setting it more toward away settings?
-//   This could be set in Nest, but it is possible this automation is running on a non-Nest thermostat
+
 // if we cannot save/restore settings, don't bother turning things off
 // Documentation says this supports mirroring to other thermostats, but that is not in this code
 //
@@ -5804,7 +5798,7 @@ def extTmpTempCheck() {
                 }
             } else { scheduleAutomationEval(30) } 
         } else { 
-            if (modeOff) { LogAction("extTmpTempCheck() | Unable to restore settings okToRestore is false", "warn", true) }
+            if (modeOff) { LogAction("extTmpTempCheck() | Unable to restore settings okToRestore is false", "warn", false) }
         }
     }
     if (tempWithinThreshold && safetyOk) {
@@ -6270,8 +6264,18 @@ def sendEventAlarmAction(evtNum) {
 def alarmAlertEvt(evt) {
     log.trace "alarmAlertEvt(${evt})"
     if (evt.value != "off") {
-        if(canSchedule()) {
-            schedule("alarmEvt${getAlarmEvtNumber()}FollowUp", [overwrite: true] )
+        def evtNum = getAlarmEvtNumber()
+        def timeVal = 0
+        switch(evtNum) {
+            case 1:
+                timeVal = getAlert1DelayVal()
+                break
+            case 2:
+                timeVal = getAlert2DelayVal()
+                break
+        }
+        if(canSchedule() && timeVal > 0) {
+            schedule(timeVal, "alarmEvt${evtNum}FollowUp", [overwrite: true] )
         }
     }
 }
@@ -7164,10 +7168,10 @@ def setNotificationPage(params) {
             def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications:\n(Manager App Recipients are Used by Default)"
             section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
-                    input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
+                    input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
                 } else {
-                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("recipient_icon.png")) {
-                        input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", description: "Phone Number", required: false)
+                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
+                        input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", submitOnChange: true, description: "Phone Number", required: false)
                     }
                 }
             }
@@ -7235,20 +7239,15 @@ def setNotificationPage(params) {
                         image: getAppImg("alarm_icon.png")
                 if(settings["${pName}AllowAlarmNotif"]) {
                     input "${pName}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
-                    if(settings?."${pName}AlarmDevices") {
-                        input "${pName}AlarmAlertType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
-                    }
                 }
             }
         }
         if(getPagePrefix() in ["conWat"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
-                paragraph ""
-                input name: "${pName}_Alert_1_Delay", type: "enum", title: "First Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], defaultValue: 120, required: false, submitOnChange: true,
+                input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: 120, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("delay_time_icon.png")
-                
                 if(settings?."${pName}_Alert_1_Delay") {
-                    if(settings?."${pName}PushMsgOn") {
+                    if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                         input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
                         if(settings["${pName}_Alert_1_Send_Push"]) {
                             input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7273,7 +7272,7 @@ def setNotificationPage(params) {
                             input "${pName}_Alert_1_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, 
                                     required: false, image: getAppImg("instruction_icon.png")
                             if(settings["${pName}_Alert_1_AlarmType"]) {
-                                input name: "${pName}_Alert_1_Alarm_Runtime", type: "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
+                                input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
                                         image: getAppImg("delay_time_icon.png")
                             }
                         }
@@ -7292,12 +7291,11 @@ def setNotificationPage(params) {
                     }
                 }
             }
-            if(settings?."${pName}_Alert_1_Delay") {
+            if(settings["${pName}_Alert_1_Delay"]) {
                 section("Notification Alert Options (2):") {
-                    input name: "${pName}_Alert_2_Delay", type: "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
-                        image: getAppImg("delay_time_icon.png")
+                    input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("delay_time_icon.png")
                     if(settings?."${pName}_Alert_2_Delay") {
-                        if(settings?."${pName}PushMsgOn") {
+                        if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                             input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
                             if(settings["${pName}_Alert_2_Send_Push"]) {
                                 input "${pName}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7320,7 +7318,7 @@ def setNotificationPage(params) {
                             if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevices") {
                                 input "${pName}_Alert_2_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
                                 iif(settings["${pName}_Alert_2_AlarmType"]) {
-                                    input name: "${pName}_Alert_2_Alarm_Runtime", type: "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
+                                    input "${pName}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
                                             image: getAppImg("delay_time_icon.png")
                                 }
                             }
