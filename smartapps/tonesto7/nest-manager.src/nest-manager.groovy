@@ -154,6 +154,9 @@ preferences {
     page(name: "custWeatherPage")
     page(name: "automationsPage")
     page(name: "automationGlobalPrefsPage")
+    page(name: "backupSendManagerDataPage")
+    page(name: "backupRemoveManagerDataPage")
+    page(name: "backupPage")
     
     //Automation Pages
     page(name: "selectAutoPage" )
@@ -489,8 +492,41 @@ def prefsPage() {
         section("Nest Login:") {
             href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
         }
+        section("Backup Data (Experimental):") {
+            href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+        }
         section("Change the Name of the App:") {
             label title:"Application Label (optional)", required:false
+        }
+    }
+}
+
+def backupPage() {
+    return dynamicPage(name: "backupPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            href "backupSendManagerDataPage", title: "Send Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+            href "backupRemoveManagerDataPage", title: "Remove Backup Data", description: "Tap to configure...", image: getAppImg("uninstall_icon.png")
+        }
+    }
+}
+
+def backupSendManagerDataPage() {
+    return dynamicPage(name: "backupSendManagerDataPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            paragraph "Sending Backup Data to Firebase..."
+            if(sendManagerBackupData()) {
+                paragraph "Backup Data sent Successfully..."
+            }
+        }
+    }
+}
+def backupRemoveManagerDataPage() {
+    return dynamicPage(name: "backupRemoveManagerDataPage", title: "", nextPage: "prefsPage", install: false) {
+        section("") {
+            paragraph "Removing Backed Up App Data from Firebase..."
+            if(removeManagerBackupData()) {
+                paragraph "Backup Data Removed Successfully..."
+            }
         }
     }
 }
@@ -630,6 +666,8 @@ def uninstalled() {
     //log.debug "uninstalled..."
     if(!parent) { 
         uninstManagerApp()
+    } else {
+        uninstallAutomationApp()
     }
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -894,7 +932,7 @@ def getApiData(type = null) {
             httpGet(params) { resp ->
                 if(resp?.status == 200) {
                     LogTrace("API Structure Resp.Data: ${resp?.data}")
-                    atomicState.apiIssues = false
+                    apiIssueEvent(false)
                     if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) {
                         LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.structData = resp?.data
@@ -911,7 +949,7 @@ def getApiData(type = null) {
             httpGet(params) { resp ->
                 if(resp?.status == 200) {
                     LogTrace("API Device Resp.Data: ${resp?.data}")
-                    atomicState.apiIssues = false
+                    apiIssueEvent(false)
                     if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) {
                         LogAction("API Device Data HAS Changed... Updating State data...", "debug", true)
                         atomicState?.deviceData = resp?.data
@@ -924,7 +962,7 @@ def getApiData(type = null) {
         }
     }
     catch(ex) {
-        atomicState.apiIssues = true
+        apiIssueEvent(true)
         atomicState.needChildUpd = true
         if(ex instanceof groovyx.net.http.HttpResponseException) {
             if (ex.message.contains("Too Many Requests")) {
@@ -1067,8 +1105,42 @@ def locationPresence() {
 }
 
 def apiIssues() {
-    return atomicState?.apiIssues ? true : false
-    LogAction("API Issues: ${atomicState.apiIssues}", "debug", false)
+    def result = atomicState?.apiIssuesList.toString().contains("true") ? true : false
+    if(result) {
+        LogAction("Nest API Issues Detected... (${getDtNow()})", "warn", true)
+    }
+    return result
+}
+
+def apiIssueEvent(issue, cmd = null) {
+    try {
+        def list = atomicState?.apiIssuesList ?: []
+        //log.debug "listIn: $list (${list?.size()})"
+        def listSize = 3
+        if(list?.size() < listSize) {
+            list.push(issue)
+        } 
+        else if (list?.size() > listSize) {
+            def nSz = (list?.size()-listSize) + 1
+            //log.debug ">listSize: ($nSz)"
+            def nList = list?.drop(nSz)
+            //log.debug "nListIn: $list"
+            nList?.push(issue)
+            //log.debug "nListOut: $nList"
+            list = nList
+        }
+        else if (list?.size() == listSize) {
+            def nList = list?.drop(1)
+            nList?.push(issue)
+            list = nList
+        }
+
+        if(list) { atomicState?.apiIssuesList = list }
+        //log.debug "listOut: $list"
+    } catch (ex) {
+        LogAction("apiIssueEvent Exception: ${ex}", "error", true)
+        sendExceptionData(ex, "apiIssueEvent")
+    }
 }
 
 def ok2PollDevice() {
@@ -1572,7 +1644,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
             }
             else if( resp?.status == 200) {
                 LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!!!", "info", true)
-                atomicState?.apiIssues = false
+                apiIssueEvent(false)
                 result = true
                 //attempts to update device event immediately after successful command.
                 increaseCmdCnt()
@@ -1590,7 +1662,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
     catch (ex) {
         LogAction("procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", "error", true)
         sendExceptionData(ex, "procNestApiCmd")
-        atomicState.apiIssues = true
+        apiIssueEvent(true)
         atomicState?.lastCmdSentStatus = "failed"
     }
     return result
@@ -3985,13 +4057,13 @@ def renderInstallId() {
 
 def sendInstallData() {
     if (optInAppAnalytics) {
-        sendAnalyticData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json")
+        sendFirebaseData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json")
     }
 }
 
 def removeInstallData() {
     if (optInAppAnalytics) {
-        removeAnalyticData("installData/clients/${atomicState?.installationId}.json")
+        removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
     }
 }
 
@@ -4004,7 +4076,7 @@ def sendExceptionData(exMsg, methodName) {
             def appType = !parent ? "managerApp" : "automationApp"
             def exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
             def results = new groovy.json.JsonOutput().toJson(exData)
-            sendAnalyticExceptionData(results, "errorData/${appType}/${methodName}.json")
+            sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
         }
     } catch (ex) {
         LogAction("sendExceptionData Exception: ${ex}", "error", true)
@@ -4019,15 +4091,15 @@ def sendChildExceptionData(devType, devVer, exMsg, methodName) {
         if (optInSendExceptions) {
             def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
             def results = new groovy.json.JsonOutput().toJson(exData)
-            sendAnalyticExceptionData(results, "errorData/${devType}/${methodName}.json")
+            sendFirebaseExceptionData(results, "errorData/${devType}/${methodName}.json")
         }
     } catch (ex) {
         LogAction("sendChildExceptionData Exception: ${ex}", "error", true)
     }
 }
 
-def sendAnalyticData(data, pathVal) {
-    //log.trace "sendAnalyticData(${data}, ${pathVal}"
+def sendFirebaseData(data, pathVal) {
+    //log.trace "sendFirebaseData(${data}, ${pathVal}"
     def json = new groovy.json.JsonOutput().prettyPrint(data)
     def result = false
     def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
@@ -4035,29 +4107,29 @@ def sendAnalyticData(data, pathVal) {
         httpPutJson(params) { resp ->
             //log.debug "resp: ${resp}"
             if( resp?.status == 200) {
-                LogAction("sendAnalyticData: Install Data Sent Successfully!!!", "info", true)
+                LogAction("sendFirebaseData: Install Data Sent Successfully!!!", "info", true)
                 atomicState?.lastAnalyticUpdDt = getDtNow()
                 result = true
             }
             else if(resp?.status == 400) {
-                LogAction("sendAnalyticData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+                LogAction("sendFirebaseData: 'Bad Request' Exception: ${resp?.status}", "error", true)
             }
             else {
-                LogAction("sendAnalyticData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+                LogAction("sendFirebaseData: 'Unexpected' Response: ${resp?.status}", "warn", true)
             }
         }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendAnalyticData: 'HttpResponseException' Exception: ${ex}", "error", true)
+            LogAction("sendFirebaseData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
-        else { LogAction("sendAnalyticData: Exception: ${ex}", "error", true) }
-        sendExceptionData(ex, "sendAnalyticData")
+        else { LogAction("sendFirebaseData: Exception: ${ex}", "error", true) }
+        sendExceptionData(ex, "sendFirebaseData")
     }
     return result
 }
 
-def sendAnalyticExceptionData(data, pathVal) {
+def sendFirebaseExceptionData(data, pathVal) {
     //log.trace "sendExceptionData(${data}, ${pathVal}"
     def json = new groovy.json.JsonOutput().prettyPrint(data)
     def result = false
@@ -4066,29 +4138,29 @@ def sendAnalyticExceptionData(data, pathVal) {
         httpPostJson(params) { resp ->
             //log.debug "resp: ${resp}"
             if( resp?.status == 200) {
-                LogAction("sendAnalyticExceptionData: Exception Data Sent Successfully!!!", "info", true)
+                LogAction("sendFirebaseExceptionData: Exception Data Sent Successfully!!!", "info", true)
                 atomicState?.lastSentExceptionDataDt = getDtNow()
                 result = true
             }
             else if(resp?.status == 400) {
-                LogAction("sendAnalyticExceptionData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+                LogAction("sendFirebaseExceptionData: 'Bad Request' Exception: ${resp?.status}", "error", true)
             }
             else {
-                LogAction("sendAnalyticExceptionData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+                LogAction("sendFirebaseExceptionData: 'Unexpected' Response: ${resp?.status}", "warn", true)
             }
         }
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendAnalyticExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
+            LogAction("sendFirebaseExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
         }
-        else { LogAction("sendAnalyticExceptionData: Exception: ${ex}", "error", true) }
+        else { LogAction("sendFirebaseExceptionData: Exception: ${ex}", "error", true) }
     }
     return result
 }
 
-def removeAnalyticData(pathVal) {
-    log.trace "removeAnalyticData(${pathVal}"
+def removeFirebaseData(pathVal) {
+    log.trace "removeFirebaseData(${pathVal}"
     def result = true
     try {
         httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
@@ -4097,14 +4169,55 @@ def removeAnalyticData(pathVal) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.ResponseParseException) {
-            LogAction("removeAnalyticData: Response: ${ex.message}", "info", true)
+            LogAction("removeFirebaseData: Response: ${ex.message}", "info", true)
         } else {
-            LogAction("removeAnalyticData: Exception: ${ex}", "error", true)
-            sendExceptionData(ex, "removeAnalyticData")
+            LogAction("removeFirebaseData: Exception: ${ex}", "error", true)
+            sendExceptionData(ex, "removeFirebaseData")
             result = false
         }
     }
     return result
+}
+
+def createManagerBackupDataJson() {
+    def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+    def sData = settings?.findAll { !(it.key in noShow) }
+    def setData = [:]
+    sData?.sort().each { item ->
+        setData["${item?.key}"] = item?.value
+    }
+    def stData = settings?.findAll { !(it.key in noShow) }
+    def stateData = [:]
+    stData?.sort().each { item ->
+        stateData["${item?.key}"] = item?.value
+    }
+    def result = ["settingsData":setData.toString(), "stateData":stateData.toString()]
+    def resultJson = new groovy.json.JsonOutput().toJson(result)
+    return resultJson
+}
+
+def sendManagerBackupData() {
+    try {    
+        return sendFirebaseData(createManagerBackupDataJson(), "backupData/clients/${atomicState?.installationId}/managerAppData.json")
+    } catch (ex) {
+        LogAction("sendManagerBackupData Exception: ${ex}", "error", true)
+    }
+}
+
+def removeManagerBackupData() {
+    return removeFirebaseData("backupData/clients/${atomicState?.installationId}/managerAppData.json")
+}
+
+def sendAutomationBackupData(data) {
+    try {    
+        sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
+    } catch (ex) {
+        LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
+    }
+}
+
+def removeAutomationBackupData(childId) {
+    return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -4345,6 +4458,11 @@ def initAutoApp() {
     scheduler()
     app.updateLabel(getAutoTypeLabel())
     watchDogAutomation()
+    backupConfigToFirebase()
+}
+
+def uninstallAutomationApp() {
+    parent?.removeAutomationBackupData(app?.id)
 }
 
 def getAutoTypeLabel() {
@@ -4499,11 +4617,6 @@ def scheduler() {
         if(extTmpUseWeather && extTmpTstat) { 
             random_int = random.nextInt(60)
             random_dint = random.nextInt(9)
-//            def wVal = getExtTmpWeatherUpdVal()
-            //log.debug "wVal: ${wVal}"   
-//            schedule("${random_int} ${random_dint}/${wVal} * * * ?", "updateWeather")
-//            updateWeather()
-
         }
     }
 }
@@ -4513,18 +4626,29 @@ def watchDogAutomation() {
     runAutomationEval()
 }
 
-//def updateWeather() {
-//    if(extTmpUseWeather && extTmpTstat) { 
-//        getExtConditions(true) 
-//    }
-//}
-
 def scheduleAutomationEval(schedtime = 20) {
     if (schedtime < 20) { schedtime = 20 }
     if (getLastAutomationSchedSec() > (20-8)) {
         atomicState?.lastAutomationSchedDt = getDtNow()
         runIn(schedtime, "runAutomationEval", [overwrite: true])
     }
+}
+
+def backupConfigToFirebase() {
+    def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+    def sData = settings?.findAll { !(it.key in noShow) }
+    def setData = [:]
+    sData?.sort().each { item ->
+        setData["${item?.key}"] = item?.value
+    }
+    def stData = settings?.findAll { !(it.key in noShow) }
+    def stateData = [:]
+    stData?.sort().each { item ->
+        stateData["${item?.key}"] = item?.value
+    }
+    def result = ["${app?.id}":["settingsData":setData.toString(), "stateData":stateData.toString()]]
+    def resultJson = new groovy.json.JsonOutput().toJson(result)
+    parent?.sendAutomationBackupData(resultJson)
 }
 
 def getLastAutomationSchedSec() { return !atomicState?.lastAutomationSchedDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAutomationSchedDt).toInteger() }
