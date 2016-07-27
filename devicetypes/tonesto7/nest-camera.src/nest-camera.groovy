@@ -753,6 +753,22 @@ def getCSS(){
     }
 }
 
+def getJS(){
+    try {
+        def params = [
+            uri: "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js",
+            contentType: 'text/javascript'
+        ]
+        httpGet(params)  { resp ->
+            return resp?.data.text
+        }
+    }
+    catch (ex) {
+        log.error "Failed to load JS - Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getJS")
+    }
+}
+
 //this scrapes the public nest cam page for its unique id for using in render html tile
 def getCamUUID(pubVidId) {
     def params = [
@@ -838,7 +854,21 @@ def getInfoHtml() {
                 <style type="text/css">
                     ${getCSS()}
                 </style>
-                <script src="https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"></script>
+                <script type="text/javascript">
+                  <!--
+                    function toggle_visibility(id) {
+                        var id = document.getElementById(id);
+                        
+                        var divsToHide = document.getElementsByClassName("hideable");
+
+                        for(var i = 0; i < divsToHide.length; i++) {
+                            divsToHide[i].style.display="none";
+                        }
+
+                        id.style.display = 'block'
+                    }
+                  //-->
+                </script>
                    ${updateAvail}
                 <div class="hideable" id="liveStream">
                     <video width="410" controls
@@ -927,7 +957,7 @@ def getInfoHtml() {
                 </table>
                 <table>
                 <thead>
-                    <th>Nest Last Checked-In</th>
+                    <th>Last Online Change</th>
                     <th>Data Last Received</th>
                 </thead>
                 <tbody>

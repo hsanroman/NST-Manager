@@ -6661,6 +6661,10 @@ def nestModePresPage() {
                     input "nModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], 
                             submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
+                if(parent?.cameras) {
+                    input (name: "nModeCamOnAway", type: "bool", title: "Turn On Nest Cams when Away?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_icon.png"))
+                    input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_icon.png"))
+                }
             }
         }
         if(((nModeHomeModes && nModeAwayModes) && !nModePresSensor) || nModePresSensor) {
@@ -6804,7 +6808,17 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = true
                 if(parent?.setStructureAway(null, true)) { 
                     if(nModePushMsgOn) {
-                        sendNofificationMsg("${awayDesc} Nest 'Away", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                        sendNofificationMsg("${awayDesc} Nest 'Away'", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                    }
+                    if(nModeCamOnAway) {
+                        def cams = parent?.cameras
+                        cams?.each { cam ->
+                            def dev = getChildDevice(cam)
+                            if(dev) {
+                                dev?.on()
+                                LogAction("checkNestMode: Turning Streaming On for (${dev}) because Location is now Away...", "info", true)
+                            }
+                        }
                     }
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
@@ -6817,6 +6831,16 @@ def checkNestMode() {
                 if (parent?.setStructureAway(null, false)) { 
                     if(nModePushMsgOn) {
                         sendNofificationMsg("${homeDesc} Nest 'Home", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                    }
+                    if(nModeCamOffHome) {
+                        def cams = parent?.cameras
+                        cams?.each { cam ->
+                            def dev = getChildDevice(cam)
+                            if(dev) {
+                                dev?.off()
+                                LogAction("checkNestMode: Turning Streaming Off for (${dev}) because Location is now Home...", "info", true)
+                            }
+                        }
                     }
                 } else {
                     LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
