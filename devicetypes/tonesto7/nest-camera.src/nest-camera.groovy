@@ -349,7 +349,7 @@ def isStreamingEvent(isStreaming) {
 def audioInputEnabledEvent(on) {
     try {
         def isOn = device.currentState("audioInputEnabled")?.value
-        def val = on ? "Enabled" : "Disabled"
+        def val = (on.toString() == "true") ? "Enabled" : "Disabled"
         state?.audioInputEnabled = val
         if(!isOn.equals(val)) {
             log.debug("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
@@ -365,7 +365,7 @@ def audioInputEnabledEvent(on) {
 def videoHistEnabledEvent(on) {
     try {
         def isOn = device.currentState("videoHistoryEnabled")?.value
-        def val = on ? "Enabled" : "Disabled"
+        def val = (on.toString() == "true") ? "Enabled" : "Disabled"
         state?.videoHistoryEnabled = val
         if(!isOn.equals(val)) {
             log.debug("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
