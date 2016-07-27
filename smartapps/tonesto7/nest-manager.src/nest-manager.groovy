@@ -5897,7 +5897,7 @@ def extTmpTempCheck() {
 //
     def curMode = extTmpTstat?.currentThermostatMode?.toString()
     def modeOff = (curMode == "off") ? true : false
-    def allowNotif = (extTmpPushMsgOn || settings?."${getPagePrefix()}PushMsgOn") ? true : false
+    def allowNotif = (extTmpNotificationsOn || settings?."${getPagePrefix()}NotificationsOn") ? true : false
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
@@ -6169,7 +6169,7 @@ def conWatCheck(timeOut = false) {
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def schedOk = conWatScheduleOk()
             def okToRestore = ((modeOff && conWatRestoreOnClose) && (atomicState?.conWatTstatOffRequested || (!atomicState?.conWatTstatOffRequested && conWatRestoreAutoMode))) ? true : false
-            def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
@@ -6444,7 +6444,7 @@ def leakWatCheck() {
             def okToRestore = ((modeOff && leakWatRestoreOnDry) && (atomicState?.leakWatTstatOffRequested )) ? true : false
             def safetyOk = getSafetyTempsOk(leakWatTstat)
             def schedOk = leakWatScheduleOk()
-            def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
             def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
             def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
             def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
@@ -6765,6 +6765,7 @@ def checkNestMode() {
             LogAction("checkNestMode: Skipping because of Schedule Restrictions...", "info", true)
         } else {
             def curStMode = location?.mode
+            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
             def nestModeAway = (getNestLocPres() == "home") ? false : true
             def awayPresDesc = (nModePresSensor && !nModeSwitch) ? "All Presence device(s) have left setting " : ""
             def homePresDesc = (nModePresSensor && !nModeSwitch) ? "A Presence Device is Now Present setting " : ""
@@ -6802,9 +6803,8 @@ def checkNestMode() {
                 LogAction("${awayDesc} Nest 'Away'", "info", true)
                 atomicState?.nModeTstatLocAway = true
                 if(parent?.setStructureAway(null, true)) { 
-                    if(nModePushMsgOn) {
+                    if(allowNotif) {
                         sendNotificationEvent("${awayDesc} Nest 'Away'", "Info")
-                        //sendNofificationMsg("${awayDesc} Nest 'Away'", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                     }
                     if(nModeCamOnAway) {
                         def cams = parent?.cameras
@@ -6825,9 +6825,8 @@ def checkNestMode() {
                 LogAction("${homeDesc} Nest 'Home'", "info", true)
                 atomicState?.nModeTstatLocAway = false
                 if (parent?.setStructureAway(null, false)) { 
-                    if(nModePushMsgOn) {
+                    if(allowNotif) {
                         sendNotificationEvent("${awayDesc} Nest 'Home'", "Info")
-                        //sendNofificationMsg("${homeDesc} Nest 'Home", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                     }
                     if(nModeCamOffHome) {
                         def cams = parent?.cameras
@@ -7143,11 +7142,11 @@ def setNotificationPage(params) {
         allowSpeech = atomicState?.curNotifPageData?.allowSpeech; showSched = atomicState?.curNotifPageData?.showSchedule; allowAlarm = atomicState?.curNotifPageData?.allowAlarm
     } 
     dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
-        section("Push Notification Preferences:") {
-            input "${pName}PushMsgOn", "bool", title: "Enable Notifications?", description: "", required: false, defaultValue: false, submitOnChange: true,
+        section("Notification Preferences:") {
+            input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
         }
-        if(settings["${pName}PushMsgOn"]) {
+        if(settings["${pName}NotificationsOn"]) {
             def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications:\n(Manager App Recipients are Used by Default)"
             section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
@@ -7159,13 +7158,13 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(showSchedule && settings["${pName}PushMsgOn"]) {
+        if(showSchedule && settings["${pName}NotificationsOn"]) {
             section(title: "Time Restrictions") {
                 href "setNotificationTimePage", title: "Silence Notifications...", description: (getNotifSchedDesc() ?: "Tap to configure..."), state: (getNotifSchedDesc() ? "complete" : null), image: getAppImg("quiet_time_icon.png")
             }
         }
         
-        if(allowSpeech) {
+        if(allowSpeech && settings?."${pName}NotificationsOn") {
             section("Voice Notification Preferences:") {
                 input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
@@ -7228,7 +7227,7 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(allowAlarm) {
+        if(allowAlarm && settings?."${pName}NotificationsOn") {
             section("Alarm/Siren Device Preferences:") {
                 input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("alarm_icon.png")
@@ -7237,12 +7236,12 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(getPagePrefix() in ["conWat", "leakWat"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+        if(getPagePrefix() in ["conWat", "leakWat"] && (settings["${pName}NotificationsOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
                 input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("alert_icon2.png")
                 if(settings?."${pName}_Alert_1_Delay") {
-                    if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
+                    if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                         input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
                         if(settings["${pName}_Alert_1_Send_Push"]) {
                             input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7289,7 +7288,7 @@ def setNotificationPage(params) {
                 section("Notification Alert Options (2):") {
                     input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", defaultValue: null, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
                     if(settings?."${pName}_Alert_2_Delay") {
-                        if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
+                        if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                             input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
                             if(settings["${pName}_Alert_2_Send_Push"]) {
                                 input "${pName}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7359,7 +7358,7 @@ def voiceNotifString(phrase) {
 def getNotifConfigDesc() {
     def pName = getPagePrefix()
     def str = ""
-    str += (settings?."${pName}PushMsgOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
+    str += (settings?."${pName}NotificationsOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
             "Push Status:" : ""
     str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
     str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
@@ -7400,7 +7399,7 @@ def getAlarmNotifConfigDesc() {
 def getAlertNotifConfigDesc() {
     def pName = getPagePrefix()
     def str = ""
-    if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+    if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"] && (settings["${pName}NotificationsOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
         str += settings["${pName}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_1_Delay"])})" : ""
         str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_1_Send_Push"]})" : ""
         str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_1_Use_Speech"]})" : ""
@@ -7602,7 +7601,7 @@ def sendEventPushNotifications(message, type) {
 }
 
 def sendEventVoiceNotifications(vMsg) {
-    def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+    def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
     if(allowNotif && allowSpeech) {
@@ -7667,7 +7666,7 @@ def alarmEvtSchedCleanup() {
 def sendEventAlarmAction(evtNum) {
     try {
         def resval = false
-        def allowNotif = settings?."${getPagePrefix()}PushMsgOn" ? true : false
+        def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
         def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
         if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
             if(settings["${getPagePrefix()}_Alert_${evtNum}_Use_Alarm"] && canSchedule()) {
