@@ -47,8 +47,8 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.6.9" }
-def appVerDate() { "7-26-2016" }
+def appVersion() { "2.6.10" }
+def appVerDate() { "7-27-2016" }
 def appVerInfo() {
     def str = ""
 
@@ -158,7 +158,7 @@ preferences {
     //Automation Pages
     page(name: "selectAutoPage" )
     page(name: "mainAutoPage")
-    page(name: "nameAutoPage", install: true, uninstall: true)
+    page(name: "nameAutoPage")
     page(name: "remSensorPage")
     page(name: "remSenTstatFanSwitchPage")
     page(name: "remSenShowTempsPage")
@@ -502,7 +502,7 @@ def prefsPage() {
 }
 
 def automationsPage() {
-    return dynamicPage(name: "automationsPage", title: "", nextPage: "mainPage", install: false) {
+    return dynamicPage(name: "automationsPage", title: "", nextPage: !parent ? "startPage" : "automationsPage", install: false) {
         
         def autoApp = findChildAppByName( appName() )
         if(autoApp) {
@@ -3474,11 +3474,11 @@ def devCustomizePageDesc() {
 
 def getDevicesDesc() {
     def str = ""
-    str += thermostats ? "\n• (${thermostats?.size()}) Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
-    str += protects ? "\n• (${protects?.size()}) Protect${(protects?.size() > 1) ? "s" : ""}" : ""
-    str += cameras ? "\n• (${cameras?.size()}) Camera${(cameras?.size() > 1) ? "s" : ""}" : ""
-    str += presDevice ? "\n• (1) Presence Device" : ""
-    str += weatherDevice ? "\n• (1) Weather Device" : ""
+    str += thermostats ? "\n• [${thermostats?.size()}] Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
+    str += protects ? "\n• [${protects?.size()}] Protect${(protects?.size() > 1) ? "s" : ""}" : ""
+    str += cameras ? "\n• [${cameras?.size()}] Camera${(cameras?.size() > 1) ? "s" : ""}" : ""
+    str += presDevice ? "\n• [1] Presence Device" : ""
+    str += weatherDevice ? "\n• [1] Weather Device" : ""
     str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "• No Devices Selected..." : ""
     return (str != "") ? str : null
 }
@@ -4458,7 +4458,7 @@ def mainAutoPage(params) {
 }
 
 def nameAutoPage() {
-    dynamicPage(name: "nameAutoPage") {
+    dynamicPage(name: "nameAutoPage", install: true, uninstall: true) {
         section("Automation name") {
             label title: "Name this Automation", defaultValue: "${getAutoTypeLabel()}", required: true
             paragraph "Make sure to name it something that will help you easily identify the app later."
@@ -6075,7 +6075,7 @@ def contactWatchPage() {
                 str += conWatTstat ? "\n├ Temp: (${conWatTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                 str += conWatTstat ? "\n├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
                 str += conWatTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
-                str += (conWatTstat && settings?."${getPagePrefix()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
+                str += (conWatTstat && settings?."${getPagePrefix()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     └ Min | Max: (${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit} | ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit})" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
         }
@@ -6804,7 +6804,7 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = true
                 if(parent?.setStructureAway(null, true)) { 
                     if(allowNotif) {
-                        sendNotificationEvent("${awayDesc} Nest 'Away'", "Info")
+                        sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info")
                     }
                     if(nModeCamOnAway) {
                         def cams = parent?.cameras
@@ -6826,7 +6826,7 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = false
                 if (parent?.setStructureAway(null, false)) { 
                     if(allowNotif) {
-                        sendNotificationEvent("${awayDesc} Nest 'Home'", "Info")
+                        sendEventPushNotifications("${awayDesc} Nest 'Home'", "Info")
                     }
                     if(nModeCamOffHome) {
                         def cams = parent?.cameras
