@@ -4191,7 +4191,7 @@ def removeAutomationBackupData(childId) {
 }
 
 def backupPage() {
-    return dynamicPage(name: "backupPage", title: "", nextPage: "prefsPage", install: false) {
+    return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
         section("") {
             href "backupSendDataPage", title: "Send Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
             href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to configure...", image: getAppImg("uninstall_icon.png")
@@ -4200,7 +4200,7 @@ def backupPage() {
 }
 
 def backupSendDataPage() {
-    return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "prefsPage", install: false) {
+    return dynamicPage(name: "backupSendDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
         section("") {
             paragraph "Sending Backup Data to Firebase..."
             if(!parent) {
@@ -4216,7 +4216,7 @@ def backupSendDataPage() {
     }
 }
 def backupRemoveDataPage() {
-    return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "prefsPage", install: false) {
+    return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
         section("") {
             paragraph "Removing Backed Up App Data from Firebase..."
             if(!parent) {
@@ -5715,7 +5715,9 @@ def extTempPage() {
         if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
+                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
             }
             section("Delay Values:") {
                 input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -6118,15 +6120,13 @@ def contactWatchPage() {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
                 input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                        image: getAppImg("delay_time_icon.png")
             }
             section("Trigger Actions:") {
                 
                 input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                
-                input name: "conWatOffTimeout", type: "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
-                        image: getAppImg("delay_time_icon.png")
-                
                 input name: "conWatRestoreOnClose", type: "bool", title: "Restore Prev. Mode on Close?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
                 
                 if(conWatRestoreOnClose) {
@@ -7223,7 +7223,7 @@ def setNotificationPage(params) {
         if(getPagePrefix() in ["conWat"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
                 input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: 120, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
-                        image: getAppImg("delay_time_icon.png")
+                        image: getAppImg("alert_icon2.png")
                 if(settings?."${pName}_Alert_1_Delay") {
                     if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                         input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7247,8 +7247,7 @@ def setNotificationPage(params) {
                     if(settings?."${pName}AllowAlarmNotif") {
                         input "${pName}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
                         if(settings?."${pName}_Alert_1_Use_Alarm" && settings?."${pName}AlarmDevices") {
-                            input "${pName}_Alert_1_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, 
-                                    required: false, image: getAppImg("instruction_icon.png")
+                            input "${pName}_Alert_1_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
                             if(settings["${pName}_Alert_1_AlarmType"]) {
                                 input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
                                         image: getAppImg("delay_time_icon.png")
@@ -7271,7 +7270,7 @@ def setNotificationPage(params) {
             }
             if(settings["${pName}_Alert_1_Delay"]) {
                 section("Notification Alert Options (2):") {
-                    input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("delay_time_icon.png")
+                    input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
                     if(settings?."${pName}_Alert_2_Delay") {
                         if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                             input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7294,7 +7293,7 @@ def setNotificationPage(params) {
                         if(settings?."${pName}AllowAlarmNotif") {
                             input "${pName}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
                             if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevices") {
-                                input "${pName}_Alert_2_AlarmType", "enum", title: "Alert Options to use...", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("instruction_icon.png")
+                                input "${pName}_Alert_2_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
                                 iif(settings["${pName}_Alert_2_AlarmType"]) {
                                     input "${pName}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
                                             image: getAppImg("delay_time_icon.png")
@@ -7371,6 +7370,16 @@ def getVoiceNotifConfigDesc() {
     return (str != "") ? "${str}" : null
 }
 
+def getAlarmNotifConfigDesc() {
+    def pName = getPagePrefix()
+    def str = ""
+    if(settings["${pName}AllowAlarmNotif"]) {
+        def alarms = getInputToStringDesc(settings["${pName}AlarmDevices"], true)
+        str += alarms ? "\n • Alarm Devices:${alarms.size() > 1 ? "\n" : ""}${alarms}" : ""
+    }
+    return (str != "") ? "${str}" : null
+}
+
 def getAlertNotifConfigDesc() {
     def pName = getPagePrefix()
     def str = ""
@@ -7379,21 +7388,14 @@ def getAlertNotifConfigDesc() {
         str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_1_Send_Push"]})" : ""
         str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_1_Use_Speech"]})" : ""
         str += settings["${pName}_Alert_1_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${pName}_Alert_1_Use_Alarm"]})" : ""
+        str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${pName}_Alert_1_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${pName}_Alert_1_AlarmType"])})" : ""
+        str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${pName}_Alert_1_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${pName}_Alert_1_Alarm_Runtime"])})" : ""
         str += settings["${pName}_Alert_2_Delay"] ? "${settings["${pName}_Alert_1_Delay"] ? "\n" : ""}\nAlert (2) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_2_Delay"])})" : ""
         str += settings["${pName}_Alert_2_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_2_Send_Push"]})" : ""
         str += settings["${pName}_Alert_2_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_2_Use_Speech"]})" : ""
         str += settings["${pName}_Alert_2_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${pName}_Alert_2_Use_Alarm"]})" : ""
-    }
-    return (str != "") ? "${str}" : null
-}
-
-def getAlarmNotifConfigDesc() {
-    def pName = getPagePrefix()
-    def str = ""
-    if(settings["${pName}AllowAlarmNotif"]) {
-        def alarms = getInputToStringDesc(settings["${pName}AlarmDevices"], true)
-        str += alarms ? "\n • Alarm Devices:${alarms.size() > 1 ? "\n" : ""}${alarms}" : ""
-        str += (alarms && settings?."${pName}AlarmAlertType") ? "\n      AlertType: (${settings?."${pName}AlarmAlertType"})" : ""
+        str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${pName}_Alert_2_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${pName}_Alert_2_AlarmType"])})" : ""
+        str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${pName}_Alert_2_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${pName}_Alert_2_Alarm_Runtime"])})" : ""
     }
     return (str != "") ? "${str}" : null
 }
@@ -7592,25 +7594,33 @@ def sendEventVoiceNotifications(vMsg) {
 }
 
 def scheduleAlarmOn() {
-    def timeVal = getAlert1DelayVal()
+    log.debug "a1DelayVal: ${getAlert1DelayVal()}"
+    def timeVal = getAlert1DelayVal().toInteger()
+    log.debug "scheduleAlarmOn timeVal: $timeVal"
     if (timeVal > 0) {
-        schedule(timeVal, "alarm0FollowUp", [overwrite: true] )
+        schedule(timeVal, "alarm0FollowUp", [overwrite: true])
+        LogAction("scheduleAlarmOn: Scheduling Alarm Followup 0...", "info", true)
     }
 }
 
 def alarm0FollowUp() {
-    def timeVal = getAlert1AlarmEvtOffVal()
+    log.debug "a1OffVal: ${getAlert1AlarmEvtOffVal()}"
+    def timeVal = getAlert1AlarmEvtOffVal().toInteger()
+    log.debug "alarm0FollowUp timeVal: $timeVal"
     if (timeVal > 0 && sendEventAlarmAction(1)) {
-        schedule(timeVal, "alarm1FollowUp", [overwrite: true] )
+        schedule(timeVal, "alarm1FollowUp", [overwrite: true])
+        LogAction("alarm0FollowUp: Scheduling Alarm Followup 1...", "info", true)
     }
 }
 
 def alarm1FollowUp() {
     def aDev = settings["${getPagePrefix()}AlarmDevices"]
         aDev?.off()
-    def timeVal = getAlert2DelayVal()
+        LogAction("alarm1FollowUp: Turning OFF ${aDev}", "info", true)
+    def timeVal = getAlert2DelayVal().toInteger()
     if (timeVal > 0) {
         schedule(timeVal, "alarm2FollowUp", [overwrite: true] )
+        LogAction("alarm1FollowUp: Scheduling Alarm Followup 2...", "info", true)
     }
 }
 
@@ -7618,17 +7628,19 @@ def alarm2FollowUp() {
     def timeVal = getAlert2AlarmEvtOffVal()
     if (timeVal > 0 && sendEventAlarmAction(2)) {
         schedule(timeVal, "alarm3FollowUp", [overwrite: true] )
+        LogAction("alarm2FollowUp: Scheduling Alarm Followup 3...", "info", true)
     }
 }
 
 def alarm3FollowUp() {
     def aDev = settings["${getPagePrefix()}AlarmDevices"]
-        aDev?.off()
+    aDev?.off()
+    LogAction("alarm3FollowUp: Turning OFF ${aDev}", "info", true)
 }
 
 def alarmEvtSchedCleanup() {
     LogAction("Cleaning Up Alarm Event Schedules...", "info", true)
-    def items = ["alarm0FollowUp","alarm1FollowUp", "alarm2FollowUp"]
+    def items = ["alarm0FollowUp", "alarm1FollowUp", "alarm2FollowUp"]
     items.each { 
         unschedule("$it")
     }
@@ -7643,10 +7655,12 @@ def sendEventAlarmAction(evtNum) {
         if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
             resval = true
             def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
+            log.debug "alarmType: $alarmType"
             def aDev = settings["${getPagePrefix()}AlarmDevices"]
             switch (alarmType) {
                 case "both":
                     atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
+                    
                     aDev?.both()
                     break
                 case "siren":
