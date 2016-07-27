@@ -4662,7 +4662,7 @@ def backupConfigToFirebase() {
     stData?.sort().each { item ->
         stateData["${item?.key}"] = item?.value
     }
-    def result = ["${app?.id}":["settingsData":setData.toString(), "stateData":stateData.toString()]]
+    def result = ["${app?.id}":["appLabel":app?.label, "settingsData":setData.toString(), "stateData":stateData.toString()]]
     def resultJson = new groovy.json.JsonOutput().toJson(result)
     return parent?.sendAutomationBackupData(resultJson)
 }
@@ -5899,6 +5899,7 @@ def extTmpTempCheck() {
     def modeOff = (curMode == "off") ? true : false
     def allowNotif = (extTmpPushMsgOn || settings?."${getPagePrefix()}PushMsgOn") ? true : false
     def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
+    def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
     def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
     def okToRestore = ((modeOff && extTmpRestoreOnTemp) && (atomicState?.extTmpTstatOffRequested || (!atomicState?.extTmpTstatOffRequested && extTmpRestoreAutoMode))) ? true : false
     def tempWithinThreshold = extTmpTempOk()
@@ -5925,12 +5926,8 @@ def extTmpTempCheck() {
                             LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
                         }
                         if(allowNotif) {
-                            sendNofificationMsg("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info", 
-                                    settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                            if(allowSpeech && speakOnRestore) {
-                                def msg = voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")
-                                sendTTS(msg)
-                            }
+                            sendEventPushNotifications("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info")
+                            if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")) }
                         }
                     } else { 
                         LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) 
@@ -5963,12 +5960,8 @@ def extTmpTempCheck() {
                 atomicState?.extTmpTstatOffRequested = true
                 LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
                 if(allowNotif) {
-                    sendNofificationMsg("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info", 
-                        settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                    if(allowSpeech && speakOnRestore) {
-                        def msg = voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg")
-                        sendTTS(msg)
-                    }
+                    sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
+                    if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg")) }
                 }
             } else { scheduleAutomationEval(30) }
         } else {
@@ -6223,7 +6216,7 @@ def conWatCheck(timeOut = false) {
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info")
-                                        sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg"))
+                                        if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")) }
                                     }
                                 }
                             } else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
@@ -6398,9 +6391,6 @@ def leakWatchPage() {
             section("Notifications:") {
                 href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true], 
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
-                if(settings?."${pName}AllowSpeechNotif") {
-                    input name: "leakWatSpeechOnRestore", type: "bool", title: "Speak on Mode Restoration?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-                }
             }
         }
         section("Help:") {
@@ -6662,20 +6652,25 @@ def nestModePresPage() {
                             submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
                 if(parent?.cameras) {
-                    input (name: "nModeCamOnAway", type: "bool", title: "Turn On Nest Cams when Away?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_icon.png"))
-                    input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_icon.png"))
+                    input (name: "nModeCamOnAway", type: "bool", title: "Turn On Nest Cams when Away?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_green_icon.png"))
+                    input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_gray_icon.png"))
                 }
             }
         }
         if(((nModeHomeModes && nModeAwayModes) && !nModePresSensor) || nModePresSensor) {
-            section(getDmtSectionDesc(nModePrefix())) {
+            /*
+            section("Notifications:") {
+                href "setRecipientsPage", title: "(Optional) Select Recipients", description: getNotifConfigDesc(), params: [pName: "${pName}"], state: (getNotificationOptionsConf() ? "complete" : null),
+                        image: getAppImg("recipient_icon.png")
+            }*/
+            section(getDmtSectionDesc(conWatPrefix())) {
                 def pageDesc = getDayModeTimeDesc(pName)
                 href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null), 
                         image: getAppImg("cal_filter_icon.png")
             }
             section("Notifications:") {
-                href "setRecipientsPage", title: "(Optional) Select Recipients", description: getNotifConfigDesc(), params: [pName: "${pName}"], state: (getNotificationOptionsConf() ? "complete" : null),
-                        image: getAppImg("recipient_icon.png")
+                href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":false, "showSchedule":false], 
+                        state: (getNotifConfigDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
         section("Help:") {
@@ -6808,7 +6803,8 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = true
                 if(parent?.setStructureAway(null, true)) { 
                     if(nModePushMsgOn) {
-                        sendNofificationMsg("${awayDesc} Nest 'Away'", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                        sendNotificationEvent("${awayDesc} Nest 'Away'", "Info")
+                        //sendNofificationMsg("${awayDesc} Nest 'Away'", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                     }
                     if(nModeCamOnAway) {
                         def cams = parent?.cameras
@@ -6830,7 +6826,8 @@ def checkNestMode() {
                 atomicState?.nModeTstatLocAway = false
                 if (parent?.setStructureAway(null, false)) { 
                     if(nModePushMsgOn) {
-                        sendNofificationMsg("${homeDesc} Nest 'Home", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                        sendNotificationEvent("${awayDesc} Nest 'Home'", "Info")
+                        //sendNofificationMsg("${homeDesc} Nest 'Home", "Info", settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
                     }
                     if(nModeCamOffHome) {
                         def cams = parent?.cameras
@@ -7189,8 +7186,20 @@ def setNotificationPage(params) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
                         input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
                     }
-                    if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getPagePrefix() in ["conWat", "extTmp"]) {
-                        input name: "${pName}SpeechOnRestore", type: "bool", title: "Speak on Mode Restoration?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+                    if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getPagePrefix() in ["conWat", "extTmp","leakWat"]) {
+                        def desc = ""
+                        switch(getPagePrefix()) {
+                            case "conWat":
+                                desc = "Contact Close"
+                                break
+                            case "extTmp":
+                                desc = "Temp Threshold Change"
+                                break
+                            case "leakWat":
+                                desc = "Water Drying"
+                                break
+                        }
+                        input name: "${pName}SpeechOnRestore", type: "bool", title: "Speak on ${desc}?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
                     }
                     input "${pName}UseCustomSpeechNotifMsg", "bool", title: "Customize Notitification Message?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
