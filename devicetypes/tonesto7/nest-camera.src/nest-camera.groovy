@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.0.7" }
+def devVer() { return "0.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -203,10 +203,11 @@ def generateEvent(Map eventData) {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
                 lastEventDataEvent(results?.last_event)
-                //if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
-                //if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
-                //if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
+                if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
+                if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
+                if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
+                log.debug "Animated Image Url: ${results?.last_event?.animated_image_url}"
             }
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
@@ -414,11 +415,11 @@ def lastEventDataEvent(data) {
             tf.setTimeZone(getTimeZone())
         def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
         def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
-        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+        def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
+        def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
 
-        state.lastEventStartDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", newStartDt), true)
-        state.lastEventEndDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", newEndDt), true)
+        state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
+        state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
         state?.lastEventData = data
 
         if(curStartDt != newStartDt || curEndDt != newEndDt) {
@@ -441,14 +442,14 @@ def zoneMotionEvent(data) {
     try {
         def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
             tf.setTimeZone(getTimeZone())
+        def nowDt = tf.format(new Date())
         def isMotion = device.currentState("motion")?.stringValue
-        
-        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-        log.debug "MotEvt| newStartDt: $newStartDt | newEnd: $newEndDt"
-        
-        def isBtwn = timeOfDayIsBetween(newStartDt, newEndDt, new Date(), getTimeZone())
-        log.debug "MotEvt| hasMotion: ${data?.has_motion} | start: $newStartDt | end: $newEndDt | isBtwn: $isBtwn"
+        def isBtwn = false        
+        if(data?.start_time && data?.end_time) {
+            def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+            def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+            isBtwn = isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+        }
         def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
         if(!isMotion.equals(val)) {
             log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
@@ -461,10 +462,19 @@ def zoneMotionEvent(data) {
     }
 }
 
-def zoneSoundEvent(sound) {
+def zoneSoundEvent(data) {
     try {
+        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+            tf.setTimeZone(getTimeZone())
+        def nowDt = tf.format(new Date())
         def isSound = device.currentState("sound")?.stringValue
-        def val = sound == "true" ? "detected" : "not detected"
+        def isBtwn = false        
+        if(data?.start_time && data?.end_time) {
+            def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+            def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+            isBtwn = isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+        }
+        def val = (date?.has_sound == "true" && isBtwn) ? "detected" : "not detected"
         if(!isSound.equals(val)) {
             log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
             sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -482,7 +492,7 @@ def activityZoneEvent(zones) {
 
     } catch (ex) {
         log.error "activityZoneEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "activityZoneEvent")
+        //parent?.sendChildExceptionData("camera", ex.message, "activityZoneEvent")
     }
 }
 
@@ -652,6 +662,23 @@ def epochToTime(tm) {
     def tf = new SimpleDateFormat("h:mm a")
         tf?.setTimeZone(getTimeZone())
     return tf.format(tm)
+}
+
+def isTimeBetween(start, end, now, tz) {
+    try {
+        def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", start).getTime()
+        def endDt = Date.parse("E MMM dd HH:mm:ss z yyyy", end).getTime()
+        def nowDt = Date.parse("E MMM dd HH:mm:ss z yyyy", now).getTime()
+        def result = false
+        if(nowDt > startDt && nowDt < endDt) {
+            result = true
+        }
+        //def result = timeOfDayIsBetween(startDt, endDt, nowDt, tz) ? true : false
+        return result
+    } catch (ex) {
+        log.error "isTimeBetween Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "isTimeBetween")
+    }
 }
 
 // Local Application Logging
