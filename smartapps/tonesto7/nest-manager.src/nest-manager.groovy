@@ -520,10 +520,10 @@ def automationsPage() {
         }
         section("Global Automation Preferences:") {
             def descStr = ""
-            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "Desired Temps:" : ""
+            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "Comfort Settings:" : ""
             descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
             descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
-            descStr += (comfortDewpointMax) ? "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
+            //descStr += (comfortDewpointMax) ? "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
             descStr += comfortDewpointMax ? "\n • Max Dew Point: ($comfortDewpointMax${getTemperatureScale()})" : ""
             descStr += "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
@@ -546,8 +546,8 @@ def automationGlobalPrefsPage() {
                 def curDewPnt = wDev ? "${wDev.currentValue("dewpoint")}°${getTemperatureScale()}" : 0
                 input "comfortDewpointMax", "decimal", title: "Max. Dewpoint Allowed (${trange} °${getTemperatureScale()})", required: false,  range: trange, 
                         description: "Current Dew Point: (${curDewPnt})", submitOnChange: true, image: getAppImg("dewpoint_icon.png")
-                href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"embedded", required: false, title: "What is Dew Point?", 
-                        description:"", state: "complete", icon: getAppImg("question_icon.png")
+                href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"external", title: "What is Dew Point?", 
+                        description:"", state: "complete", image: getAppImg("question_icon.png")
             }
             section("Safety Preferences:") {
                 href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
@@ -596,7 +596,7 @@ def getSafetyValuesDesc() {
             str += ts ? "(${ts?.value}) Safety Values:" : ""
             str += minTemp ? "\n • Min. Temp: (${minTemp}°${getTemperatureScale()})" : ""
             str += maxTemp ? "\n • Max. Temp: (${maxTemp}°${getTemperatureScale()})" : ""
-            str += maxHum ? "\n • Max. Humidity: (${maxHum}%)" : ""
+            //str += maxHum ? "\n • Max. Humidity: (${maxHum}%)" : ""
             str += maxDew ? "\n • Max. Dewpoint: (${maxDew}°${getTemperatureScale()})" : ""
             str += tstats?.size() > 1 ? "\n\n" : ""
         }
@@ -4360,10 +4360,10 @@ def mainAutoPage(params) {
                 section("Turn Thermostat On/Off when a Door or Window is Opened:") {
                     def conDesc = ""
                     conDesc += conWatTstat ? "${conWatTstat?.label}" : "" 
-                    conDesc += conWatTstat ? "\n • Temp: (${getDeviceTemp(conWatTstat)}°${atomicState?.tempUnit})" : ""
-                    conDesc += conWatTstat ? "\n • Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                    conDesc += conWatTstat ? "\n • Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
-                    conDesc += conWatTstat && getSafetyTemps(conWatTstat) ? "\n • Safefy Temps: \n     • Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
+                    conDesc += conWatTstat ? "\n ├ Temp: (${getDeviceTemp(conWatTstat)}°${atomicState?.tempUnit})" : ""
+                    conDesc += conWatTstat ? "\n ├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
+                    conDesc += conWatTstat ? "\n ├ Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    conDesc += conWatTstat && getSafetyTemps(conWatTstat) ? "\n └ Safefy Temps: \n     └ Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                     conDesc += (conWatContacts && conWatTstat && conWatContactDesc()) ? "\n\n${conWatContactDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
@@ -6119,24 +6119,24 @@ def contactWatchPage() {
         if(conWatContacts && conWatTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
-                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
             section("Trigger Actions:") {
                 
-                input name: "conWatOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input name: "conWatOffDelay", type: "enum", title: "Delay Off When Opened\n(in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                input name: "conWatRestoreOnClose", type: "bool", title: "Restore Prev. Mode on Close?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
+                input name: "conWatRestoreOnClose", type: "bool", title: "Restore Previous Mode\nWhen Closed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("restore_icon.png")
                 
                 if(conWatRestoreOnClose) {
                     if(atomicState?."${conWatPrefix()}TstatCanCool" && atomicState?."${conWatPrefix()}TstatCanHeat") {
-                        input name: "conWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode if Already Off?", required: false, defaultValue: false, submitOnChange: true,
+                        input name: "conWatRestoreAutoMode", type: "bool", title: "Restore to Auto Mode\nIf Already Off?", required: false, defaultValue: false, submitOnChange: true,
                                 image: getAppImg("restore_icon.png")
                     }
-                    input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                    input name: "conWatOnDelay", type: "enum", title: "Delay Restore (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
-                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Wait Before Restoring Again (Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                    input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Restorations\n(Optional)", defaultValue: 900, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
                 }
             }
@@ -7140,7 +7140,7 @@ def setNotificationPage(params) {
     } 
     dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
         section("Push Notification Preferences:") {
-            input "${pName}PushMsgOn", "bool", title: "Send Notifications on Events?", description: "", required: false, defaultValue: false, submitOnChange: true,
+            input "${pName}PushMsgOn", "bool", title: "Enable Notifications?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
         }
         if(settings["${pName}PushMsgOn"]) {
@@ -7163,7 +7163,7 @@ def setNotificationPage(params) {
         
         if(allowSpeech) {
             section("Voice Notification Preferences:") {
-                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice Notitifications?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
+                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
                 if(settings["${pName}AllowSpeechNotif"]) {
                     if(pName == "conWat") {
@@ -7214,7 +7214,7 @@ def setNotificationPage(params) {
         }
         if(allowAlarm) {
             section("Alarm/Siren Device Preferences:") {
-                input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm/Siren Notitifications?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
+                input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("alarm_icon.png")
                 if(settings["${pName}AllowAlarmNotif"]) {
                     input "${pName}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
@@ -7223,7 +7223,7 @@ def setNotificationPage(params) {
         }
         if(getPagePrefix() in ["conWat"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
-                input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: 120, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
+                input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("alert_icon2.png")
                 if(settings?."${pName}_Alert_1_Delay") {
                     if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
@@ -7271,7 +7271,7 @@ def setNotificationPage(params) {
             }
             if(settings["${pName}_Alert_1_Delay"]) {
                 section("Notification Alert Options (2):") {
-                    input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
+                    input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", defaultValue: null, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
                     if(settings?."${pName}_Alert_2_Delay") {
                         if(settings?."${pName}PushMsgOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
                             input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
@@ -7384,7 +7384,7 @@ def getAlarmNotifConfigDesc() {
 def getAlertNotifConfigDesc() {
     def pName = getPagePrefix()
     def str = ""
-    if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"]) {
+    if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
         str += settings["${pName}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_1_Delay"])})" : ""
         str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_1_Send_Push"]})" : ""
         str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_1_Use_Speech"]})" : ""
