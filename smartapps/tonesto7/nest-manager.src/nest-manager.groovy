@@ -7165,7 +7165,7 @@ def setNotificationPage(params) {
             }
         }
         
-        if(allowSpeech && settings["${pName}PushMsgOn"]) {
+        if(allowSpeech) {
             section("Voice Notification Preferences:") {
                 input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("speech_icon.png")
@@ -7228,7 +7228,7 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(allowAlarm && settings["${pName}PushMsgOn"]) {
+        if(allowAlarm) {
             section("Alarm/Siren Device Preferences:") {
                 input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("alarm_icon.png")
@@ -7237,7 +7237,7 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(getPagePrefix() in ["conWat", "leakWat"] && settings["${pName}PushMsgOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+        if(getPagePrefix() in ["conWat", "leakWat"] && (settings["${pName}PushMsgOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
                 input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("alert_icon2.png")
