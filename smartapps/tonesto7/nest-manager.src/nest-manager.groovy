@@ -275,7 +275,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled) {
             section("Location & Devices:") {
-                def devDesc = getDevicesDesc() ? "Current Devices: ${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
+                def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n\nCurrent Devices: ${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
                 href "deviceSelectPage", title: "Location & Devices", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
             }
         }
@@ -532,6 +532,8 @@ def automationsPage() {
         def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
         if(!watchdogApp) {
             addChildApp(textNamespace(), getWatchdogAppChildName(), getWatchdogAppChildName())
+        } else {
+            watchdogApp?.update()
         }
     }
 }
@@ -711,7 +713,11 @@ def appBtnDesc(val) {
 }
 
 def isAutoAppInst() {
-    return (childApps.size() > 0) ? true : false
+    def chldCnt = 0
+    childApps?.each { cApp ->
+        if(cApp?.name != getWatchdogAppChildName()) { chldCnt = chldCnt + 1 }
+    }
+    return (chldCnt > 0) ? true : false
 }
 
 def autoAppInst(Boolean val) {
@@ -728,28 +734,30 @@ def getInstAutoTypesDesc() {
     def tModeCnt = 0
     def disCnt = 0
     childApps?.each { a ->
-        def type = a?.getAutomationType()
-        def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
-        //log.debug "automation type: $type"
-        switch(type) {
-            case "remSen":
-                remSenCnt = remSenCnt+1
-                break
-            case "conWat":
-                conWatCnt = conWatCnt+1
-                break
-            case "leakWat":
-                leakWatCnt = leakWatCnt+1
-                break
-            case "extTmp":
-                extTmpCnt = extTmpCnt+1
-                break
-            case "nMode":
-                nModeCnt = nModeCnt+1
-                break
-            case "tMode":
-                tModeCnt = tModeCnt+1
-                break
+        if(a?.name != getWatchdogAppChildName()) {    
+            def type = a?.getAutomationType()
+            def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
+            //log.debug "automation type: $type"
+            switch(type) {
+                case "remSen":
+                    remSenCnt = remSenCnt+1
+                    break
+                case "conWat":
+                    conWatCnt = conWatCnt+1
+                    break
+                case "leakWat":
+                    leakWatCnt = leakWatCnt+1
+                    break
+                case "extTmp":
+                    extTmpCnt = extTmpCnt+1
+                    break
+                case "nMode":
+                    nModeCnt = nModeCnt+1
+                    break
+                case "tMode":
+                    tModeCnt = tModeCnt+1
+                    break
+            }
         }
     }
     def remSenDesc = (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
@@ -7179,8 +7187,7 @@ def setNotificationPage(params) {
         
         if(allowSpeech && settings?."${pName}NotificationsOn") {
             section("Voice Notification Preferences:") {
-                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, 
-                        image: getAppImg("speech_icon.png")
+                input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, image: getAppImg("speech_icon.png")
                 if(settings["${pName}AllowSpeechNotif"]) {
                     if(pName == "conWat") {
                         if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because %opencontact% has been Opened for (%offdelay%)" }
@@ -7190,10 +7197,8 @@ def setNotificationPage(params) {
                         if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
                         if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
                     }
-                    input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", multiple: true, required: false, 
-                            submitOnChange: true, image: getAppImg("media_player.png")
-                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false,
-                            submitOnChange: true, image: getAppImg("speech2_icon.png")
+                    input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
+                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
                     if(settings["${pName}SpeechMediaPlayer"]) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
                         input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
@@ -7241,7 +7246,7 @@ def setNotificationPage(params) {
             }
         }
         if(allowAlarm && settings?."${pName}NotificationsOn") {
-            section("Alarm/Siren Device Preferences:") {
+            section("Alarm/Siren Device Preferences:", hideWhenEmpty: true) {
                 input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true, 
                         image: getAppImg("alarm_icon.png")
                 if(settings["${pName}AllowAlarmNotif"]) {
