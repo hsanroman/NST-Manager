@@ -172,6 +172,8 @@ preferences {
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
 
+    //watcherApp Pages
+    page(name: "initWatcherAppPage")
     //shared pages
     page(name: "setNotificationPage")
     page(name: "setNotificationTimePage")
@@ -195,7 +197,11 @@ mappings {
 def startPage() {
     atomicState?.isParent = false
     if (parent) {
-        selectAutoPage()
+        if (app?.name == "${getWatchAppChildName()}") {
+            initWatcherAppPage()
+        } else {
+            selectAutoPage()
+        }
     } else {
         atomicState?.isParent = true
         authPage()
@@ -529,6 +535,26 @@ def automationsPage() {
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
+        def watchApp = findChildAppByName( getWatchAppChildName() )
+        log.debug "App Name: ${app.name}"
+        if(!watchApp) {
+            section("Watcher App Initialization:") {
+                app(name: "watchApp", appName: "Nest Location Watcher", namespace: "tonesto7", multiple: false, title: "Initialize Location Watcher...", image: getAppImg("watcher_icon.png"))
+            }
+        }
+        //if(!watchApp) {
+        //    addChildApp(textNamespace(), getWatchAppChildName(), getWatchAppChildName())
+        //}
+    }
+}
+
+def initWatcherAppPage() {
+    log.trace "initWatcherAppPage"
+    log.debug "App Name: ${app.name}"
+    dynamicPage(name: "initWatcherAppPage", title: "", nextPage: "", install: true, uninstall: true) {
+        section("") {
+            paragraph "Press Done to Complete the Install"
+        }
     }
 }
 
@@ -625,6 +651,11 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
+    if(parent) {
+        if(app.label == "Nest Location Watcher") {
+            atomicState?.appInstalled = true
+        }
+    }
 }
 
 def updated() {
@@ -638,14 +669,24 @@ def uninstalled() {
     if(!parent) { 
         uninstManagerApp()
     } else {
-        uninstallAutomationApp()
+        if(app.label == "Nest Location Watcher") {
+            uninstallWatcherApp()
+        } else {
+            uninstallAutomationApp()
+        }
     }
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
 
 def initialize() {
     //log.debug "initialize..."
-    if(parent) { initAutoApp() }
+    if(parent) { 
+        if(app.label == "Nest Location Watcher") {
+            initWatcherApp()
+        } else {
+            initAutoApp() 
+        }
+    }
     else { initManagerApp() }
 }
 
@@ -3074,6 +3115,7 @@ def getPresenceChildName()   { return getChildName("Nest Presence") }
 def getWeatherChildName()    { return getChildName("Nest Weather") }
 def getCameraChildName()     { return getChildName("Nest Camera") }
 def getAutoAppChildName()    { return getChildName("Nest Automations") }
+def getWatchAppChildName()    { return getChildName("Nest Location Watcher") }
 
 def getChildName(str)     { return "${str}${appDevName()}" }
 
@@ -4044,7 +4086,7 @@ def sendExceptionData(exMsg, methodName) {
         exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
         atomicState?.appExceptionCnt = exCnt ?: 1
         if (optInSendExceptions) {
-            def appType = !parent ? "managerApp" : "automationApp"
+            def appType = parent ? (app?.name == "Nest Location Watcher" ? "watcherApp" : "automationApp") : "managerApp" 
             def exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
             def results = new groovy.json.JsonOutput().toJson(exData)
             sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
@@ -8065,12 +8107,27 @@ void sendTTS(txt) {
     }
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+/******************************************************************************
+*                           Nest Location Watcher Code                        *
+*******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+
+def initWatcherApp() {
+    log.trace "initWatcherApp..."
+}
+
+def uninstallWatcherApp() {
+    log.trace "uninstallWatcherApp..."
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /******************************************************************************
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-private def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
+private def appName() 		{ return "${parent ? (app?.name == "Nest Location Watcher" ? "Nest Location Watcher" : "Nest Automations") : "Nest Manager"}${appDevName()}" }
 private def appAuthor() 	{ return "Anthony S." }
 private def appNamespace() 	{ return "tonesto7" }
 private def gitBranch()     { return "master" }
