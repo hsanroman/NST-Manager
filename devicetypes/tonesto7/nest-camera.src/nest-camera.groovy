@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.1.0" }
+def devVer() { return "0.1.1" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -103,7 +103,7 @@ metadata {
             state("off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
             state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
         }
-        carouselTile("cameraDetails", "device.image", width: 3, height: 2) { }
+        carouselTile("cameraDetails", "device.image", width: 4, height: 4) { }
         standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF"
             //state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
@@ -150,7 +150,7 @@ metadata {
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
 
     main "isStreamingStatus"
-    details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "sound", "cameraDetails"])
+    details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "cameraDetails", "sound"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
     }
 }
@@ -476,6 +476,7 @@ def zoneSoundEvent(data) {
             isBtwn = isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
         }
         def val = (date?.has_sound == "true" && isBtwn) ? "detected" : "not detected"
+        log.debug "sound val: $val"
         if(!isSound.equals(val)) {
             log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
             sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -802,7 +803,8 @@ def getImg(imgName) {
 def getCSS(){
     try {
         def params = [
-            uri: state?.cssUrl.toString(),
+            //uri: state?.cssUrl.toString(),
+            uri: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css",
             contentType: 'text/css'
         ]
         httpGet(params)  { resp ->
@@ -815,13 +817,14 @@ def getCSS(){
     }
 }
 
-def getJS(){
+def getJS(url){
     try {
         def params = [
-            uri: "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js",
+            uri: url.toString(),
             contentType: 'text/javascript'
         ]
         httpGet(params)  { resp ->
+            log.debug "JS Resp: ${resp?.data}"
             return resp?.data.text
         }
     }
@@ -881,50 +884,38 @@ def getCamApiServer(camUUID) {
     }
 }
 
-def putImageInS3(map) {
-    log.debug "firing s3"
-    def s3ObjectContent
-    try {
-        def imageBytes = getS3Object(map.bucket, map.key + ".jpg")
-        if(imageBytes)
-        {
-            s3ObjectContent = imageBytes.getObjectContent()
-            def bytes = new ByteArrayInputStream(s3ObjectContent.bytes)
-            storeImage(getPictureName(), bytes)
-        }
-    }
-    catch(Exception e) {
-        log.error e
-    }
-    finally {
-    //Explicitly close the stream
-        if (s3ObjectContent) { s3ObjectContent.close() }
-    }
-}
+def getCamBtnJsData(js) {
+    def data = 
+    """<!--
+        function toggle_visibility(id) {
+            var id = document.getElementById(id);
+            
+            var divsToHide = document.getElementsByClassName("hideable");
 
-private getPictureName() {
-    def pictureUuid = java.util.UUID.randomUUID().toString().replaceAll('-', '')
-    log.debug pictureUuid
-    def picName = device.deviceNetworkId.replaceAll(':', '') + "_$pictureUuid" + ".jpg"
-    return picName
+                for(var i = 0; i < divsToHide.length; i++) {
+                    divsToHide[i].style.display="none";
+                }
+
+                id.style.display = 'block'
+                }
+        //-->"""
 }
 
 def getCamHtml() {
     try {
-
-        def camJs1 = "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
+        def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
+        
+        // These are used to determine the URL for the nest cam stream
         def camUUID = getCamUUID(getPublicVideoId())
         def apiServer = getCamApiServer(camUUID)
         def liveStreamURL = getLiveStreamHost(camUUID)
         def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        //log.debug "CamImgUrl: $camImgUrl"
         def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
-        def animationUrl = state?.animation_url
+        def animationUrl = getImgBase64(state?.animation_url, 'gif')
         //log.debug "Animation URL: $animationUrl"
-
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
@@ -942,10 +933,16 @@ def getCamHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state?.cssUrl.toString()}"/>
-                <script type="text/javascript" src="$camJs1"></script>
+                <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer.min.js"></script>
+                <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer-time.min.js"></script>
             </head>
             <body>
+                <style type="text/css">
+                    ${getCSS()}
+                </style>
+                <script type="text/javascript">
+                    ${getCamBtnJsData(getJS(camJs1))}
+                </script>
                 ${updateAvail}
                 <div class="hideable" id="liveStream">
                     <video width="410" controls
@@ -1010,7 +1007,6 @@ def getInfoHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state?.cssUrl.toString()}"/>
             </head>
             <body>
                 <style type="text/css">
