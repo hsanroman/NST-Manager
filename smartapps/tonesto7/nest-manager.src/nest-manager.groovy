@@ -6504,12 +6504,8 @@ def leakWatCheck() {
                                     LogAction("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "info", true)
                                 }
                                 if(allowNotif) {
-                                    sendNofificationMsg("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "Info", 
-                                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                                    if(allowSpeech && speakOnRestore) {
-                                        def msg = "Restoring ${leakWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL leak sensors have been Dry again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})"
-                                        sendTTS(msg)
-                                    }
+                                    sendEventPushNotifications("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "Info")
+                                    if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString("Restoring ${leakWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL leak sensors have been Dry again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})"))
                                 }
                             } else { 
                                 LogAction("leakWatCheck() | There was problem restoring the last mode to ${lastMode}...", "error", true) 
@@ -6557,12 +6553,8 @@ def leakWatCheck() {
                     }
                     LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "warn", true)
                     if(allowNotif) {
-                        sendNofificationMsg("'${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "Info", 
-                            settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
-                        if(allowNotif && allowSpeech) {
-                            def msg = "${leakWatTstat} has been turned OFF because${wetCtDesc}has reported it's WET..."
-                            sendTTS(msg)
-                        }
+                        sendEventPushNotifications("'${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "Info") 
+                        sendEventVoiceNotifications(voiceNotifString("${leakWatTstat} has been turned OFF because${wetCtDesc}has reported it's WET..."))
                     }
                 } else {
                     if (!leakWatRestoreOnDry) { LogAction("leakWatCheck() | Skipping off change because '${leakWatTstat?.label}' because mode cannot be restored", "warn", true) }
