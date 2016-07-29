@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.1.1" }
+def devVer() { return "0.1.2" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -205,8 +205,8 @@ def generateEvent(Map eventData) {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
                 if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-                if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
-                if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
+                zoneMotionEvent(results?.last_event)
+                zoneSoundEvent(results?.last_event)
                 if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
@@ -449,9 +449,9 @@ def zoneMotionEvent(data) {
         if(data?.start_time && data?.end_time) {
             def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
             def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-            isBtwn = isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+            isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
         }
-        def val = (data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
+        def val = ((data?.has_motion == "true") && isBtwn) ? "active" : "inactive"
         if(!isMotion.equals(val)) {
             log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
             sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -473,10 +473,9 @@ def zoneSoundEvent(data) {
         if(data?.start_time && data?.end_time) {
             def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
             def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-            isBtwn = isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+            isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
         }
-        def val = (date?.has_sound == "true" && isBtwn) ? "detected" : "not detected"
-        log.debug "sound val: $val"
+        def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
         if(!isSound.equals(val)) {
             log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
             sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -884,7 +883,7 @@ def getCamApiServer(camUUID) {
     }
 }
 
-def getCamBtnJsData(js) {
+def getCamBtnJsData() {
     def data = 
     """<!--
         function toggle_visibility(id) {
@@ -920,7 +919,7 @@ def getCamHtml() {
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Snapshot</a>"""
+        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
         def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
         def html = """
         <!DOCTYPE html>
@@ -933,6 +932,7 @@ def getCamHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
                 <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer.min.js"></script>
                 <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer-time.min.js"></script>
             </head>
@@ -941,7 +941,7 @@ def getCamHtml() {
                     ${getCSS()}
                 </style>
                 <script type="text/javascript">
-                    ${getCamBtnJsData(getJS(camJs1))}
+                    ${getCamBtnJsData()}
                 </script>
                 ${updateAvail}
                 <div class="hideable" id="liveStream">
@@ -993,9 +993,12 @@ def getInfoHtml() {
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>"""
-        def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+        //def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+        //def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>"""
+        //def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+        def vidBtn = !liveStreamURL ? "" : """<label class="button yellow"><input type="radio" id="liveStream" name="options" onclick="toggle_visibility('liveStream');" value="liveStream"checked="checked"><span>Live Video</span></label>"""
+        def imgBtn = !pubSnapUrl ? "" : """<label class="button"><input type="radio" name="options" onclick="toggle_visibility('still');"><span>Take Picture</span></label>"""
+        def lastEvtBtn = !animationUrl ? "" : """<label class="button red"><input type="radio" name="options" onclick="toggle_visibility('animation');"><span>Last Event</span></label>"""
         def html = """
         <!DOCTYPE html>
         <html>
@@ -1007,6 +1010,7 @@ def getInfoHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
             </head>
             <body>
                 <style type="text/css">
