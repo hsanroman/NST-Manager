@@ -663,10 +663,10 @@ def initialize() {
     if(parent) { initAutoApp() }
     else {
         initManagerApp()
-        def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
+        /*def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
         if(!watchdogApp) {
             addChildApp(textNamespace(), getWatchdogAppChildName(), getWatchdogAppChildName())
-        } else { watchdogApp?.update() }
+        } else { watchdogApp?.update() }*/
     }
 }
 

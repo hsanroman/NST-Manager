@@ -933,15 +933,16 @@ def getCamHtml() {
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
                 <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
+                <script type="text/javascript" src="$cssJs1"></script>
                 <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer.min.js"></script>
                 <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer-time.min.js"></script>
             </head>
             <body>
                 <style type="text/css">
-                    ${getCSS()}
+                    
                 </style>
                 <script type="text/javascript">
-                    ${getCamBtnJsData()}
+                    
                 </script>
                 ${updateAvail}
                 <div class="hideable" id="liveStream">
