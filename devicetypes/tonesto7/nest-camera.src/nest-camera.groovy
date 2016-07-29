@@ -207,7 +207,6 @@ def generateEvent(Map eventData) {
                 if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
                 if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
-                log.debug "Animated Image Url: ${results?.last_event?.animated_image_url}"
             }
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
