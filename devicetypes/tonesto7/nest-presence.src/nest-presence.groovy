@@ -176,11 +176,12 @@ def debugOnEvent(debug) {
 def lastUpdatedEvent() {
     try {
         def now = new Date()
-        def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
-            tf.setTimeZone(getTimeZone())
+        tf.setTimeZone(getTimeZone())
         def lastDt = "${tf?.format(now)}"
         def lastUpd = device.currentState("lastUpdatedDt")?.value
+        state?.lastUpdatedDt = lastDt?.toString()
         if(!lastUpd.equals(lastDt?.toString())) {
             Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
             sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)

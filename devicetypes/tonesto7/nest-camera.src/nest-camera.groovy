@@ -202,7 +202,7 @@ def generateEvent(Map eventData) {
             if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
-                lastEventDataEvent(results?.last_event)
+                if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
                 if(results?.last_event?.has_motion) { zoneMotionEvent(results?.last_event) }
                 if(results?.last_event?.has_sound) { zoneSoundEvent(results?.last_event) }
                 if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
