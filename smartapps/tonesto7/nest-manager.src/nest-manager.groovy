@@ -535,6 +535,11 @@ def automationsPage() {
         } else {
             watchdogApp?.update()
         }
+        app.subscriptions?.each {
+            it.each { item ->
+                //log.debug "${item}"
+            }    
+        }
     }
 }
 

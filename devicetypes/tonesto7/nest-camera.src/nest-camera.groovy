@@ -92,7 +92,6 @@ metadata {
                 attributeState("betaLogo", label: "", value: "", defaultState: true)
             }
         }
-        carouselTile("cameraDetails", "device.image", width: 6, height: 2) { }
 
         standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
             state("on", label: "Streaming", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
@@ -104,7 +103,8 @@ metadata {
             state("off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
             state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
         }
-        standardTile("take", "device.image", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
+        carouselTile("cameraDetails", "device.image", width: 3, height: 2) { }
+        standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
             state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
             state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
@@ -149,7 +149,7 @@ metadata {
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 9)
 
     main "isStreamingStatus"
-    details(["devInfoHtml", "isStreaming", "motion", "sound", "refresh"])
+    details(["devInfoHtml", "isStreaming", "take", "motion", "sound", "cameraDetails", "refresh"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
     }
 }
@@ -609,6 +609,40 @@ def on() {
 def off() {
     streamingOff()
 }
+
+def take() {
+	try {
+        def img = getImgBase64(state?.snapshot_url,'jpeg')
+        log.debug "img: $img"
+        def list = state?.last5ImageData ?: []
+        log.debug "listIn: $list (${list?.size()})"
+        def listSize = 4
+        if(list?.size() < listSize) {
+            list.push(img)
+        } 
+        else if (list?.size() > listSize) {
+            def nSz = (list?.size()-listSize) + 1
+            //log.debug ">listSize: ($nSz)"
+            def nList = list?.drop(nSz)
+            //log.debug "nListIn: $list"
+            nList?.push(img)
+            //log.debug "nListOut: $nList"
+            list = nList
+        }
+        else if (list?.size() == listSize) {
+            def nList = list?.drop(1)
+            nList?.push(img)
+            list = nList
+        }
+
+        if(list) { state?.last5ImageData = list }
+    }
+    catch (ex) {
+        log.error "take Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", ex.message, "take")
+    }
+}
+
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
@@ -843,6 +877,34 @@ def getCamApiServer(camUUID) {
         log.error "getCamApiServer Exception: ${ex}"
         parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamApiServer")
     }
+}
+
+def putImageInS3(map) {
+	log.debug "firing s3"
+    def s3ObjectContent
+    try {
+        def imageBytes = getS3Object(map.bucket, map.key + ".jpg")
+        if(imageBytes)
+        {
+            s3ObjectContent = imageBytes.getObjectContent()
+            def bytes = new ByteArrayInputStream(s3ObjectContent.bytes)
+            storeImage(getPictureName(), bytes)
+        }
+    }
+    catch(Exception e) {
+        log.error e
+    }
+	finally {
+    //Explicitly close the stream
+		if (s3ObjectContent) { s3ObjectContent.close() }
+	}
+}
+
+private getPictureName() {
+	def pictureUuid = java.util.UUID.randomUUID().toString().replaceAll('-', '')
+    log.debug pictureUuid
+    def picName = device.deviceNetworkId.replaceAll(':', '') + "_$pictureUuid" + ".jpg"
+	return picName
 }
 
 def getInfoHtml() {
