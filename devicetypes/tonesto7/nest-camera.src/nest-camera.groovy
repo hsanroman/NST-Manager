@@ -105,9 +105,9 @@ metadata {
         }
         carouselTile("cameraDetails", "device.image", width: 3, height: 2) { }
         standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
-            state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
-            state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
-            state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
+            state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF"
+            //state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
+            //state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
         }
         standardTile("motion", "device.motion", width: 2, height: 2) {
             state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
@@ -146,15 +146,17 @@ metadata {
             state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
         }
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 9)
+        htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 5)
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
 
     main "isStreamingStatus"
-    details(["devInfoHtml", "isStreaming", "take", "motion", "sound", "cameraDetails", "refresh"])
+    details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "sound", "cameraDetails"])
     //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
     }
 }
 
 mappings {
+    path("/getCamHtml") {action: [GET: "getCamHtml"]}
     path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
 }
 
@@ -611,11 +613,11 @@ def off() {
 }
 
 def take() {
-	try {
+    try {
         def img = getImgBase64(state?.snapshot_url,'jpeg')
-        log.debug "img: $img"
+        //log.debug "img: $img"
         def list = state?.last5ImageData ?: []
-        log.debug "listIn: $list (${list?.size()})"
+        //log.debug "listIn: $list (${list?.size()})"
         def listSize = 4
         if(list?.size() < listSize) {
             list.push(img)
@@ -634,7 +636,7 @@ def take() {
             nList?.push(img)
             list = nList
         }
-
+log.debug "img_list_size: ${list?.size()}"
         if(list) { state?.last5ImageData = list }
     }
     catch (ex) {
@@ -880,7 +882,7 @@ def getCamApiServer(camUUID) {
 }
 
 def putImageInS3(map) {
-	log.debug "firing s3"
+    log.debug "firing s3"
     def s3ObjectContent
     try {
         def imageBytes = getS3Object(map.bucket, map.key + ".jpg")
@@ -894,17 +896,87 @@ def putImageInS3(map) {
     catch(Exception e) {
         log.error e
     }
-	finally {
+    finally {
     //Explicitly close the stream
-		if (s3ObjectContent) { s3ObjectContent.close() }
-	}
+        if (s3ObjectContent) { s3ObjectContent.close() }
+    }
 }
 
 private getPictureName() {
-	def pictureUuid = java.util.UUID.randomUUID().toString().replaceAll('-', '')
+    def pictureUuid = java.util.UUID.randomUUID().toString().replaceAll('-', '')
     log.debug pictureUuid
     def picName = device.deviceNetworkId.replaceAll(':', '') + "_$pictureUuid" + ".jpg"
-	return picName
+    return picName
+}
+
+def getCamHtml() {
+    try {
+
+        def camJs1 = "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
+        def camUUID = getCamUUID(getPublicVideoId())
+        def apiServer = getCamApiServer(camUUID)
+        def liveStreamURL = getLiveStreamHost(camUUID)
+        def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
+        //log.debug "CamImgUrl: $camImgUrl"
+        def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
+
+        def pubVidUrl = state?.public_share_url
+        def pubVidId = getPublicVideoId()
+        def animationUrl = state?.animation_url
+        //log.debug "Animation URL: $animationUrl"
+
+        def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
+
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+        def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Snapshot</a>"""
+        def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+        def html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <meta http-equiv="cache-control" content="max-age=0"/>
+                <meta http-equiv="cache-control" content="no-cache"/>
+                <meta http-equiv="expires" content="0"/>
+                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+                <meta http-equiv="pragma" content="no-cache"/>
+                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${state?.cssUrl.toString()}"/>
+                <script type="text/javascript" src="$camJs1"></script>
+            </head>
+            <body>
+                ${updateAvail}
+                <div class="hideable" id="liveStream">
+                    <video width="410" controls
+                        id="nest-video"
+                        class="video-js vjs-default-skin"
+                        poster="${camImgUrl}"
+                        data-video-url="${pubVidUrl}"
+                        data-video-title="">
+                        <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+                    </video>
+                </div>
+                <div class="hideable" id="still" style="display:none">
+                    <img src="${pubSnapUrl}" width="100%"/>
+                </div>
+                <div class="hideable" id="animation" style="display:none">
+                    <img src="${animationUrl}" width="100%"/>
+                </div>
+                <div class="centerText">
+                  ${vidBtn}
+                  ${imgBtn}
+                  ${lastEvtBtn}
+                </div>
+            </body>
+        </html>
+        """
+        render contentType: "text/html", data: html, status: 200
+    }
+    catch (ex) {
+        log.error "getCamHtml Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamHtml")
+    }
 }
 
 def getInfoHtml() {
@@ -931,54 +1003,19 @@ def getInfoHtml() {
         <!DOCTYPE html>
         <html>
             <head>
+                <meta charset="utf-8"/>
                 <meta http-equiv="cache-control" content="max-age=0"/>
                 <meta http-equiv="cache-control" content="no-cache"/>
                 <meta http-equiv="expires" content="0"/>
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${state?.cssUrl.toString()}"/>
             </head>
             <body>
                 <style type="text/css">
                     ${getCSS()}
                 </style>
-                <script type="text/javascript">
-                  <!--
-                    function toggle_visibility(id) {
-                        var id = document.getElementById(id);
-                        
-                        var divsToHide = document.getElementsByClassName("hideable");
-
-                        for(var i = 0; i < divsToHide.length; i++) {
-                            divsToHide[i].style.display="none";
-                        }
-
-                        id.style.display = 'block'
-                    }
-                  //-->
-                </script>
-                   ${updateAvail}
-                <div class="hideable" id="liveStream">
-                    <video width="410" controls
-                        id="nest-video"
-                        class="video-js vjs-default-skin"
-                        poster="${camImgUrl}"
-                        data-video-url="${pubVidUrl}"
-                        data-video-title="">
-                        <source src="${camPlaylistUrl}" type="application/x-mpegURL">
-                    </video>
-                </div>
-                <div class="hideable" id="still" style="display:none">
-                    <img src="${pubSnapUrl}" width="100%"/>
-                </div>
-                <div class="hideable" id="animation" style="display:none">
-                    <img src="${animationUrl}" width="100%"/>
-                </div>
-                <div class="centerText">
-                  ${vidBtn}
-                  ${imgBtn}
-                  ${lastEvtBtn}
-                </div>
                 <table>
                 <col width="50%">
                 <col width="50%">
