@@ -171,6 +171,7 @@ preferences {
     page(name: "tModeTstatConfModePage")
     page(name: "setRecipientsPage")
     page(name: "setDayModeTimePage")
+    page(name: "watchDogPage")
 
     //shared pages
     page(name: "setNotificationPage")
@@ -537,21 +538,31 @@ def automationsPage() {
     }
 }
 
-def initWatchdogAppPage() {
-    log.trace "initWatchdogAppPage"
-    log.debug "Watchdog App Name: ${app.name}"
-    dynamicPage(name: "initWatchdogAppPage", title: "", nextPage: "", install: true, uninstall: true) {
-        section("") {
-            paragraph "Press Done to Complete the Install"
+def initWatchdogApp() {
+    log.trace "initWatchdogApp"
+    def watDogCnt = 0
+    def watDogApp 
+    childApps?.each { cApp -> 
+        if(cApp?.settings["watchDogFlag"] || cApp?.getAutomationType() == "watchDog") {
+            watDogCnt = watDogCnt+1
+            watDogApp = cApp
         }
     }
+    
+    if(watDogCnt <= 0) {
+        log.debug "adding New WatchDogApp..."
+        addChildApp(textNamespace(), getAutoAppChildName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
+    } else { 
+        log.debug "updating watDogApp..."
+        watDogApp?.update() 
+    }
+    log.debug "watDogCnt: $watDogCnt | watDogApp: $watDogApp"
 }
 
 def automationGlobalPrefsPage() {
     dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
         if(atomicState?.thermostats) {
             section("Comfort Preferences:") {
-//ERS why is required set to remSensor automation?
                 input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: ((remSensorNight && remSenHeatTempsReq()) ? true : false), image: getAppImg("heat_icon.png")
                 input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
@@ -640,6 +651,9 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
+    if(parent) {
+        installAutoApp()
+    }
 }
 
 def updated() {
@@ -663,10 +677,7 @@ def initialize() {
     if(parent) { initAutoApp() }
     else {
         initManagerApp()
-        /*def watchdogApp = findChildAppByName( getWatchdogAppChildName() )
-        if(!watchdogApp) {
-            addChildApp(textNamespace(), getWatchdogAppChildName(), getWatchdogAppChildName())
-        } else { watchdogApp?.update() }*/
+        initWatchdogApp()
     }
 }
 
@@ -4307,7 +4318,7 @@ def selectAutoPage() {
                 href "mainAutoPage", title: "Leak Sensors...", description: "", params: [autoType: "leakWat"], image: getAppImg("leak_icon.png")
             }
         }
-    }
+    } 
     else { return mainAutoPage( [autoType: atomicState?.automationType]) }
 }
 
@@ -4327,6 +4338,7 @@ def mainAutoPage(params) {
     else if (autoType == "nMode" && !isNestModesConfigured()) { return nestModePresPage() }
     else if (autoType == "tMode" && !isTstatModesConfigured()) { return tstatModePage() }
     else if (autoType == "leakWat" && !isLeakWatConfigured()) { return leakWatchPage() }
+    else if (autoType == "watchDog") { return watchDogPage() }
     
     else { 
         // Main Page Entries
@@ -4507,6 +4519,12 @@ def nameAutoPage() {
     }
 }
 
+def installAutoApp() {
+    if(settings["watchDogFlag"]) {
+        atomicState?.automationType = "watchDog"
+    }
+}
+
 def initAutoApp() {
     unschedule()
     unsubscribe()
@@ -4534,6 +4552,7 @@ def getAutoTypeLabel() {
     else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
     else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
     else if (type == "leakWat")  { typeLabel = "${newName} (LeakSensor)" }
+    //else if (type == "watchDog") { typeLabel = "Nest Location WatchDog"}
     
     if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
         newLbl = appLbl
@@ -4571,7 +4590,7 @@ def automationsInst() {
 }
 
 def getAutomationType() {
-    return atomicState?.automationType ? atomicState?.automationType : null
+    return atomicState?.automationType ?: null
 }
 
 def getIsAutomationDisabled() {
@@ -4680,7 +4699,7 @@ def scheduler() {
 
 def watchDogAutomation() {
     LogAction("watchDogAutomation...", "trace", false)
-    runAutomationEval()
+    //runAutomationEval()
 }
 
 def scheduleAutomationEval(schedtime = 20) {
@@ -4747,11 +4766,27 @@ def runAutomationEval() {
                 leakWatCheck()
             }
             break
+        case "watchDog":
+            
+            break
         default:
             LogAction("runAutomationEval: Invalid Option Received... ${autoType}", "warn", true)
-        break
+            break
     }
 }
+
+/******************************************************************************  
+|                			REMOTE SENSOR AUTOMATION CODE	                  |
+*******************************************************************************/
+def watchDogPrefix() { return "watchDog" }
+
+def watchDogPage() {
+    def pName = watchDogPrefix()
+    dynamicPage(name: "watchDogPage", title: "Nest Location Watchdog", uninstall: true, install: true) {
+        paragraph "watch dog page here"
+    }
+}
+
 
 /*
     Add in dynamic remote sensor options > Select modes for the sensor and allow current choices and triggers for each
@@ -6505,7 +6540,7 @@ def leakWatCheck() {
                                 }
                                 if(allowNotif) {
                                     sendEventPushNotifications("Restoring '${leakWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL leak sensors have been 'Dry' again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})...", "Info")
-                                    if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString("Restoring ${leakWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL leak sensors have been Dry again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})"))
+                                    if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString("Restoring ${leakWatTstat} to ${lastMode?.toString().toUpperCase()} Mode because ALL leak sensors have been Dry again for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})")) }
                                 }
                             } else { 
                                 LogAction("leakWatCheck() | There was problem restoring the last mode to ${lastMode}...", "error", true) 

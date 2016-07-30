@@ -146,8 +146,8 @@ metadata {
             state "true", 	label: 'Debug:\n${currentValue}'
             state "false", 	label: 'Debug:\n${currentValue}'
         }
-        htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 5)
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
+        htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 5, whitelist: ["raw.githubusercontent.com", "hammerjs.github.io"])
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5, whitelist: ["raw.githubusercontent.com", "hammerjs.github.io"])
 
     main "isStreamingStatus"
     details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "cameraDetails", "sound"])
@@ -939,10 +939,10 @@ def getCamHtml() {
             </head>
             <body>
                 <style type="text/css">
-                    
+                    ${getCSS()}
                 </style>
                 <script type="text/javascript">
-                    
+                    ${getCamBtnJsData()}
                 </script>
                 ${updateAvail}
                 <div class="hideable" id="liveStream">
