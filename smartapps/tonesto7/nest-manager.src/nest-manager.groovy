@@ -920,7 +920,7 @@ def forcedPoll(type = null) {
         atomicState.needStrPoll = true
         atomicState.needDevPoll = true
     }
-    updateChildData()
+    updateChildData(true)
 }
 
 def postCmd() {
@@ -997,9 +997,10 @@ def schedUpdateChild() {
     runIn(25, "updateChildData", [overwrite: true])
 }
 
-def updateChildData() {
+def updateChildData(force = false) {
     LogAction("updateChildData()", "info", true)
     if (atomicState?.pollBlocked) { return }
+    def nforce = atomicState?.needChildUpd
     atomicState.needChildUpd = true
     unschedule("schedUpdateChild")
     runIn(40, "postCmd", [overwrite: true])
@@ -1020,9 +1021,12 @@ def updateChildData() {
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
                                 "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
-                    it.generateEvent(tData) //parse received message from parent
-                    //atomicState?.tDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldtData = atomicState?."oldtData${devId}"
+                    if (force || nforce || oldtData != tData) {
+                        LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
+                        it.generateEvent(tData) //parse received message from parent
+                        atomicState."oldtData${devId}" = tData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Thermostat Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1034,9 +1038,12 @@ def updateChildData() {
                 if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
-                    it.generateEvent(pData) //parse received message from parent
-                    //atomicState?.pDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldpData = atomicState?."oldpData${devId}"
+                    if (force || nforce || oldpData != pData) {
+                        LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
+                        it.generateEvent(pData) //parse received message from parent
+                        atomicState."oldpData${devId}" = pData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Protect Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1048,9 +1055,12 @@ def updateChildData() {
                 if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera)) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
-                    LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
-                    it.generateEvent(camData) //parse received message from parent
-                    //atomicState?.camDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldcamData = atomicState?."oldcamData${devId}"
+                    if (force || nforce || oldcamData != camData) {
+                        LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
+                        it.generateEvent(camData) //parse received message from parent
+                        atomicState."oldcamData${devId}" = camData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Camera device because the device version (${versionStr2Int(atomicState?.camDevVer)}) is lower than the Minimum (v${minDevVersions()?.camera})... Please Update Camera Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1060,10 +1070,13 @@ def updateChildData() {
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 atomicState?.presDevVer = it?.devVer() ?: ""
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
-                    LogTrace("UpdateChildData >> Presence id: ${devId}")
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
-                    it.generateEvent(pData)
-                    //atomicState?.presDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldpData = atomicState?."oldpData${devId}"
+                    if (force || nforce || oldpData != pData) {
+                        LogTrace("UpdateChildData >> Presence id: ${devId}")
+                        it.generateEvent(pData)
+                        atomicState."oldpData${devId}" = pData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Presence Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -1073,10 +1086,13 @@ def updateChildData() {
             else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
                 atomicState?.weatDevVer = it?.devVer() ?: ""
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
-                    LogTrace("UpdateChildData >> Weather id: ${devId}")
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                    it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                    //atomicState?.weatDevVer = !it.devVer() ? "" : it.devVer()
+                    def oldwData = atomicState?."oldwData${devId}"
+                    if (force || nforce || oldwData != wData) {
+                        LogTrace("UpdateChildData >> Weather id: ${devId}")
+                        it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
+                        atomicState."oldwData${devId}" = wData
+                    }
                     return true
                 } else { 
                     LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Weather Device Handler Code to latest version to resolve this issue...", "error", true)
@@ -5383,18 +5399,18 @@ private remSenEvtEval() {
             if(remSenUseSunAsMode) { getSunTimeState() }
             def threshold = !remSenTempDiffDegrees ? 2 : remSenTempDiffDegrees.toDouble()
             def tempChangeVal = !remSenTstatTempChgVal ? 5 : remSenTstatTempChgVal.toDouble()
-            def maxTempChangeVal = tempChangeVal * 2
+            def maxTempChangeVal = tempChangeVal * 3
             def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
             def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
+            def reqSenHeatSetPoint = getRemSenHeatSetTemp()
+            def reqSenCoolSetPoint = getRemSenCoolSetTemp()
+            def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
+
             def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
             def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
             def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
             def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
             def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-            def reqSenHeatSetPoint = getRemSenHeatSetTemp()
-            def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-            def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
-
             def acRunning = (curTstatOperState == "cooling") ? true : false
             def heatRunning = (curTstatOperState == "heating") ? true : false
 
@@ -5473,11 +5489,12 @@ private remSenEvtEval() {
                         chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
                         chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
                         if (chgval != curCoolSetpoint) {
-                            if (havcMode in ["auto"]) {
-                                if (curHeatSetpoint > chgval-5) {
-                                    remSenTstat?.setHeatingSetpoint(chgval-5)
-                                    LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(chgval-5)}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
-                                    if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval-5) }
+                            runIn(60, "remSenCheck", [overwrite: true])
+                            if (hvacMode in ["auto"]) {
+                                if (curHeatSetpoint > (chgval-5.0)) {
+                                    remSenTstat?.setHeatingSetpoint((chgval-5.0))
+                                    LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(chgval-5.0)}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
+                                    if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint((chgval-5.0)) }
                                 }
                             }
                             remSenTstat?.setCoolingSetpoint(chgval)
@@ -5493,6 +5510,16 @@ private remSenEvtEval() {
 
             chg = false
             chgval = 0
+            curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
+            curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
+            fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
+            curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+            curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
+            acRunning = (curTstatOperState == "cooling") ? true : false
+            heatRunning = (curTstatOperState == "heating") ? true : false
+
+            LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)   
+
             //Heat Functions....
             if (hvacMode in ["heat", "emergency heat", "auto"]) {
                 if (remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]) { 
@@ -5538,7 +5565,8 @@ private remSenEvtEval() {
                         chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
                         chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
                         if (chgval != curHeatSetpoint) {
-                            if (havcMode in ["auto"]) {
+                            runIn(60, "remSenCheck", [overwrite: true])
+                            if (hvacMode in ["auto"]) {
                                 if (curCoolSetpoint < chgval+5) {
                                     remSenTstat?.setCoolingSetpoint(chgval+5)
                                     LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(chgval+5)}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
