@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "2.5.6"}
+def devVer() { return "2.6.0"}
 
 // for the UI
 metadata {
@@ -843,19 +843,17 @@ def checkSafetyTemps() {
 
 def comfortHumidityEvent(comfortHum) {
     try {
-        //def curMinHum = device.currentState("safetyHumidityMin")?.integerValue
+        //def curMinHum = device.currentState("comfortHumidityMin")?.integerValue
         def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
-        //def newMinHum = safetyHum?.min.toInteger() ?: 0
-        //def newMaxHum = safetyHum?.max.toInteger() ?: 0
+        //def newMinHum = comfortHum?.min.toInteger() ?: 0
         def newMaxHum = comfortHum?.toInteger() ?: 0
         if(curMaxHum != newMaxHum) {
-            //log.debug("UPDATED | Safety Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
-            log.debug("UPDATED | Safety Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
-            //sendEvent(name:'safetyHumidityMin', value: newMinHum, unit: "%", descriptionText: "Safety Humidity Minimum is ${newMinHum}" , displayed: true, isStateChange: true)
+            //log.debug("UPDATED | Comfort Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
+            log.debug("UPDATED | Comfort Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
             sendEvent(name:'comfortHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
         } else { 
-            //Logger("Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
-            Logger("Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)") 
+            //Logger("Comfort Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
+            Logger("Comfort Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)") 
         }
     }
     catch (ex) {
@@ -866,19 +864,18 @@ def comfortHumidityEvent(comfortHum) {
 
 def comfortDewpointEvent(comfortDew) {
     try {
-        //def curMinDew = device.currentState("safetyDewpointMin")?.integerValue
+        //def curMinDew = device.currentState("comfortDewpointMin")?.integerValue
         def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
-        //def newMinDew = safetyDew?.min.toInteger() ?: 0
-        //def newMaxDew = safetyDew?.max.toInteger() ?: 0
+        //def newMinDew = comfortDew?.min.toInteger() ?: 0
         def newMaxDew = comfortDew?.toDouble() ?: 0.0
         if(curMaxDew != newMaxDew) {
-            //log.debug("UPDATED | Safety Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
-            log.debug("UPDATED | Safety Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
-            //sendEvent(name:'safetyDewpointMin', value: newMinDew, unit: "%", descriptionText: "Safety Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
-            sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Safety Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
+            //log.debug("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
+            log.debug("UPDATED | Comfort Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
+            //sendEvent(name:'comfortDewpointMin', value: newMinDew, unit: "%", descriptionText: "Comfort Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
+            sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Comfort Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
         } else { 
-            //Logger("Humidity Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
-            Logger("Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})") 
+            //Logger("Comfort Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
+            Logger("Comfort Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})") 
         }
     }
     catch (ex) {
