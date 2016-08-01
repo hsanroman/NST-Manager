@@ -543,7 +543,6 @@ def initWatchdogApp() {
     def watDogCnt = 0
     def watDogApp 
     childApps?.each { cApp -> 
-        //if(cApp?.settings["watchDogFlag"] || cApp?.getAutomationType() == "watchDog") {
         if(cApp?.getAutomationType() == "watchDog") {
             watDogCnt = watDogCnt+1
             watDogApp = cApp
@@ -752,34 +751,32 @@ def getInstAutoTypesDesc() {
     def watchDogCnt = 0
     def disCnt = 0
     childApps?.each { a ->
-//        if(a?.name != getWatchdogAppChildName()) {    
-            def type = a?.getAutomationType()
-            def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
-            //log.debug "automation type: $type"
-            switch(type) {
-                case "remSen":
-                    remSenCnt = remSenCnt+1
-                    break
-                case "conWat":
-                    conWatCnt = conWatCnt+1
-                    break
-                case "leakWat":
-                    leakWatCnt = leakWatCnt+1
-                    break
-                case "extTmp":
-                    extTmpCnt = extTmpCnt+1
-                    break
-                case "nMode":
-                    nModeCnt = nModeCnt+1
-                    break
-                case "tMode":
-                    tModeCnt = tModeCnt+1
-                    break
-                case "watchDog":
-                    watchDogCnt = watchDogCnt+1
-                    break
-            }
- //       }
+        def type = a?.getAutomationType()
+        def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
+        //log.debug "automation type: $type"
+        switch(type) {
+            case "remSen":
+                remSenCnt = remSenCnt+1
+                break
+            case "conWat":
+                conWatCnt = conWatCnt+1
+                break
+            case "leakWat":
+                leakWatCnt = leakWatCnt+1
+                break
+            case "extTmp":
+                extTmpCnt = extTmpCnt+1
+                break
+            case "nMode":
+                nModeCnt = nModeCnt+1
+                break
+            case "tMode":
+                tModeCnt = tModeCnt+1
+                break
+            case "watchDog":
+                watchDogCnt = watchDogCnt+1
+                break
+        }
     }
     def remSenDesc = (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
     def conWatDesc = (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
@@ -787,7 +784,7 @@ def getInstAutoTypesDesc() {
     def extTmpDesc = (extTmpCnt > 0) ? "\n• External Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\n• Nest Modes ($nModeCnt)" : ""
     def tModeDesc = (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
-    def watchDogDesc = (watchDogCnt > 0) ? "\n• Watch Dog ($watchDogCnt)" : ""
+    def watchDogDesc = (watchDogCnt > 0) ? "\n• Nest WatchDog" : ""
     def disabDesc = (disCnt > 0) ? "\n• Disabled Automations ($nModeCnt)" : ""
     atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt]
     return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}${watchDogDesc}"
