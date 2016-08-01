@@ -4946,13 +4946,12 @@ def remSensorPage() {
                         input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: inDesc ?: "", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
                                 image: getAppImg("sunrise_icon.png")
                         if(!remSenUseSunAsMode) { 
-                            if(!checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
-                                def modesReq = (!remSenUseSunAsMode && (remSensorDay && remSensorNight)) ? true : false
-                                input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
-                                input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
-                            } else {
+                            if(checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
                                 paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
                             }
+                            def modesReq = (!remSenUseSunAsMode && (remSensorDay && remSensorNight)) ? true : false
+                            input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                            input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
                         }
                     }
                 }
@@ -6098,6 +6097,7 @@ def extTmpTempCheck() {
             }
             else if (modeOff && extTmpRestoreOnTemp && !atomicState?.extTmpRestoreMode) {
                 LogAction("extTmpTempCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+                atomicState?.extTmpTstatOffRequested = false
             }
             else if (!extTmpRestoreOnTemp && !modeOff) {
                 LogAction("extTmpTempCheck() | Skipping Restore since it is not enabled.", "warn", true)
@@ -6380,6 +6380,7 @@ def conWatCheck(timeOut = false) {
                     }
                     else if (modeOff && conWatRestoreOnClose && !atomicState?.conWatRestoreMode) {
                         LogAction("conWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+                        atomicState?.conWatTstatOffRequested = false
                     }
                     else if (!conWatRestoreOnClose && !modeOff) { 
                         LogAction("conWatCheck() | Skipping Restore since it is not enabled.", "warn", true) 
@@ -6643,6 +6644,7 @@ def leakWatCheck() {
                     }
                     else if (modeOff && leakWatRestoreOnDry && !atomicState?.leakWatRestoreMode) {
                         LogAction("leakWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+                        atomicState?.leakWatTstatOffRequested = false
                     }
                     else if (!leakWatRestoreOnDry && !modeOff) {
                         LogAction("leakWatCheck() | Skipping Restore since it is not enabled.", "warn", true)
