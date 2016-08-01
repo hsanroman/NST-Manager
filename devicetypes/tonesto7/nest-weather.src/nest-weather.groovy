@@ -625,7 +625,7 @@ def luxUpdate() {
 }
 
 private estimateLux(weatherIcon) {
-    log.trace "estimateLux ( ${weatherIcon} )"
+    //log.trace "estimateLux ( ${weatherIcon} )"
     try {
         //log.debug "state.sunriseDate: ${state.sunriseDate} state.sunriseDate.time: ${state.sunriseDate.time}"
         //log.debug "state.sunsetDate: ${state.sunsetDate} state.sunsetDate.time: ${state.sunsetDate.time}"
@@ -669,14 +669,14 @@ private estimateLux(weatherIcon) {
                 def afterSunrise = now - sunriseDate
                 def beforeSunset = sunsetDate - now
 
-                log.debug "now: $now afterSunrise: $afterSunrise beforeSunset: $beforeSunset oneHour: $oneHour"
+                //log.debug "now: $now afterSunrise: $afterSunrise beforeSunset: $beforeSunset oneHour: $oneHour"
                 if(afterSunrise < oneHour) {
                     //dawn
                     lux = (long)(lux * (afterSunrise/oneHour))
                     runIn(5*60, "luxUpdate", [overwrite: true])
                 } else if (beforeSunset < oneHour) {
                     //dusk
-                    log.trace "dusk"
+                    //log.trace "dusk"
                     lux = (long)(lux * (beforeSunset/oneHour))
                     runIn(5*60, "luxUpdate", [overwrite: true])
                 } else if (beforeSunset < (oneHour*2)) {
