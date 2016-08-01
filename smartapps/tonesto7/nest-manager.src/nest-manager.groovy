@@ -7415,19 +7415,19 @@ def setNotificationPage(params) {
     dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
         section("Notification Preferences:") {
             if(!settings["${getAutoType()}NotificationsOn"]) {
-                paragraph "Turn On to Allow Configuration of Push, Voice, and Alarm Notifications...", image: getAppImg("instruct_icon.png"), state: null
+                paragraph "Turn On to Allow:\nText, Voice, and Alarm Notifications...", required: true, image: getAppImg("instruct_icon.png"), state: null
             }
             input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
         }
         if(settings["${pName}NotificationsOn"]) {
-            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People to Receive Notifications:\n(Manager App Recipients are Used by Default)"
+            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "(Manager App Recipients are Used by Default)\n\nYou can customize who receives notifications"
             section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
-                    input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+                    input "${pName}UsePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
                 } else {
-                    input("${pName}NotifRecips", "contact", title: "Select Contacts to Send to...", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-                        input ("${pName}NotifPhones", "phone", title: "Phone Number to Send SMS to...", submitOnChange: true, description: "Phone Number", required: false)
+                    input("${pName}NotifRecips", "contact", title: "Select Contacts...\n(Optional)", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
+                        input ("${pName}NotifPhones", "phone", title: "Phone Number to Send SMS to...\n(Optional)", submitOnChange: true, description: "Phone Number", required: false)
                     }
                 }
             }
@@ -7450,11 +7450,11 @@ def setNotificationPage(params) {
                         if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
                         if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
                     }
-                    input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
-                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
+                    input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
+                    input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
                     if(settings["${pName}SpeechMediaPlayer"]) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
-                        input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
+                        input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
                     }
                     if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getAutoType() in ["conWat", "extTmp","leakWat"]) {
                         def desc = ""
@@ -7517,7 +7517,6 @@ def setNotificationPage(params) {
                         if(settings["${pName}_Alert_1_Send_Push"]) {
                             input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
                             if(settings["${pName}_Alert_1_Send_Custom_Push"]) {
-                                
                                 input "${pName}_Alert_1_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
                             }
                         }
