@@ -47,12 +47,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.6.10" }
-def appVerDate() { "7-27-2016" }
+def appVersion() { "2.7.0" }
+def appVerDate() { "8-1-2016" }
 def appVerInfo() {
     def str = ""
+    
+    str += "V2.7.0 (August 1st, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Lots of optimizations to Automations."
+    str += "\n • ADDED: Added new watchdog automation"
 
-    str += "V2.6.7 (July 17th, 2016):"
+    str += "V\n\n2.6.7 (July 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Merged in Eric's latest patches."
     str += "\n • UPDATED: Added in support for Dew point."
@@ -752,42 +757,45 @@ def getInstAutoTypesDesc() {
     def disCnt = 0
     childApps?.each { a ->
         def type = a?.getAutomationType()
-        def disabled = !a?.getIsAutomationDisabled() ? null : disCnt+1
-        //log.debug "automation type: $type"
-        switch(type) {
-            case "remSen":
-                remSenCnt = remSenCnt+1
-                break
-            case "conWat":
-                conWatCnt = conWatCnt+1
-                break
-            case "leakWat":
-                leakWatCnt = leakWatCnt+1
-                break
-            case "extTmp":
-                extTmpCnt = extTmpCnt+1
-                break
-            case "nMode":
-                nModeCnt = nModeCnt+1
-                break
-            case "tMode":
-                tModeCnt = tModeCnt+1
-                break
-            case "watchDog":
-                watchDogCnt = watchDogCnt+1
-                break
+        if(a?.getIsAutomationDisabled()) { disCnt = disCnt+1 }
+        else {
+            //log.debug "automation type: $type"
+            switch(type) {
+                case "remSen":
+                    remSenCnt = remSenCnt+1
+                    break
+                case "conWat":
+                    conWatCnt = conWatCnt+1
+                    break
+                case "leakWat":
+                    leakWatCnt = leakWatCnt+1
+                    break
+                case "extTmp":
+                    extTmpCnt = extTmpCnt+1
+                    break
+                case "nMode":
+                    nModeCnt = nModeCnt+1
+                    break
+                case "tMode":
+                    tModeCnt = tModeCnt+1
+                    break
+                case "watchDog":
+                    watchDogCnt = watchDogCnt+1
+                    break
+            }
         }
     }
+    def watchDogDesc = (watchDogCnt > 0) ? "\n• Nest Watchdog: (Active)" : ""
     def remSenDesc = (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
     def conWatDesc = (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
     def leakWatDesc = (leakWatCnt > 0) ? "\n• Leak Sensor ($leakWatCnt)" : ""
     def extTmpDesc = (extTmpCnt > 0) ? "\n• External Sensor ($extTmpCnt)" : ""
     def nModeDesc = (nModeCnt > 0) ? "\n• Nest Modes ($nModeCnt)" : ""
     def tModeDesc = (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
-    def watchDogDesc = (watchDogCnt > 0) ? "\n• Nest WatchDog" : ""
+    
     def disabDesc = (disCnt > 0) ? "\n• Disabled Automations ($nModeCnt)" : ""
     atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt]
-    return "Installed Automations: ${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}${watchDogDesc}"
+    return "Installed Automations: ${watchDogDesc}${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
 }
 
 def subscriber() {
@@ -4694,8 +4702,8 @@ def subscribeToEvents() {
                     LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
 
                     // temperature is for DEBUG
-                    subscribe(d1, "temperature", watchdogSafetyEvt)
-                    subscribe(d1, "safetyTempExceeded", watchdogSafetyEvt)
+                    subscribe(d1, "temperature", watchdogSafetyTempEvt)
+                    subscribe(d1, "safetyTempExceeded", watchdogSafetyTempEvt)
                 }
                 return d1
             }
@@ -4842,7 +4850,7 @@ def watchdogSafetyTempEvt(evt) {
     else {
         if(evt?.value == "true") {
             scheduleAutomationEval()
-//            watchDogAlarmActions(evt?.device, "temp")
+            watchDogAlarmActions(evt?.device, "temp")
         }
     }
 }
@@ -4881,21 +4889,29 @@ def watchDogAlarmActions(dev, actType) {
             evtNotifMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
             evtVoiceMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
             break
-    } 
-    LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "trace", true)
-        
-    if (allowNotif) {
-        sendEventPushNotifications(evtNotifMsg, "Warning")
-    } else {
-        sendNofificationMsg("Warning", evtNotifMsg)
     }
-    if (allowSpeech) { 
-        sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg))
-    }
-    if (allowAlarm) {
-        scheduleAlarmOn()
+    if((getLastWatDogSafetyAlertDtSec() > getWatDogRepeatMsgDelayVal()) || (evtNotifMsg != atomicState?.lastWatDogSafetyAlertMsg)) {
+        LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "trace", true)
+            
+        if (allowNotif) {
+            sendEventPushNotifications(evtNotifMsg, "Warning")
+        } else {
+            sendNofificationMsg("Warning", evtNotifMsg)
+        }
+        if (allowSpeech) { 
+            sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg))
+        }
+        if (allowAlarm) {
+            scheduleAlarmOn()
+        }
+        atomicState?.lastWatDogSafetyAlertDt = getDtNow()
+        atomicState?.lastWatDogSafetyAlertMsg = evtNotifMsg
     }
 }
+
+def getLastWatDogSafetyAlertDtSec() { return !atomicState?.lastWatDogSafetyAlertDt ? 1000 : GetTimeDiffSeconds(atomicState?.lastWatDogSafetyAlertDt).toInteger() }
+def getWatDogRepeatMsgDelayVal() { return !watDogRepeatMsgDelay ? 3600 : watDogRepeatMsgDelay.toInteger() }
+
 
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
@@ -7398,17 +7414,20 @@ def setNotificationPage(params) {
     } 
     dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
         section("Notification Preferences:") {
+            if(!settings["${getAutoType()}NotificationsOn"]) {
+                paragraph "Turn On to Allow Configuration of Push, Voice, and Alarm Notifications...", image: getAppImg("instruct_icon.png"), state: null
+            }
             input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", description: "", required: false, defaultValue: false, submitOnChange: true,
                         image: getAppImg("notification_icon.png")
         }
         if(settings["${pName}NotificationsOn"]) {
-            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People or Devices to Receive Notifications:\n(Manager App Recipients are Used by Default)"
+            def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "Select People to Receive Notifications:\n(Manager App Recipients are Used by Default)"
             section("${notifDesc}") {
                 if(!location.contactBookEnabled) {
                     input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
                 } else {
-                    input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-                        input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", submitOnChange: true, description: "Phone Number", required: false)
+                    input("${pName}NotifRecips", "contact", title: "Select Contacts to Send to...", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
+                        input ("${pName}NotifPhones", "phone", title: "Phone Number to Send SMS to...", submitOnChange: true, description: "Phone Number", required: false)
                     }
                 }
             }
