@@ -1018,11 +1018,11 @@ def updateChildData(force = false) {
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
                                 "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
-                    def oldtData = atomicState?."oldtData${devId}"
-                    if (force || nforce || oldtData != tData) {
+                    def oldTstatData = atomicState?."oldTstatData${devId}"
+                    if (force || nforce || oldTstatData != tData) {
                         LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
                         it.generateEvent(tData) //parse received message from parent
-                        atomicState."oldtData${devId}" = tData
+                        atomicState."oldTstatData${devId}" = tData
                     }
                     return true
                 } else { 
@@ -1035,11 +1035,11 @@ def updateChildData(force = false) {
                 if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
-                    def oldpData = atomicState?."oldpData${devId}"
-                    if (force || nforce || oldpData != pData) {
+                    def oldProtData = atomicState?."oldProtData${devId}"
+                    if (force || nforce || oldProtData != pData) {
                         LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
                         it.generateEvent(pData) //parse received message from parent
-                        atomicState."oldpData${devId}" = pData
+                        atomicState."oldProtData${devId}" = pData
                     }
                     return true
                 } else { 
@@ -1052,11 +1052,11 @@ def updateChildData(force = false) {
                 if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera)) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
                                 "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
-                    def oldcamData = atomicState?."oldcamData${devId}"
-                    if (force || nforce || oldcamData != camData) {
+                    def oldCamData = atomicState?."oldCamData${devId}"
+                    if (force || nforce || oldCamData != camData) {
                         LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
                         it.generateEvent(camData) //parse received message from parent
-                        atomicState."oldcamData${devId}" = camData
+                        atomicState."oldCamData${devId}" = camData
                     }
                     return true
                 } else { 
@@ -1068,11 +1068,11 @@ def updateChildData(force = false) {
                 atomicState?.presDevVer = it?.devVer() ?: ""
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
                     def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
-                    def oldpData = atomicState?."oldpData${devId}"
-                    if (force || nforce || oldpData != pData) {
+                    def oldPresData = atomicState?."oldPresData${devId}"
+                    if (force || nforce || oldPresData != pData) {
                         LogTrace("UpdateChildData >> Presence id: ${devId}")
                         it.generateEvent(pData)
-                        atomicState."oldpData${devId}" = pData
+                        atomicState."oldPresData${devId}" = pData
                     }
                     return true
                 } else { 
@@ -1084,11 +1084,11 @@ def updateChildData(force = false) {
                 atomicState?.weatDevVer = it?.devVer() ?: ""
                 if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
                     def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
-                    def oldwData = atomicState?."oldwData${devId}"
-                    if (force || nforce || oldwData != wData) {
+                    def oldWeatherData = atomicState?."oldWeatherData${devId}"
+                    if (force || nforce || oldWeatherData != wData) {
                         LogTrace("UpdateChildData >> Weather id: ${devId}")
                         it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
-                        atomicState."oldwData${devId}" = wData
+                        atomicState."oldWeatherData${devId}" = wData
                     }
                     return true
                 } else { 
@@ -1718,7 +1718,7 @@ def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDif
 def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
-def getOk2Notify() { return (daysOk(settings?."${getPagePrefix()}quietDays") && notificationTimeOk() && modesOk(settings?."${getPagePrefix()}quietModes")) }
+def getOk2Notify() { return (daysOk(settings?."${getAutoType()}quietDays") && notificationTimeOk() && modesOk(settings?."${getAutoType()}quietModes")) }
 def isMissedPoll() { return (getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger()) ? true : false }
 
 def notificationCheck() {
@@ -3182,7 +3182,7 @@ def getLocationModes() {
     return result
 }
 
-def getPagePrefix() { return !parent ? "" : atomicState?.automationType }
+def getAutoType() { return !parent ? "" : atomicState?.automationType }
 
 def getTimeZone() { 
     def tz = null
@@ -3258,7 +3258,7 @@ def quietTimeOk() {
 
 def notificationTimeOk() {
     try {
-        def pName = getPagePrefix()
+        def pName = getAutoType()
         def strtTime = null
         def stopTime = null
         def now = new Date()
@@ -3320,7 +3320,7 @@ def isInMode(modeList) {
 }
 
 def minDevVersions() {
-    return ["thermostat":250, "protect":250, "presence":250, "weather":250, "camera":001]
+    return appData?.versions?.minDevVersions ?: ["thermostat":250, "protect":250, "presence":250, "weather":250, "camera":001]
 }
 
 def notifValEnum(allowCust = true) {
@@ -4417,8 +4417,8 @@ def mainAutoPage(params) {
                     extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
                     extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
                     extDesc += extTmpRestoreOnTemp ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode.toString().capitalize() ?: "Not Set"})" : ""
-                    extDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    extDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
                     extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
                     def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
                     href "extTempPage", title: "External Temps Config...", description: extTmpDesc ?: "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
@@ -4438,9 +4438,9 @@ def mainAutoPage(params) {
                     conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
                     conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
                     conDesc += conWatRestoreOnClose ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-                    conDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
-                    conDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                    conDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+                    conDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
                             "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
                     def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
@@ -4459,8 +4459,8 @@ def mainAutoPage(params) {
                     nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
                     nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
                     nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
-                    nDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
+                    nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
                     nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
                     def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
                     href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
@@ -4490,9 +4490,9 @@ def mainAutoPage(params) {
                     //  leakDesc += leakWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), leakWatOffDelay)})" : ""
                     leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
                     leakDesc += leakWatRestoreOnDry ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-                    leakDesc += (settings?."${getPagePrefix()}Modes" || settings?."${getPagePrefix()}Days" || (settings?."${getPagePrefix()}StartTime" && settings?."${getPagePrefix()}StopTime")) ? 
-                            "\n • Evaluation Allowed: (${autoScheduleOk(getPagePrefix()) ? "ON" : "OFF"})" : ""
-                    leakDesc += (settings["${getPagePrefix()}AllowSpeechNotif"] && (settings["${getPagePrefix()}SpeechDevices"] || settings["${getPagePrefix()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                    leakDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ? 
+                            "\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+                    leakDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
                             "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
                     leakDesc += (leakWatContacts && leakWatTstat) ? "\n\nTap to Modify..." : ""
                     def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
@@ -4684,19 +4684,18 @@ def subscribeToEvents() {
     }
     //watchDog Subscriptions
     if (autoType == "watchDog") {
-        def tstats = parent.getTstats()
-        def foundtstats
+        def tstats = parent?.getTstats()
+        def foundTstats
 
         if(tstats) {
-            foundtstats = tstats.collect { dni ->
+            foundTstats = tstats?.collect { dni ->
                 def d1 = parent.getThermostatDevice(dni)
                 if(d1) {
                     LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
 
-// temperature is for DEBUG
-           subscribe(d1, "temperature", watchDogsafetyEvt)
-
-                    subscribe(d1, "safetyTempExceeded", watchDogsafetyEvt)
+                    // temperature is for DEBUG
+                    subscribe(d1, "temperature", watchdogSafetyEvt)
+                    subscribe(d1, "safetyTempExceeded", watchdogSafetyEvt)
                 }
                 return d1
             }
@@ -4806,7 +4805,7 @@ def runAutomationEval() {
 }
 
 /******************************************************************************  
-|                			WATCHDOG AUTOMATION CODE	                  |
+|                			WATCHDOG AUTOMATION CODE	                      |
 *******************************************************************************/
 def watchDogPrefix() { return "watchDog" }
 
@@ -4820,14 +4819,18 @@ def watchDogPage() {
         }
         else {
             section("Enable/Disable this Automation") {
-                input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
+                input "disableAutomation", "bool", title: "Disable the WatchDog?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
                 if(!atomicState?.disableAutomation && disableAutomation) {
-                    LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
+                    LogAction("Watchdog was Disabled at (${getDtNow()})", "info", true)
                     atomicState.disableAutomationDt = getDtNow()
                 } else if (atomicState?.disableAutomation && !disableAutomation) {
-                    LogAction("This Automation was Restored at (${getDtNow()})", "info", true)
+                    LogAction("Watchdog was Restored at (${getDtNow()})", "info", true)
                     atomicState.disableAutomationDt = null
                 }
+            }
+            section("Notifications:") {
+                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true], 
+                        state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
             section("Debug Options") {
                 input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
@@ -4837,19 +4840,50 @@ def watchDogPage() {
     }
 }
 
-def watchDogsafetyEvt(evt) {
+def watchdogSafetyTempEvt(evt) {
     LogAction("Safety Temp Exceeded Event | Thermostat Temp: ${evt?.displayName} (${evt?.value})", "trace", true)
     if(disableAutomation) { return }
+    else {
+        if(evt?.value == "true") {
+            watchDogAlarmActions(evt?.device, "temp")
+        }
+    }
 }
 
+def watchDogAlarmActions(dev, actType) {
+    def allowNotif = (settings["${getAutoType()}NotificationsOn"] && (settings["${getAutoType()}NofifRecips"] || settings["${getAutoType()}NotifPhones"] || settings["${getAutoType()}UsePush"]))  ? true : false
+    def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
+    def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
+    def evtNotifMsg = ""
+    def evtVoiceMsg = ""
+    switch(actType) {
+        case "temp":
+            tempAlarmNotifMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
+            tempAlarmVoiceMsg = "Safety Temp has been exceeded on ${dev}.  Resuming Normal Operation"
+            break
+    } 
+        
+    if (allowNotif) {
+        sendEventPushNotifications(evtNotifMsg, "Warning")
+    } else {
+        sendNofificationMsg("Warning", evtNotifMsg)
+    }
+    if (allowSpeech) { 
+        sendEventVoiceNotifications(voiceNotifString(evtVoiceMsg) 
+    }
+    if (allowAlarm) {
+        scheduleAlarmOn()
+    }
+}
+
+/******************************************************************************  
+|                			REMOTE SENSOR AUTOMATION CODE	                  |
+*******************************************************************************/
 /*
     Add in dynamic remote sensor options > Select modes for the sensor and allow current choices and triggers for each
     maybe just allow toggle for advanced options
 */
 
-/******************************************************************************  
-|                			REMOTE SENSOR AUTOMATION CODE	                  |
-*******************************************************************************/
 def remSenPrefix() { return "remSen" }
 
 def remSensorPage() {
@@ -5867,7 +5901,7 @@ def extTempPage() {
                     str += extTmpTstat ? "Thermostat Status:" : ""
                     str += extTmpTstat ? "\n├ Temp: (${extTmpTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                     str += extTmpTstat ? "\n├ Mode: (${extTmpTstat?.currentThermostatOperatingState.toString().capitalize()}/${extTmpTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                    str += extTmpTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    str += extTmpTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
                     str += extTmpTstat && getSafetyTemps(extTmpTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(extTmpTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(extTmpTstat).max}°${atomicState?.tempUnit}" : ""
                     paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
                     input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp (°${atomicState?.tempUnit})?", defaultValue: 1.0, submitOnChange: true, required: true,
@@ -5878,8 +5912,8 @@ def extTempPage() {
         if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
-                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer (Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
             section("Delay Values:") {
@@ -6049,7 +6083,7 @@ def getExtTmpBadDtSec() { return !atomicState?.extTmpTempBadDt ? 100000 : GetTim
 def getExtTmpOffDelayVal() { return !extTmpOffDelay ? 300 : extTmpOffDelay.toInteger() }
 def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toInteger() }
 
-def extTmpTempCheck(ctimeOut = false) {
+def extTmpTempCheck(cTimeOut = false) {
     //log.trace "extTmpTempCheck..."
 //
 // if we cannot save/restore settings, don't bother turning things off
@@ -6059,7 +6093,7 @@ def extTmpTempCheck(ctimeOut = false) {
         if(disableAutomation) { return }
         else {
             if(!atomicState?.timeOutOn) { atomicState.timeOutOn = false }
-            if(ctimeOut) { atomicState.timeOutOn = true }
+            if(cTimeOut) { atomicState.timeOutOn = true }
             def timeOut = atomicState.timeOutOn ?: false
 
             def curMode = extTmpTstat?.currentThermostatMode?.toString()
@@ -6067,10 +6101,10 @@ def extTmpTempCheck(ctimeOut = false) {
             def safetyOk = getSafetyTempsOk(extTmpTstat)
             def schedOk = extTmpScheduleOk()
             def okToRestore = (modeOff && extTmpRestoreOnTemp && atomicState?.extTmpTstatOffRequested) ? true : false
-            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
-            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-            def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
-            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
+            def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
 
             def tempWithinThreshold = extTmpTempOk()
 
@@ -6105,7 +6139,7 @@ def extTmpTempCheck(ctimeOut = false) {
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info")
-                                        if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")) }
+                                        if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OnVoiceMsg")) }
                                     }
                                 }
                             } else { LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) }
@@ -6147,7 +6181,7 @@ def extTmpTempCheck(ctimeOut = false) {
 
                             if(allowNotif) {
                                 sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
-                                if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg")) }
+                                if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
                             }
                         } else { LogAction("extTmpCheck(): Error turning themostat Off", "warn", true) }
                     } else { scheduleAutomationEval(30) }
@@ -6231,13 +6265,6 @@ def extTmpDpEvt(evt) {
     }
 }
 
-/*
-    Adding in timer to restore mode
-    Add alarm/siren notification options
-    Allow user to set different alert times for each stage 
-    Allow custom alert voice messages
-
-*/
 /******************************************************************************  
 |                			WATCH CONTACTS AUTOMATION CODE	                  |
 *******************************************************************************/
@@ -6267,16 +6294,16 @@ def contactWatchPage() {
                 str += conWatTstat ? "\nThermostat Status:" : ""
                 str += conWatTstat ? "\n├ Temp: (${conWatTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                 str += conWatTstat ? "\n├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                str += conWatTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
-                str += (conWatTstat && settings?."${getPagePrefix()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     └ Min | Max: (${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit} | ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit})" : ""
+                str += conWatTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += (conWatTstat && settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     └ Min | Max: (${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit} | ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit})" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
         }
         if(conWatContacts && conWatTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
-                input "${getPagePrefix()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "When Safety Temps are Reached Auto Restore?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore Timer\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
                         image: getAppImg("delay_time_icon.png")
             }
             section("Trigger Actions:") {
@@ -6338,7 +6365,7 @@ def getConWatOffDelayVal() { return !conWatOffDelay ? 300 : (conWatOffDelay.toIn
 def getConWatOnDelayVal() { return !conWatOnDelay ? 300 : (conWatOnDelay.toInteger()) }
 def getConWatRestoreDelayBetweenVal() { return !conWatRestoreDelayBetween ? 600 : conWatRestoreDelayBetween.toInteger() }
 
-def conWatCheck(ctimeOut = false) {
+def conWatCheck(cTimeOut = false) {
     //log.trace "conWatCheck..."
     //
     // Should consider not turning thermostat off, as much as setting it more toward away settings?
@@ -6351,7 +6378,7 @@ def conWatCheck(ctimeOut = false) {
         if (disableAutomation) { return }
         else {
             if(!atomicState?.timeOutOn) { atomicState.timeOutOn = false }
-            if(ctimeOut) { atomicState.timeOutOn = true }
+            if(cTimeOut) { atomicState.timeOutOn = true }
             def timeOut = atomicState.timeOutOn ?: false
             def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
             def curNestPres = getTstatPresence(conWatTstat)
@@ -6360,10 +6387,10 @@ def conWatCheck(ctimeOut = false) {
             def safetyOk = getSafetyTempsOk(conWatTstat)
             def schedOk = conWatScheduleOk()
             def okToRestore = (modeOff && conWatRestoreOnClose && atomicState?.conWatTstatOffRequested) ? true : false
-            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
-            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-            def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
-            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
+            def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
 
             //log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
             //log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
@@ -6405,7 +6432,7 @@ def conWatCheck(ctimeOut = false) {
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${conWatTstat?.label}' to '${lastMode?.toString().toUpperCase()}' Mode because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})...", "Info")
-                                        if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OnVoiceMsg")) }
+                                        if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OnVoiceMsg")) }
                                     }
                                 }
                             } else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
@@ -6454,7 +6481,7 @@ def conWatCheck(ctimeOut = false) {
                             
                             if(allowNotif) {
                                 sendEventPushNotifications("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info")
-                                sendEventVoiceNotifications(voiceNotifString(atomicState?."${getPagePrefix()}OffVoiceMsg"))
+                                sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg"))
                             }
                         } else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
                     } else { 
@@ -6558,7 +6585,7 @@ def leakWatchPage() {
                 def str = ""
                 str += leakWatTstat ? "Thermostat Status:" : ""
                 str += leakWatTstat ? "\n├ Mode: (${leakWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${leakWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                str += leakWatTstat ? "\n${settings?."${getPagePrefix()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(leakWatTstat) == "present" ? "Home" : "Away"})" : ""
+                str += leakWatTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(leakWatTstat) == "present" ? "Home" : "Away"})" : ""
                 str += leakWatTstat && getSafetyTemps(leakWatTstat) ? "\n└ Safefy Temps: \n     • Min: ${getSafetyTemps(leakWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(leakWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
@@ -6567,7 +6594,7 @@ def leakWatchPage() {
         if(leakWatSensors && leakWatTstat) {
 // need to check if safety temps are set and != to each other
             section("Restoration Preferences (Optional):") {
-                input "${getPagePrefix()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
+                input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore when Safety Temps are Reached?", defaultValue: true, submitOnChange: false, image: getAppImg("switch_icon.png")
             }
             section("Restore on Dry:") {
                 input name: "leakWatRestoreOnDry", type: "bool", title: "Restore Previous Mode when Dry?", description: "", required: false, defaultValue: true, submitOnChange: true,
@@ -6632,10 +6659,10 @@ def leakWatCheck() {
             def safetyOk = getSafetyTempsOk(leakWatTstat)
             def schedOk = leakWatScheduleOk()
             def okToRestore = (modeOff && leakWatRestoreOnDry && atomicState?.leakWatTstatOffRequested) ? true : false
-            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
-            def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-            def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
-            def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+            def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
+            def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
+            def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
+            def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
          
             if(getLeakWatSensorsOk() || !safetyOk) {
                 if (allowAlarm) { alarmEvtSchedCleanup() }
@@ -6945,7 +6972,7 @@ def checkNestMode() {
             LogAction("checkNestMode: Skipping because of Schedule Restrictions...", "info", true)
         } else {
             def curStMode = location?.mode
-            def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
+            def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
             def nestModeAway = (getNestLocPres() == "home") ? false : true
             def awayPresDesc = (nModePresSensor && !nModeSwitch) ? "All Presence device(s) have left setting " : ""
             def homePresDesc = (nModePresSensor && !nModeSwitch) ? "A Presence Device is Now Present setting " : ""
@@ -7338,7 +7365,7 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 *************************************************************************************************/
 
 def setNotificationPage(params) {   
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     def allowSpeech = false
     def allowAlarm = false
     def showSched = false
@@ -7379,7 +7406,7 @@ def setNotificationPage(params) {
                         if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because %opencontact% has been Opened for (%offdelay%)" }
                         if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because ALL contacts have been Closed again for (%ondelay%)" }
                     }
-                    if(getPagePrefix() == "extTmp") {
+                    if(getAutoType() == "extTmp") {
                         if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
                         if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
                     }
@@ -7389,9 +7416,9 @@ def setNotificationPage(params) {
                         input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
                         input "${pName}SpeechAllowResume", "bool", title: "Allow Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
                     }
-                    if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getPagePrefix() in ["conWat", "extTmp","leakWat"]) {
+                    if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getAutoType() in ["conWat", "extTmp","leakWat"]) {
                         def desc = ""
-                        switch(getPagePrefix()) {
+                        switch(getAutoType()) {
                             case "conWat":
                                 desc = "Contact Close"
                                 break
@@ -7399,7 +7426,7 @@ def setNotificationPage(params) {
                                 desc = "Temp Threshold Change"
                                 break
                             case "leakWat":
-                                desc = "Water Drying"
+                                desc = "Water Dried"
                                 break
                         }
                         input name: "${pName}SpeechOnRestore", type: "bool", title: "Speak on ${desc}?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
@@ -7423,7 +7450,7 @@ def setNotificationPage(params) {
                             paragraph "Off Msg:\n" + voiceNotifString(atomicState?."${pName}OffVoiceMsg")
                         }
                         input "${pName}CustomOnSpeechMessage", "text", title: "Restore Message?", required: false, defaultValue: atomicState?."${pName}OnVoiceMsg", submitOnChange: true, image: getAppImg("speech_icon.png")
-                        if(settings?."${pName}CustomOnSpeechMessage" && getPagePrefix() in ["conWat", "extTmp"]) { 
+                        if(settings?."${pName}CustomOnSpeechMessage" && getAutoType() in ["conWat", "extTmp"]) { 
                             atomicState?."${pName}OnVoiceMsg" = settings?."${pName}CustomOnSpeechMessage" 
                             paragraph "Restore Msg:\n" + voiceNotifString(atomicState?."${pName}OnVoiceMsg")
                         }
@@ -7440,7 +7467,7 @@ def setNotificationPage(params) {
                 }
             }
         }
-        if(getPagePrefix() in ["conWat", "leakWat"] && settings["${pName}NotificationsOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+        if(getAutoType() in ["conWat", "leakWat"] && settings["${pName}NotificationsOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
             section("Notification Alert Options (1):") {
                 input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
                         image: getAppImg("alert_icon2.png")
@@ -7544,14 +7571,14 @@ def setNotificationPage(params) {
 def voiceNotifString(phrase) {
     //log.trace "conWatVoiceNotifString..."
     try {
-        if (phrase.toLowerCase().contains("%tstatname%")) { phrase = phrase.toLowerCase().replace('%tstatname%', (settings?."${getPagePrefix()}Tstat"?.displayName.toString() ?: "unknown")) }
-        if (phrase.toLowerCase().contains("%lastmode%")) { phrase = phrase.toLowerCase().replace('%lastmode%', (atomicState?."${getPagePrefix()}RestoreMode".toString() ?: "unknown")) } 
-        if (getPagePrefix() == "conWat" && phrase.toLowerCase().contains("%opencontact%")) { 
+        if (phrase.toLowerCase().contains("%tstatname%")) { phrase = phrase.toLowerCase().replace('%tstatname%', (settings?."${getAutoType()}Tstat"?.displayName.toString() ?: "unknown")) }
+        if (phrase.toLowerCase().contains("%lastmode%")) { phrase = phrase.toLowerCase().replace('%lastmode%', (atomicState?."${getAutoType()}RestoreMode".toString() ?: "unknown")) } 
+        if (getAutoType() == "conWat" && phrase.toLowerCase().contains("%opencontact%")) { 
             phrase = phrase.toLowerCase().replace('%opencontact%', (getOpenContacts(conWatContacts) ? getOpenContacts(conWatContacts)?.join(", ").toString() : "a selected contact")) }
-        if (getPagePrefix() == "extTmp" && phrase.toLowerCase().contains("%tempthreshold%")) { 
+        if (getAutoType() == "extTmp" && phrase.toLowerCase().contains("%tempthreshold%")) { 
             phrase = phrase.toLowerCase().replace('%tempthreshold%', "${extTmpDiffVal.toString()}(°${atomicState?.tempUnit})") }
-        if (phrase.toLowerCase().contains("%offdelay%")) { phrase = phrase.toLowerCase().replace('%offdelay%', getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OffDelay").toString()) }
-        if (phrase.toLowerCase().contains("%ondelay%")) { phrase = phrase.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OnDelay").toString()) }
+        if (phrase.toLowerCase().contains("%offdelay%")) { phrase = phrase.toLowerCase().replace('%offdelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffDelay").toString()) }
+        if (phrase.toLowerCase().contains("%ondelay%")) { phrase = phrase.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OnDelay").toString()) }
     } catch (ex) {
         LogAction("voiceNotifString Exception: ${ex}", "error", true)
         sendExceptionData(ex, "voiceNotifString")
@@ -7560,7 +7587,7 @@ def voiceNotifString(phrase) {
 }
 
 def getNotifConfigDesc() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     def str = ""
     str += (settings?."${pName}NotificationsOn" && (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")))) ?
             "Push Status:" : ""
@@ -7576,7 +7603,7 @@ def getNotifConfigDesc() {
 }
 
 def getVoiceNotifConfigDesc() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     def str = ""
     if(settings["${pName}AllowSpeechNotif"]) {
         def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
@@ -7591,7 +7618,7 @@ def getVoiceNotifConfigDesc() {
 }
 
 def getAlarmNotifConfigDesc() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     def str = ""
     if(settings["${pName}AllowAlarmNotif"]) {
         def alarms = getInputToStringDesc(settings["${pName}AlarmDevices"], true)
@@ -7601,7 +7628,7 @@ def getAlarmNotifConfigDesc() {
 }
 
 def getAlertNotifConfigDesc() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     def str = ""
     if(settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"] && (settings["${pName}NotificationsOn"] || settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
         str += settings["${pName}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_1_Delay"])})" : ""
@@ -7635,13 +7662,13 @@ def getInputToStringDesc(inpt, addSpace = null) {
 
 def getNotifSchedDesc() { 
     def sun = getSunriseAndSunset()
-    //def schedInverted = settings?."${getPagePrefix()}DmtInvert"
-    def startInput = settings?."${getPagePrefix()}qStartInput"
-    def startTime = settings?."${getPagePrefix()}qStartTime"
-    def stopInput = settings?."${getPagePrefix()}qStopInput"
-    def stopTime = settings?."${getPagePrefix()}qStopTime"
-    def dayInput = settings?."${getPagePrefix()}quietDays"
-    def modeInput = settings?."${getPagePrefix()}quietModes"
+    //def schedInverted = settings?."${getAutoType()}DmtInvert"
+    def startInput = settings?."${getAutoType()}qStartInput"
+    def startTime = settings?."${getAutoType()}qStartTime"
+    def stopInput = settings?."${getAutoType()}qStopInput"
+    def stopTime = settings?."${getAutoType()}qStopTime"
+    def dayInput = settings?."${getAutoType()}quietDays"
+    def modeInput = settings?."${getAutoType()}quietModes"
     def notifDesc = ""
     def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
     def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
@@ -7658,12 +7685,12 @@ def isPluralString(obj) {
 }
 
 def getNotificationOptionsConf() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     return (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ) ? true : false
 }
 
 def setRecipientsPage(params) {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     dynamicPage(name: "setRecipientsPage", title: "Set Push Notifications Recipients", uninstall: false) {
         def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
         section("${notifDesc}:") {
@@ -7691,11 +7718,11 @@ def getRecipientsNames(val) {
 }
 
 def getRecipientDesc() {
-    return ((settings?."${getPagePrefix()}NotifRecips") || (settings?."${getPagePrefix()}NotifPhones" || settings?."${getPagePrefix()}NotifUsePush")) ? "${getRecipientsNames(settings?."${getPagePrefix()}NotifRecips")}" : null
+    return ((settings?."${getAutoType()}NotifRecips") || (settings?."${getAutoType()}NotifPhones" || settings?."${getAutoType()}NotifUsePush")) ? "${getRecipientsNames(settings?."${getAutoType()}NotifRecips")}" : null
 }
 
 def setNotificationTimePage() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     dynamicPage(name: "setNotificationTimePage", title: "Prevent Notifications\nDuring these Days, Times or Modes", uninstall: false) {
         def timeReq = (settings["${pName}qStartTime"] || settings["${pName}qStopTime"]) ? true : false
         section() {
@@ -7715,7 +7742,7 @@ def setNotificationTimePage() {
 }
 
 def setDayModeTimePage(params) {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     dynamicPage(name: "setDayModeTimePage", title: "Select Days, Times or Modes", uninstall: false) {
         def secDesc = settings["${pName}DmtInvert"] ? "Not" : "Only"
         def inverted = settings["${pName}DmtInvert"] ? true : false
@@ -7792,22 +7819,22 @@ def autoScheduleOk(autoType) {
 
 def sendEventPushNotifications(message, type) {
     if(allowNotif) {
-        if(settings["${getPagePrefix()}_Alert_1_Send_Push"] || settings["${getPagePrefix()}_Alert_2_Send_Push"]) {
-            if(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"]) {
-                sendNofificationMsg(settings["${getPagePrefix()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+        if(settings["${getAutoType()}_Alert_1_Send_Push"] || settings["${getAutoType()}_Alert_2_Send_Push"]) {
+            if(settings["${getAutoType()}_Alert_1_CustomPushMessage"]) {
+                sendNofificationMsg(settings["${getAutoType()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
             } else {
-                sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+                sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
             }
         } else {
-            sendNofificationMsg(message, type, settings?."${getPagePrefix()}NofifRecips", settings?."${getPagePrefix()}NotifPhones", settings?."${getPagePrefix()}UsePush")
+            sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
         }
     }
 }
 
 def sendEventVoiceNotifications(vMsg) {
-    def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
-    def allowSpeech = allowNotif && settings?."${getPagePrefix()}AllowSpeechNotif" ? true : false
-    def speakOnRestore = allowSpeech && settings?."${getPagePrefix()}SpeechOnRestore" ? true : false
+    def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
+    def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
+    def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
     if(allowNotif && allowSpeech) {
         sendTTS(vMsg)
     }
@@ -7818,8 +7845,13 @@ def scheduleAlarmOn() {
     def timeVal = getAlert1DelayVal().toInteger()
     log.debug "scheduleAlarmOn timeVal: $timeVal"
     if (timeVal > 0) {
-        schedule(timeVal, "alarm0FollowUp", [overwrite: true])
-        LogAction("scheduleAlarmOn: Scheduling Alarm Followup 0...", "info", true)
+        if(getAutoType() == "watchDog") {
+            schedule(5, "alarm3FollowUp", [overwrite: true])
+            LogAction("scheduleAlarmOn: Scheduling Alarm Off in 5 seconds...", "info", true)
+        } else {
+            schedule(timeVal, "alarm0FollowUp", [overwrite: true])
+            LogAction("scheduleAlarmOn: Scheduling Alarm Followup 0...", "info", true)
+        }
     }
 }
 
@@ -7834,7 +7866,7 @@ def alarm0FollowUp() {
 }
 
 def alarm1FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+    def aDev = settings["${getAutoType()}AlarmDevices"]
         aDev?.off()
         LogAction("alarm1FollowUp: Turning OFF ${aDev}", "info", true)
     def timeVal = getAlert2DelayVal().toInteger()
@@ -7853,7 +7885,7 @@ def alarm2FollowUp() {
 }
 
 def alarm3FollowUp() {
-    def aDev = settings["${getPagePrefix()}AlarmDevices"]
+    def aDev = settings["${getAutoType()}AlarmDevices"]
     if (aDev) { aDev?.off() }
     LogAction("alarm3FollowUp: Turning OFF ${aDev}", "info", true)
 }
@@ -7870,13 +7902,13 @@ def alarmEvtSchedCleanup() {
 def sendEventAlarmAction(evtNum) {
     try {
         def resval = false
-        def allowNotif = settings?."${getPagePrefix()}NotificationsOn" ? true : false
-        def allowAlarm = allowNotif && settings?."${getPagePrefix()}AllowAlarmNotif" ? true : false
-        if(allowNotif && allowAlarm && settings["${getPagePrefix()}AlarmDevices"]) {
-            if(settings["${getPagePrefix()}_Alert_${evtNum}_Use_Alarm"] && canSchedule()) {
+        def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
+        def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
+        if(allowNotif && allowAlarm && settings["${getAutoType()}AlarmDevices"]) {
+            if(settings["${getAutoType()}_Alert_${evtNum}_Use_Alarm"] && canSchedule()) {
                 resval = true
-                def alarmType = settings["${getPagePrefix()}_Alert_${evtNum}_AlarmType"].toString()
-                def aDev = settings["${getPagePrefix()}AlarmDevices"]
+                def alarmType = settings["${getAutoType()}_Alert_${evtNum}_AlarmType"].toString()
+                def aDev = settings["${getAutoType()}AlarmDevices"]
                 switch (alarmType) {
                     case "both":
                         atomicState?."alarmEvt${evtNum}StartDt" = getDtNow()
@@ -7907,26 +7939,26 @@ def alarmAlertEvt(evt) {
     log.trace "alarmAlertEvt: ${evt.displayName} Alarm State is Now (${evt.value})"
 }
 
-def getAlert1DelayVal() { return !settings["${getPagePrefix()}_Alert_1_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_1_Delay"].toInteger()) }
-def getAlert2DelayVal() { return !settings["${getPagePrefix()}_Alert_2_Delay"] ? 300 : (settings["${getPagePrefix()}_Alert_2_Delay"].toInteger()) }
+def getAlert1DelayVal() { return !settings["${getAutoType()}_Alert_1_Delay"] ? 300 : (settings["${getAutoType()}_Alert_1_Delay"].toInteger()) }
+def getAlert2DelayVal() { return !settings["${getAutoType()}_Alert_2_Delay"] ? 300 : (settings["${getAutoType()}_Alert_2_Delay"].toInteger()) }
 
-def getAlert1AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_1_Alarm_Runtime"].toInteger()) }
-def getAlert2AlarmEvtOffVal() { return !settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"] ? 60 : (settings["${getPagePrefix()}_Alert_2_Alarm_Runtime"].toInteger()) }
+def getAlert1AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_1_Alarm_Runtime"] ? 60 : (settings["${getAutoType()}_Alert_1_Alarm_Runtime"].toInteger()) }
+def getAlert2AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_2_Alarm_Runtime"] ? 60 : (settings["${getAutoType()}_Alert_2_Alarm_Runtime"].toInteger()) }
 
 def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt1StartDt).toInteger() }
 def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
 
 def scheduleTimeoutRestore() {
-    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
+    def timeOutVal = settings["${getAutoType()}OffTimeout"]?.toInteger()
     if(timeOutVal && !atomicState?.timeOutScheduled) { 
         runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
-        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getPagePrefix()}OffTimeout")})", "info", true)
+        LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffTimeout")})", "info", true)
         atomicState?.timeOutScheduled = true
     }
 }
 
 def unschedTimeoutRestore() {
-    def timeOutVal = settings?."${getPagePrefix()}OffTimeout".toInteger()
+    def timeOutVal = settings["${getAutoType()}OffTimeout"]?.toInteger()
     if(timeOutVal && atomicState?.timeOutScheduled) {
         unschedule("restoreAfterTimeOut")
         LogAction("The Scheduled Mode Restoration Timeout has been cancelled because all Triggers are now clear...", "info", true)
@@ -7935,7 +7967,7 @@ def unschedTimeoutRestore() {
 }
 
 def restoreAfterTimeOut() {
-    def pName = getPagePrefix()
+    def pName = getAutoType()
     if(settings?."${pName}OffTimeout") {
         switch(pName) {
             case "conWat":
@@ -8023,7 +8055,7 @@ def getComfortDewpoint() {
 }
 
 def getSafetyTempsOk(tstat) {
-    if(settings?."${getPagePrefix()}UseSafetyTemps") {
+    if(settings?."${getAutoType()}UseSafetyTemps") {
         def sTemps = getSafetyTemps(tstat)
         //log.debug "sTempsOk: $sTemps"
         if(sTemps) {
@@ -8120,7 +8152,7 @@ def setTstatMode(tstat, mode) {
             else if (mode == "cool") { tstat.cool(); result = true }
             else if (mode == "off") { tstat.off(); result = true }
             
-            if(result) { LogAction("setThermostatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
+            if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
             else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
         } else { 
             LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
@@ -8237,7 +8269,7 @@ def getSunTimeState() {
 void sendTTS(txt) {
     log.trace "sendTTS(data: ${txt})"
     try {
-        def pName = getPagePrefix()
+        def pName = getAutoType()
         def msg = txt.toString().replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
         def spks = settings?."${pName}SpeechDevices" 
         def meds = settings?."${pName}SpeechMediaPlayer"
