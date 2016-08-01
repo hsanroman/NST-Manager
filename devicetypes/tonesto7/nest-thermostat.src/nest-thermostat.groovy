@@ -821,14 +821,14 @@ def checkSafetyTemps() {
         def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
         def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
         def curTemp = device.currentState("temperature")?.doubleValue
-        def curRangestr = device.currentState("safetyTempExceeded")?.toString()
-        def curinRange = !curRangestr?.toBoolean()
+        def curRangeStr = device.currentState("safetyTempExceeded")?.toString()
+        def curInRange = !curRangeStr?.toBoolean()
         def inRange = true
         if(curMinTemp && curMaxTemp) {
             if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
         }
         //log.debug("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curinRange: ${curinRange} inRange: ${inRange}")
-        if (curRangestr == null || inRange != curinRange) {
+        if (curRangeStr == null || inRange != curInRange) {
             sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
             log.debug("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
         } else { 
