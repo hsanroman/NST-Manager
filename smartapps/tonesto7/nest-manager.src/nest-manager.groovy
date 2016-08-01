@@ -4121,8 +4121,7 @@ def sendExceptionData(exMsg, methodName, isChild = false, autoType) {
         exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
         atomicState?.appExceptionCnt = exCnt ?: 1
         if (optInSendExceptions) {
-            def appType = isChild ? "automationApp" : "managerApp" 
-            log.debug "sendException appType: $appType"
+            def appType = isChild ? "automationApp/${autoType}" : "managerApp" 
             def exData
             if(isChild) {
                 exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
@@ -5914,6 +5913,7 @@ def extTmpPrefix() { return "extTmp" }
 def extTempPage() {
     def pName = extTmpPrefix()
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false, nextPage: "mainAutoPage") {
+        parent?.sendExceptionData("Some Stupid Data", "extTempPage", true, getAutoType())
         section("External Temps to use to Turn off the Thermostat Below:") {
             if(!parent?.getWeatherDeviceInst()) {
                 paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as an External Sensor!!!", required: true, state: null
@@ -6317,6 +6317,7 @@ def conWatPrefix() { return "conWat" }
 def contactWatchPage() {
     def pName = conWatPrefix()
     dynamicPage(name: "contactWatchPage", title: "Thermostat/Contact Automation", uninstall: false, nextPage: "mainAutoPage") {
+        parent?.sendExceptionData("Some Stupid Data", "contactWatchPage", true, getAutoType())
         def dupTstat = checkThermostatDupe(conWatTstat, conWatTstatMir)
         section("When These Contacts are open, Turn Off this Thermostat") {
             def req = (conWatContacts || conWatTstat) ? true : false
