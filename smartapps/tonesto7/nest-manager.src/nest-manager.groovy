@@ -4061,9 +4061,10 @@ def createInstallDataJson() {
         generateInstallId()
         def tsVer = atomicState?.tDevVer ?: "Not Installed"
         def ptVer = atomicState?.pDevVer ?: "Not Installed"
+        def cdVer = atomicState?.camDevVer ?: "Not Installed"
         def pdVer = atomicState?.presDevVer ?: "Not Installed"
         def wdVer = atomicState?.weatDevVer ?: "Not Installed"
-        def versions = ["apps":["manager":appVersion()?.toString()], "devices":["thermostat":tsVer, "protect":ptVer, "presence":pdVer, "weather":wdVer]]
+        def versions = ["apps":["manager":appVersion()?.toString()], "devices":["thermostat":tsVer, "protect":ptVer, "camera":cdVer, "presence":pdVer, "weather":wdVer]]
         
         def tstatCnt = atomicState?.thermostats?.size() ?: 0
         def protCnt = atomicState?.protects?.size() ?: 0
@@ -4114,14 +4115,20 @@ def removeInstallData() {
     }
 }
 
-def sendExceptionData(exMsg, methodName) {
+def sendExceptionData(exMsg, methodName, isChild = false, autoType) {
     try {
         def exCnt = 0
         exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
         atomicState?.appExceptionCnt = exCnt ?: 1
         if (optInSendExceptions) {
-            def appType = parent ? "automationApp" : "managerApp" 
-            def exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+            def appType = isChild ? "automationApp" : "managerApp" 
+            log.debug "sendException appType: $appType"
+            def exData
+            if(isChild) {
+                exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+            } else {
+                exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
+            }
             def results = new groovy.json.JsonOutput().toJson(exData)
             sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
         }
@@ -5421,7 +5428,7 @@ def remSenTstatFanSwitchCheck() {
         }
     } catch (ex) {
         LogAction("remSenTstatFanSwitchCheck Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "remSenTstatFanSwitchCheck")
+        parent?.sendExceptionData(ex, "remSenTstatFanSwitchCheck", true, getAutoType())
     }
 }
 
@@ -6109,7 +6116,7 @@ def extTmpTempOk() {
         return retval
     } catch (ex) { 
         LogAction("getExtTmpTempOk Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "extTmpTempOk")
+        parent?.sendExceptionData(ex, "extTmpTempOk", true, getAutoType())
     }
 }
 
@@ -6233,7 +6240,7 @@ def extTmpTempCheck(cTimeOut = false) {
         }
     } catch (ex) {
         LogAction("extTmpCheck Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "extTmpCheck")
+        parent?.sendExceptionData(ex, "extTmpCheck", true, getAutoType())
     }
 }
 
@@ -6538,7 +6545,7 @@ def conWatCheck(cTimeOut = false) {
         }
     } catch (ex) {
         LogAction("conWatCheck Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "conWatCheck")
+        parent?.sendExceptionData(ex, "conWatCheck", true, getAutoType())
     }
 }
 
@@ -6794,7 +6801,7 @@ def leakWatCheck() {
         }
     } catch (ex) {
         LogAction("leakWatCheck Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "leakWatCheck")
+        parent?.sendExceptionData(ex, "leakWatCheck", true, getAutoType())
     }
 }
 
@@ -7095,7 +7102,7 @@ def checkNestMode() {
         }
     } catch (ex) { 
         LogAction("checkNestMode Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "checkNestMode")
+        parent?.sendExceptionData(ex, "checkNestMode", true, getAutoType())
     }
 }
 
@@ -7371,7 +7378,7 @@ def checkTstatMode() {
         }
     } catch (ex) { 
         LogAction("checkTstaMode Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "checkTstatMode")
+        parent?.sendExceptionData(ex, "checkTstatMode", true, getAutoType())
     }
 }
 
@@ -7620,7 +7627,7 @@ def voiceNotifString(phrase) {
         if (phrase.toLowerCase().contains("%ondelay%")) { phrase = phrase.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OnDelay").toString()) }
     } catch (ex) {
         LogAction("voiceNotifString Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "voiceNotifString")
+        parent?.sendExceptionData(ex, "voiceNotifString", true, getAutoType())
     }
     return phrase
 }
@@ -7848,7 +7855,7 @@ def autoScheduleOk(autoType) {
         return (modeOk && dayOk && timeOk) ? true : false
     } catch (ex) { 
         LogAction("${autoType}-autoScheduleOk Exception: ${ex}", "error", true)
-        sendExceptionData(ex, "${autoType}-autoScheduleOk")
+        parent?.sendExceptionData(ex, "${autoType}-autoScheduleOk", true, getAutoType())
     }
 }
 
@@ -7969,7 +7976,7 @@ def sendEventAlarmAction(evtNum) {
         }
     } catch (ex) {
         LogAction("sendEventAlarmAction Exception: ($evtNum) - (${ex})", "error", true)
-        sendExceptionData(ex, "sendEventAlarmAction")
+        parent?.sendExceptionData(ex, "sendEventAlarmAction", true, getAutoType())
     }
    return resval
 }
@@ -8062,7 +8069,7 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
         atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
         atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
     } catch (ex) { 
-        sendExceptionData("${tstat} - ${autoType} | ${ex}", "getTstatCapabilities")
+        parent?.sendExceptionData("${tstat} - ${autoType} | ${ex}", "getTstatCapabilities", true, getAutoType())
     }
 }
 
@@ -8199,7 +8206,7 @@ def setTstatMode(tstat, mode) {
     }
     catch (ex) { 
         LogAction("setTstatMode() Exception | ${ex}", "error", true)
-        sendExceptionData(ex, "setTstatMode")
+        parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
     }
     return result
 }
@@ -8219,7 +8226,7 @@ def setMultipleTstatMode(tstats, mode) {
         }
     } catch (ex) { 
         LogAction("setMultipleTstatMode() Exception | ${ex}", "error", true)
-        sendExceptionData(ex, "setMultipleTstatMode")
+        parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
     }
     return result
 }
@@ -8339,7 +8346,7 @@ void sendTTS(txt) {
         }
     } catch (ex) {
         LogAction("sendTTS Exception: (${ex})", "error", true)
-        sendExceptionData(ex, "sendTTS")
+        parent?.sendExceptionData(ex, "sendTTS", true, getAutoType())
     }
 }
 
