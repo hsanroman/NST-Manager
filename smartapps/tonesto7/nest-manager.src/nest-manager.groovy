@@ -4368,7 +4368,7 @@ def mainAutoPage(params) {
     else if (autoType == "nMode" && !isNestModesConfigured()) { return nestModePresPage() }
     else if (autoType == "tMode" && !isTstatModesConfigured()) { return tstatModePage() }
     else if (autoType == "leakWat" && !isLeakWatConfigured()) { return leakWatchPage() }
-    else if (autoType == "watchDog") { return watchDogPage() }
+    else if (autoType == "watchDog" && !isWatchdogConfigured()) { return watchDogPage() }
     
     else { 
         // Main Page Entries
@@ -4517,7 +4517,17 @@ def mainAutoPage(params) {
                 } 
             }
 
-            if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured())) {
+            if(autoType == "watchDog" && !disableAutomation) { 
+                section("Watch you Nest Location for Events:") {
+                    def watDogDesc = ""
+                    watDogDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
+                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
+                    def leakWatDesc = isWatchdogConfigured() ? "${watDogDesc}" : null
+                    href "watchDogPage", title: "Nest Location Watchdog...", description: watDogDesc ?: "Tap to Configure...", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
+                } 
+            }
+
+            if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured() || isWatchdogConfigured())) {
                 section("Enable/Disable this Automation") {
                     input "disableAutomation", "bool", title: "Disable this Automation?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
                     if(!atomicState?.disableAutomation && disableAutomation) {
@@ -4528,12 +4538,14 @@ def mainAutoPage(params) {
                         atomicState?.disableAutomationDt = null
                     }
                 }
-                section("Backup Data (Experimental):") {
-                    href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
-                }
                 section("Debug Options") {
                     input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
                     atomicState?.showDebug = showDebug
+                }
+                if(autoType != "watchDog") {
+                    section("Backup Data (Experimental):") {
+                        href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+                    }
                 }
             }
         }
@@ -4613,6 +4625,7 @@ def automationsInst() {
     atomicState.isLeakWatConfigured = isLeakWatConfigured() ? true : false
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
+    atomicState.isWatchdogConfigured = isWatchdogConfigured() ? true : false
     atomicState?.isInstalled = true
 }
 
@@ -4810,7 +4823,9 @@ def runAutomationEval() {
             }
             break
         case "watchDog":
-            watchDogCheck()
+            if (isWatchdogConfigured()) {
+                watchDogCheck()
+            }
             break
 
         default:
@@ -4827,30 +4842,9 @@ def watchDogPrefix() { return "watchDog" }
 def watchDogPage() {
     def pName = watchDogPrefix()
     dynamicPage(name: "watchDogPage", title: "Nest Location Watchdog", uninstall: true, install: true) {
-        if(disableAutomation) {
-            section("Title") {
-                paragraph "This Automation is currently disabled!!!\nTurn it back on to resume operation...", image: getAppImg("instruct_icon.png")
-            }
-        }
-        else {
-            section("Enable/Disable this Automation") {
-                input "disableAutomation", "bool", title: "Disable the WatchDog?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_off_icon.png")
-                if(!atomicState?.disableAutomation && disableAutomation) {
-                    LogAction("Watchdog was Disabled at (${getDtNow()})", "info", true)
-                    atomicState.disableAutomationDt = getDtNow()
-                } else if (atomicState?.disableAutomation && !disableAutomation) {
-                    LogAction("Watchdog was Restored at (${getDtNow()})", "info", true)
-                    atomicState.disableAutomationDt = null
-                }
-            }
-            section("Notifications:") {
-                href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true], 
-                        state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
-            }
-            section("Debug Options") {
-                input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
-                atomicState.showDebug = showDebug
-            }
+        section("Notifications:") {
+            href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true], 
+                    state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
         }
     }
 }
@@ -4921,6 +4915,9 @@ def watchDogAlarmActions(dev, dni, actType) {
 def getLastWatDogSafetyAlertDtSec(dni) { return !atomicState?."lastWatDogSafetyAlertDt{$dni}" ? 10000 : GetTimeDiffSeconds(atomicState?."lastWatDogSafetyAlertDt${dni}").toInteger() }
 def getWatDogRepeatMsgDelayVal() { return !watDogRepeatMsgDelay ? 3600 : watDogRepeatMsgDelay.toInteger() }
 
+def isWatchdogConfigured() {
+    return (atomicState?.automationType == "watchDog") ? true : false
+}
 
 /******************************************************************************  
 |                			REMOTE SENSOR AUTOMATION CODE	                  |
@@ -4944,39 +4941,41 @@ def remSensorPage() {
         def locMode = location?.mode
         
 // need to get the thermostat first, so we can narrow down options on what is available??
-
-        section("Select the Allowed (Rule) Action Type:") {
-            if(!remSenRuleType) { 
-                paragraph "(Rule) Actions will be used to determine the actions the automation can take when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
-                          " out the temperatures in your home in an attempt to make it more comfortable...", image: getAppImg("instruct_icon.png")
+        section("Choose a Thermostat... ") {
+            input "remSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
+            if(dupTstat) {
+                paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
             }
-            input(name: "remSenRuleType", type: "enum", title: "(Rule) Action Type", options: remSenRuleEnum(), required: true, submitOnChange: true, image: getAppImg("rule_icon.png"))
-        }
-        if(remSenRuleType) {
-            section("Choose a Thermostat... ") {
-                input "remSenTstat", "capability.thermostat", title: "Which Thermostat?", submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
-                if(dupTstat) {
-                    paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
-                }
-                if(remSenTstat) { 
-                    getTstatCapabilities(remSenTstat, remSenPrefix())
-                    def str = ""
-                    str += remSenTstat ? "\n• Temp: (${tStatTemp})" : ""
-                    str += remSenTstat ? "\n• Mode: (${tStatMode.toString().capitalize()})" : ""
-                    str += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• FanMode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
-                    str += remSenTstat ? "\n• Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})" : ""
-                    str += remSenTstat ? "\n• Presence: (${getTstatPresence(remSenTstat) == "present" ? "Home" : "Away"})" : ""
-                    paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+            if(remSenTstat && remSenRuleType) { 
+                getTstatCapabilities(remSenTstat, remSenPrefix())
+                def str = ""
+                str += remSenTstat ? "Thermostat Status:" : ""
+                str += remSenTstat ? "\n├ Temp: (${tStatTemp})" : ""
+                str += remSenTstat ? "\n├ Mode: (${tStatMode.toString().capitalize()})" : ""
+                str += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n├ FanMode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
+                str += remSenTstat ? "\n├ Setpoints: (H: ${tStatHeatSp}°${atomicState?.tempUnit} | C: ${tStatCoolSp}°${atomicState?.tempUnit})" : ""
+                str += remSenTstat ? "\n${settings?."${getAutoType()}UseSafetyTemps" ? "├" : "└"} Presence: (${getTstatPresence(remSenTstat) == "present" ? "Home" : "Away"})" : ""
+                paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 
-                    input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
-                            image: getAppImg("thermostat_icon.png")
-                    if(remSenTstatsMir && !dupTstat) { 
-                        remSenTstatsMir?.each { t ->
-                            paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
-                        }
+                input "remSenTstatsMir", "capability.thermostat", title: "Mirror Changes to these Thermostats", description: "", multiple: true, submitOnChange: true, required: false, 
+                        image: getAppImg("thermostat_icon.png")
+                if(remSenTstatsMir && !dupTstat) { 
+                    remSenTstatsMir?.each { t ->
+                        paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
                     }
                 }
             }
+        }
+        if(remSenTstat) {
+            section("Select the Allowed (Rule) Action Type:") {
+                if(!remSenRuleType) { 
+                    paragraph "(Rule) Actions will be used to determine the actions the automation can take when the temperature threshold is reached. Using combinations of Heat/Cool/Fan to help balance" + 
+                            " out the temperatures in your home in an attempt to make it more comfortable...", image: getAppImg("instruct_icon.png")
+                }
+                input(name: "remSenRuleType", type: "enum", title: "(Rule) Action Type", options: remSenRuleEnum(), required: true, submitOnChange: true, image: getAppImg("rule_icon.png"))
+            }
+        }
+        if(remSenRuleType) {
             section("Turn On a Fan/Switch While your Thermostat is Running:") {
                 href "remSenTstatFanSwitchPage", title: "Control a Fan/Switch when Thermostat in Running?", description: getRemSenTstatFanSwitchDesc() ?: "", state: (getRemSenTstatFanSwitchDesc() ? "complete" : null), image: getAppImg("fan_ventilation_icon.png")
             }
