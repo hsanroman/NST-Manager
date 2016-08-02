@@ -153,6 +153,7 @@ preferences {
     page(name: "custWeatherPage")
     page(name: "automationsPage")
     page(name: "automationGlobalPrefsPage")
+    page(name: "restoreAutomationsPage")
     
     //Automation Pages
     page(name: "selectAutoPage" )
@@ -339,7 +340,7 @@ def mainPage() {
         }
         if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
             section("Diagnostics/Info:") {
-                href "nestInfoPage", title: "View API & Diagnostic Info...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
+                href "nestInfoPage", title: "API | Diagnostics | Testing...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
             }
         }
         if(atomicState?.isInstalled) {
@@ -529,33 +530,16 @@ def automationsPage() {
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
+
+        section("Restore Your Automations") {
+            href "restoreAutomationsPage", title: "Restore Your Automations...", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+        }
         app.subscriptions?.each {
             it.each { item ->
                 //log.debug "${item}"
             }    
         }
     }
-}
-
-def initWatchdogApp() {
-    log.trace "initWatchdogApp"
-    def watDogCnt = 0
-    def watDogApp 
-    childApps?.each { cApp -> 
-        if(cApp?.getAutomationType() == "watchDog") {
-            watDogCnt = watDogCnt+1
-            watDogApp = cApp
-        }
-    }
-    
-    if(watDogCnt <= 0) {
-        log.debug "adding New WatchDogApp..."
-        addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
-    } else { 
-        log.debug "updating watDogApp..."
-        watDogApp?.update() 
-    }
-    log.debug "watDogCnt: $watDogCnt | watDogApp: $watDogApp"
 }
 
 def automationGlobalPrefsPage() {
@@ -718,6 +702,26 @@ def uninstManagerApp() {
         LogAction("uninstManagerApp Exception: ${ex}", "error", true)
         sendExceptionData(ex, "uninstManagerApp")
     }
+}
+
+def initWatchdogApp() {
+    //log.trace "initWatchdogApp"
+    def watDogCnt = 0
+    def watDogApp 
+    childApps?.each { cApp -> 
+        if(cApp?.getAutomationType() == "watchDog") {
+            watDogCnt = watDogCnt+1
+            watDogApp = cApp
+        }
+    }
+    if(watDogCnt <= 0) {
+        //log.debug "adding New WatchDogApp..."
+        addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
+    } else { 
+        //log.debug "updating watDogApp..."
+        watDogApp?.update() 
+    }
+    //log.debug "watDogCnt: $watDogCnt | watDogApp: $watDogApp"
 }
 
 def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
@@ -3662,7 +3666,7 @@ def nestTokenResetPage() {
 def nestInfoPage () {
     dynamicPage(name: "nestInfoPage", install: false) {
 
-        section("Location API Info") {
+        section("Nest API Data") {
             if(atomicState?.structures) {
                 href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", image: getAppImg("nest_structure_icon.png")
             }
@@ -3679,20 +3683,12 @@ def nestInfoPage () {
                 paragraph "There is nothing to show here...", image: getAppImg("instruct_icon.png")
             }
         }
-        section("Recent Nest Command") {
-            def cmdDesc = ""
-            cmdDesc += "Last Command Details:"
-            cmdDesc += "\n • DateTime: (${atomicState.lastCmdSentDt ?: "Nothing found..."})"
-            cmdDesc += "\n • Cmd Sent: (${atomicState.lastCmdSent ?: "Nothing found..."})"
-            cmdDesc += "\n • Cmd Result: (${atomicState?.lastCmdSentStatus ?: "Nothing found..."})"
-
-            cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
-            paragraph "${cmdDesc}"
-        }
+        
         if(atomicState?.protects) {
             section("Protect Alarm Testing") {
                 if(atomicState?.protects) {
-                    href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
+                    href "alarmTestPage", title: "Test Device Alarms...", required: true , image: getAppImg("test_icon.png"), state: null,
+                            description: "This will Allow you to Simulate Alarm Events to Test your Automations..."
                 }
             }
         }
@@ -3920,6 +3916,16 @@ def diagPage () {
                 }
                 href url: getAppEndpointUrl("renderInstallId"), style:"embedded", required: false, title:"View Your Installation ID", description:"Tap to view...", image: getAppImg("view_icon.png")
             }
+        }
+        section("Recent Nest Command") {
+            def cmdDesc = ""
+            cmdDesc += "Last Command Details:"
+            cmdDesc += "\n • DateTime: (${atomicState.lastCmdSentDt ?: "Nothing found..."})"
+            cmdDesc += "\n • Cmd Sent: (${atomicState.lastCmdSent ?: "Nothing found..."})"
+            cmdDesc += "\n • Cmd Result: (${atomicState?.lastCmdSentStatus ?: "Nothing found..."})"
+
+            cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
+            paragraph "${cmdDesc}"
         }
     }
 }
