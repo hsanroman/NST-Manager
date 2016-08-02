@@ -15,15 +15,9 @@
 *********************************************************************************************/
 
 /*
-    ITEMS TO COMPLETE
-    Nest Cam DTH
-    Complete automation auto restore timeout function and apply to external temp and leak Watcher
-    Complete contact automation 2-stage alert system and integrate the new alarm device into that.
-    Look into storing events and action data for graphing.
-
-    Create instructions on how to create individual nest tokens
-    Update documentation with new features/functions
-
+    * Look into storing events and action data for graphing.
+    * Create instructions on how to create individual nest tokens
+    * Update documentation with new features/functions
 */
 
 import groovy.json.*
@@ -891,9 +885,7 @@ def poll(force = false, type = null) {
             }
         }
         if (atomicState?.pollBlocked) { return }
-        if(updChildOnNewOnly) {
-            if (dev || str || atomicState?.needChildUpd || (getLastChildUpdSec() > 1800)) { schedUpdateChild() }
-        } else { schedUpdateChild() }
+        schedUpdateChild()
 
         updateWebStuff()
         notificationCheck() //Checks if a notification needs to be sent for a specific event
@@ -3399,9 +3391,6 @@ def pollPrefPage() {
                         description: pollWeatherValDesc, submitOnChange: true)
             }
         }
-        section("Other Options:") {
-            input "updChildOnNewOnly", "bool", title: "Only Update Devices on New Data?", description: "", required: false, defaultValue: true, submitOnChange: true
-        }
         section("Wait Values:") {
             def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
             input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
@@ -3422,7 +3411,6 @@ def getPollingConfDesc() {
     pStr += "\n• Device: (${getInputEnumLabel(pollValue, pollValEnum())})"
     pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue, pollValEnum())})"
     pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue, notifValEnum())})" : ""
-    pStr += "\n• Update Child Data: ${(updChildOnNewOnly == null || updChildOnNewOnly == true) ? "(Only on New)" : "(Always)"}"
     return pStr
 }
 
@@ -3673,35 +3661,25 @@ def nestTokenResetPage() {
 
 def nestInfoPage () {
     dynamicPage(name: "nestInfoPage", install: false) {
-        section("About this page:") {
-            paragraph "The info displayed below is the data received directly from the Nest API..."
-        }
-        if(atomicState?.structures) {
-            section("Locations") {
+
+        section("Location API Info") {
+            if(atomicState?.structures) {
                 href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view Location info...", image: getAppImg("nest_structure_icon.png")
             }
-        }
-        if (atomicState?.thermostats) {
-            section("Thermostats") {
+            if (atomicState?.thermostats) {
                 href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view Thermostat info...", image: getAppImg("nest_like.png")
             }
-        }
-        if (atomicState?.protects) {
-            section("Protects") {
+            if (atomicState?.protects) {
                 href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view Protect info...", image: getAppImg("protect_icon.png")
             }
-        }
-        if (atomicState?.cameras) {
-            section("Cameras") {
+            if (atomicState?.cameras) {
                 href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view Camera info...", image: getAppImg("camera_icon.png")
             }
-        }
-        if(atomicState?.protects) {
-            section("Perform Alarm Event Tests:") {
-                href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
+            if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
+                paragraph "There is nothing to show here...", image: getAppImg("instruct_icon.png")
             }
         }
-        section("Recent Command") {
+        section("Recent Nest Command") {
             def cmdDesc = ""
             cmdDesc += "Last Command Details:"
             cmdDesc += "\n • DateTime: (${atomicState.lastCmdSentDt ?: "Nothing found..."})"
@@ -3710,6 +3688,13 @@ def nestInfoPage () {
 
             cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
             paragraph "${cmdDesc}"
+        }
+        if(atomicState?.protects) {
+            section("Protect Alarm Testing") {
+                if(atomicState?.protects) {
+                    href "alarmTestPage", title: "Test Device Alarms...", description: null, image: getAppImg("test_icon.png")
+                }
+            }
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, image: getAppImg("diag_icon.png")
