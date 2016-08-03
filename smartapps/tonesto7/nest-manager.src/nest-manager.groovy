@@ -5438,9 +5438,11 @@ private remSenEvtEval() {
                         chgval = curTstatTemp + tempChangeVal
                         chg = true
                         LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn Off Thermostat", "info", true)
+                        acRunning = false
                     } else if (turnOn && !acRunning) {
                         chgval = curTstatTemp - tempChangeVal
                         chg = true
+                        acRunning = true
                         LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn On Thermostat", "info", true)
                     } else {
                         // logic to decide if we need to nudge thermostat to keep it on or off
@@ -5450,7 +5452,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp + tempChangeVal
                         }
                         def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
-                        LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1}", "trace", false)
+                        LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", true)
                         if (coolDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
@@ -5465,15 +5467,20 @@ private remSenEvtEval() {
                             if (hvacMode in ["auto"]) {
                                 if (curHeatSetpoint > (chgval-5.0)) {
                                     cHeat = chgval - 5.0
-                                    LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${(chgval-5.0)}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
+                                    LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
+                                    curHeatSetpoint =  cHeat
                                     if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(cHeat) }
                                 }
                             }
 
                             if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
                                 LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+                                curCoolSetpoint = chgval
                                 if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(chgval) }
                             }
+
+                            return  // let all this take effect
+
                         } else {
                             LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
                         }
@@ -5486,13 +5493,6 @@ private remSenEvtEval() {
 
             chg = false
             chgval = 0
-            curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
-            curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
-            fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
-            curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
-            curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-            acRunning = (curTstatOperState == "cooling") ? true : false
-            heatRunning = (curTstatOperState == "heating") ? true : false
 
             LogAction("remSenEvtEval: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)   
 
@@ -5519,10 +5519,12 @@ private remSenEvtEval() {
                         chgval = curTstatTemp - tempChangeVal
                         chg = true
                         LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn Off Thermostat", "info", true)
+                        heatRunning = false
                     } else if (turnOn && !heatRunning) {
                         chgval = curTstatTemp + tempChangeVal
                         chg = true
                         LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn On Thermostat", "info", true)
+                        heatRunning = true
                     } else {
                         // logic to decide if we need to nudge thermostat to keep it on or off
                         if (heatRunning) {
@@ -5531,7 +5533,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp - tempChangeVal
                         }
                         def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
-                        LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1}", "trace", false)
+                        LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1} tempChangeVal: ${tempChangeVal}", "trace", true)
                         if (heatDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to maintain state", "info", true)
@@ -5544,17 +5546,22 @@ private remSenEvtEval() {
                             runIn(60, "remSenCheck", [overwrite: true])
                             def cCool = null
                             if (hvacMode in ["auto"]) {
-                                if (curCoolSetpoint < chgval+5) {
+                                if (curCoolSetpoint < (chgval+5)) {
                                     cCool = chgval + 5.0
-                                    LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${(chgval+5)}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
+                                    LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
+                                    curCoolSetpoint = cCool
                                     if(remSenTstatsMirror) { remSenTstatsMir*.setCoolingSetpoint(cCool) }
                                 }
                             }
 
                             if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
                                 LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
+                                curHeatSetpoint = chgval
                                 if(remSenTstatsMirror) { remSenTstatsMir*.setHeatingSetpoint(chgval) }
                             }
+
+                           return  // let all this take effect
+
                         } else {
                             LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
                         }
@@ -5849,13 +5856,13 @@ def extTempPage() {
         }
         if(extTmpUseWeather || extTmpTempSensor) {
             def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
+            def dupTstat = checkThermostatDupe(extTmpTstat, extTmpTstatsMir)
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
+                if(dupTstat) {
+                    paragraph "Duplicate Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", image: getAppImg("error_icon.png")
+                }
                 if(extTmpTstat) {
-                    if(extTmpTstat) {
-                        input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
-                                image: getAppImg("thermostat_icon.png")
-                    }
                     getTstatCapabilities(extTmpTstat, extTmpPrefix())
                     def str = ""
                     str += extTmpTstat ? "Thermostat Status:" : ""
@@ -5864,6 +5871,15 @@ def extTempPage() {
                     str += extTmpTstat ? "\n${(settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(extTmpTstat)) ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
                     str += (extTmpTstat && settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(extTmpTstat)) ? "\n└ Safefy Temps: \n     └ Min: ${getSafetyTemps(extTmpTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(extTmpTstat).max}°${atomicState?.tempUnit}" : ""
                     paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+
+                    input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                            image: getAppImg("thermostat_icon.png")
+                    if(extTmpTstatsMir && !dupTstat) { 
+                        extTmpTstatsMir?.each { t ->
+                            paragraph "Thermostat Temp: ${getDeviceTemp(t)}${atomicState?.tempUnit}", image: " "
+                        }
+                    }
+
                     input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp (°${atomicState?.tempUnit})?", defaultValue: 1.0, submitOnChange: true, required: true,
                             image: getAppImg("temp_icon.png")
                 }
@@ -5935,7 +5951,7 @@ def getExtConditions( doEvent = false ) {
         atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
     }
 
-    if (doEvent) {
+/*    if (doEvent) {
         if (origTempF != atomicState?.curWeatherTemp_f || origTempC != atomicState?.curWeatherTemp_c) {
             LogAction("${atomicState?.curWeatherLoc} Weather | humidity: ${atomicState?.curWeatherHum} | temp_f: ${atomicState?.curWeatherTemp_f} | temp_c: ${atomicState?.curWeatherTemp_c}", "debug", false)
             if (isExtTmpConfigured() && !disableAutomation) {
@@ -5950,7 +5966,7 @@ def getExtConditions( doEvent = false ) {
                 extTmpDpEvt(evtset)
             }
         }
-    }
+    } */
 }
 
 def getExtTmpTemperature() {
@@ -6045,10 +6061,7 @@ def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toIntege
 
 def extTmpTempCheck(cTimeOut = false) {
     //log.trace "extTmpTempCheck..."
-//
-// if we cannot save/restore settings, don't bother turning things off
-// Documentation says this supports mirroring to other thermostats, but that is not in this code
-//
+
     try {
         if(disableAutomation) { return }
         else {
@@ -6100,17 +6113,14 @@ def extTmpTempCheck(cTimeOut = false) {
                                 else {
                                     LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
                                 }
-                                if(extTmpTstatMir) { 
-                                    setMultipleTstatMode(extTmpTstatMir, "off") {
-                                        LogAction("Mirroring (Off) Mode to ${extTmpTstatMir}", "info", true)
-                                    }
-                                }
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info")
                                         if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OnVoiceMsg")) }
                                     }
                                 }
+                                return
+
                             } else { LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) }
                         } else {
                             if(!timeOut && safetyOk) { LogAction("extTmpTstatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
@@ -6142,6 +6152,11 @@ def extTmpTempCheck(cTimeOut = false) {
                             atomicState?.extTmpTstatOffRequested = true
                             scheduleTimeoutRestore()
                             LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
+                            if(extTmpTstatMir) { 
+                                setMultipleTstatMode(extTmpTstatMir, "off") {
+                                    LogAction("Mirroring (Off) Mode to ${extTmpTstatMir}", "info", true)
+                                }
+                            }
 
                             if(allowNotif) {
                                 sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
