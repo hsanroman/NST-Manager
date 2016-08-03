@@ -140,9 +140,7 @@ preferences {
     page(name: "childDevDataPage")
     page(name: "managAppDataPage")
     page(name: "alarmTestPage")
-    page(name: "simulateSmokeEventPage")
-    page(name: "simulateCarbonEventPage")
-    page(name: "simulateBatteryEventPage")
+    page(name: "simulateTestEventPage")
     page(name: "safetyValuesPage")
     page(name: "devNameResetPage")
     page(name: "resetDiagQueuePage")
@@ -576,11 +574,11 @@ def automationRestore(data) {
 
 def getAutomationBackupData() {
     def clientId = atomicState?.installationId
-    def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/${clientId}/automationApps.json", contentType: 'application/json' ]
+    def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${clientId}/automationApps.json", contentType: 'application/json' ]
     try {
         httpGet(params) { resp ->
             if(resp.data) {
-                //log.debug "resp: ${resp.data}"
+                log.debug "resp: ${resp.data}"
                 //atomicState?.lastClientDataUpdDt = getDtNow()
                 return resp.data
             }
@@ -3756,76 +3754,95 @@ def nestInfoPage () {
 def alarmTestPage () {
     dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
         if(atomicState?.protects) {
-            section("Select Carbon/Smoke Devices to Test:") {
+            section("Select Carbon/Smoke Device to Test:") {
                 input(name: "alarmCoTestDevice", title:"Select the Protect to Test", type: "enum", required: false, multiple: false, submitOnChange: true, 
                         description: coDesc, metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png"))
-
-                if(alarmCoTestDevice) {
+            }
+            if(alarmCoTestDevice) {
+                section("Select the Events to Generate:") {
                     input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
-                    if(alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimLowBatt) {
-                        href "simulateSmokeEventPage", title: "Simulate Smoke Event", description: null, state: null
-                    }
-
                     input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
-                    if(alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimLowBatt) {
-                        href "simulateCarbonEventPage", title: "Simulate Carbon Event", description: null, state: null
-                    }
-
                     input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
-                    if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
-                        href "simulateBatteryEventPage", title: "Simulate Battery Event", description: null, state: null
+                }
+                if ((alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
+                    section("Execute Selected Tests from Above:") {
+                        if(alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimLowBatt) {
+                            href "simulateTestEventPage", title: "Simulate Smoke Event", params: ["testType":"smoke"], description: "Tap to Execute Test", required: true, state: null
+                        }
+                        if(alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimLowBatt) {
+                            href "simulateTestEventPage", title: "Simulate Carbon Event", params: ["testType":"co"], description: "Tap to Execute Test", required: true, state: null
+                        }
+                        if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
+                            href "simulateTestEventPage", title: "Simulate Battery Event", params: ["testType":"battery"], description: "Tap to Execute Test", required: true, state: null
+                        }
+                        if(atomicState?.isAlarmCoTestActive &&  (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
+                            paragraph "clear all tests to reset for new alarm test", required: true, state: null
+                        }
+                        if (!alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) { 
+                            atomicState?.isAlarmCoTestActive = false
+                            atomicState?.curProtTestPageData = null
+                        }
                     }
-                    if(atomicState?.isAlarmCoTestActive &&  (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
-                        paragraph "clear all tests to reset for new alarm test"
-                    }
-                    if (!alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) { atomicState?.isAlarmCoTestActive = false }
                 }
             }
         }
     }
 }
 
-def simulateSmokeEventPage() {
-    dynamicPage(name: "simulateSmokeEventPage", install: false, uninstall: false) {
-        if(alarmCoTestDevice && alarmCoTestDeviceSimSmoke) {
-            if(!atomicState?.isAlarmCoTestActive) {
-                LogAction("Sending Smoke 'Detected' Event to '$alarmCoTestDevice'", "info", true)
-                paragraph "Sending Smoke 'Detected' Event to '$alarmCoTestDevice'"
-                atomicState?.isAlarmCoTestActive = true
-                alarmCoTestDevice?.runsmoketest()
-                // tell them test started, and will autoend
-            }
-        } // else tell them it could not start
-    }
-}
-
-def simulateCarbonEventPage() {
-    dynamicPage(name: "simulateCarbonEventPage", install: false, uninstall: false) {
-        if(alarmCoTestDevice && alarmCoTestDeviceSimCo) {
-            if(!atomicState?.isAlarmCoTestActive) {
-                LogAction("Sending Carbon 'Detected' Event to '$alarmCoTestDevice'", "info", true)
-                paragraph "Sending Carbon 'Detected' Event to '$alarmCoTestDevice'"
-                atomicState?.isAlarmCoTestActive = true
-                alarmCoTestDevice?.runcotest()
-                // tell them test started, and will autoend
-            }
-        } // else tell them it could not start
-    }
-}
-
-def simulateBatteryEventPage() {
-    dynamicPage(name: "simulateBatteryEventPage", install: false, uninstall: false) {
-        section("Testing...") {
-            if(alarmCoTestDevice && alarmCoTestDeviceSimLowBatt) {
-                if(!atomicState?.isAlarmCoTestActive) {
-                    LogAction("Sending Battery 'Replace' Event to '$alarmCoTestDevice'", "info", true)
-                    paragraph "Sending Battery 'Replace' Event to '$alarmCoTestDevice'"
-                    atomicState?.isAlarmCoTestActive = true
-                    alarmCoTestDevice?.runbatterytest()
-                // tell them test started, and will autoend
+def simulateTestEventPage(params) {
+    def pName = getAutoType()
+    def testType
+    if(params?.testType) {
+        atomicState.curProtTestType = params?.testType 
+        testType = params?.testType
+    } else { 
+        testType = atomicState?.curProtTestType
+    } 
+    dynamicPage(name: "simulateTestEventPage", refreshInterval: 10, install: false, uninstall: false) {
+        if(alarmCoTestDevice) {
+            def dev = getChildDevice(alarmCoTestDevice)
+            def testText
+            if(dev) {
+                atomicState?.alarmCoTestDeviceId = alarmCoTestDevice
+                subscribe(dev, "isTesting", simulateAlarmCoTestEvt)
+                section("Testing ${dev}...") {
+                    def isRun = false
+                    if(!atomicState?.isAlarmCoTestActive) {
+                        atomicState?.isAlarmCoTestActive = true
+                        if(testType == "co") { 
+                            testText = "Carbon 'Detected'" 
+                            dev?.runCoTest()
+                        }
+                        else if (testType == "smoke") { 
+                            testText = "Smoke 'Detected'" 
+                            dev?.runSmokeTest()
+                        }
+                        else if (testType == "co") { 
+                            testText = "Battery 'Replace'" 
+                            dev?.runBatteryTest()
+                        }
+                        LogAction("Sending ${testText} Event to '$dev'", "info", true)
+                        paragraph "Sending ${testText} Event to '$dev'", state: "complete"
+                    } else {
+                        paragraph "Skipping... A Test is already Running...", required: true, state: null
+                    }
                 }
-            } // else tell them it could not start
-        }
+            }
+        } // else tell them it could not start
+    }
+}
+
+def simulateAlarmCoTestEvt(evt) {
+    log.trace "simulateAlarmCoTestEvt...(${evt?.value})"
+    if(evt.value.toString() == "false") {
+        atomicState?.isAlarmCoTestActive = false
+        atomicState?.curProtTestPageData = null
+        def dev = getChildDevice(atomicState?.alarmCoTestDeviceId)
+        unsubscribe(dev)
+        atomicState?.alarmCoTestDeviceId = null
+    }
+    if(evt.value.toString() == "true") {
+        atomicState?.isAlarmCoTestActive = true
     }
 }
 

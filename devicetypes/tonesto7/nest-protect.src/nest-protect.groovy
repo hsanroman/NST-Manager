@@ -36,9 +36,9 @@ metadata {
         command "refresh"
         command "poll"
         command "log", ["string","string"]
-        command "runsmoketest"
-        command "runcotest"
-        command "runbatterytest"
+        command "runSmokeTest"
+        command "runCoTest"
+        command "runBatteryTest"
         
         attribute "alarmState", "string"
         attribute "batteryState", "string"
@@ -177,45 +177,66 @@ def refresh() {
     poll()
 }
 
-
-//ERS
-def runsmoketest() {
-    log.trace("runsmoketest()")
-//values from nest are ok, warning, emergency
-    testingStateEvent("true")
-    carbonSmokeStateEvent("ok", "emergency")
-    schedEndTest()
+void runSmokeTest() {
+    log.trace("runSmokeTest()")
+    //values from nest are ok, warning, emergency
+    try {
+        testingStateEvent("true")
+        carbonSmokeStateEvent("ok", "emergency")
+        schedEndTest()
+    } catch (ex) {
+        log.error "runSmokeTest Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runSmokeTest")
+    }
 }
 
-def runcotest() {
-    log.trace("runcotest()")
-//values from nest are ok, warning, emergency
-    testingStateEvent("true")
-    carbonSmokeStateEvent("emergency", "ok")
-    schedEndTest()
+void runCoTest() {
+    log.trace("runCoTest()")
+    try {
+        //values from nest are ok, warning, emergency
+        testingStateEvent("true")
+        carbonSmokeStateEvent("emergency", "ok")
+        schedEndTest()
+    } catch (ex) {
+        log.error "runCoTest Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runCoTest")
+    }
 }
 
-def runbatterytest() {
-    log.trace("runbatterytest()")
-//values from nest are ok, replace
-    testingStateEvent("true")
-    batteryStateEvent("replace")
-    schedEndTest()
+void runBatteryTest() {
+    log.trace("runBatteryTest()")
+    try {
+        //values from nest are ok, replace
+        testingStateEvent("true")
+        batteryStateEvent("replace")
+        schedEndTest()
+    } catch (ex) {
+        log.error "runBatteryTest Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runBatteryTest")
+    }
 }
 
-def schedEndTest() {
-    runIn(5, "endTest", [overwrite: true])
-    refresh()  // this typically takes more than 5 seconds to complete
+void schedEndTest() {
+    try {
+        runIn(5, "endTest", [overwrite: true])
+        refresh()  // this typically takes more than 5 seconds to complete
+    } catch (ex) {
+        log.error "schedEndTest Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "schedEndTest")
+    }
 }
 
-def endTest() {
-    carbonSmokeStateEvent("ok", "ok")
-    batteryStateEvent("ok")
-    testingStateEvent("false")
-    refresh()
+void endTest() {
+    try {
+        carbonSmokeStateEvent("ok", "ok")
+        batteryStateEvent("ok")
+        testingStateEvent("false")
+        refresh()
+    } catch (ex) {
+        log.error "endTest Exception: ${ex}"
+        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "endTest")
+    }
 }
-
-
 
 def generateEvent(Map eventData) {
     //log.trace("generateEvent parsing data ${eventData}")
