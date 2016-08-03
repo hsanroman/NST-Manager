@@ -3741,7 +3741,7 @@ def nestInfoPage () {
             section("Protect Alarm Testing") {
                 if(atomicState?.protects) {
                     href "alarmTestPage", title: "Test Device Alarms...", required: true , image: getAppImg("test_icon.png"), state: null,
-                            description: "This will Allow you to Simulate Alarm Events to Test your Automations..."
+                            description: "Simulate Nest Protect Alarm Events\nSo you can Test your Automations..."
                 }
             }
         }
@@ -3766,18 +3766,26 @@ def alarmTestPage () {
                 }
                 if ((alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
                     section("Execute Selected Tests from Above:") {
+                        if (!atomicState?.isAlarmCoTestActive) {
+                            paragraph "WARNING: If your protect devices are used Smart Home Monitor (SHM) it will not see these as a test and will trigger any action/alarms you have configured...", 
+                                    required: true, state: null
+                        }
                         if(alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimLowBatt) {
                             href "simulateTestEventPage", title: "Simulate Smoke Event", params: ["testType":"smoke"], description: "Tap to Execute Test", required: true, state: null
                         }
+                        
                         if(alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke && !alarmCoTestDeviceSimLowBatt) {
                             href "simulateTestEventPage", title: "Simulate Carbon Event", params: ["testType":"co"], description: "Tap to Execute Test", required: true, state: null
                         }
+                        
                         if(alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) {
                             href "simulateTestEventPage", title: "Simulate Battery Event", params: ["testType":"battery"], description: "Tap to Execute Test", required: true, state: null
                         }
-                        if(atomicState?.isAlarmCoTestActive &&  (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
-                            paragraph "clear all tests to reset for new alarm test", required: true, state: null
-                        }
+                        
+                        if(atomicState?.isAlarmCoTestActive && (alarmCoTestDeviceSimLowBatt || alarmCoTestDeviceSimCo || alarmCoTestDeviceSimSmoke)) {
+                            paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null 
+                        } 
+                        
                         if (!alarmCoTestDeviceSimLowBatt && !alarmCoTestDeviceSimCo && !alarmCoTestDeviceSimSmoke) { 
                             atomicState?.isAlarmCoTestActive = false
                             atomicState?.curProtTestPageData = null
@@ -3803,8 +3811,8 @@ def simulateTestEventPage(params) {
             def dev = getChildDevice(alarmCoTestDevice)
             def testText
             if(dev) {
-                atomicState?.alarmCoTestDeviceId = alarmCoTestDevice
-                subscribe(dev, "isTesting", simulateAlarmCoTestEvt)
+                //atomicState?.alarmCoTestDeviceId = alarmCoTestDevice
+                //subscribe(dev, "isTesting", simulateAlarmCoTestEvt)
                 section("Testing ${dev}...") {
                     def isRun = false
                     if(!atomicState?.isAlarmCoTestActive) {
@@ -3828,11 +3836,11 @@ def simulateTestEventPage(params) {
                     }
                 }
             }
-        } // else tell them it could not start
+        }
     }
 }
 
-def simulateAlarmCoTestEvt(evt) {
+/*def simulateAlarmCoTestEvt(evt) {
     log.trace "simulateAlarmCoTestEvt...(${evt?.value})"
     if(evt.value.toString() == "false") {
         atomicState?.isAlarmCoTestActive = false
@@ -3844,7 +3852,7 @@ def simulateAlarmCoTestEvt(evt) {
     if(evt.value.toString() == "true") {
         atomicState?.isAlarmCoTestActive = true
     }
-}
+}*/
 
 def structInfoPage () {
     dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
