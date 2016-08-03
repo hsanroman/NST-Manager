@@ -4915,7 +4915,7 @@ def remSensorPage() {
                                     image: getAppImg("sunrise_icon.png")
                             if(remSenUseTimeForMode) {
                                 def nightTimeReq = (settings["${pName}NightStartTime"] || settings["${pName}NightStopTime"]) ? true : false
-                                def timeChkErr = settings["${pName}NightStopTime"].getTime() > settings["${pName}NightStopTime"].getTime() ? true : false
+                                def timeChkErr = settings["${pName}NightStopTime"] > settings["${pName}NightStopTime"] ? true : false
                                 if(timeChkErr) {
                                     paragraph "Stop Time is before Start Time!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
                                 }
@@ -4927,14 +4927,15 @@ def remSensorPage() {
                             if(checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
                                 paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
                             }
-                            def modesReq = (!remSenUseSunAsMode && !remSenUseTimeForMode && (remSensorDay || remSensorNight)) ? true : false
+                            def modesReq = (!remSenUseSunAsMode && !remSenUseTimeForMode && (remSensorDay && remSensorNight)) ? true : false
                             input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
                             input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
                         }
                         if(remSenUseSunAsMode || (remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"]) || (remSensorDayModes && remSensorNightModes)) {
+                            log.debug "use night sensor: ${getUseNightSensor()}"
                             def str = ""
                             str += "Current Active Sensor:"
-                            str += getUseNightSensor() ? "\n └ ${getUseNightSensor() ? "Night" : "Day"} Sensor" : ""
+                            str += "\n └ ${getUseNightSensor() ? "Night" : "Day"} Sensor"
                             paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
                         }
                     }
@@ -5196,6 +5197,7 @@ def getUseNightSensor() {
 }
 
 def getRemSenUseNightTimeOk() {
+    def pName = getAutoType()
     if(remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"] && !remSenUseSunAsMode) {
         return timeOfDayIsBetween(settings?."${pName}NightStartTime", settings?."${pName}NightStopTime", new Date(), getTimeZone()) ?: false
     }
