@@ -4270,7 +4270,7 @@ def mainAutoPage(params) {
         return dynamicPage(name: "mainAutoPage", title: "Automation Config Page...", uninstall: false, install: false, nextPage: "nameAutoPage" ) {
             if(disableAutomation) {
                 section() {
-                    paragraph "This Automation is currently disabled!!!\nTurn it back on to resume operation...", image: getAppImg("instruct_icon.png")
+                    paragraph "This Automation is currently disabled!!!\nTurn it back on to to make changes or resume operation...", required: true, state: null, image: getAppImg("instruct_icon.png")
                 }
             }
             if(autoType == "remSen" && !disableAutomation) {
@@ -4454,10 +4454,6 @@ def nameAutoPage() {
     }
 }
 
-def autoInstalled() {
-
-}
-
 def initAutoApp() {
     if(settings["watchDogFlag"]) {
         atomicState?.automationType = "watchDog"
@@ -4471,10 +4467,6 @@ def initAutoApp() {
     watchDogAutomation()
 }
 
-def uninstallAutomationApp() {
-    
-}
-
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
     def appLbl = app?.label?.toString()
@@ -4482,13 +4474,13 @@ def getAutoTypeLabel() {
     def typeLabel = ""
     def newLbl
     def dis = disableAutomation ? "\n(Disabled)" : ""
-    if (type == "remSen")       { typeLabel = "${newName} (RemoteSensor)" }
-    else if (type == "extTmp")  { typeLabel = "${newName} (ExternalTemp)" }
-    else if (type == "conWat")  { typeLabel = "${newName} (Contact)" }
-    else if (type == "nMode")   { typeLabel = "${newName} (NestMode)" }
-    else if (type == "tMode")   { typeLabel = "${newName} (TstatMode)" }
-    else if (type == "leakWat")  { typeLabel = "${newName} (LeakSensor)" }
-    else if (type == "watchDog") { typeLabel = "Nest Location ${location.name} Watchdog"}
+    if (type == "remSen")           { typeLabel = "${newName} (RemoteSensor)" }
+    else if (type == "extTmp")      { typeLabel = "${newName} (ExternalTemp)" }
+    else if (type == "conWat")      { typeLabel = "${newName} (Contact)" }
+    else if (type == "nMode")       { typeLabel = "${newName} (NestMode)" }
+    else if (type == "tMode")       { typeLabel = "${newName} (TstatMode)" }
+    else if (type == "leakWat")     { typeLabel = "${newName} (LeakSensor)" }
+    else if (type == "watchDog")    { typeLabel = "Nest Location ${location.name} Watchdog"}
     
     if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
         newLbl = appLbl
@@ -5860,6 +5852,10 @@ def extTempPage() {
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
                 if(extTmpTstat) {
+                    if(extTmpTstat) {
+                        input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                                image: getAppImg("thermostat_icon.png")
+                    }
                     getTstatCapabilities(extTmpTstat, extTmpPrefix())
                     def str = ""
                     str += extTmpTstat ? "Thermostat Status:" : ""
@@ -6075,7 +6071,6 @@ def extTmpTempCheck(cTimeOut = false) {
             if (!modeOff) { atomicState.timeOutOn = false; timeOut = false }
 
             if(!tempWithinThreshold || timeOut || !safetyOk) {
-
                 if(okToRestore) {
                     if(getExtTmpGoodDtSec() >= (getExtTmpOnDelayVal() - 5) || timeOut || !safetyOk) {
                         def lastMode = null
@@ -6089,6 +6084,12 @@ def extTmpTempCheck(cTimeOut = false) {
                                 atomicState.timeOutOn = false
                                 unschedTimeoutRestore()
                                 modeOff = false
+                                
+                                if(extTmpTstatMir) { 
+                                    if(setMultipleTstatMode(extTmpTstatMir, lastMode)) {
+                                        LogAction("Mirroring (${lastMode}) Restore to ${extTmpTstatMir}", "info", true)
+                                    }
+                                }
 
                                 if(!safetyOk) {
                                     LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp Safefy Temps have been reached...", "info", true)
@@ -6099,7 +6100,11 @@ def extTmpTempCheck(cTimeOut = false) {
                                 else {
                                     LogAction("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "info", true)
                                 }
-
+                                if(extTmpTstatMir) { 
+                                    setMultipleTstatMode(extTmpTstatMir, "off") {
+                                        LogAction("Mirroring (Off) Mode to ${extTmpTstatMir}", "info", true)
+                                    }
+                                }
                                 if(allowNotif) {
                                     if(!timeOut && safetyOk) {
                                         sendEventPushNotifications("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info")
@@ -6425,7 +6430,7 @@ def conWatCheck(cTimeOut = false) {
                             if (allowAlarm) { scheduleAlarmOn() }
                             if(conWatTstatMir) { 
                                 setMultipleTstatMode(conWatTstatMir, "off") {
-                                    LogAction("Mirroring (${lastMode}) Mode to ${conWatTstatMir}", "info", true)
+                                    LogAction("Mirroring (Off) Mode to ${conWatTstatMir}", "info", true)
                                 }
                             }
                             LogAction("conWatCheck: '${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "warn", true)
