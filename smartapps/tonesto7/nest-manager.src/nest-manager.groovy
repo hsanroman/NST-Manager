@@ -770,17 +770,19 @@ def getInstAutoTypesDesc() {
             }
         }
     }
-    def watchDogDesc = (watchDogCnt > 0) ? "\n• Nest Watchdog: (Active)" : ""
-    def remSenDesc = (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
-    def conWatDesc = (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
-    def leakWatDesc = (leakWatCnt > 0) ? "\n• Leak Sensor ($leakWatCnt)" : ""
-    def extTmpDesc = (extTmpCnt > 0) ? "\n• External Sensor ($extTmpCnt)" : ""
-    def nModeDesc = (nModeCnt > 0) ? "\n• Nest Modes ($nModeCnt)" : ""
-    def tModeDesc = (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
-    
-    def disabDesc = (disCnt > 0) ? "\n• Disabled Automations ($nModeCnt)" : ""
     atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt]
-    return "Installed Automations: ${watchDogDesc}${disabDesc}${remSenDesc}${conWatDesc}${leakWatDesc}${extTmpDesc}${nModeDesc}${tModeDesc}"
+
+    def str = ""
+    str += "Installed Automations:"
+    str += (watchDogCnt > 0) ? "\n• Nest Watchdog: (Active)" : ""
+    str += (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
+    str += (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
+    str += (leakWatCnt > 0) ? "\n• Leak Sensor ($leakWatCnt)" : ""
+    str += (extTmpCnt > 0) ? "\n• External Sensor ($extTmpCnt)" : ""
+    str += (nModeCnt > 0) ? "\n• Nest Modes ($nModeCnt)" : ""
+    str += (tModeCnt > 0) ? "\n• Tstat Modes ($tModeCnt)" : ""
+    str += (disCnt > 0) ? "\n\nDisabled Automations ($disCnt)" : ""
+    return str
 }
 
 def subscriber() {
@@ -4722,7 +4724,7 @@ def watchDogPage() {
 }
 
 def watchdogSafetyTempEvt(evt) {
-    LogAction("Safety Temp Exceeded Event | Thermostat Temp: ${evt?.displayName} (${evt?.value})", "trace", true)
+    LogAction("watchDogSafetyTempEvt | Thermostat Temp: '${evt.displayName}' (${evt.value})", "trace", true)
     if(disableAutomation) { return }
     else {
         if(evt?.value == "true") {
@@ -4870,10 +4872,10 @@ def remSensorPage() {
                                 submitOnChange: true, required: remSenCoolTempsReq(), image: getAppImg("cool_icon.png")
                         
                         }
-                        paragraph "The Action Threshold Temp is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
+                        paragraph "Action Threshold Temp:\nThis is the temperature difference used to trigger a selected action.", image: getAppImg("instruct_icon.png")
                         input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         if(remSenRuleType != "Circ") {
-                            paragraph "The Change Temp Increments are the amount the temp is adjusted +/- when an action requires a temp change.", image: getAppImg("instruct_icon.png")
+                            paragraph "Change Temp Increments:\n This is the amount the temp is adjusted +/- when a temp change is required.", image: getAppImg("instruct_icon.png")
                             input "remSenTstatTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 5.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
                     }
@@ -4901,17 +4903,39 @@ def remSensorPage() {
                 }
                 if(remSensorDay && remSensorNight) {
                     section("Day/Evening Detection Options:") {
-                        if(remSenUseSunAsMode) { getSunTimeState() }
-                        def inDesc = remSenUseSunAsMode ? "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}" : null
-                        input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: inDesc ?: "", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
-                                image: getAppImg("sunrise_icon.png")
-                        if(!remSenUseSunAsMode) { 
+                        if(!remSenUseTimeForMode && !remSensorDayModes && !remSensorNightModes) {
+                            if(remSenUseSunAsMode) { getSunTimeState() }
+                            def inDesc = remSenUseSunAsMode ? "Day/Night Mode Triggers:\n• ☀ Day: ${atomicState?.sunriseTm}\n• ☽ Night: ${atomicState?.sunsetTm}" : null
+                            input "remSenUseSunAsMode", "bool", title: "Use Sunrise/Sunset to Determine Day/Night Sensors?", description: inDesc ?: "", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
+                                    image: getAppImg("sunrise_icon.png")
+                        }
+                        
+                        if(!remSenUseSunAsMode && (!remSensorDayModes || !remSensorNightModes)) {
+                            input "remSenUseTimeForMode", "bool", title: "Set Start/End Time to use Night Sensors?", description: "", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
+                                    image: getAppImg("sunrise_icon.png")
+                            if(remSenUseTimeForMode) {
+                                def nightTimeReq = (settings["${pName}NightStartTime"] || settings["${pName}NightStopTime"]) ? true : false
+                                def timeChkErr = settings["${pName}NightStopTime"].getTime() > settings["${pName}NightStopTime"].getTime() ? true : false
+                                if(timeChkErr) {
+                                    paragraph "Stop Time is before Start Time!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
+                                }
+                                input "${pName}NightStartTime", "time", title: "Night Start time", required: nightTimeReq, submitOnChange: true, image: getAppImg("start_time_icon.png")
+                                input "${pName}NightStopTime", "time", title: "Night Stop time", required: nightTimeReq, submitOnChange: true, image: getAppImg("stop_time_icon.png") 
+                            }
+                        }
+                        if(!remSenUseSunAsMode && !remSenUseTimeForMode) {
                             if(checkModeDuplication(remSensorDayModes, remSensorNightModes)) {
                                 paragraph "Duplicate Mode(s) found under the Day or Evening Sensor!!!.  Please Correct...", image: getAppImg("error_icon.png")
                             }
-                            def modesReq = (!remSenUseSunAsMode && (remSensorDay && remSensorNight)) ? true : false
+                            def modesReq = (!remSenUseSunAsMode && !remSenUseTimeForMode && (remSensorDay || remSensorNight)) ? true : false
                             input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
                             input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
+                        }
+                        if(remSenUseSunAsMode || (remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"]) || (remSensorDayModes && remSensorNightModes)) {
+                            def str = ""
+                            str += "Current Active Sensor:"
+                            str += getUseNightSensor() ? "\n └ ${getUseNightSensor() ? "Night" : "Day"} Sensor" : ""
+                            paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
                         }
                     }
                 }
@@ -4921,7 +4945,7 @@ def remSensorPage() {
                 if(remSenTstat && (remSensorDay || remSensorNight)) {
                     if(remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) {
                         section("Fan Settings:") {
-                            paragraph "The default fan runtime is 15 minutes.\nThis can be adjusted under your nest account.", image: getAppImg("instruct_icon.png")
+                            paragraph "Default Fan Runtime is 15 minutes\nThis can be adjusted under your Nest Mobile App.", image: getAppImg("instruct_icon.png")
                             input "remSenTimeBetweenRuns", "enum", title: "Wait Time between Fan Runs?", required: true, defaultValue: 3600, metadata: [values:longTimeSecEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
                         }
                     }
@@ -5163,10 +5187,18 @@ def heatingSetpointHandler(evt) { log.debug "heatingSetpointHandler()" }
 def getUseNightSensor() {
     def day = !remSensorDayModes ? false : isInMode(remSensorDayModes)
     def night = !remSensorNightModes ? false : isInMode(remSensorNightModes)
-    if (remSenUseSunAsMode) { return getTimeAfterSunset() }
+
+    if (remSenUseSunAsMode && !remSenUseTimeForMode) { return getTimeAfterSunset() }
+    if (!remSenUseSunAsMode && remSenUseTimeForMode) { return getRemSenUseNightTimeOk() }
     else if (night && !day) { return true }
     else if (day && !night) { return false }
     else { return null }
+}
+
+def getRemSenUseNightTimeOk() {
+    if(remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"] && !remSenUseSunAsMode) {
+        return timeOfDayIsBetween(settings?."${pName}NightStartTime", settings?."${pName}NightStopTime", new Date(), getTimeZone()) ?: false
+    }
 }
 
 def getDeviceTempAvg(items) {
@@ -5822,6 +5854,7 @@ def extTmpPrefix() { return "extTmp" }
 def extTempPage() {
     def pName = extTmpPrefix()
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false, nextPage: "mainAutoPage") {
+        def dupTstat = checkThermostatDupe(extTmpTstat, extTmpTstatMir)
         section("Select the External Temps to Use:") {
             if(!parent?.getWeatherDeviceInst()) {
                 paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as an External Sensor!!!", required: true, state: null
@@ -5851,11 +5884,13 @@ def extTempPage() {
             def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
+                if(dupTstat) {
+                    paragraph "Primary Thermostat found in Mirror Thermostat List!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
+                }
                 if(extTmpTstat) {
-                    if(extTmpTstat) {
-                        input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
+                    input name: "extTmpTstatMir", type: "capability.thermostat", title: "Mirror commands to these Thermostats?", multiple: true, submitOnChange: true, required: false,
                                 image: getAppImg("thermostat_icon.png")
-                    }
+                    
                     getTstatCapabilities(extTmpTstat, extTmpPrefix())
                     def str = ""
                     str += extTmpTstat ? "Thermostat Status:" : ""

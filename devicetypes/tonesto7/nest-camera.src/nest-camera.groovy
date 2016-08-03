@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.1.2" }
+def devVer() { return "0.1.3" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -296,7 +296,7 @@ def lastCheckinEvent(checkin) {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
         tf.setTimeZone(getTimeZone())
-        def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+        def lastConn = checkin ? tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin.toString())) : "Not Available"
         def lastChk = device.currentState("lastConnection")?.value
         state?.lastConnection = lastConn?.toString()
         if(!lastChk.equals(lastConn?.toString())) {
@@ -316,7 +316,7 @@ def lastOnlineEvent(dt) {
         def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
         def tf = new SimpleDateFormat(formatVal)
         tf.setTimeZone(getTimeZone())
-        def lastOnl = !dt ? "Nothing To Show..." : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
+        def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
         state?.lastOnl = lastOnl
         if(!lastOnlVal.equals(lastOnl?.toString())) {
             Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
@@ -419,6 +419,7 @@ def lastEventDataEvent(data) {
         def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
         def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
 
+        //log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
         state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
         state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
         state?.lastEventData = data
@@ -435,7 +436,7 @@ def lastEventDataEvent(data) {
     }
     catch (ex) {
         log.error "lastEventDataEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "lastEventDataEvent")
+        parent?.sendChildExceptionData("camera", ex.message.toString(), "lastEventDataEvent")
     }
 }
 
@@ -459,7 +460,7 @@ def zoneMotionEvent(data) {
     }
     catch (ex) {
         log.error "zoneMotionEvent Exception: ${ex}"
-        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "zoneMotionEvent")
+        parent?.sendChildExceptionData("camera", devVer(), ex.message.toString(), "zoneMotionEvent")
     }
 }
 
@@ -666,33 +667,6 @@ def formatDt(dt, mdy = false) {
     }
 }
 
-def formatParseDt(dt, mdy = false) {
-    //log.trace "formatParseDt($dt, $mdy)..."
-    try {
-        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
-        def tf = new SimpleDateFormat(formatVal)
-        if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-        else {
-            LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
-        }
-        return Date.parse(formatVal, tf.format(Date.parse(formatVal, dt)))
-    }
-    catch (ex) {
-        log.error "formatParseDt Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "formatParseDt")
-    }
-}
-
-def parseDt(dt) {
-    //log.trace "parseDt($dt)..."
-    try {
-        return Date.parse("E MMM dd H:m:s z yyyy", dt)
-    } catch (ex) {
-        log.error "parseDt Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "parseDt")
-    }
-}
-
 def epochToTime(tm) {
     def tf = new SimpleDateFormat("h:mm a")
         tf?.setTimeZone(getTimeZone())
@@ -712,7 +686,7 @@ def isTimeBetween(start, end, now, tz) {
         return result
     } catch (ex) {
         log.error "isTimeBetween Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "isTimeBetween")
+        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "isTimeBetween")
     }
 }
 
@@ -835,47 +809,53 @@ def getJS(url){
 
 //this scrapes the public nest cam page for its unique id for using in render html tile
 def getCamUUID(pubVidId) {
-    def params = [
-        uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
-    ]
     try {
-        httpGet(params) { resp ->
-            def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
-            //log.debug "uuid: $uuid"
-            return uuid ?: null
-        }
+        if(pubVidId) {
+            def params = [
+                uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
+            ]
+            httpGet(params) { resp ->
+                def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
+                //log.debug "uuid: $uuid"
+                return uuid ?: null
+            }
+        } else { LogAction("getCamUUID PublicVideoId is missing....", "warn", true) }
     } catch (ex) {
-        log.error "getUUID Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getUUID")
+        log.error "getCamUUID Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamUUID")
     }
 }
 
 def getLiveStreamHost(camUUID) {
-  try {
-      def params = [
-          uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
-      ]
-      httpGet(params)  { resp ->
-        def stream = resp?.data?.items.live_stream_host.toString().replaceAll("\\[|\\]", "")
-        return stream ?: null
-      }
-  }
-  catch (ex) {
-      log.error "getLiveStreamHost Exception: ${ex}"
-      parent?.sendChildExceptionData("camera", devVer(), ex.message, "getLiveStreamHost")
-  }
+    try {
+        if(camUUID) {
+            def params = [
+                uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
+            ]
+            httpGet(params) { resp ->
+                def stream = resp?.data?.items.live_stream_host.toString().replaceAll("\\[|\\]", "")
+                return stream ?: null
+            }
+        } else { LogAction("getLiveStreamHost camUUID is missing....", "warn", true) }
+    }
+    catch (ex) {
+        log.error "getLiveStreamHost Exception: ${ex}"
+        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getLiveStreamHost")
+    }
 }
 
 def getCamApiServer(camUUID) {
     try {
-        def params = [
-            uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
-        ]
-        httpGet(params)  { resp ->
-            def apiServer = (resp?.data?.items.nexus_api_http_server)
-            def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
-            return apiServer1 ?: null
-        }
+        if(camUUID) {
+            def params = [
+                uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
+            ]
+            httpGet(params)  { resp ->
+                def apiServer = (resp?.data?.items.nexus_api_http_server)
+                def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
+                return apiServer1 ?: null
+            }
+        } else { LogAction("getCamApiServer camUUID is missing....", "warn", true) }
     }
     catch (ex) {
         log.error "getCamApiServer Exception: ${ex}"
