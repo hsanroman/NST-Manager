@@ -3312,7 +3312,7 @@ def isInMode(modeList) {
 }
 
 def minDevVersions() {
-    return appData?.versions?.minDevVersions ?: ["thermostat":250, "protect":250, "presence":250, "weather":250, "camera":001]
+    return appData?.versions?.minDevVersions ?: ["thermostat":300, "protect":300, "presence":300, "weather":300, "camera":010]
 }
 
 def notifValEnum(allowCust = true) {

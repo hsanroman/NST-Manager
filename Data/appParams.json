@@ -28,11 +28,11 @@
             "ver": "2.5.6"
         },
         "minDevVersions": {
-            "thermostat": 250,
-            "protect": 250,
-            "presence": 250,
-            "weather": 250,
-            "camera": 010
+            "thermostat": 300,
+            "protect": 300,
+            "presence": 300,
+            "weather": 300,
+            "camera": 012
         }
     },
     "token": {
