@@ -4095,13 +4095,13 @@ def removeInstallData() {
     }
 }
 
-def sendExceptionData(exMsg, methodName, isChild = false, autoType) {
+def sendExceptionData(exMsg, methodName, isChild = false, autoType = null) {
     try {
         def exCnt = 0
         exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
         atomicState?.appExceptionCnt = exCnt ?: 1
         if (optInSendExceptions) {
-            def appType = isChild ? "automationApp/${autoType}" : "managerApp" 
+            def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp" 
             def exData
             if(isChild) {
                 exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exMsg.toString(), "errorDt":getDtNow().toString()]
