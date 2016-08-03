@@ -15,7 +15,6 @@
 *********************************************************************************************/
 
 /*
-    * Look into storing events and action data for graphing.
     * Create instructions on how to create individual nest tokens
     * Update documentation with new features/functions
 */
@@ -51,7 +50,7 @@ def appVerInfo() {
     str += "\n • UPDATED: Lots of optimizations to Automations."
     str += "\n • ADDED: Added new watchdog automation"
 
-    str += "/n/nV2.7.0 (August 1st, 2016):"
+    str += "\n\nV2.7.0 (August 1st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Lots of optimizations to Automations."
     str += "\n • ADDED: Added new watchdog automation"
@@ -4863,7 +4862,6 @@ def remSensorPage() {
                     input "remSensorDay", "capability.temperatureMeasurement", title: "${dSenStr} Temp Sensors", submitOnChange: true, required: dSenReq,
                             multiple: true, image: getAppImg("temperature_icon.png")
                     if(remSensorDay) {
-
                         def tmpVal = "$dSenStr Temp${(remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(remSensorDay)}°${atomicState?.tempUnit})"
                         if(remSensorDay.size() > 1) {
                             href "remSenShowTempsPage", title: "View $dSenStr Sensor Temps...", description: "${tmpVal}", state: "complete", image: getAppImg("blank_icon.png")
