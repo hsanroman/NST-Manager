@@ -41,12 +41,17 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "2.7.0" }
-def appVerDate() { "8-1-2016" }
+def appVersion() { "3.0.0" }
+def appVerDate() { "8-3-2016" }
 def appVerInfo() {
     def str = ""
     
-    str += "V2.7.0 (August 1st, 2016):"
+    str += "V3.0.0 BETA 1 (August 3rd, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Lots of optimizations to Automations."
+    str += "\n • ADDED: Added new watchdog automation"
+
+    str += "/n/nV2.7.0 (August 1st, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Lots of optimizations to Automations."
     str += "\n • ADDED: Added new watchdog automation"
@@ -151,9 +156,7 @@ preferences {
     page(name: "custWeatherPage")
     page(name: "automationsPage")
     page(name: "automationGlobalPrefsPage")
-    page(name: "restoreAutomationsPage")
-    page(name: "automationRestorePage")
-    
+        
     //Automation Pages
     page(name: "selectAutoPage" )
     page(name: "mainAutoPage")
@@ -175,9 +178,6 @@ preferences {
     //shared pages
     page(name: "setNotificationPage")
     page(name: "setNotificationTimePage")
-    page(name: "backupSendDataPage")
-    page(name: "backupRemoveDataPage")
-    page(name: "backupPage")
 }
 
 mappings {
@@ -511,7 +511,7 @@ def automationsPage() {
         }
         section("Add a new Automation:") {
             app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
-            def rText = "NOTICE:\nAutomations is still in BETA!!!\nIt may contain bugs or unforseen issues. Features may change or be removed during development without notice.\n" +
+            def rText = "NOTICE:\nAutomations is still in BETA!!!\n" +
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
         }
@@ -526,78 +526,6 @@ def automationsPage() {
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
         }
-
-        section("Restore Your Automations") {
-            href "restoreAutomationsPage", title: "Restore Your Automations...", description: "Tap to configure...", image: getAppImg("backup_icon.png")
-        }
-        /*app.subscriptions?.each {
-            it.each { item ->
-                //log.debug "${item}"
-            }    
-        }*/
-    }
-}
-
-def restoreAutomationsPage() {
-    def backupData = getAutomationBackupData()
-    dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
-        section("Available Automations") {
-            if(backupData) {
-                paragraph "Automation Apps Backed Up: (${backupData?.size()})"
-                href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData],
-                    state: null, image: getAppImg("reset_icon.png")
-            }
-        }
-    }
-}
-
-def automationRestorePage() {
-    def backupData = getAutomationBackupData()
-    dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
-        section("Restoring Automations:") {
-            paragraph "Restoring Automations..."
-            automationRestore(backupData)
-        }
-    }
-}
-
-def automationRestore(data) {
-    if(data) {
-        data?.each { bApp -> 
-            def appLbl = bApp?.value?.appLabel.toString()
-            //log.debug "Automation AppId: ${bApp?.key}"
-            //log.debug "bAppData: ${stringToMap(bApp?.value.settingsData.toString())}"
-
-            def setData = stringToMap(bApp?.value?.settingsData?.toString()) 
-    
-            log.debug "settingsData: $setData"
-            
-            log.debug "Restoring: ($appLbl) Automation Settings...."
-            addChildApp(textNamespace(), appName(), appLbl, [settings:setData])
-        }
-    }
-}
-
-def getAutomationBackupData() {
-    def clientId = atomicState?.installationId
-    def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${clientId}/automationApps.json", contentType: 'application/json' ]
-    try {
-        httpGet(params) { resp ->
-            if(resp.data) {
-                //log.debug "resp: ${resp.data}"
-                //atomicState?.lastClientDataUpdDt = getDtNow()
-                return resp.data
-            }
-            return null
-        }
-    }
-    catch (ex) {
-        if(ex instanceof groovyx.net.http.HttpResponseException) {
-               //log.warn  "clientData.json file not found..."
-        } else {
-            LogAction("getAutomationBackupData Exception: ${ex}", "error", true)
-        }
-        return null
     }
 }
 
@@ -610,13 +538,13 @@ def automationGlobalPrefsPage() {
                 input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", range: (getTemperatureScale() == "C") ? "10..32" : "50..90",
                         submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
                 
-                def trange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
+                def tRange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
                 def wDev = getChildDevice(getNestWeatherId())
-                def curDewPnt = wDev ? "${wDev.currentValue("dewpoint")}°${getTemperatureScale()}" : 0
-                input "comfortDewpointMax", "decimal", title: "Max. Dewpoint Allowed (${trange} °${getTemperatureScale()})", required: false,  range: trange, 
+                def curDewPnt = wDev ? "${wDev?.currentDewpoint}°${getTemperatureScale()}" : 0
+                input "comfortDewpointMax", "decimal", title: "Max. Dewpoint Allowed (${tRange} °${getTemperatureScale()})", required: false,  range: trange, 
                         description: "Current Dew Point: (${curDewPnt})", submitOnChange: true, image: getAppImg("dewpoint_icon.png")
-                href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"external", title: "What is Dew Point?", 
-                        description:"", state: "complete", image: getAppImg("question_icon.png")
+                href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"embedded", title: "What is Dew Point?", 
+                        description:"", image: getAppImg("instruct_icon.png")
             }
             section("Safety Preferences:") {
                 href "safetyValuesPage", title: "Configure Safety Values?", description: (getSafetyValuesDesc() ? "${getSafetyValuesDesc()}\n\nTap to Modify..." : " Tap to configure..."), 
@@ -694,9 +622,6 @@ def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
     sendNotificationEvent("${textAppName()} has been installed...")
-    if(parent) {
-        autoInstalled()
-    }
 }
 
 def updated() {
@@ -4288,83 +4213,6 @@ def removeFirebaseData(pathVal) {
     return result
 }
 
-def createManagerBackupDataJson() {
-    def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-    def sData = settings?.findAll { !(it.key in noShow) }
-    def setData = [:]
-    sData?.sort().each { item ->
-        setData["${item?.key}"] = item?.value
-    }
-    def stData = state?.findAll { !(it.key in noShow) }
-    def stateData = [:]
-    stData?.sort().each { item ->
-        stateData["${item?.key}"] = item?.value
-    }
-    def result = ["settingsData":setData.toString(), "stateData":stateData.toString()]
-    def resultJson = new groovy.json.JsonOutput().toJson(result)
-    return resultJson
-}
-
-def sendManagerBackupData() {
-    try {    
-        return sendFirebaseData(createManagerBackupDataJson(), "backupData/clients/${atomicState?.installationId}/managerAppData.json")
-    } catch (ex) {
-        LogAction("sendManagerBackupData Exception: ${ex}", "error", true)
-    }
-}
-
-def removeManagerBackupData() {
-    return removeFirebaseData("backupData/clients/${atomicState?.installationId}/managerAppData.json")
-}
-
-def sendAutomationBackupData(data) {
-    try {    
-        sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
-    } catch (ex) {
-        LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
-    }
-}
-
-def removeAutomationBackupData(childId) {
-    return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
-}
-
-def backupPage() {
-    return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-        section("") {
-            href "backupSendDataPage", title: "Send Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to Backup...", 
-                    state: (atomicState?.lastBackupDt ? "complete" : null), image: getAppImg("backup_icon.png")
-            href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
-        }
-    }
-}
-
-def backupSendDataPage() {
-    return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
-        section("") {
-            paragraph "Sending Backup Data to Firebase..."
-            if(parent) {
-                if(backupConfigToFirebase()) {
-                    atomicState?.lastBackupDt = getDtNow()
-                    paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
-                }
-            }
-        }
-    }
-}
-def backupRemoveDataPage() {
-    return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-        section("") {
-            paragraph "Removing Backed Up App Data from Firebase..."
-            if(parent) {
-                if(backupConfigToFirebase()) {
-                    paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
-                }
-            }
-        }
-    }
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 /********************************************************************************************
 |    Application Name: Nest Automations                                                   	|
@@ -4409,13 +4257,13 @@ def mainAutoPage(params) {
     else { atomicState.automationType = params?.autoType; autoType = params?.autoType }
 
     // If the selected automation has not been configured take directly to the config page.  Else show main page
-    if (autoType == "remSen" && (!isRemSenConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return remSensorPage() }
-    else if (autoType == "extTmp" && (!isExtTmpConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return extTempPage() }
-    else if (autoType == "conWat" && (!isConWatConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return contactWatchPage() }
-    else if (autoType == "nMode" && (!isNestModesConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return nestModePresPage() }
-    else if (autoType == "tMode" && (!isTstatModesConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return tstatModePage() }
-    else if (autoType == "leakWat" && (!isLeakWatConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return leakWatchPage() }
-    else if (autoType == "watchDog" && (!isWatchdogConfigured() || (settings["backedUpData"] && !atomicState?.restoreCompleted))) { return watchDogPage() }
+    if (autoType == "remSen" && !isRemSenConfigured())          { return remSensorPage() }
+    else if (autoType == "extTmp" && !isExtTmpConfigured())     { return extTempPage() }
+    else if (autoType == "conWat" && !isConWatConfigured())     { return contactWatchPage() }
+    else if (autoType == "nMode" && !isNestModesConfigured())   { return nestModePresPage() }
+    else if (autoType == "tMode" && !isTstatModesConfigured())  { return tstatModePage() }
+    else if (autoType == "leakWat" && !isLeakWatConfigured())   { return leakWatchPage() }
+    else if (autoType == "watchDog" && !isWatchdogConfigured()) { return watchDogPage() }
     
     else { 
         // Main Page Entries
@@ -4589,12 +4437,6 @@ def mainAutoPage(params) {
                     input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
                     atomicState?.showDebug = showDebug
                 }
-                if(autoType != "watchDog") {
-                    section("Backup Data (Experimental):") {
-                        href "backupPage", title: "Manage Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to configure...", 
-                        image: getAppImg("backup_icon.png"), state: atomicState?.lastBackupDt ? "complete" : null
-                    }
-                }
             }
         }
     }
@@ -4621,23 +4463,17 @@ def initAutoApp() {
     if(settings["watchDogFlag"]) {
         atomicState?.automationType = "watchDog"
     }
-    if(!atomicState?.automationType && settings["automationTypeFlag"]) {
-        atomicState?.automationType = settings["automationTypeFlag"].toString()
-        log.debug "init stateData: ${atomicState?.automationType}"
-    }
-    if(settings["backedUpData"] && atomicState?.restoreCompleted) {
-        unschedule()
-        unsubscribe()
-        automationsInst()
-        subscribeToEvents()
-        scheduler()
-        app.updateLabel(getAutoTypeLabel())
-        watchDogAutomation()
-    }
+    unschedule()
+    unsubscribe()
+    automationsInst()
+    subscribeToEvents()
+    scheduler()
+    app.updateLabel(getAutoTypeLabel())
+    watchDogAutomation()
 }
 
 def uninstallAutomationApp() {
-    //parent?.removeAutomationBackupData(app?.id)
+    
 }
 
 def getAutoTypeLabel() {
@@ -4826,29 +4662,6 @@ def scheduleAutomationEval(schedtime = 20) {
         atomicState?.lastAutomationSchedDt = getDtNow()
         runIn(schedtime, "runAutomationEval", [overwrite: true])
     }
-}
-
-def backupConfigToFirebase() {
-    def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-    def stData = state?.findAll { !(it.key in noShow) }
-    def stateData = [:]
-    stData?.sort().each { item ->
-        stateData["${item?.key}"] = item?.value
-    }
-    def setData = settings?.findAll { !(it.key in noShow) }
-    def settingsData = [:]
-    
-    setData?.sort().each { item ->
-        settingsData["${item?.key}"] = item?.value
-    }
-    if(stateData) {
-        //settingsData["stateData"] = stateData.toString()
-        settingsData["automationTypeFlag"] = getAutoType().toString() 
-        settingsData["backedUpData"] = true 
-    }
-    def result = ["${app?.id}":["appLabel":app?.label, "settingsData":settingsData.toString(), "backupDt":getDtNow()]]
-    def resultJson = new groovy.json.JsonOutput().toJson(result)
-    return parent?.sendAutomationBackupData(resultJson)
 }
 
 def getLastAutomationSchedSec() { return !atomicState?.lastAutomationSchedDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastAutomationSchedDt).toInteger() }
@@ -6023,20 +5836,20 @@ def extTempPage() {
             if(!parent?.getWeatherDeviceInst()) {
                 paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as an External Sensor!!!", required: true, state: null
             } else {
-                if(!extTmpTempSensor || extTmpTempSensor instanceof String) {
+                if(!extTmpTempSensor) {
                     input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-                    if(extTmpUseWeather && !extTmpUseWeather instanceof String ){
+                    if(extTmpUseWeather){
                         getExtConditions()
                         def tmpVal = (location?.temperatureScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
                         paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc} (${tmpVal}°${atomicState?.tempUnit})", state: "complete", image: getAppImg("instruct_icon.png")
                     }
                 }
             }
-            if(!extTmpUseWeather || extTmpUseWeather instanceof String) {
-                def senReq = (!extTmpUseWeather || extTmpUseWeather instanceof String) ? true : false
+            if(!extTmpUseWeather) {
+                def senReq = (!extTmpUseWeather && !extTmpTempSensor) ? true : false
                 input "extTmpTempSensor", "capability.temperatureMeasurement", title: "Select a Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, 
                         image: getAppImg("temperature_icon.png")
-                if(extTmpTempSensor && !extTmpTempSensor instanceof String) {
+                if(extTmpTempSensor) {
                     def str = ""
                     str += extTmpTempSensor ? "Sensor Status:" : ""
                     str += extTmpTempSensor ? "\n└ Temp: (${extTmpTempSensor?.currentTemperature}°${atomicState?.tempUnit})" : ""
@@ -6048,7 +5861,7 @@ def extTempPage() {
             def req = (extTmpUseWeather || (!extTmpUseWeather && extTmpTempSensor)) ? true : false
             section("When the Threshold Temp is Reached\nTurn Off this Thermostat...") {
                 input name: "extTmpTstat", type: "capability.thermostat", title: "Which Thermostat?", multiple: false, submitOnChange: true, required: req, image: getAppImg("thermostat_icon.png")
-                if(extTmpTstat && !extTmpTstat instanceof String) {
+                if(extTmpTstat) {
                     getTstatCapabilities(extTmpTstat, extTmpPrefix())
                     def str = ""
                     str += extTmpTstat ? "Thermostat Status:" : ""
@@ -6057,8 +5870,6 @@ def extTempPage() {
                     str += extTmpTstat ? "\n${(settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(extTmpTstat)) ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
                     str += (extTmpTstat && settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(extTmpTstat)) ? "\n└ Safefy Temps: \n     └ Min: ${getSafetyTemps(extTmpTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(extTmpTstat).max}°${atomicState?.tempUnit}" : ""
                     paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
-                }
-                if(extTmpTstat || extTmpTstat instanceof String) {
                     input name: "extTmpDiffVal", type: "decimal", title: "When Thermostat temp is within this many degrees of the external temp (°${atomicState?.tempUnit})?", defaultValue: 1.0, submitOnChange: true, required: true,
                             image: getAppImg("temp_icon.png")
                 }
@@ -6095,7 +5906,7 @@ def extTempPage() {
 }
 
 def isExtTmpConfigured() {
-    def devOk = ((extTmpUseWeather || extTmpTempSensor) && extTmpTstat) ? true : false
+    def devOk = ((extTmpUseWeather || extTmpTempSensor) && extTmpTstat && extTmpDiffVal) ? true : false
     return devOk
 }
 
