@@ -680,7 +680,7 @@ private estimateLux(weatherIcon) {
                     lux = (long)(lux * (beforeSunset/oneHour))
                     runIn(5*60, "luxUpdate", [overwrite: true])
                 } else if (beforeSunset < (oneHour*2)) {
-                    log.trace "before dusk"
+                    //log.trace "before dusk"
                     def newTim =  (beforeSunset - oneHour)/1000 // seconds
                     if(newTim > 0 && newTim < 3600) {
                         runIn(newTim, "luxUpdate", [overwrite: true])
