@@ -480,7 +480,7 @@ def prefsPage() {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            input(name: "mobileClientType", title:"Mobile Client Type?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
+            input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
                                 image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
         }
         section ("Misc. Options:") {
@@ -523,7 +523,7 @@ def automationsPage() {
             descStr += comfortDewpointMax ? "\n • Max Dew Point: ($comfortDewpointMax${getTemperatureScale()})" : ""
             //descStr += "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
-            href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("settings_icon.png")
+            href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
         }
     }
 }
@@ -4286,15 +4286,17 @@ def mainAutoPage(params) {
                     remSenDescStr += remSenSwitches ? ("\n • Switches: (${remSenSwitches?.size()})\n└ Trigger Type: (${getEnumValue(switchEnumVals(), remSenSwitchOpt)})") : ""
                     remSenDescStr += remSenEvalModes ? "\n • Mode Filters: (${remSenEvalModes.size()})\n└ Status: ${isInMode(remSenEvalModes) ? "Eval Allowed" : "Eval Blocked"}" : ""
                     
-                    remSenDescStr += remSenTstat ? "\n\nThermostat:" : ""
-                    remSenDescStr += remSenTstat ? "\n• Name: (${remSenTstat.displayName})" : ""
-                    remSenDescStr += remSenTstat ? "\n• Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
-                    remSenDescStr += remSenTstat ? "\n• Mode: (${remSenTstat?.currentThermostatOperatingState.toString().capitalize()}/${remSenTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n• Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
-                    remSenDescStr += (remSenTstat) ? "\n• Presence: (${getTstatPresence(remSenTstat).toString().capitalize()})" : ""
+                    remSenDescStr += remSenTstat ? "\n\n${remSenTstat.displayName}:" : ""
+                    remSenDescStr += remSenTstat ? "\n ├ Temp: (${getDeviceTemp(remSenTstat)}°${atomicState?.tempUnit})" : ""
+                    remSenDescStr += remSenTstat ? "\n ├ Mode: (${remSenTstat?.currentThermostatOperatingState.toString().capitalize()}/${remSenTstat?.currentThermostatMode.toString().capitalize()})" : ""
+                    remSenDescStr += (remSenTstat && atomicState?.remSenTstatHasFan) ? "\n ├ Fan Mode: (${remSenTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
+                    remSenDescStr += (remSenTstat) ? "\n ├ Presence: (${getTstatPresence(remSenTstat).toString().capitalize()})" : ""
+                    remSenDescStr += remSenTstat && getSafetyTemps(remSenTstat) ? "\n └ Safefy Temps: \n     └ Min: ${getSafetyTemps(remSenTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(remSenTstat).max}°${atomicState?.tempUnit}" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
                     remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
+                    remSenDescStr += (remSenUseTimeForMode && remSensorDay && remSensorNight && settings["${autoType}NightStartTime"] && settings["${autoType}NightStopTime"]) ? 
+                            "\n• Night: (Start: ${settings["${autoType}NightStartTime"]}\n• Stop: ${settings["${autoType}NightStopTime"]})" : ""
                     //remote sensor/Day
                     def dayModeDesc = ""
                         dayModeDesc += remSensorDay ? "\n\n${!remSensorNight ? "Remote" : "Day"} Sensor:" : ""
@@ -4705,6 +4707,18 @@ def runAutomationEval() {
         default:
             LogAction("runAutomationEval: Invalid Option Received... ${autoType}", "warn", true)
             break
+    }
+}
+
+def storeAutoAction(actionDesc, actionDt) {
+    if(actionDesc && actionDt) {
+        atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt]
+    }
+}
+
+def getAutoActionData() {
+    if(atomicState?.lastAutoActionData) {
+        return atomicState?.lastAutoActionData
     }
 }
 
@@ -5508,7 +5522,7 @@ private remSenEvtEval() {
                             }
 
                             if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
-                                LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+                                LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${curCoolSetpoint}°${atomicState?.tempUnit}) ", "info", true)
                                 curCoolSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
                             }
@@ -5589,7 +5603,7 @@ private remSenEvtEval() {
                             }
 
                             if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
-                                LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
+                                LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${curHeatSetpoint}°${atomicState?.tempUnit})", "info", true)
                                 curHeatSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
                             }
@@ -5649,8 +5663,8 @@ def getFanAutoModeTemp(hvacMode, operState, reqHeatSetTemp, reqCoolSetTemp, curH
     return ["req":reqTemp, "cur":sTemp, "type":opType]
 }
 
+// CONTROLS THE THERMOSTAT FAN
 def remSenFanControl(tstat, tstatsMir, curHvacMode, ruleType, curOperState, curFanMode, operType, Double curSenTemp, Double reqSetpointTemp, Double curSetpointTemp, Double threshold, Boolean fanOn) {
-    //CONTROLS THE FAN
     if(tstat) {
         def fanRunOk = getRemSenFanRunOk(curOperState, curFanMode)
         def fanTempOk = getRemSenFanTempOk(curHvacMode, curSenTemp, reqSetpointTemp, curSetpointTemp, threshold, fanOn, operType)
@@ -5863,7 +5877,6 @@ def extTmpPrefix() { return "extTmp" }
 def extTempPage() {
     def pName = extTmpPrefix()
     dynamicPage(name: "extTempPage", title: "Thermostat/External Temps Automation", uninstall: false, nextPage: "mainAutoPage") {
-        def dupTstat = checkThermostatDupe(extTmpTstat, extTmpTstatMir)
         section("Select the External Temps to Use:") {
             if(!parent?.getWeatherDeviceInst()) {
                 paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as an External Sensor!!!", required: true, state: null
@@ -6126,6 +6139,7 @@ def extTmpTempCheck(cTimeOut = false) {
                         if(lastMode && (lastMode != curMode || timeOut || !safetyOk)) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(extTmpTstat, lastMode)) {
+                                storeAutoAction("Restored Mode ($lastMode)", getDtNow())
                                 atomicState?.extTmpRestoreMode = null
                                 atomicState?.extTmpTstatOffRequested = false
                                 atomicState?.extTmpRestoredDt = getDtNow()
@@ -6184,6 +6198,7 @@ def extTmpTempCheck(cTimeOut = false) {
                         LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
                         scheduleAutomationEval(180)
                         if(setTstatMode(extTmpTstat, "off")) {
+                            storeAutoAction("Turned Off Thermostat", getDtNow())
                             atomicState?.extTmpTstatOffRequested = true
                             scheduleTimeoutRestore()
                             LogAction("${extTmpTstat} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "info", true)
@@ -6192,7 +6207,6 @@ def extTmpTempCheck(cTimeOut = false) {
                                     LogAction("Mirroring (Off) Mode to ${extTmpTstatMir}", "info", true)
                                 }
                             }
-
                             if(allowNotif) {
                                 sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
                                 if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
@@ -6424,6 +6438,7 @@ def conWatCheck(cTimeOut = false) {
                         if(lastMode && (lastMode != curMode || timeOut || !safetyOk)) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(conWatTstat, lastMode)) {
+                                storeAutoAction("Restored Mode ($lastMode)", getDtNow())
                                 atomicState?.conWatRestoreMode = null
                                 atomicState?.conWatTstatOffRequested = false
                                 atomicState?.conWatRestoredDt = getDtNow()
@@ -6481,6 +6496,7 @@ def conWatCheck(cTimeOut = false) {
                         LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
                         scheduleAutomationEval(180)
                         if(setTstatMode(conWatTstat, "off")) {
+                            storeAutoAction("Turned Off Thermostat", getDtNow())
                             atomicState?.conWatTstatOffRequested = true
                             scheduleTimeoutRestore()
                             if (allowAlarm) { scheduleAlarmOn() }
@@ -6685,6 +6701,7 @@ def leakWatCheck() {
                         if(lastMode && (lastMode != curMode || !safetyOk)) {
                             scheduleAutomationEval(180)
                             if(setTstatMode(leakWatTstat, lastMode)) {
+                                storeAutoAction("Restored Mode ($lastMode)", getDtNow())
                                 atomicState?.leakWatTstatOffRequested = false
                                 atomicState?.leakWatRestoreMode = null
 
@@ -6736,6 +6753,7 @@ def leakWatCheck() {
                     LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
                     scheduleAutomationEval(180)
                     if(setTstatMode(leakWatTstat, "off")) {
+                        storeAutoAction("Turned Off Thermostat", getDtNow())
                         atomicState?.leakWatTstatOffRequested = true
                         if (allowAlarm) { scheduleAlarmOn() }
 
