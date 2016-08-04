@@ -444,7 +444,7 @@ def reviewSetupPage() {
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             if (optInAppAnalytics != false) {
-                input(name: "mobileClientType", title:"Mobile Client Type?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
+                input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
                                 image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
@@ -8394,12 +8394,17 @@ private def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"
 private def appAuthor() 	{ return "Anthony S." }
 private def appNamespace() 	{ return "tonesto7" }
 private def gitBranch()     { return "master" }
+private def betaMarker()    { return true }
 private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{
     def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
-    def ver = (isAppUpdateAvail()) ? "${textVersion()} (Lastest: v${cur})" : textVersion()
-    return "${textAppName()}\n• ${ver}\n• ${textModified()}"
+    def beta = betaMarker() ? " (BETA 1)" : ""
+    def str = ""
+    str += "${textAppName()}"
+    str += isAppUpdateAvail() ? "\n• ${textVersion()} (Lastest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
+    str += "\n• ${textModified()}"
+    return str
 }
 private def textAppName()   { return "${appName()}" }
 private def textVersion()   { return "Version: ${appVersion()}" }
