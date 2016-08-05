@@ -4440,7 +4440,7 @@ def mainAutoPage(params) {
             }
 
             if(autoType == "watchDog" && !disableAutomation) { 
-                section("Watch you Nest Location for Events:") {
+                section("Watch your Nest Location for Events:") {
                     def watDogDesc = ""
                     watDogDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ? 
                             "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
