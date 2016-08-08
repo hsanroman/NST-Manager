@@ -567,7 +567,7 @@ def automationStatisticsPage() {
                         str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
                         str += lastSchedDt ? "\n\n • Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
                         str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-                        str += lastExecVal ? "\n\n • Execution History:\n  ${execAvgVal ? "├" : "└"} Last: (${lastExecVal})${execAvgVal ? "\n  └ Avg: (${execAvgVal})" : ""}" : "\n\n • Execution History: (Not Available)"
+                        str += lastExecVal ? "\n\n • Execution History:\n  ${execAvgVal ? "├" : "└"} Last: (${lastExecVal} milliseconds)${execAvgVal ? "\n  └ Avg: (${execAvgVal} milliseconds)" : ""}" : "\n\n • Execution History: (Not Available)"
                         paragraph "${str}", state: "complete", image: getAutoIcon(autoType)
                     }
                 }
@@ -4821,7 +4821,7 @@ def getAutomationStats() {
         "lastActionData":getAutoActionData(),
         "lastSchedDt":atomicState?.lastAutomationSchedDt,
         "lastExecVal":atomicState?.lastExecutionTime,
-        "execAvgVal":(atomicState?.executionHistory != [] ? getAverageValue(atomicState?.executionHistory) : null)
+        "execAvgVal":(atomicState?.evalExecutionHistory != [] ? getAverageValue(atomicState?.evalExecutionHistory) : null)
     ]
 }
 
@@ -5450,7 +5450,7 @@ def remSenTstatFanSwitchCheck() {
         if(disableAutomation) { return }
         if(!remSenTstatFanSwitches) { return }
 
-        def execTime = now()
+        //def execTime = now()
         def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
         def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
         def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
@@ -5523,7 +5523,7 @@ def remSenTstatFanSwitchCheck() {
                 }
             }
         }
-        storeExecutionHistory((now()-execTime), "remSenTstatFanSwitchCheck")
+        //storeExecutionHistory((now()-execTime), "remSenTstatFanSwitchCheck")
     } catch (ex) {
         LogAction("remSenTstatFanSwitchCheck Exception: (${ex})", "error", true)
         parent?.sendExceptionData(ex, "remSenTstatFanSwitchCheck", true, getAutoType())
@@ -5689,7 +5689,7 @@ private remSenEvtEval() {
                                 curCoolSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
                             }
-                            storeExecutionHistory((now() - execTime), "remSenEvtEval")
+                            //storeExecutionHistory((now() - execTime), "remSenEvtEval")
                             return  // let all this take effect
 
                         } else {
@@ -5772,7 +5772,7 @@ private remSenEvtEval() {
                                 curHeatSetpoint = chgval
                                 if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
                             }
-                            storeExecutionHistory((now() - execTime), "remSenEvtEval")
+                            //storeExecutionHistory((now() - execTime), "remSenEvtEval")
                             return  // let all this take effect
 
                         } else {
@@ -7602,7 +7602,7 @@ def storeExecutionHistory(val, method = null) {
             log.debug "${method} Execution Time: (${val} milliseconds)"
         }
         atomicState?.lastExecutionTime = val ?: null
-        def list = atomicState?.executionHistory ?: []
+        def list = atomicState?.evalExecutionHistory ?: []
         def listSize = 10
         if(list?.size() < listSize) {
             list.push(val)
@@ -7618,7 +7618,7 @@ def storeExecutionHistory(val, method = null) {
             nList?.push(val)
             list = nList
         }
-        if(list) { atomicState?.executionHistory = list }
+        if(list) { atomicState?.evalExecutionHistory = list }
     } catch (ex) {
         LogAction("storeExecutionHistory Exception: ${ex}", "error", true)
         sendExceptionData(ex, "storeExecutionHistory")
