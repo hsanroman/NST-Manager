@@ -5944,6 +5944,7 @@ def getRemSenTempsToList() {
 def getRemSenModeOk() {
     def result = false
     if(remSenUseSunAsMode) { result = true }
+    else if (remSenUseTimeForMode) { result = true }
     else if (remSensorDay && !remSensorNight) { result = true }
     else if (remSensorDayModes && remSensorNightModes) {
         result = (remSensorNight && getUseNightSensor()) ? (isInMode(remSensorNightModes) ? true : false) : (isInMode(remSensorDayModes) ? true : false)
