@@ -546,17 +546,19 @@ def automationStatisticsPage() {
                 if(chld?.getAutomationType() != "watchDog") {
                     section("${chld?.label} Stats:") {
                         def data = chld?.getAutomationStats()
-                        def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+                        def tf = new SimpleDateFormat("M/d/yyyy - h:mm:ss a")
                             tf.setTimeZone(getTimeZone())
                         def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
-                        def lastEvtDt = data?.lastEvent ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.isoDate.toString())) : null
-                        def lastActionDt = data?.lastActionData ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
+                        def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss'Z'", data?.lastEvent?.date.toString())) : null
+                        def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
                         def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
+                        def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
                         
                         def str = ""
                         str += lastModDt ? " • Last Modified:\n  └ ${lastModDt}" : "\n • Last Modified: Not Available"
                         str += lastEvtDt ? "\n\n • Last Event:\n  ├ Device: ${data?.lastEvent?.displayName}\n  ├ Type: ${data?.lastEvent?.name}\n  ├ Value: ${data?.lastEvent?.value}\n  └ DateTime: ${lastEvtDt}" : "\n\n • Last Event: Not Available"
                         str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ ${lastEvalDt}" : "\n\n • Last Evaluation: Not Available"
+                        str += lastSchedDt ? "\n\n • Last Schedule:\n  └ ${lastSchedDt}" : "\n\n • Last Schedule: Not Available"
                         str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: Not Available"
                         paragraph "${str}", state: "complete"
                     }
@@ -4774,7 +4776,13 @@ def runAutomationEval() {
 }
 
 def getAutomationStats() {
-    return ["lastUpdatedDt":atomicState?.lastUpdatedDt, "lastEvalDt":atomicState?.lastEvalDt, "lastEvent":atomicState?.lastEventData, "lastActionData":getAutoActionData()]
+    return [
+        "lastUpdatedDt":atomicState?.lastUpdatedDt, 
+        "lastEvalDt":atomicState?.lastEvalDt, 
+        "lastEvent":atomicState?.lastEventData, 
+        "lastActionData":getAutoActionData(),
+        "lastSchedDt":atomicState?.lastAutomationSchedDt
+    ]
 }
 
 def storeAutoAction(actionDesc, actionDt) {
@@ -5142,6 +5150,7 @@ def remSenMotionEvt(evt) {
     LogAction("RemoteSensor Event | Motion Sensor: ${evt?.displayName} Motion State is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         def dorunIn = false
         def delay = remSenMotionDelayVal.toInteger()
         
@@ -5177,7 +5186,7 @@ def remSenTempSenEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5186,7 +5195,7 @@ def remSenTstatTempEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5195,7 +5204,7 @@ def remSenTstatModeEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5204,7 +5213,7 @@ def remSenTstatPresenceEvt(evt) {
     if(disableAutomation) { return }  
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }  
 
@@ -5213,7 +5222,7 @@ def remSenFanSwitchEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5222,7 +5231,7 @@ def remSenTstatFanEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5231,7 +5240,7 @@ def remSenTstatOperEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5240,7 +5249,7 @@ def remSenTstatCTempEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5249,7 +5258,7 @@ def remSenTstatHTempEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5257,7 +5266,7 @@ def remSenSunEvtHandler(evt) {
     if(disableAutomation) { return }
     if(remSenUseSunAsMode) { 
         scheduleAutomationEval()
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -5266,7 +5275,7 @@ def remSenSwitchEvt(evt) {
     def evtType = evt?.value?.toString()
     if(disableAutomation) { return }
     else if(remSenSwitches) {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         def swOpt = settings?.remSenSwitchOpt
         switch(swOpt.toInteger()) {
             case 0:
@@ -5290,7 +5299,7 @@ def remSenModeEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -6338,7 +6347,7 @@ def extTmpTstatModeEvt(evt) {
         else { atomicState?.extTmpTstatTurnedOff = true }
     }
     scheduleAutomationEval()
-    atomicState?.lastEventData = evt
+    atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
 }
 
 def extTmpTstatTempEvt(evt) {
@@ -6346,7 +6355,7 @@ def extTmpTstatTempEvt(evt) {
     if(disableAutomation) { return }
     else { 
         scheduleAutomationEval() 
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -6372,7 +6381,7 @@ def extTmpTempEvt(evt) {
             scheduleAutomationEval(timeVal?.valNum)
         } else { 
             scheduleAutomationEval() 
-            atomicState?.lastEventData = evt
+            atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         }
     }
 }
@@ -6394,12 +6403,12 @@ def extTmpDpEvt(evt) {
             atomicState.extTmpTempBadDt = getDtNow()
             timeVal = ["valNum":onVal, "valLabel":getEnumValue(longTimeSecEnum(), onVal)]
         }
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         LogAction("extTmpDpEvt() ${!evt ? "" : "'${evt?.displayName}': (${evt?.value}°${atomicState?.tempUnit}) received... | "}External Temp Check scheduled for (${timeVal?.valLabel})...", "info", true)
         if (timeVal?.valNum > 20) {
             scheduleAutomationEval(timeVal?.valNum)
         } else { 
-            scheduleAutomationEval() 
-            atomicState?.lastEventData = evt
+            scheduleAutomationEval()
         }
     }
 }
@@ -6653,7 +6662,7 @@ def conWatTstatModeEvt(evt) {
         if(!modeOff) { atomicState?.conWatTstatTurnedOff = false }
         else { atomicState?.conWatTstatTurnedOff = true }
         scheduleAutomationEval()
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -6661,7 +6670,7 @@ def conWatTstatTempEvt(evt) {
     LogAction("conWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     scheduleAutomationEval() 
-    atomicState?.lastEventData = evt
+    atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
 }
 
 def conWatContactEvt(evt) {
@@ -6688,12 +6697,10 @@ def conWatContactEvt(evt) {
         }
         if(canSched) {
             LogAction("conWatContactEvt: ${!evt ? "A monitored Contact is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Contact Check scheduled for (${timeVal?.valLabel})...", "info", true)
+            atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
             if (timeVal?.valNum > 20) {
                 scheduleAutomationEval(timeVal?.valNum)
-            } else { 
-                scheduleAutomationEval() 
-                atomicState?.lastEventData = evt
-            }
+            } else { scheduleAutomationEval()}
         } else {
             LogAction("conWatContactEvt: Skipping Event...", "info", true)
         }
@@ -6909,7 +6916,7 @@ def leakWatTstatModeEvt(evt) {
         if(!modeOff) { atomicState?.leakWatTstatTurnedOff = false }
         else { atomicState?.leakWatTstatTurnedOff = true }
         scheduleAutomationEval()
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
     }
 }
 
@@ -6917,7 +6924,7 @@ def leakWatTstatTempEvt(evt) {
     LogAction("leakWatTstatTempEvt Event | Thermostat Temperature: ${evt?.displayName} - Temperature is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     scheduleAutomationEval()
-    atomicState?.lastEventData = evt
+    atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
 }
 
 def leakWatSensorEvt(evt) {
@@ -6944,11 +6951,11 @@ def leakWatSensorEvt(evt) {
         
         if(canSched) {
             LogAction("leakWatSensorEvt: ${!evt ? "A monitored Leak Sensor is " : "'${evt?.displayName}' is "} '${evt?.value.toString().toUpperCase()}' | Leak Check scheduled for (${timeVal?.valLabel})...", "info", true)
+            atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
             if (timeVal?.valNum > 20) {
                 scheduleAutomationEval(timeVal?.valNum)
             } else { 
-                scheduleAutomationEval() 
-                atomicState?.lastEventData = evt
+                scheduleAutomationEval()
             }
         } else {
             LogAction("leakWatSensorEvt: Skipping Event...", "info", true)
@@ -7062,7 +7069,7 @@ def isNestModesConfigured() {
 def nModeModeEvt(evt) { 
     if (disableAutomation) { return }
     else if(!nModePresSensor && !nModeSwitch) {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         if(nModeDelay) {
             def delay = nModeDelayVal.toInteger()
 
@@ -7080,7 +7087,7 @@ def nModeModeEvt(evt) {
 def nModePresEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeDelay) {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         def delay = nModeDelayVal.toInteger()
 
         if (delay > 20) {
@@ -7096,7 +7103,7 @@ def nModePresEvt(evt) {
 def nModeSwitchEvt(evt) {
     if (disableAutomation) { return }
     else if(nModeSwitch && !nModePresSensor) {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         if(nModeDelay) {
             def delay = nModeDelayVal.toInteger()
             if (delay > 20) {
@@ -7377,7 +7384,7 @@ def isTstatModesConfigured() {
 def tModeModeEvt(evt) { 
     if (disableAutomation) { return }
     else {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         if(tModeDelay) {
             def delay = tModeDelayVal.toInteger()
 
@@ -7395,7 +7402,7 @@ def tModeModeEvt(evt) {
 def tModePresEvt(evt) { 
     if (disableAutomation) { return }
     else {
-        atomicState?.lastEventData = evt
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date]
         if(tModeDelay) {
             def delay = tModeDelayVal.toInteger()
 
