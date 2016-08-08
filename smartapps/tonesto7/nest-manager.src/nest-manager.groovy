@@ -932,7 +932,7 @@ def pollWatcher(evt) {
 
 def poll(force = false, type = null) {
     if(isPollAllowed()) {
-        unschedule("postCmd")
+        //unschedule("postCmd")
         def dev = false
         def str = false
         if (force == true) { forcedPoll(type) }
@@ -950,7 +950,7 @@ def poll(force = false, type = null) {
             }
         }
         if (atomicState?.pollBlocked) { schedNextWorkQ(null); return }
-        if (dev || str || atomicState?.needChildUpd ) { schedUpdateChild() }
+        if (dev || str || atomicState?.needChildUpd ) { updateChildData() }
 
         updateWebStuff(force)
         notificationCheck() //Checks if a notification needs to be sent for a specific event
@@ -1072,8 +1072,8 @@ def updateChildData(force = false) {
     def nforce = atomicState?.needChildUpd
     atomicState.needChildUpd = true
     //log.warn "force: $force   nforce: $nforce"
-    unschedule("schedUpdateChild")
-    runIn(40, "postCmd", [overwrite: true])
+    //unschedule("schedUpdateChild")
+    //runIn(40, "postCmd", [overwrite: true])
     try {
         atomicState?.lastChildUpdDt = getDtNow()
         def useMt = !useMilitaryTime ? false : true
@@ -1197,6 +1197,7 @@ def updateChildData(force = false) {
                 return null
             }
         }
+        atomicState.needChildUpd = false
     }
     catch (ex) {
         LogAction("updateChildData Exception: ${ex}", "error", true)
@@ -1204,7 +1205,7 @@ def updateChildData(force = false) {
         atomicState?.lastChildUpdDt = null
         return
     }
-    unschedule("postCmd")
+    //unschedule("postCmd")
     atomicState.needChildUpd = false
 }
 
@@ -8069,8 +8070,8 @@ def alarm0FollowUp() {
 
 def alarm1FollowUp() {
     def aDev = settings["${getAutoType()}AlarmDevices"]
-        aDev?.off()
-        LogAction("alarm1FollowUp: Turning OFF ${aDev}", "info", true)
+    if (aDev) { aDev?.off() }
+    LogAction("alarm1FollowUp: Turning OFF ${aDev}", "info", true)
     def timeVal = getAlert2DelayVal().toInteger()
     if (timeVal > 0) {
         schedule(timeVal, "alarm2FollowUp", [overwrite: true] )
@@ -8144,8 +8145,8 @@ def alarmAlertEvt(evt) {
 def getAlert1DelayVal() { return !settings["${getAutoType()}_Alert_1_Delay"] ? 300 : (settings["${getAutoType()}_Alert_1_Delay"].toInteger()) }
 def getAlert2DelayVal() { return !settings["${getAutoType()}_Alert_2_Delay"] ? 300 : (settings["${getAutoType()}_Alert_2_Delay"].toInteger()) }
 
-def getAlert1AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_1_Alarm_Runtime"] ? 60 : (settings["${getAutoType()}_Alert_1_Alarm_Runtime"].toInteger()) }
-def getAlert2AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_2_Alarm_Runtime"] ? 60 : (settings["${getAutoType()}_Alert_2_Alarm_Runtime"].toInteger()) }
+def getAlert1AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_1_Alarm_Runtime"] ? 15 : (settings["${getAutoType()}_Alert_1_Alarm_Runtime"].toInteger()) }
+def getAlert2AlarmEvtOffVal() { return !settings["${getAutoType()}_Alert_2_Alarm_Runtime"] ? 15 : (settings["${getAutoType()}_Alert_2_Alarm_Runtime"].toInteger()) }
 
 def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt1StartDt).toInteger() }
 def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
