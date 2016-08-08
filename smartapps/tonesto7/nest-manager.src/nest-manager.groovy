@@ -546,7 +546,6 @@ def automationStatisticsPage() {
                 if(chld?.getAutomationType() != "watchDog") {
                     section("${chld?.label} Stats:") {
                         def data = chld?.getAutomationStats()
-                        log.debug "data: $data"
                         def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
                             tf.setTimeZone(getTimeZone())
                         def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
