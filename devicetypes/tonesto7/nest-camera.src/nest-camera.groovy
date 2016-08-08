@@ -959,27 +959,6 @@ def getCamHtml() {
 
 def getInfoHtml() {
     try {
-        def camUUID = getCamUUID(getPublicVideoId())
-        def apiServer = getCamApiServer(camUUID)
-        def liveStreamURL = getLiveStreamHost(camUUID)
-        def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        //log.debug "CamImgUrl: $camImgUrl"
-        def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
-
-        def pubVidUrl = state?.public_share_url
-        def pubVidId = getPublicVideoId()
-        def animationUrl = state?.animation_url
-        //log.debug "Animation URL: $animationUrl"
-
-        def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
-
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        //def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-        //def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button">Take Picture</a>"""
-        //def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
-        def vidBtn = !liveStreamURL ? "" : """<label class="button yellow"><input type="radio" id="liveStream" name="options" onclick="toggle_visibility('liveStream');" value="liveStream"checked="checked"><span>Live Video</span></label>"""
-        def imgBtn = !pubSnapUrl ? "" : """<label class="button"><input type="radio" name="options" onclick="toggle_visibility('still');"><span>Take Picture</span></label>"""
-        def lastEvtBtn = !animationUrl ? "" : """<label class="button red"><input type="radio" name="options" onclick="toggle_visibility('animation');"><span>Last Event</span></label>"""
         def html = """
         <!DOCTYPE html>
         <html>
