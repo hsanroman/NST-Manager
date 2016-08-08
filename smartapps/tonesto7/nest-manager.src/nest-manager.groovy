@@ -539,19 +539,27 @@ def automationsPage() {
 }
 
 def automationStatisticsPage() {
-    dynamicPage(name: "automationStatisticsPage", title: "View Automation Statistics", uninstall: false) {
+    dynamicPage(name: "automationStatisticsPage", title: "View Automation Statistics", refreshInterval: 20, uninstall: false) {
         def cApps = getChildApps()
-        section("Automation Stats:") {
-            if(cApps) {
-                cApps?.each { chld ->
-                    if(chld?.getAutomationType() != "watchDog") {
-                        def data = getAutomationStats()
+        if(cApps) {
+            cApps?.each { chld ->
+                if(chld?.getAutomationType() != "watchDog") {
+                    section("${chld?.label} Stats:") {
+                        def data = chld?.getAutomationStats()
+                        log.debug "data: $data"
+                        def tf = new SimpleDateFormat("MMM d, yyyy - h:mm:ss a")
+                            tf.setTimeZone(getTimeZone())
+                        def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
+                        def lastEvtDt = data?.lastEvent ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.isoDate.toString())) : null
+                        def lastActionDt = data?.lastActionData ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
+                        def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
+                        
                         def str = ""
-                        str += "${chld?.label}"
-                        str += data?.lastUpdatedDt ? "\n • Last Updated: ${data?.lastUpdatedDt}" : "\n • Last Updated: Not Available"
-                        str += data?.lastEvalDt ? "\n • Last Evaluation: ${data?.lastEvalDt}" : "\n • Not Available"
-                        str += data?.lastActionData ? "\n • Last Action:\n  ├ DateTime: (${data?.lastActionData?.dt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n • Last Action: Not Available"
-                        paragraph "${str}"
+                        str += lastModDt ? " • Last Modified:\n  └ ${lastModDt}" : "\n • Last Modified: Not Available"
+                        str += lastEvtDt ? "\n\n • Last Event:\n  ├ Device: ${data?.lastEvent?.displayName}\n  ├ Type: ${data?.lastEvent?.name}\n  ├ Value: ${data?.lastEvent?.value}\n  └ DateTime: ${lastEvtDt}" : "\n\n • Last Event: Not Available"
+                        str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ ${lastEvalDt}" : "\n\n • Last Evaluation: Not Available"
+                        str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: Not Available"
+                        paragraph "${str}", state: "complete"
                     }
                 }
             }
@@ -4402,7 +4410,7 @@ def mainAutoPage(params) {
                     conDesc += conWatTstat ? "${conWatTstat?.label}" : "" 
                     conDesc += conWatTstat ? "\n ├ Temp: (${getDeviceTemp(conWatTstat)}°${atomicState?.tempUnit})" : ""
                     conDesc += conWatTstat ? "\n ├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                    conDesc += conWatTstat ? "\n ├ Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                    conDesc += conWatTstat ? "\n ├ Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
                     conDesc += conWatTstat && getSafetyTemps(conWatTstat) ? "\n └ Safefy Temps: \n     └ Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                     conDesc += (conWatContacts && conWatTstat && conWatContactDesc()) ? "\n\n${conWatContactDesc()}" : ""
                     conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
@@ -6422,7 +6430,7 @@ def contactWatchPage() {
                 str += conWatTstat ? "\nThermostat Status:" : ""
                 str += conWatTstat ? "\n├ Temp: (${conWatTstat?.currentTemperature}°${atomicState?.tempUnit})" : ""
                 str += conWatTstat ? "\n├ Mode: (${conWatTstat?.currentThermostatOperatingState.toString().capitalize()}/${conWatTstat?.currentThermostatMode.toString().capitalize()})" : ""
-                str += conWatTstat ? "\n${(settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "├" : "└"} Presence: (${getTstatPresence(extTmpTstat) == "present" ? "Home" : "Away"})" : ""
+                str += conWatTstat ? "\n${(settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "├" : "└"} Presence: (${getTstatPresence(conWatTstat) == "present" ? "Home" : "Away"})" : ""
                 str += (conWatTstat && settings?."${getAutoType()}UseSafetyTemps" && getSafetyTemps(conWatTstat)) ? "\n└ Safefy Temps: \n     └ Min: ${getSafetyTemps(conWatTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(conWatTstat).max}°${atomicState?.tempUnit}" : ""
                 paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
             }
@@ -8519,7 +8527,7 @@ private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{
     def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
-    def beta = betaMarker() ? " (BETA 1)" : ""
+    def beta = betaMarker() ? " (BETA 2)" : ""
     def str = ""
     str += "${textAppName()}"
     str += isAppUpdateAvail() ? "\n• ${textVersion()} (Lastest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
