@@ -4348,7 +4348,7 @@ def mainAutoPage(params) {
     if (!atomicState?.tempUnit) { atomicState?.tempUnit = getTemperatureScale()?.toString() }
     if (!atomicState?.disableAutomation) { atomicState.disableAutomation = false }
     def autoType = null
-    //If params.autotype is not null then save to atomicState.  
+    //If params.autoType is not null then save to atomicState.  
     if (!params?.autoType) { autoType = atomicState?.automationType } 
     else { atomicState.automationType = params?.autoType; autoType = params?.autoType }
 
@@ -4388,10 +4388,14 @@ def mainAutoPage(params) {
                     remSenDescStr += (remSenTstat) ? "\n ├ Presence: (${getTstatPresence(remSenTstat).toString().capitalize()})" : ""
                     remSenDescStr += remSenTstat && getSafetyTemps(remSenTstat) ? "\n └ Safefy Temps: \n     └ Min: ${getSafetyTemps(remSenTstat).min}°${atomicState?.tempUnit}/Max: ${getSafetyTemps(remSenTstat).max}°${atomicState?.tempUnit}" : ""
                     remSenDescStr += (remSensorDay && remSensorNight) ? "\n\nSensor Mode:" : ""
-                    remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Mode: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
+                    remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Sensors: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
                     remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
-                    remSenDescStr += (remSenUseTimeForMode && remSensorDay && remSensorNight && settings["${autoType}NightStartTime"] && settings["${autoType}NightStopTime"]) ? 
-                            "\n• Night: (Start: ${settings["${autoType}NightStartTime"]}\n• Stop: ${settings["${autoType}NightStopTime"]})" : ""
+                    def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
+                            tf.setTimeZone(getTimeZone())
+                    def remSenNightStartDt = settings["${autoType}NightStartTime"] ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSz", settings["${autoType}NightStartTime"].toString())) : null
+                    def remSenNightStopDt = settings["${autoType}NightStopTime"] ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSz", settings["${autoType}NightStopTime"].toString())) : null
+                    remSenDescStr += (remSenUseTimeForMode && remSensorDay && remSensorNight && remSenNightStartDt && remSenNightStopDt) ? 
+                            "\n• Night Schedule:\n ├ Start: (${remSenNightStartDt})\n └ Stop: (${remSenNightStopDt})" : ""
                     //remote sensor/Day
                     def dayModeDesc = ""
                         dayModeDesc += remSensorDay ? "\n\n${!remSensorNight ? "Remote" : "Day"} Sensor:" : ""
@@ -5440,6 +5444,7 @@ def remSenTstatFanSwitchCheck() {
         if(disableAutomation) { return }
         if(!remSenTstatFanSwitches) { return }
 
+        def perf = now()
         def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
         def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
         def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
@@ -5505,6 +5510,8 @@ def remSenTstatFanSwitchCheck() {
                 }
             }
         }
+        perf = now() - perf
+        log.debug "remSenTstatFanSwitchCheck Execution Time: (${perf} milliseconds)"
     } catch (ex) {
         LogAction("remSenTstatFanSwitchCheck Exception: (${ex})", "error", true)
         parent?.sendExceptionData(ex, "remSenTstatFanSwitchCheck", true, getAutoType())
@@ -5536,7 +5543,8 @@ private remSenEvtEval() {
 //
 // This automation could create a virtual Nest thermostat in ST, so users could control temp (with averaging) via this thermostat
 //    This would make it easier to adjust set points and to display status to the user
-//
+//      
+        def perf = now()
         atomicState?.lastEvalDt = getDtNow()
         def home = false
         def away = false
@@ -5786,6 +5794,8 @@ private remSenEvtEval() {
 //
             LogAction("Remote Sensor: Skipping Evaluation... Thermostat is set to away...", "info", true)
         }
+        perf = now() - perf
+        log.debug "remSenEvtEval Execution Time: (${perf} milliseconds)"
     } catch (ex) {
         LogAction("remSenEvtEval Exception: ${ex}", "error", true)
         parent?.sendExceptionData(ex, "remSenEvtEval", true, getAutoType())
@@ -6182,6 +6192,7 @@ def getExtTmpDewPoint() {
 def extTmpTempOk() { 
     //log.trace "extTmpTempOk..."
     try {
+        def perf = now
         def desiredHeatTemp = getGlobalDesiredHeatTemp()
         def desiredCoolTemp = getGlobalDesiredCoolTemp()
         def intTemp = extTmpTstat ? extTmpTstat?.currentTemperature.toDouble() : null
@@ -6233,6 +6244,8 @@ def extTmpTempOk() {
             LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
         }
         LogAction("extTmpTempOk: Inside Temp: (${intTemp}°${atomicState?.tempUnit}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${atomicState?.tempUnit}) or Dewpoint: (${curDp}°${atomicState?.tempUnit}) is ${dpOk ? "ok" : "too high"}", "info", true)
+        perf = now() - perf
+        log.debug "extTmpTempOk Execution Time: (${perf} milliseconds)"
         return retval
     } catch (ex) { 
         LogAction("getExtTmpTempOk Exception: ${ex}", "error", true)
@@ -6253,6 +6266,7 @@ def extTmpTempCheck(cTimeOut = false) {
     try {
         if(disableAutomation) { return }
         else {
+            def perf = now()
             atomicState?.lastEvalDt = getDtNow()
             if(!atomicState?.timeOutOn) { atomicState.timeOutOn = false }
             if(cTimeOut) { atomicState.timeOutOn = true }
@@ -6362,6 +6376,8 @@ def extTmpTempCheck(cTimeOut = false) {
                 if (!safetyOk) { LogAction("extTmpTempCheck: Skipping because of Safety Temps Exceeded...", "info", true) }
             }
         }
+        perf = now() - perf
+        log.debug "extTmpTempCheck Execution Time: (${perf} milliseconds)"
     } catch (ex) {
         LogAction("extTmpTempCheck Exception: (${ex})", "error", true)
         parent?.sendExceptionData(ex, "extTmpTempCheck", true, getAutoType())
@@ -6559,6 +6575,7 @@ def conWatCheck(cTimeOut = false) {
     try {
         if (disableAutomation) { return }
         else {
+            def perf = now()
             atomicState?.lastEvalDt = getDtNow()
             if(!atomicState?.timeOutOn) { atomicState.timeOutOn = false }
             if(cTimeOut) { atomicState.timeOutOn = true }
@@ -6678,6 +6695,8 @@ def conWatCheck(cTimeOut = false) {
                 if (!safetyOk) { LogAction("conWatCheck: Skipping because of Safety Temps Exceeded...", "warn", true) }
             }
         }
+        perf = now() - perf
+        log.debug "conWatCheck Execution Time: (${perf} milliseconds)"
     } catch (ex) {
         LogAction("conWatCheck Exception: (${ex})", "error", true)
         parent?.sendExceptionData(ex, "conWatCheck", true, getAutoType())
@@ -6834,6 +6853,7 @@ def leakWatCheck() {
     try {
         if (disableAutomation) { return }
         else {
+            def perf = now()
             atomicState?.lastEvalDt = getDtNow()
             def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
             def curNestPres = getTstatPresence(leakWatTstat)  
@@ -6932,6 +6952,8 @@ def leakWatCheck() {
                 if (!safetyOk) { LogAction("leakWatCheck: Skipping because of Safety Temps Exceeded...", "warn", true) }
             }
         }
+        perf = now() - perf
+        log.debug "leakWatCheck Execution Time: (${perf} milliseconds)"
     } catch (ex) {
         LogAction("leakWatCheck Exception: (${ex})", "error", true)
         parent?.sendExceptionData(ex, "leakWatCheck", true, getAutoType())
