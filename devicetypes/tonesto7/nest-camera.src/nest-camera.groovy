@@ -489,9 +489,9 @@ def zoneSoundEvent(data) {
 }
 
 def activityZoneEvent(zones) {
-    log.trace "activityZoneEvent($zones)..."
+    //log.trace "activityZoneEvent($zones)..."
     try {
-
+        
     } catch (ex) {
         log.error "activityZoneEvent Exception: ${ex}"
         //parent?.sendChildExceptionData("camera", ex.message, "activityZoneEvent")

@@ -567,7 +567,7 @@ def automationStatisticsPage() {
                         str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
                         str += lastSchedDt ? "\n\n • Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
                         str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-                        str += lastExecVal ? "\n\n • Execution History:\n  ${execAvgVal ? "├" : "└"} Last: (${lastExecVal} milliseconds)${execAvgVal ? "\n  └ Avg: (${execAvgVal} milliseconds)" : ""}" : "\n\n • Execution History: (Not Available)"
+                        str += lastExecVal ? "\n\n • Execution History:\n  ${execAvgVal ? "├" : "└"} Last: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg: (${execAvgVal} ms)" : ""}" : "\n\n • Execution History: (Not Available)"
                         paragraph "${str}", state: "complete", image: getAutoIcon(autoType)
                     }
                 }
@@ -5061,7 +5061,6 @@ def remSensorPage() {
                             input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
                         }
                         if(remSenUseSunAsMode || (remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"]) || (remSensorDayModes && remSensorNightModes)) {
-                            log.debug "use night sensor: ${getUseNightSensor()}"
                             def str = ""
                             str += "Current Active Sensor:"
                             str += "\n └ ${getUseNightSensor() ? "Night" : "Day"} Sensor"
@@ -5468,20 +5467,20 @@ def remSenTstatFanSwitchCheck() {
         LogAction("remSenTstatFanSwitchCheck: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)   
         LogAction("remSenTstatFanSwitchCheck: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "info", false)  
             
-        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() == 1 || remSenTstatFanSwitchTriggerType.toInteger() == 2)) {
+        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() in [1, 2])) {
             if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter != hvacMode)) {
                 LogAction("remSenTstatFanSwitchCheck: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
                 hvacFanOn = false  // force off of fans
             }
         }
 
-        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() == 1 || remSenTstatFanSwitchTriggerType.toInteger() == 2)) {
+        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() in [1, 2])) {
             if(hvacFanOn) {
-                if(atomicState?.remSenTstatFanSwitchSpeedEnabled && remSenTstatFanSwitchHighSpeed && remSenTstatFanSwitchMedSpeed && remSenTstatFanSwitchLowSpeed) {
+                if(remSenTstatFanSwitches) {
                     remSenTstatFanSwitches.each { sw ->
                         def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
                         if(!swOn) {
-                            if(checkFanSpeedSupport(sw)) {
+                            if(checkFanSpeedSupport(sw) && atomicState?.remSenTstatFanSwitchSpeedEnabled && remSenTstatFanSwitchHighSpeed && remSenTstatFanSwitchMedSpeed && remSenTstatFanSwitchLowSpeed) {
                                 if(tempDiff < remSenTstatFanSwitchLowSpeed.toDouble()) {
                                     sw.off()
                                     LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch (OFF)", "info", true)
@@ -5552,10 +5551,10 @@ private remSenEvtEval() {
     //LogAction("remSenEvtEval.....", "trace", false)
     if(disableAutomation) { return }
     try { 
-//
-// This automation could create a virtual Nest thermostat in ST, so users could control temp (with averaging) via this thermostat
-//    This would make it easier to adjust set points and to display status to the user
-//      
+        //
+        // This automation could create a virtual Nest thermostat in ST, so users could control temp (with averaging) via this thermostat
+        //    This would make it easier to adjust set points and to display status to the user
+        //      
         def execTime = now()
         atomicState?.lastEvalDt = getDtNow()
         def home = false
@@ -5581,7 +5580,7 @@ private remSenEvtEval() {
             def reqSenCoolSetPoint = getRemSenCoolSetTemp()
 
             if (hvacMode in ["auto"]) {
-// check that requested setpoints make sense & notify 
+                // check that requested setpoints make sense & notify 
                 def coolheatDiff = Math.abs(reqSenCoolSetPoint - reqSenHeatSetPoint)
                 if( !((reqSenCoolSetPoint >= reqSenHeatSetPoint) && (coolheatDiff > 2)) ) {
                     LogAction("remSenEvtEval: Bad requested setpoints with auto mode ${reqSenCoolSetPoint} ${reqSenHeatSetPoint}...", "warn", true)
@@ -5804,13 +5803,13 @@ private remSenEvtEval() {
             }
         }
         else {
-//
-// if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan will be off (or set back) with away mode.
-// if thermostats were not all Nest, then non Nest units could still be on for AC/HEAT or FAN...
-// current presumption in this implementation is:
-//      they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.   (They could be mirrored from primary)
-//      all thermostats in an automation are in the same Nest structure, so that all react to home/away changes
-//
+            //
+            // if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan will be off (or set back) with away mode.
+            // if thermostats were not all Nest, then non Nest units could still be on for AC/HEAT or FAN...
+            // current presumption in this implementation is:
+            //      they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.   (They could be mirrored from primary)
+            //      all thermostats in an automation are in the same Nest structure, so that all react to home/away changes
+            //
             LogAction("Remote Sensor: Skipping Evaluation... Thermostat is set to away...", "info", true)
         }
         storeExecutionHistory((now() - execTime), "remSenEvtEval")
@@ -5975,7 +5974,7 @@ def getRemoteSenTemp() {
         return getDeviceTempAvg(remSensorNight).toDouble() 
     }
     else {
-        log.warn "getRemoteSenTemp: no temperature found"
+        log.warn "getRemoteSenTemp: No Temperature Found!!!"
         return 0.0
     }
 }
