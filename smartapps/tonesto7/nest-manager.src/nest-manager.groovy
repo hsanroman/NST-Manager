@@ -507,7 +507,6 @@ def prefsPage() {
 
 def automationsPage() {
     return dynamicPage(name: "automationsPage", title: "", nextPage: !parent ? "startPage" : "automationsPage", install: false) {
-        startStreamTest()
         def autoApp = findChildAppByName( appName() )
         if(autoApp) {
             section("Installed Automations...") { }
@@ -537,36 +536,6 @@ def automationsPage() {
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
         }
     }
-}
-
-def receiveEventData() {
-    log.debug "receiveEventData: ${}"
-}
-
-def startStreamTest() {
-    def ip = "10.0.0.134"
-    def port = 3000
-    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}/receiveEventData")
-
-    try {
-        def hubAction = new physicalgraph.device.HubAction(
-            method: "POST",
-            headers: [
-                "HOST": "${ip}:${port}",
-                "token": "${atomicState?.authToken}",
-                "callback": "${apiUrl}",
-                "accessToken": "${atomicState?.accessToken}"
-            ],
-            path: "/stream",
-            body: ""
-        )
-        log.debug hubAction
-        sendHubCommand(hubAction)
-    }
-    catch (Exception e) {
-        log.debug "Exception $e on $hubAction"
-    }
-
 }
 
 def automationStatisticsPage() {
