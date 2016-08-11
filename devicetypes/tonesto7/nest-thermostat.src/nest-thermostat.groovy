@@ -2068,100 +2068,175 @@ String getDataString(Integer seriesIndex) {
     return dataString
 }
 
-def getSomeOldData(devpoll = false) {
-    def temperatureTable = state?.temperatureTable
+def tgetSomeOldData(val) {
+    log.trace "tgetSomeOldData ${val}"
+    def type = val?.type?.value
+    def attributestr  = val?.attributestr?.value
+    def gfloat = val?.gfloat?.value
+    def devpoll = val?.devpoll?.value
+    log.trace "calling getSomeOldData ( ${type}, ${attributestr}, ${gfloat}, ${devpoll})"
+    getSomeOldData(type, attributestr, gfloat, devpoll)
+}
 
-    if (devpoll) {
-        runIn( 66, "getSomeOldData", [overwrite: true])
-        return
-    }
+def getSomeOldData(type, attributestr, gfloat, devpoll = false, nostate = true) {
+    log.trace "getSomeOldData ( ${type}, ${attributestr}, ${gfloat}, ${devpoll})"
+
+//    if (devpoll && (!state?."${type}TableYesterday" || !state?."${type}Table")) {
+//        runIn( 66, "tgetSomeOldData", [data: [type:type, attributestr:attributestr, gfloat:gfloat, devpoll:false]])
+//        return
+//    }
 
     def startOfToday = timeToday("00:00", location.timeZone)
     def newValues
     def dataTable = []
 
-    if (state.temperatureTableYesterday == null) {
-        log.trace "Querying DB for yesterday's data…"
-        def temperatureData = device.statesBetween("temperature", startOfToday - 1, startOfToday, [max: 100])
-        log.debug "got ${temperatureData.size()}"
-        while ((newValues = device.statesBetween("temperature", startOfToday - 1, temperatureData.last().date, [max: 100])).size()) {
-            log.debug "got ${newValues.size()}"
-            temperatureData += newValues
+    if (( nostate || state?."${type}TableYesterday" == null) && attributestr ) {
+        log.trace "Querying DB for yesterday's ${type} data…"
+        def yesterdayData = device.statesBetween("${attributestr}", startOfToday - 1, startOfToday, [max: 100])
+        //log.debug "got ${yesterdayData.size()}"
+        if (yesterdayData.size() > 0) {
+            while ((newValues = device.statesBetween("${attributestr}", startOfToday - 1, yesterdayData.last().date, [max: 100])).size()) {
+                //log.debug "got ${newValues.size()}"
+                yesterdayData += newValues
+            }
         }
-
+        log.debug "got ${yesterdayData.size()}"
         dataTable = []
-        temperatureData.reverse().each() {
-            dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        yesterdayData.reverse().each() {
+            if (gfloat) { dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue]) }
+            else { dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.stringValue]) }
         }
-        runIn( 80, "getSomeOldData", [overwrite: true])
-        state.temperatureTableYesterday = dataTable
-        log.debug "finished"
-        return
+        log.debug "finished ${dataTable}"
+        if (!nostate) {
+            state."${type}TableYesterday" = dataTable
+        }
     }
 
-    if (temperatureTable == null) {
-        log.trace "Querying DB for today's data…"
-        def temperatureData = device.statesSince("temperature", startOfToday, [max: 100])
-        log.debug "got ${temperatureData.size()}"
-        while ((newValues = device.statesBetween("temperature", startOfToday, temperatureData.last().date, [max: 100])).size()) {
-            temperatureData += newValues
-            log.debug "got ${newValues.size()}"
+    if ( nostate || state?."${type}Table" == null) {
+        log.trace "Querying DB for today's ${type} data…"
+        def todayData = device.statesSince("${attributestr}", startOfToday, [max: 100])
+        //log.debug "got ${todayData.size()}"
+        if (todayData.size() > 0) {
+            while ((newValues = device.statesBetween("${attributestr}", startOfToday, todayData.last().date, [max: 100])).size()) {
+                //log.debug "got ${newValues.size()}"
+                todayData += newValues
+            }
         }
-        temperatureTable = []
-        temperatureData.reverse().each() {
-            temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+        log.debug "got ${todayData.size()}"
+        dataTable = []
+        todayData.reverse().each() {
+            if (gfloat) { dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue]) }
+            else { dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.stringValue]) }
         }
-        runIn( 30, "getSomeOldData", [overwrite: true])
-        state.temperatureTable = temperatureTable
-        log.debug "finished"
-        return
+        log.debug "finished ${dataTable}"
+        if (!nostate) {
+            state."${type}Table" = dataTable
+        }
     }
 }
 
 def getSomeData(devpoll = false) {
     //log.trace "getSomeData ${app}"
+
 // hackery to test getting old data
-    def coolSetpointTable
     def temperatureTable
-    def heatSetpointTable
     def operatingStateTable
     def humidityTable
+    def coolSetpointTable
+    def heatSetpointTable
 
     def tryNum = 1
     if (state.eric != tryNum ) {
-        coolSetpointTable = null
-        temperatureTable = null
-        state.coolSetpointTableYesterday = null
+        if (devpoll) {
+            runIn( 33, "getSomeData", [overwrite: true])
+            return
+        }
+
+        runIn( 33, "getSomeData", [overwrite: true])
+        state.eric = tryNum
+
         state.temperatureTableYesterday = null
-        state.heatSetpointTableYesterday = null
         state.operatingStateTableYesterday = null
         state.humidityTableYesterday = null
+        state.coolSetpointTableYesterday = null
+        state.heatSetpointTableYesterday = null
 
-        state.coolSetpointTable = null
         state.temperatureTable = null
-        state.heatSetpointTable = null
         state.operatingStateTable = null
         state.humidityTable = null
+        state.coolSetpointTable = null
+        state.heatSetpointTable = null
 
-        state.remove("coolSetpointTableYesterday")
         state.remove("temperatureTableYesterday")
-        state.remove("coolSetpointTable")
-        state.remove("temperatureTable")
-        state.remove("humidityTable")
-        state.remove("today")
+        state.remove("operatingStateTableYesterday")
+        state.remove("humidityTableYesterday")
+        state.remove("coolSetpointTableYesterday")
+        state.remove("heatSetpointTableYesterday")
 
-        state.eric = tryNum
-        runIn( 33, "getSomeData", [overwrite: true])
+        state.remove("today")
+        state.remove("temperatureTable")
+        state.remove("operatingStateTable")
+        state.remove("humidityTable")
+        state.remove("coolSetpointTable")
+        state.remove("heatSetpointTable")
+
         return
+    } else {
+        //getSomeOldData("temperature", "temperature", true, devpoll)
+        //getSomeOldData("operatingState", "thermostatOperatingState", false, devpoll)
+        //getSomeOldData("humidity", "humidity", false, devpoll)
+        //if (state?.can_cool) { getSomeOldData("coolSetpoint", "coolingSetpoint", true, devpoll) }
+        //if (state?.can_heat) { getSomeOldData("heatSetpoint", "heatingSetpoint", true, devpoll) }
     }
 
     def todayDay = new Date().format("dd",location.timeZone)
 
-    coolSetpointTable = state?.coolSetpointTable
     temperatureTable = state?.temperatureTable
-    heatSetpointTable = state?.heatSetpointTable
     operatingStateTable = state?.operatingStateTable
     humidityTable = state?.humidityTable
+    coolSetpointTable = state?.coolSetpointTable
+    heatSetpointTable = state?.heatSetpointTable
+
+    if (!state?.today || state.today != todayDay) {
+
+// debugging
+        if (!state?.today) {
+            temperatureTable = []
+            operatingStateTable =  []
+            humidityTable =  []
+            coolSetpointTable = []
+            heatSetpointTable = []
+        }
+
+        state.today = todayDay
+        state.temperatureTableYesterday = temperatureTable
+        state.operatingStateTableYesterday = operatingStateTable
+        state.humidityTableYesterday = humidityTable
+        state.coolSetpointTableYesterday = coolSetpointTable
+        state.heatSetpointTableYesterday = heatSetpointTable
+
+        temperatureTable = temperatureTable ? [] : null
+        operatingStateTable = operatingStateTable ? [] : null
+        humidityTable = humidityTable ? [] : null
+        coolSetpointTable = coolSetpointTable ? [] : null
+        heatSetpointTable = heatSetpointTable ? [] : null
+
+// these are commented out as the platform continuously times out
+        //getSomeOldData("temperature", "temperature", true, devpoll)
+        //getSomeOldData("operatingState", "thermostatOperatingState", false, devpoll)
+        //getSomeOldData("humidity", "humidity", false, devpoll)
+        //if (state?.can_cool) { getSomeOldData("coolSetpoint", "coolingSetpoint", true, devpoll) }
+        //if (state?.can_heat) { getSomeOldData("heatSetpoint", "heatingSetpoint", true, devpoll) }
+
+        //temperatureTable = state?.temperatureTable
+        //operatingStateTable = state?.operatingStateTable
+        //coolSetpointTable = state?.coolSetpointTable
+        //heatSetpointTable = state?.heatSetpointTable
+        //humidityTable = state?.humidityTable
+    }
+
+    // need for upgrade of beta folks
+    if (humidityTable == null) { humidityTable = [] }
 
     def currentTemperature = getTemp()
     def currentcoolSetPoint = getCoolTemp()
@@ -2169,56 +2244,13 @@ def getSomeData(devpoll = false) {
     def currentoperatingState = getHvacState()
     def currenthumidity = getHumidity()
 
-    if (!state.today || state.today != todayDay) {
-
-        //debugging
-        if (coolSetpointTable == null) {
-            coolSetpointTable = []
-            temperatureTable = []
-            heatSetpointTable = []
-            operatingStateTable =  []
-            humidityTable =  []
-        }
-        state.today = todayDay
-        state.coolSetpointTableYesterday = coolSetpointTable
-        state.temperatureTableYesterday = temperatureTable
-        state.heatSetpointTableYesterday = heatSetpointTable
-        state.operatingStateTableYesterday = operatingStateTable
-        state.humidityTableYesterday = humidityTable
-
-// these are commented out as the platform continuously times out
-        //coolSetpointTable = coolSetpointTable ? [] : null
-        //temperatureTable = temperatureTable ? [] : null
-        //heatSetpointTable = heatSetpointTable ? [] : null
-        //operatingStateTable = operatingStateTable ? [] : null
-        //humidityTable = humidityTable ? [] : null
-
-// these are in due to platform timeouts
-        coolSetpointTable = []
-        temperatureTable = []
-        heatSetpointTable = []
-        operatingStateTable =  []
-        humidityTable =  []
-
-// these are commented out as the platform continuously times out
-        //getSomeOldData(devpoll)
-        //coolSetpointTable = state?.coolSetpointTable
-        //temperatureTable = state?.temperatureTable
-        //heatSetpointTable = state?.heatSetpointTable
-        //operatingStateTable = state?.operatingStateTable
-        //humidityTable = state?.humidityTable
-    }
-
-    // need for upgrade of beta folks
-    if (humidityTable == null) { humidityTable = [] }
-
     // add latest coolSetpoint & temperature readings for the graph
     def newDate = new Date()
-    coolSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
     temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
-    heatSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
     operatingStateTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentoperatingState])
     humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currenthumidity])
+    coolSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
+    heatSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
 
     state.coolSetpointTable = coolSetpointTable
     state.temperatureTable = temperatureTable
