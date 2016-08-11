@@ -202,7 +202,7 @@ metadata {
         }
 
         controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 2, width: 3, inactiveLabel: false) {
-            state "default", action:"setHeatingSetpoint", backgroundColor:"#d04e00"
+            state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
             state "", label: ''
         }
 
@@ -216,7 +216,7 @@ metadata {
         }
 
         controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 2, width: 3, inactiveLabel: false) {
-            state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#1e9cbb"
+            state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
             state "", label: ''
         }
 
