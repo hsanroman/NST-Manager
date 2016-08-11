@@ -4956,9 +4956,11 @@ def watchDogCheck() {
             foundTstats = tstats?.collect { dni ->
                 def d1 = parent.getThermostatDevice(dni)
                 if(d1) {
-                    def exceeded = dev?.currentValue("safetyTempExceeded")?.toString()
-                    LogAction("watchDogCheck() | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
-                    if (exceeded == "true") { watchDogAlarmActions(d1.displayName, dni, "temp") }
+                    def exceeded = d1?.currentValue("safetyTempExceeded")?.toString()
+                    if (exceeded == "true") { 
+                        watchDogAlarmActions(d1.displayName, dni, "temp")
+                        LogAction("watchDogCheck() | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
+                    }
                     return d1
                 }
             }
