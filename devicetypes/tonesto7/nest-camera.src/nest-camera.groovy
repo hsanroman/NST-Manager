@@ -219,7 +219,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "generateEvent")
+        exceptionDataHandler(ex.message, "generateEvent")
     }
 }
 
@@ -287,7 +287,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "deviceVerEvent")
+        exceptionDataHandler(ex.message, "deviceVerEvent")
     }
 }
 
@@ -306,7 +306,7 @@ def lastCheckinEvent(checkin) {
     }
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastCheckinEvent")
+        exceptionDataHandler(ex.message, "lastCheckinEvent")
     }
 }
 
@@ -325,7 +325,7 @@ def lastOnlineEvent(dt) {
     }
     catch (ex) {
         log.error "lastOnlineEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastOnlineEvent")
+        exceptionDataHandler(ex.message, "lastOnlineEvent")
     }
 }
 
@@ -343,7 +343,7 @@ def isStreamingEvent(isStreaming) {
     }
     catch (ex) {
         log.error "isStreamingEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "isStreamingEvent")
+        exceptionDataHandler(ex.message, "isStreamingEvent")
     }
 }
 
@@ -359,7 +359,7 @@ def audioInputEnabledEvent(on) {
     }
     catch (ex) {
         log.error "audioInputEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "audioInputEnabledEvent")
+        exceptionDataHandler(ex.message, "audioInputEnabledEvent")
     }
 }
 
@@ -375,7 +375,7 @@ def videoHistEnabledEvent(on) {
     }
     catch (ex) {
         log.error "videoHistEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "videoHistEnabledEvent")
+        exceptionDataHandler(ex.message, "videoHistEnabledEvent")
     }
 }
 
@@ -391,7 +391,7 @@ def publicShareEnabledEvent(on) {
     }
     catch (ex) {
         log.error "publicShareEnabledEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "publicShareEnabledEvent")
+        exceptionDataHandler(ex.message, "publicShareEnabledEvent")
     }
 }
 
@@ -406,7 +406,7 @@ def softwareVerEvent(ver) {
     }
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "softwareVerEvent")
+        exceptionDataHandler(ex.message, "softwareVerEvent")
     }
 }
 
@@ -484,7 +484,7 @@ def zoneSoundEvent(data) {
     }
     catch (ex) {
         log.error "zoneSoundEvent Exception: ${ex}"
-        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "zoneSoundEvent")
+        //exceptionDataHandler(ex.message, "zoneSoundEvent")
     }
 }
 
@@ -527,7 +527,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "apiStatusEvent")
+        exceptionDataHandler(ex.message, "apiStatusEvent")
     }
 }
 
@@ -547,7 +547,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "lastUpdatedEvent")
+        exceptionDataHandler(ex.message, "lastUpdatedEvent")
     }
 }
 
@@ -563,7 +563,7 @@ def onlineStatusEvent(online) {
     }
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "onlineStatusEvent")
+        exceptionDataHandler(ex.message, "onlineStatusEvent")
     }
 }
 
@@ -575,7 +575,7 @@ def getPublicVideoId() {
         }
     } catch (ex) {
         log.error "getPublicVideoId Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getPublicVideoId")
+        exceptionDataHandler(ex.message, "getPublicVideoId")
     }
 }
 
@@ -590,7 +590,7 @@ def streamingOn() {
         sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
     } catch (ex) {
         log.error "streamingOn Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "streamingOn")
+        exceptionDataHandler(ex.message, "streamingOn")
     }
 }
 
@@ -601,7 +601,7 @@ def streamingOff() {
         sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
     } catch (ex) {
         log.error "streamingOff Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "streamingOff")
+        exceptionDataHandler(ex.message, "streamingOff")
     }
 }
 
@@ -686,7 +686,7 @@ def isTimeBetween(start, end, now, tz) {
         return result
     } catch (ex) {
         log.error "isTimeBetween Exception: ${ex}"
-        //parent?.sendChildExceptionData("camera", devVer(), ex.message, "isTimeBetween")
+        //exceptionDataHandler(ex.message, "isTimeBetween")
     }
 }
 
@@ -734,6 +734,13 @@ def log(message, level = "trace") {
     return null
 }
 
+def exceptionDataHandler(msg, methodName) {
+    if(msg && methodName) {
+        def msgString = "${msg}"
+        parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
+    }
+}
+
 def getImgBase64(url,type) {
     try {
         def params = [
@@ -759,7 +766,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getImgBase64")
+        exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
 
@@ -769,7 +776,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getImg")
+        exceptionDataHandler(ex.message, "getImg")
     }
 }
 
@@ -786,7 +793,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCSS")
+        exceptionDataHandler(ex.message, "getCSS")
     }
 }
 
@@ -803,7 +810,7 @@ def getJS(url){
     }
     catch (ex) {
         log.error "Failed to load JS - Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getJS")
+        exceptionDataHandler(ex.message, "getJS")
     }
 }
 
@@ -822,7 +829,7 @@ def getCamUUID(pubVidId) {
         } else { LogAction("getCamUUID PublicVideoId is missing....", "warn", true) }
     } catch (ex) {
         log.error "getCamUUID Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamUUID")
+        exceptionDataHandler(ex.message, "getCamUUID")
     }
 }
 
@@ -840,7 +847,7 @@ def getLiveStreamHost(camUUID) {
     }
     catch (ex) {
         log.error "getLiveStreamHost Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getLiveStreamHost")
+        exceptionDataHandler(ex.message, "getLiveStreamHost")
     }
 }
 
@@ -859,7 +866,7 @@ def getCamApiServer(camUUID) {
     }
     catch (ex) {
         log.error "getCamApiServer Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamApiServer")
+        exceptionDataHandler(ex.message, "getCamApiServer")
     }
 }
 
@@ -953,7 +960,7 @@ def getCamHtml() {
     }
     catch (ex) {
         log.error "getCamHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getCamHtml")
+        exceptionDataHandler(ex.message, "getCamHtml")
     }
 }
 
@@ -1062,7 +1069,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message, "getInfoHtml")
+        exceptionDataHandler(ex.message, "getInfoHtml")
     }
 }
 

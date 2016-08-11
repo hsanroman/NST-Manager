@@ -120,7 +120,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "generateEvent")
+        exceptionDataHandler(ex.message, "generateEvent")
     }
 }
 
@@ -153,7 +153,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "deviceVerEvent")
+        exceptionDataHandler(ex.message, "deviceVerEvent")
     }
 }
 
@@ -169,7 +169,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "debugOnEvent")
+        exceptionDataHandler(ex.message, "debugOnEvent")
     }
 }
 
@@ -189,7 +189,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "lastUpdatedEvent")
+        exceptionDataHandler(ex.message, "lastUpdatedEvent")
     }
 }
 
@@ -210,7 +210,7 @@ def presenceEvent(presence) {
     }
     catch (ex) {
         log.error "presenceEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "presenceEvent")
+        exceptionDataHandler(ex.message, "presenceEvent")
     }
 }
 
@@ -226,7 +226,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "apiStatusEvent")
+        exceptionDataHandler(ex.message, "apiStatusEvent")
     }
 }
 
@@ -251,7 +251,7 @@ void setPresence() {
     } 
     catch (ex) {
         log.error "setPresence Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setPresence")
+        exceptionDataHandler(ex.message, "setPresence")
     }
 }
 
@@ -263,7 +263,7 @@ def setAway() {
     } 
     catch (ex) {
         log.error "setAway Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setAway")
+        exceptionDataHandler(ex.message, "setAway")
     }
 }
 
@@ -275,7 +275,7 @@ def setHome() {
     } 
     catch (ex) {
         log.error "setHome Exception: ${ex}"
-        parent?.sendChildExceptionData("presence", devVer(), ex.toString(), "setHome")
+        exceptionDataHandler(ex.message, "setHome")
     }
 }
 
@@ -325,6 +325,13 @@ def log(message, level = "trace") {
             break
     }            
     return null // always child interface call with a return value
+}
+
+def exceptionDataHandler(msg, methodName) {
+    if(msg && methodName) {
+        def msgString = "${msg}"
+        parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
+    }
 }
 
 private def textDevName()   { return "Nest Presence${appDevName()}" }

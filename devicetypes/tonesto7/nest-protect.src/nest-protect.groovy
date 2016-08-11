@@ -186,7 +186,7 @@ void runSmokeTest() {
         schedEndTest()
     } catch (ex) {
         log.error "runSmokeTest Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runSmokeTest")
+        exceptionDataHandler(ex.message, "runSmokeTest")
     }
 }
 
@@ -199,7 +199,7 @@ void runCoTest() {
         schedEndTest()
     } catch (ex) {
         log.error "runCoTest Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runCoTest")
+        exceptionDataHandler(ex.message, "runCoTest")
     }
 }
 
@@ -212,7 +212,7 @@ void runBatteryTest() {
         schedEndTest()
     } catch (ex) {
         log.error "runBatteryTest Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "runBatteryTest")
+        exceptionDataHandler(ex.message, "runBatteryTest")
     }
 }
 
@@ -222,7 +222,7 @@ void schedEndTest() {
         refresh()  // this typically takes more than 5 seconds to complete
     } catch (ex) {
         log.error "schedEndTest Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "schedEndTest")
+        exceptionDataHandler(ex.message, "schedEndTest")
     }
 }
 
@@ -234,7 +234,7 @@ void endTest() {
         refresh()
     } catch (ex) {
         log.error "endTest Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "endTest")
+        exceptionDataHandler(ex.message, "endTest")
     }
 }
 
@@ -268,7 +268,7 @@ def generateEvent(Map eventData) {
     } 
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "generateEvent")
+        exceptionDataHandler(ex.message, "generateEvent")
     }
 }
 
@@ -331,7 +331,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "deviceVerEvent")
+        exceptionDataHandler(ex.message, "deviceVerEvent")
     }
 }
 
@@ -350,7 +350,7 @@ def lastCheckinEvent(checkin) {
     } 
     catch (ex) {
         log.error "lastCheckinEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastCheckinEvent")
+        exceptionDataHandler(ex.message, "lastCheckinEvent")
     }
 }
 
@@ -369,7 +369,7 @@ def lastTestedEvent(dt) {
     } 
     catch (ex) {
         log.error "lastTestedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastTestedEvent")
+        exceptionDataHandler(ex.message, "lastTestedEvent")
     }
 }
 
@@ -384,7 +384,7 @@ def softwareVerEvent(ver) {
     } 
     catch (ex) {
         log.error "softwareVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "softwareVerEvent")
+        exceptionDataHandler(ex.message, "softwareVerEvent")
     }
 }
 
@@ -401,7 +401,7 @@ def debugOnEvent(debug) {
     } 
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "debugOnEvent")
+        exceptionDataHandler(ex.message, "debugOnEvent")
     }
 }
 
@@ -417,7 +417,7 @@ def apiStatusEvent(issue) {
     } 
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "apiStatusEvent")
+        exceptionDataHandler(ex.message, "apiStatusEvent")
     }
 }
 
@@ -437,7 +437,7 @@ def lastUpdatedEvent() {
     } 
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "lastUpdatedEvent")
+        exceptionDataHandler(ex.message, "lastUpdatedEvent")
     }
 }
 
@@ -451,7 +451,7 @@ def uiColorEvent(color) {
     } 
     catch (ex) {
         log.error "uiColorEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "uiColorEvent")
+        exceptionDataHandler(ex.message, "uiColorEvent")
     }
 }
 
@@ -467,7 +467,7 @@ def onlineStatusEvent(online) {
     } 
     catch (ex) {
         log.error "onlineStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "onlineStatusEvent")
+        exceptionDataHandler(ex.message, "onlineStatusEvent")
     }
 }
 
@@ -485,7 +485,7 @@ def batteryStateEvent(batt) {
     } 
     catch (ex) {
         log.error "batteryStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "batteryStateEvent")
+        exceptionDataHandler(ex.message, "batteryStateEvent")
     }
 }
 
@@ -500,7 +500,7 @@ def testingStateEvent(test) {
     } 
     catch (ex) {
         log.error "testingStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "testingStateEvent")
+        exceptionDataHandler(ex.message, "testingStateEvent")
     }
 }
 
@@ -539,7 +539,7 @@ def testingStateEvent(test) {
     } 
     catch (ex) {
         log.error "carbonSmokeStateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "carbonSmokeStateEvent")
+        exceptionDataHandler(ex.message, "carbonSmokeStateEvent")
     }
 }
  
@@ -590,6 +590,13 @@ def log(message, level = "trace") {
     return null
 }
 
+def exceptionDataHandler(msg, methodName) {
+    if(msg && methodName) {
+        def msgString = "${msg}"
+        parent?.sendChildExceptionData("protect", devVer(), msgString, methodName)
+    }
+}
+
 def getCarbonImg() {
     try {
         def carbonVal = device.currentState("nestCarbonMonoxide")?.value
@@ -609,7 +616,7 @@ def getCarbonImg() {
     } 
     catch (ex) {
         log.error "getCarbonImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getCarbonImg")
+        exceptionDataHandler(ex.message, "getCarbonImg")
     }
 }
 
@@ -632,7 +639,7 @@ def getSmokeImg() {
     } 
     catch (ex) {
         log.error "getSmokeImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getSmokeImg")
+        exceptionDataHandler(ex.message, "getSmokeImg")
     }
 }
 
@@ -661,7 +668,7 @@ def getImgBase64(url,type) {
     }
     catch (ex) {
         log.error "getImgBase64 Exception: $ex"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getImgBase64")
+        exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
 
@@ -672,7 +679,7 @@ def getImg(imgName) {
     }
     catch (ex) {
         log.error "getImg Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getImg")
+        exceptionDataHandler(ex.message, "getImg")
     }
 }
 
@@ -688,7 +695,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "Failed to load CSS - Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getCSS")
+        exceptionDataHandler(ex.message, "getCSS")
     }
 }
 
@@ -781,7 +788,7 @@ def getInfoHtml() {
     }
     catch (ex) {
         log.error "getInfoHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("protect", devVer(), ex.toString(), "getInfoHtml")
+        exceptionDataHandler(ex.message, "getInfoHtml")
     }
 }
 

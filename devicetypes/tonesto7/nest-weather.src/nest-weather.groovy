@@ -138,7 +138,7 @@ def getTempColors() {
     }
     catch (ex) {
         log.error "getTempColors Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTempColors")
+        exceptionDataHandler(ex.message, "getTempColors")
     }
 }
 
@@ -178,7 +178,7 @@ def generateEvent(Map eventData) {
     }
     catch (ex) {
         log.error "generateEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "generateEvent")
+        exceptionDataHandler(ex.message, "generateEvent")
     }
 }
 
@@ -241,7 +241,7 @@ def deviceVerEvent(ver) {
     }
     catch (ex) {
         log.error "deviceVerEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "deviceVerEvent")
+        exceptionDataHandler(ex.message, "deviceVerEvent")
     }
 }
 
@@ -258,7 +258,7 @@ def debugOnEvent(debug) {
     }
     catch (ex) {
         log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "debugOnEvent")
+        exceptionDataHandler(ex.message, "debugOnEvent")
     }
 }
 
@@ -278,7 +278,7 @@ def lastUpdatedEvent() {
     }
     catch (ex) {
         log.error "lastUpdatedEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "lastUpdatedEvent")
+        exceptionDataHandler(ex.message, "lastUpdatedEvent")
     }
 }
 
@@ -294,7 +294,7 @@ def apiStatusEvent(issue) {
     }
     catch (ex) {
         log.error "apiStatusEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "apiStatusEvent")
+        exceptionDataHandler(ex.message, "apiStatusEvent")
     }
 }
 
@@ -308,7 +308,7 @@ def humidityEvent(humidity) {
     }
     catch (ex) {
         log.error "humidityEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "humidityEvent")
+        exceptionDataHandler(ex.message, "humidityEvent")
     }
 }
 
@@ -322,7 +322,7 @@ def illuminanceEvent(illum) {
     }
     catch (ex) {
         log.error "illuminanceEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "illuminanceEvent")
+        exceptionDataHandler(ex.message, "illuminanceEvent")
     }
 }
 
@@ -337,7 +337,7 @@ def dewpointEvent(Double tempVal) {
     }
     catch (ex) {
         log.error "dewpointEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "dewpointEvent")
+        exceptionDataHandler(ex.message, "dewpointEvent")
     }
 }
 
@@ -354,7 +354,7 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
     }
     catch (ex) {
         log.error "temperatureEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "temperatureEvent")
+        exceptionDataHandler(ex.message, "temperatureEvent")
     }
 }
 
@@ -366,7 +366,7 @@ def getTemp() {
          return "${state?.curWeatherTemp_f}°F"
     }       
     } catch (ex) { 
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getTemp")
+        exceptionDataHandler(ex.message, "getTemp")
         return 0 
     }
 }
@@ -379,7 +379,7 @@ def getDewpoint() {
          return "${state?.curWeatherDewPoint_f}°F"
     }       
     } catch (ex) { 
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getDewpoint")
+        exceptionDataHandler(ex.message, "getDewpoint")
         return 0 
     }
 }
@@ -387,7 +387,7 @@ def getDewpoint() {
 def getCurWeather() { 
     try { return state.curWeather } 
     catch (ex) { 
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getCurWeather")
+        exceptionDataHandler(ex.message, "getCurWeather")
         return 0 
     }
 }
@@ -395,7 +395,7 @@ def getCurWeather() {
 def getHumidity() { 
     try { return device.currentValue("humidity") } 
     catch (ex) { 
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getHumidity")
+        exceptionDataHandler(ex.message, "getHumidity")
         return 0 
     }
 }
@@ -607,7 +607,7 @@ private pad(String s, size = 25) {
     }
     catch (ex) {
         log.error "pad Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "pad")
+        exceptionDataHandler(ex.message, "pad")
     }
 }
 
@@ -783,6 +783,13 @@ def log(message, level = "trace") {
     return null // always child interface call with a return value
 }
 
+def exceptionDataHandler(msg, methodName) {
+    if(msg && methodName) {
+        def msgString = "${msg}"
+        parent?.sendChildExceptionData("weather", devVer(), msgString, methodName)
+    }
+}
+
 def getImgBase64(url, type) {
     try {
         def params = [ 
@@ -807,7 +814,7 @@ def getImgBase64(url, type) {
     }
     catch (ex) {
         log.error "getImageBase64 Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getImgBase64")
+        exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
 
@@ -824,7 +831,7 @@ def getCSS(){
     }
     catch (ex) {
         log.error "getCss Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getCSS")
+        exceptionDataHandler(ex.message, "getCSS")
     }
 }
  catch (ex) {
@@ -838,7 +845,7 @@ def getWeatherIcon(weatherIcon) {
     }
     catch (ex) {
         log.error "getWeatherIcon Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherIcon")
+        exceptionDataHandler(ex.message, "getWeatherIcon")
     }
 }
 
@@ -871,7 +878,7 @@ private localDate(timeZone) {
     }
     catch (ex) {
         log.error "localDate Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "localDate")
+        exceptionDataHandler(ex.message, "localDate")
     }
 }
 
@@ -901,7 +908,7 @@ def getSunriseSunset() {
         state.localSunset = localSunset
     } catch (ex) {
         log.error "getSunriseSunset Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getSunriseSunset")
+        exceptionDataHandler(ex.message, "getSunriseSunset")
     }
 }
 
@@ -1001,7 +1008,7 @@ def getWeatherHtml() {
     }
     catch (ex) {
         log.error "getWeatherHtml Exception: ${ex}"
-        parent?.sendChildExceptionData("weather", devVer(), ex.toString(), "getWeatherHtml")
+        exceptionDataHandler(ex.message, "getWeatherHtml")
     }
 }
 
