@@ -4738,6 +4738,7 @@ def subscribeToEvents() {
             subscribe(fanCtrlFanSwitches, "switch", fanCtrlFanSwitchEvt)
             subscribe(fanCtrlFanSwitches, "level", fanCtrlFanSwitchEvt)
             subscribe(fanCtrlTstat, "thermostatFanMode", fanCtrlTstatFanEvt)
+            subscribe(fanCtrlTstat, "temperature", fanCtrlTstatTempEvt)
         }
     }
 
@@ -5234,7 +5235,8 @@ def getRemSenTstatFanSwitchDesc(showOpt = true) {
     def rmSwCnt = remSenTstatFanSwitches?.size() ?: 0
     remSenTstatFanSwitches?.each { sw ->
         swCnt = swCnt+1
-        swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3Spd)" : ""}"
+        swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})"
+        swDesc += "${checkFanSpeedSupport(sw) ? "\n   └ 3Spd (${sw?.currentValue("currentSpeed").toString()})" : ""}"
     }
     if(showOpt) {
         swDesc += (remSenTstatFanSwitches && (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter)) ? "\n\nFan Triggers:" : ""
@@ -5445,9 +5447,9 @@ def getUseNightSensor() {
 
 def getRemSenUseNightTimeOk() {
     def pName = getAutoType()
-    if(remSensorDayModes && remSensorNightModes && remremSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"] && !remSenUseSunAsMode) {
+    if(remSensorDayModes && remSensorNightModes && remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"] && !remSenUseSunAsMode) {
         return timeOfDayIsBetween(settings?."${pName}NightStartTime", settings?."${pName}NightStopTime", new Date(), getTimeZone()) ?: false
-    } 
+    }
     return false
 }
 
@@ -5508,25 +5510,24 @@ def getTimeAfterSunset() {
     return result
 }
 
-def getRemSenReqSetpointTemp() {
+def getRemSenReqSetpointTemp(curTemp) {
     def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
     def operState = remSenTstat ? remSenTstat?.currentThermostatOperatingState.toString() : null
-    def temp = 0.0
+    def opType = hvacMode.toString()
+
+    def reqHeatSetPoint = getRemSenHeatSetTemp()
+    def reqCoolSetPoint = getRemSenCoolSetTemp()
+
     if((hvacMode == "cool") || (operState == "cooling")) {
-        temp = getRemSenCoolSetTemp().toDouble()
+        opType = "cool"
+    } else if((hvacMode == "heat") || (operState == "heating")) {
+        opType = "heat"
+    } else if(hvacMode == "auto") {
+        def coolDiff = (curTemp - reqCoolSetPoint)
+        def heatDiff = (curTemp - reqHeatSetPoint)
+        opType = coolDiff < heatDiff ? "cool" : "heat"
     }
-    else if((hvacMode == "heat") || (operState == "heating")) {
-        temp = getRemSenHeatSetTemp().toDouble()
-    }
-    else if(hvacMode == "auto") {
-        def reqSenHeatSetPoint = getRemSenHeatSetTemp()
-        def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-        temp = reqSenHeatSetPoint
-        if (reqSenHeatSetPoint && reqSenCoolSetPoint && (reqSenCoolSetPoint > reqSenHeatSetPoint)) {
-            def tempDiff = Math.abs(reqSenCoolSetPoint - reqSenHeatSetPoint)
-            temp = reqSenCoolSetPoint.toDouble() - (tempDiff/2.0)
-        }
-    }
+    def temp = (opType == "cool") ?  reqCoolSetPoint.toDouble() : reqHeatSetPoint.toDouble()
     return temp
 }
 
@@ -5537,75 +5538,77 @@ def remSenTstatFanSwitchCheck() {
         if(!remSenTstatFanSwitches) { return }
 
         //def execTime = now()
-        def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
-        def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
-        def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
-        def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-        def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
-        def hvacFanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
         def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+        def curTstatOperState = remSenTstat?.currentThermostatOperatingState.toString()
+        def curTstatFanMode = remSenTstat?.currentThermostatFanMode.toString()
+
         def reqSenHeatSetPoint = getRemSenHeatSetTemp()
         def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-        def remSenReqSetPoint = getRemSenReqSetpointTemp()
+
         def curSenTemp = (remSensorDay || remSensorNight) ? getRemoteSenTemp().toDouble() : null
+        def remSenReqSetPoint = getRemSenReqSetpointTemp(curSenTemp)
         def tempDiff = Math.abs(remSenReqSetPoint - curSenTemp)
 
         LogAction("remSenTstatFanSwitchCheck: Remote Sensor Temp: ${curSenTemp}", "info", false)  
+        def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
+        def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+        def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
         LogAction("remSenTstatFanSwitchCheck: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)   
-        LogAction("remSenTstatFanSwitchCheck: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "info", false)  
+        LogAction("remSenTstatFanSwitchCheck: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint} Requested: ${remSenReqSetPoint}", "info", false)  
             
-        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() in [1, 2])) {
-            if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter != hvacMode)) {
-                LogAction("remSenTstatFanSwitchCheck: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
-                hvacFanOn = false  // force off of fans
-            }
+
+        def hvacFanOn = false
+         //1:"Heating/Cooling", 2:"With Fan Only" 
+
+        if( remSenTstatFanSwitchTriggerType.toInteger() ==  1) {
+            hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false 
+        }
+        if( remSenTstatFanSwitchTriggerType.toInteger() ==  2) {
+            hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false 
+        }
+        if(remSenTstatFanSwitchHvacModeFilter != "any" && (remSenTstatFanSwitchHvacModeFilter != hvacMode)) {
+            LogAction("remSenTstatFanSwitchCheck: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
+            hvacFanOn = false  // force off of fans
         }
 
-        if(remSenTstatFanSwitches && (remSenTstatFanSwitchTriggerType.toInteger() in [1, 2])) {
+        remSenTstatFanSwitches.each { sw ->
+            def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
             if(hvacFanOn) {
-                if(remSenTstatFanSwitches) {
-                    remSenTstatFanSwitches.each { sw ->
-                        def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
-                        if(!swOn) {
-                            if(checkFanSpeedSupport(sw) && atomicState?.remSenTstatFanSwitchSpeedEnabled && remSenTstatFanSwitchHighSpeed && remSenTstatFanSwitchMedSpeed && remSenTstatFanSwitchLowSpeed) {
-                                if(tempDiff < remSenTstatFanSwitchLowSpeed.toDouble()) {
-                                    sw.off()
-                                    LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch (OFF)", "info", true)
-                                    storeLastAction("Turned Fan $sw Off", getDtNow())
-                                }
-                                else if(tempDiff >= remSenTstatFanSwitchLowSpeed.toDouble() && tempDiff < remSenTstatFanSwitchMedSpeed.toDouble()) {
-                                    sw.lowSpeed()
-                                    LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Low Speed Threshold of ($remSenTstatFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to Low Speed", getDtNow())
-                                }
-                                else if(tempDiff >= remSenTstatFanSwitchMedSpeed.toDouble() && tempDiff < remSenTstatFanSwitchHighSpeed.toDouble()) {
-                                    sw.medSpeed()
-                                    LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($remSenTstatFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
-                                }
-                                else if(tempDiff >= remSenTstatFanSwitchHighSpeed.toDouble()) {
-                                    sw.highSpeed()
-                                    LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($remSenTstatFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to High Speed", getDtNow())
-                                }
-                            } else {
-                                LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
-                                storeLastAction("Turned On ($remSenTstatFanSwitches)", getDtNow())
-                                sw.on()
-                            }
+                if(!swOn) {
+                    LogAction("remSenTstatFanSwitchCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
+                    storeLastAction("Turned On ($remSenTstatFanSwitches)", getDtNow())
+                    sw.on()
+                }
+                if(checkFanSpeedSupport(sw) && atomicState?.remSenTstatFanSwitchSpeedEnabled && remSenTstatFanSwitchHighSpeed && remSenTstatFanSwitchMedSpeed && remSenTstatFanSwitchLowSpeed) {
+                    def speed = sw?.currentValue("currentSpeed") ?: null
+
+                    if(tempDiff < remSenTstatFanSwitchMedSpeed.toDouble()) {
+                        if (speed != "LOW") {
+                            sw.lowSpeed()
+                            LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Medium Speed Threshold of ($remSenTstatFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to Low Speed", getDtNow())
+                        }
+                    }
+                    else if(tempDiff >= remSenTstatFanSwitchMedSpeed.toDouble() && tempDiff < remSenTstatFanSwitchHighSpeed.toDouble()) {
+                        if (speed != "MED") {
+                            sw.medSpeed()
+                            LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($remSenTstatFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
+                        }
+                    }
+                    else if(tempDiff >= remSenTstatFanSwitchHighSpeed.toDouble()) {
+                        if (speed != "HIGH") {
+                            sw.highSpeed()
+                            LogAction("remSenTstatFanSwitchCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($remSenTstatFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to High Speed", getDtNow())
                         }
                     }
                 }
-            }
-            else {
-                remSenTstatFanSwitches.each { sw ->
-                    def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
-                    if(swOn) {
-                        LogAction("remSenTstatFanSwitchCheck: Thermostat (${remSenTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
-                        storeLastAction("Turned Off ($remSenTstatFanSwitches)", getDtNow())
-                        sw.off()
-
-                    }
+            } else {
+                if(swOn) {
+                    LogAction("remSenTstatFanSwitchCheck: Fan Switch (${sw?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
+                    storeLastAction("Turned Off (${sw.label})", getDtNow())
+                    sw.off()
                 }
             }
         }
@@ -5884,7 +5887,7 @@ private remSenEvtEval() {
                     }
                 }  else {
                     if (hvacMode in ["heat", "auto", "cool"]) {
-                        def sTemp = getFanAutoModeTemp(hvacMode, reqSenHeatSetPoint, reqSenCoolSetPoint, curSenTemp)
+                        def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curSenTemp)
                         remSenFanControl(remSenTstat, remSenTstatMir, hvacMode, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), threshold, fanOn)
                     }
                 }
@@ -5907,9 +5910,16 @@ private remSenEvtEval() {
     }
 }
 
-def getFanAutoModeTemp(hvacMode, reqHeatSetTemp, reqCoolSetTemp, curSenTemp) {
+def getFanAutoModeTemp(hvacMode, operState, reqHeatSetTemp, reqCoolSetTemp, curSenTemp) {
     def opType = hvacMode.toString()
-    if (hvacMode == "auto") {
+
+    if((hvacMode == "cool") || (operState == "cooling")) {
+        opType = "cool"
+    }
+    else if((hvacMode == "heat") || (operState == "heating")) {
+        opType = "heat"
+    }
+    else if(hvacMode == "auto") {
         def coolDiff = (curSenTemp - reqCoolSetTemp)
         def heatDiff = (curSenTemp - reqHeatSetTemp)
         opType = coolDiff < heatDiff ? "cool" : "heat"
@@ -6181,6 +6191,8 @@ def fanCtrlPrefix() { return "fanCtrl" }
 
 def fanControlPage() {
     dynamicPage(name: "fanControlPage", uninstall: false) {
+        def tStatMode = fanCtrlTstat ? fanCtrlTstat?.currentThermostatMode : "unknown"
+        def tStatTemp = "${getDeviceTemp(fanCtrlTstat)}°${atomicState?.tempUnit}"
         section("Control Fans/Switches based on your Thermostat\n(3-Speed Fans Supported)") {
             input "fanCtrlFanSwitches", "capability.switch", title: "Select the Switches?", required: false, submitOnChange: true, multiple: true,
                     image: getAppImg("fan_ventilation_icon.png")
@@ -6241,7 +6253,8 @@ def getFanCtrlFanSwitchDesc(showOpt = true) {
     def rmSwCnt = fanCtrlFanSwitches?.size() ?: 0
     fanCtrlFanSwitches?.each { sw ->
         swCnt = swCnt+1
-        swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3Spd)" : ""}"
+        swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})"
+        swDesc += "${checkFanSpeedSupport(sw) ? "\n   └ 3Spd (${sw?.currentValue("currentSpeed").toString()})" : ""}"
     }
     if(showOpt) {
         swDesc += (fanCtrlFanSwitches && (fanCtrlFanSwitchSpeedCtrl || fanCtrlFanSwitchTriggerType || fanCtrlFanSwitchHvacModeFilter)) ? "\n\nFan Triggers:" : ""
@@ -6280,94 +6293,131 @@ def fanCtrlTstatFanEvt(evt) {
     }
 }
 
+def fanCtrlTstatTempEvt(evt) {
+    LogAction("FanControl Event | Thermostat Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
+    if(disableAutomation) { return }
+    else { 
+        scheduleAutomationEval() 
+        storeLastEventData(evt)
+    }
+}
 
 // Eric this is where I need you help with the fan temp logic when the multi speed fans are being used
 
-def getFanCtrlSetpointTemp() {
-    def tstatTemp = getDeviceTemp(fanCtrlTstat).toDouble()
-    def tstatOperState = fanCtrlTstat?.currentThermostatOperatingState.toString()
-    def tstatHvacMode = fanCtrlTstat?.currentThermostatMode.toString()
-    def coolSetpoint = getTstatSetpoint(fanCtrlTstat, "cool")
-    def heatSetpoint = getTstatSetpoint(fanCtrlTstat, "heat")
-    def tstatSetpoint = fanCtrlTstat?.currentThermostatSetpoint.toDouble() ?: 0.0
-    def retTemp = 0.0
-    return null // This just returns null so that the code will at least work.
-    
+def getfanCtrlCoolSetTemp() {
+    def desiredCoolTemp = getGlobalDesiredCoolTemp()
+    if (desiredCoolTemp) { return desiredCoolTemp.toDouble() }
+    else { return fanCtrlTstat ? getTstatSetpoint(fanCtrlTstat, "cool") : 0 }
 }
+
+def getfanCtrlHeatSetTemp() {
+    def desiredHeatTemp = getGlobalDesiredHeatTemp()
+    if (desiredHeatTemp) { return desiredHeatTemp.toDouble() }
+    else { return fanCtrlTstat ? getTstatSetpoint(fanCtrlTstat, "heat") : 0 }
+}
+
+
+def getFanCtrlSetpointTemp(curTemp) {
+    def hvacMode = fanCtrlTstat ? fanCtrlTstat?.currentThermostatMode.toString() : null
+    def operState = fanCtrlTstat ? fanCtrlTstat?.currentThermostatOperatingState.toString() : null
+    def opType = hvacMode.toString()
+
+    def reqHeatSetPoint = getfanCtrlHeatSetTemp()
+    def reqCoolSetPoint = getfanCtrlCoolSetTemp()
+
+    if((hvacMode == "cool") || (operState == "cooling")) {
+        opType = "cool"
+    } else if((hvacMode == "heat") || (operState == "heating")) {
+        opType = "heat"
+    } else if(hvacMode == "auto") {
+        def coolDiff = (curTemp - reqCoolSetPoint)
+        def heatDiff = (curTemp - reqHeatSetPoint)
+        opType = coolDiff < heatDiff ? "cool" : "heat"
+    }
+    def temp = (opType == "cool") ?  reqCoolSetPoint.toDouble() : reqHeatSetPoint.toDouble()
+    return temp
+}
+
 
 def fanCtrlCheck() {
     //LogAction("FanControl Event | Fan Switch Check", "trace", false)
+//ERS
     try {
         if(disableAutomation) { return }
         if(!fanCtrlFanSwitches) { return }
 
         def execTime = now()
-        def curTstatTemp = getDeviceTemp(fanCtrlTstat).toDouble()
-        def curTstatOperState = fanCtrlTstat?.currentThermostatOperatingState.toString()
-        def curCoolSetpoint = getTstatSetpoint(fanCtrlTstat, "cool")
-        def curHeatSetpoint = getTstatSetpoint(fanCtrlTstat, "heat")
-        def tstatSetpoint = fanCtrlTstat?.currentThermostatSetpoint.toDouble() ?: 0.0
-        def curTstatFanMode = fanCtrlTstat?.currentThermostatFanMode.toString()
-        def hvacFanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
         def hvacMode = fanCtrlTstat ? fanCtrlTstat?.currentThermostatMode.toString() : null
-        def curSetPoint = getFanCtrlSetpointTemp() ?: 0 
+        def curTstatOperState = fanCtrlTstat?.currentThermostatOperatingState.toString()
+        def curTstatFanMode = fanCtrlTstat?.currentThermostatFanMode.toString()
+
+        def reqHeatSetPoint = getfanCtrlHeatSetTemp()
+        def reqCoolSetPoint = getfanCtrlCoolSetTemp()
+
+        def curTstatTemp = getDeviceTemp(fanCtrlTstat).toDouble()
+        def curSetPoint = getFanCtrlSetpointTemp(curTstatTemp) ?: 0 
         def tempDiff = Math.abs(curSetPoint - curTstatTemp)
 
+
+        def curHeatSetpoint = getTstatSetpoint(fanCtrlTstat, "heat")
+        def curCoolSetpoint = getTstatSetpoint(fanCtrlTstat, "cool")
         LogAction("fanCtrlCheck: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)   
-        LogAction("fanCtrlCheck: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "info", false)  
-            
-        if(fanCtrlFanSwitches && (fanCtrlFanSwitchTriggerType.toInteger() in [1, 2])) {
-            if(fanCtrlFanSwitchHvacModeFilter != "any" && (fanCtrlFanSwitchHvacModeFilter != hvacMode)) {
-                LogAction("fanCtrlCheck: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
-                hvacFanOn = false  // force off of fans
-            }
+        LogAction("fanCtrlCheck: Desired Temps - Heat: ${reqHeatSetPoint} | Cool: ${reqCoolSetPoint}", "info", false)  
+
+
+        def hvacFanOn = false
+         //1:"Heating/Cooling", 2:"With Fan Only"
+
+        if( fanCtrlFanSwitchTriggerType.toInteger() ==  1) {
+            hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false
+        }
+        if( fanCtrlFanSwitchTriggerType.toInteger() ==  2) {
+            hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
+        }
+        if(fanCtrlFanSwitchHvacModeFilter != "any" && (fanCtrlFanSwitchHvacModeFilter != hvacMode)) {
+            LogAction("fanCtrlCheck: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
+            hvacFanOn = false  // force off of fans
         }
 
-        if(fanCtrlFanSwitches && (fanCtrlFanSwitchTriggerType.toInteger() in [1, 2])) {
+
+        fanCtrlFanSwitches.each { sw ->
+            def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
             if(hvacFanOn) {
-                if(fanCtrlFanSwitches) {
-                    fanCtrlFanSwitches.each { sw ->
-                        def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
-                        if(!swOn) {
-                            if(checkFanSpeedSupport(sw) && atomicState?.fanCtrlFanSwitchSpeedEnabled && fanCtrlFanSwitchHighSpeed && fanCtrlFanSwitchMedSpeed && fanCtrlFanSwitchLowSpeed) {
-                                if(tempDiff < fanCtrlFanSwitchLowSpeed.toDouble()) {
-                                    sw.off()
-                                    LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Low Speed Threshold of ($fanCtrlFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch (OFF)", "info", true)
-                                    storeLastAction("Turned Fan $sw Off", getDtNow())
-                                }
-                                else if(tempDiff >= fanCtrlFanSwitchLowSpeed.toDouble() && tempDiff < fanCtrlFanSwitchMedSpeed.toDouble()) {
-                                    sw.lowSpeed()
-                                    LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Low Speed Threshold of ($fanCtrlFanSwitchLowSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to Low Speed", getDtNow())
-                                }
-                                else if(tempDiff >= fanCtrlFanSwitchMedSpeed.toDouble() && tempDiff < fanCtrlFanSwitchHighSpeed.toDouble()) {
-                                    sw.medSpeed()
-                                    LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($fanCtrlFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
-                                }
-                                else if(tempDiff >= fanCtrlFanSwitchHighSpeed.toDouble()) {
-                                    sw.highSpeed()
-                                    LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($fanCtrlFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
-                                    storeLastAction("Set Fan $sw to High Speed", getDtNow())
-                                }
-                            } else {
-                                LogAction("fanCtrlCheck: Thermostat (${fanCtrlTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
-                                storeLastAction("Turned On ($fanCtrlFanSwitches)", getDtNow())
-                                sw.on()
-                            }
+                if(!swOn) {
+                    LogAction("fanCtrlCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw.label}' Switch (ON)", "info", true)
+                    storeLastAction("Turned On ($fanCtrlFanSwitches)", getDtNow())
+                    sw.on()
+                }
+                if(checkFanSpeedSupport(sw) && atomicState?.fanCtrlFanSwitchSpeedEnabled && fanCtrlFanSwitchHighSpeed && fanCtrlFanSwitchMedSpeed && fanCtrlFanSwitchLowSpeed) {
+                    def speed = sw?.currentValue("currentSpeed") ?: null
+
+                    if(tempDiff < fanCtrlFanSwitchMedSpeed.toDouble()) {
+                        if (speed != "LOW") {
+                            sw.lowSpeed()
+                            LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Medium Speed Threshold of ($fanCtrlFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (LOW SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to Low Speed", getDtNow())
+                        }
+                    }
+                    else if(tempDiff >= fanCtrlFanSwitchMedSpeed.toDouble() && tempDiff < fanCtrlFanSwitchHighSpeed.toDouble()) {
+                        if (speed != "MED") {
+                            sw.medSpeed()
+                            LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of ($fanCtrlFanSwitchMedSpeed) | Turning '${sw.label}' Fan Switch on (MEDIUM SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
+                        }
+                    }
+                    else if(tempDiff >= fanCtrlFanSwitchHighSpeed.toDouble()) {
+                        if (speed != "HIGH") {
+                            sw.highSpeed()
+                            LogAction("fanCtrlCheck: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of ($fanCtrlFanSwitchHighSpeed) | Turning '${sw.label}' Fan Switch on (HIGH SPEED)", "info", true)
+                            storeLastAction("Set Fan $sw to High Speed", getDtNow())
                         }
                     }
                 }
-            }
-            else {
-                fanCtrlFanSwitches.each { sw ->
-                    def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
-                    if(swOn) {
-                        LogAction("fanCtrlCheck: Thermostat (${fanCtrlTstat?.displayName}) Fan is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
-                        storeLastAction("Turned Off ($fanCtrlFanSwitches)", getDtNow())
-                        sw.off()
-
-                    }
+            } else {
+                if(swOn) {
+                    LogAction("fanCtrlCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw?.label}' Switch (OFF)", "info", true)
+                    storeLastAction("Turned Off (${sw.label})", getDtNow())
+                    sw.off()
                 }
             }
         }
@@ -8667,7 +8717,8 @@ def checkFanSpeedSupport(dev) {
     devData.each { cmd ->
         if(cmd.name in req) { devCnt = devCnt+1 }
     }
-    return (devCnt) >= 1 ? true : false
+    def speed = dev?.currentValue("currentSpeed") ?: null
+    return (speed && devCnt == 3) ? true : false
 }
 
 def getTstatCapabilities(tstat, autoType, dyn = false) {
