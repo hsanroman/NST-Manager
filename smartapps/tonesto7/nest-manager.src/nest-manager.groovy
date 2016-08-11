@@ -5192,7 +5192,7 @@ def getRemSenTstatFanSwitchDesc(showOpt = true) {
     def swDesc = ""
     def swCnt = 0
     if(showOpt) {
-        swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "Fan Switch Config:" : ""
+        swDesc += (remSenTstatFanSwitches && (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter)) ? "Fan Switch Config:" : ""
     }
     swDesc += remSenTstatFanSwitches ? "${showOpt ? "\n" : ""}  • Fan Switches:" : ""
     def rmSwCnt = remSenTstatFanSwitches?.size() ?: 0
@@ -5201,7 +5201,7 @@ def getRemSenTstatFanSwitchDesc(showOpt = true) {
         swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3Spd)" : ""}"
     }
     if(showOpt) {
-        swDesc += (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter) ? "\n\nFan Triggers:" : ""
+        swDesc += (remSenTstatFanSwitches && (remSenTstatFanSwitchSpeedCtrl || remSenTstatFanSwitchTriggerType || remSenTstatFanSwitchHvacModeFilter)) ? "\n\nFan Triggers:" : ""
         swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchSpeedCtrl) ? "\n  • 3-Speed Fan Support: (Active)" : ""
         swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchTriggerType) ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), remSenTstatFanSwitchTriggerType)})" : ""
         swDesc += (remSenTstatFanSwitches && remSenTstatFanSwitchHvacModeFilter) ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), remSenTstatFanSwitchHvacModeFilter)})" : ""
@@ -6198,7 +6198,7 @@ def getFanCtrlFanSwitchDesc(showOpt = true) {
     def swDesc = ""
     def swCnt = 0
     if(showOpt) {
-        swDesc += (fanCtrlFanSwitchSpeedCtrl || fanCtrlFanSwitchTriggerType || fanCtrlFanSwitchHvacModeFilter) ? "Fan Switch Config:" : ""
+        swDesc += (fanCtrlFanSwitches && (fanCtrlFanSwitchSpeedCtrl || fanCtrlFanSwitchTriggerType || fanCtrlFanSwitchHvacModeFilter)) ? "Fan Switch Config:" : ""
     }
     swDesc += fanCtrlFanSwitches ? "${showOpt ? "\n" : ""}  • Fan Switches:" : ""
     def rmSwCnt = fanCtrlFanSwitches?.size() ?: 0
@@ -6207,7 +6207,7 @@ def getFanCtrlFanSwitchDesc(showOpt = true) {
         swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})${checkFanSpeedSupport(sw) ? "(3Spd)" : ""}"
     }
     if(showOpt) {
-        swDesc += (fanCtrlFanSwitchSpeedCtrl || fanCtrlFanSwitchTriggerType || fanCtrlFanSwitchHvacModeFilter) ? "\n\nFan Triggers:" : ""
+        swDesc += (fanCtrlFanSwitches && (fanCtrlFanSwitchSpeedCtrl || fanCtrlFanSwitchTriggerType || fanCtrlFanSwitchHvacModeFilter)) ? "\n\nFan Triggers:" : ""
         swDesc += (fanCtrlFanSwitches && fanCtrlFanSwitchSpeedCtrl) ? "\n  • 3-Speed Fan Support: (Active)" : ""
         swDesc += (fanCtrlFanSwitches && fanCtrlFanSwitchTriggerType) ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), fanCtrlFanSwitchTriggerType)})" : ""
         swDesc += (fanCtrlFanSwitches && fanCtrlFanSwitchHvacModeFilter) ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), fanCtrlFanSwitchHvacModeFilter)})" : ""
