@@ -5424,6 +5424,21 @@ def getRemSenReqSetpointTemp() {
     return temp
 }
 
+private remSenCheck() {
+    //LogAction("remSenCheck.....", "trace", false)
+    if(disableAutomation) { return }
+    def remWaitVal = remSenWaitVal?.toInteger() ?: 60
+    if (getLastRemSenEvalSec() < remWaitVal) {
+        def schChkVal = ((remWaitVal - getLastRemSenEvalSec()) < 30) ? 30 : (remWaitVal - getLastRemSenEvalSec())
+        scheduleAutomationEval(schChkVal)
+        LogAction("Remote Sensor: Too Soon to Evaluate Actions...Scheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
+    } 
+    else { 
+        remSenEvtEval()
+        remSenTstatFanSwitchCheck()
+    } 
+}
+
 def getLastRemSenEvalSec() { return !atomicState?.lastRemSenEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastRemSenEval).toInteger() }
 
 private remSenEvtEval() {
@@ -6099,7 +6114,7 @@ def fanCtrlCheck() {
         def curTstatOperState = fanCtrlTstat?.currentThermostatOperatingState.toString()
         def curCoolSetpoint = getTstatSetpoint(fanCtrlTstat, "cool")
         def curHeatSetpoint = getTstatSetpoint(fanCtrlTstat, "heat")
-        def tstatSetpoint = fanCtrlTstat?.currentThermostatSetpoint.doubleValue
+        def tstatSetpoint = fanCtrlTstat?.currentThermostatSetpoint.toDouble() ?: 0.0
         def curTstatFanMode = fanCtrlTstat?.currentThermostatFanMode.toString()
         def hvacFanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false 
         def hvacMode = fanCtrlTstat ? fanCtrlTstat?.currentThermostatMode.toString() : null
