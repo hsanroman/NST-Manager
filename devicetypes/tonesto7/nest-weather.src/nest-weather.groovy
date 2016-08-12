@@ -151,8 +151,19 @@ def refresh() {
     poll()
 }
 
+// parent calls this method to queue data.
+// goal is to return to parent asap to avoid execution timeouts
+
 def generateEvent(Map eventData) {
-    //log.trace("generateEvents Parsing data ${eventData}")
+    //log.trace("generateEvent Parsing data ${eventData}")
+    state.eventData = eventData
+    runIn(3, "processEvent", [overwrite: true] )
+}
+
+def processEvent() {
+    def eventData = state?.eventData
+    state.eventData = null
+    //log.trace("processEvent Parsing data ${eventData}")
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
@@ -170,8 +181,9 @@ def generateEvent(Map eventData) {
             getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
             getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
             getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
+
+            lastUpdatedEvent()
         }
-        lastUpdatedEvent()
         //This will return all of the devices state data to the logs.
         //log.debug "Device State Data: ${getState()}"
         return null
