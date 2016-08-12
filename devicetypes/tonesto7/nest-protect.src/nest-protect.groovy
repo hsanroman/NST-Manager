@@ -238,8 +238,19 @@ void endTest() {
     }
 }
 
+// parent calls this method to queue data.
+// goal is to return to parent asap to avoid execution timeouts
+
 def generateEvent(Map eventData) {
-    //log.trace("generateEvent parsing data ${eventData}")
+    //log.trace("generateEvent Parsing data ${eventData}")
+    state.eventData = eventData
+    runIn(3, "processEvent", [overwrite: true] )
+}
+
+def processEvent() {
+    def eventData = state?.eventData
+    state.eventData = null
+    //log.trace("processEvent Parsing data ${eventData}")
     try {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
@@ -260,8 +271,10 @@ def generateEvent(Map eventData) {
             softwareVerEvent(results?.software_version.toString())
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
+            
+            lastUpdatedEvent()
         }
-        lastUpdatedEvent()
+
         //This will return all of the devices state data to the logs.
         //log.debug "Device State Data: ${getState()}"
         return null
