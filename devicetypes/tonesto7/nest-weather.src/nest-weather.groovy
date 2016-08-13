@@ -1,7 +1,8 @@
 /**
  *  Nest Weather
  *      Author: Anthony S. (@tonesto7)
- *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
+ *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch)
+ *  Graphing Modelled on code from Andreas Amann (@ahndee)
  *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
