@@ -2,7 +2,7 @@
  *  Nest Presence
  *	Author: Ben W. (@desertBlade)
  *	Author: Anthony S. (@tonesto7)
- *  
+ *
  *
  * Copyright (C) 2016 Ben W, Anthony S.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -36,11 +36,11 @@ metadata {
         capability "Presence Sensor"
         capability "Sensor"
         capability "Refresh"
-        
+
         command "setPresence"
         command "refresh"
         command "log"
-        
+
         attribute "lastConnection", "string"
         attribute "apiStatus", "string"
         attribute "debugOn", "string"
@@ -144,7 +144,7 @@ def getDeviceStateData() {
     return getState()
 }
 
-def getTimeZone() { 
+def getTimeZone() {
     def tz = null
     if (location?.timeZone) { tz = location?.timeZone }
     else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
@@ -153,100 +153,70 @@ def getTimeZone() {
 }
 
 def deviceVerEvent(ver) {
-    try {
-        def curData = device.currentState("devTypeVer")?.value
-        def pubVer = ver ?: null
-        def dVer = devVer() ? devVer() : null
-        def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
-        if(curData != newData) {
-            Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
-            sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-        } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
-    }
-    catch (ex) {
-        log.error "deviceVerEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "deviceVerEvent")
-    }
+    def curData = device.currentState("devTypeVer")?.value
+    def pubVer = ver ?: null
+    def dVer = devVer() ? devVer() : null
+    def newData = (pubVer != dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}(Current)"
+    if(curData != newData) {
+        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+        sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def debugOnEvent(debug) {
-    try {
-        def val = device.currentState("debugOn")?.value
-        def stateVal = debug ? "On" : "Off"
-        state.debug = debug ? true : false
-        if(!val.equals(stateVal)) {
-            log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
-            sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-        } else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
-    }
-    catch (ex) {
-        log.error "debugOnEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "debugOnEvent")
-    }
+    def val = device.currentState("debugOn")?.value
+    def stateVal = debug ? "On" : "Off"
+    state.debug = debug ? true : false
+    if(!val.equals(stateVal)) {
+        log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: stateVal, displayed: false)
+    } else { Logger("debugOn: (${stateVal}) | Original State: (${val})") }
 }
 
 def lastUpdatedEvent() {
-    try {
-        def now = new Date()
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastDt = "${tf?.format(now)}"
-        def lastUpd = device.currentState("lastUpdatedDt")?.value
-        state?.lastUpdatedDt = lastDt?.toString()
-        if(!lastUpd.equals(lastDt?.toString())) {
-            Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-            sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
-        }
-    }
-    catch (ex) {
-        log.error "lastUpdatedEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastUpdatedEvent")
+    def now = new Date()
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastDt = "${tf?.format(now)}"
+    def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
+    if(!lastUpd.equals(lastDt?.toString())) {
+        Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+        sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
     }
 }
 
 def presenceEvent(presence) {
-    try {
-        def val = device.currentState("presence")?.value
-        def pres = (presence == "home") ? "present" : "not present"
-        def nestPres = !device.currentState("nestPresence") ? null : device.currentState("nestPresence")?.value.toString()
-        def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
-        def statePres = state?.present
-        state?.present = (pres == "present") ? true : false
-        state?.nestPresence = newNestPres
-        if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
-            log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
-            sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-            sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
-        } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
-    }
-    catch (ex) {
-        log.error "presenceEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "presenceEvent")
-    }
+    def val = device.currentState("presence")?.value
+    def pres = (presence == "home") ? "present" : "not present"
+    def nestPres = !device.currentState("nestPresence") ? null : device.currentState("nestPresence")?.value.toString()
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+    def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
+    state?.nestPresence = newNestPres
+    if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+        sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
+        sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
+    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
 def apiStatusEvent(issue) {
-    try {
-        def curStat = device.currentState("apiStatus")?.value
-        def newStat = issue ? "issue" : "ok"
-        state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) { 
-            log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
-            sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-        } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
-    }
-    catch (ex) {
-        log.error "apiStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "apiStatusEvent")
-    }
+    def curStat = device.currentState("apiStatus")?.value
+    def newStat = issue ? "issue" : "ok"
+    state?.apiStatus = newStat
+    if(!curStat.equals(newStat)) {
+        log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+        sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+    } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
-def getNestPresence() { 
+def getNestPresence() {
     return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.value.toString()
 }
 
-def getPresence() { 
+def getPresence() {
     return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
@@ -260,7 +230,7 @@ void setPresence() {
         log.trace "Current Nest Presence: ${pres}"
         if(pres == "auto-away" || pres == "away") { setHome() }
         else if (pres == "home") { setAway() }
-    } 
+    }
     catch (ex) {
         log.error "setPresence Exception: ${ex}"
         exceptionDataHandler(ex.message, "setPresence")
@@ -272,7 +242,7 @@ def setAway() {
         log.trace "setAway()..."
         parent.setStructureAway(this, "true")
         presenceEvent("away")
-    } 
+    }
     catch (ex) {
         log.error "setAway Exception: ${ex}"
         exceptionDataHandler(ex.message, "setAway")
@@ -284,7 +254,7 @@ def setHome() {
         log.trace "setHome()..."
         parent.setStructureAway(this, "false")
         presenceEvent("home")
-    } 
+    }
     catch (ex) {
         log.error "setHome Exception: ${ex}"
         exceptionDataHandler(ex.message, "setHome")
@@ -296,7 +266,7 @@ def setHome() {
 *************************************************************************************************/
 // Local Device Logging
 def Logger(msg, logType = "debug") {
-     if(state?.debug) { 
+     if(state?.debug) {
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -316,7 +286,7 @@ def Logger(msg, logType = "debug") {
         }
     }
 }
- 
+
 //This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
     switch (level) {
@@ -335,7 +305,7 @@ def log(message, level = "trace") {
         default:
             log.error "PARENT_Log>> " + message
             break
-    }            
+    }
     return null // always child interface call with a return value
 }
 

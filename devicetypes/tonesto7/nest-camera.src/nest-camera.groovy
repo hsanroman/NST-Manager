@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.1.3" }
+def devVer() { return "0.2.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -34,8 +34,7 @@ metadata {
         capability "Sound Sensor"
         capability "Refresh"
         capability "Notification"
-        //capability "Configuration"
-        capability "Image Capture"
+        //capability "Image Capture"
         //capability "Video Camera"
         //capability "Video Capture"
 
@@ -243,12 +242,11 @@ def getDeviceStateData() {
 }
 
 def getTimeZone() {
-    try {
-        def tz = null
-        if (location?.timeZone) { tz = location?.timeZone }
-        else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
-        if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
-        return tz
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
     } catch (ex) {
         LogAction("getTimeZone Exception: ${ex}", "error", true)
         sendChildExceptionData("camera", devVer(), ex.message, "getTimeZone")
@@ -256,309 +254,214 @@ def getTimeZone() {
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
-    try {
-        def result = false
-        def latestVer
-        def versions = [newVer, curVer]
-        if(newVer != curVer) {
-            latestVer = versions?.max { a, b ->
-                def verA = a?.tokenize('.')
-                def verB = b?.tokenize('.')
-                def commonIndices = Math.min(verA?.size(), verB?.size())
-                for (int i = 0; i < commonIndices; ++i) {
-                    //log.debug "comparing $numA and $numB"
-                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
-                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
-                    }
+    def result = false
+    def latestVer
+    def versions = [newVer, curVer]
+    if(newVer != curVer) {
+        latestVer = versions?.max { a, b ->
+            def verA = a?.tokenize('.')
+            def verB = b?.tokenize('.')
+            def commonIndices = Math.min(verA?.size(), verB?.size())
+            for (int i = 0; i < commonIndices; ++i) {
+                //log.debug "comparing $numA and $numB"
+                if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                    return verA[i]?.toInteger() <=> verB[i]?.toInteger()
                 }
-                verA?.size() <=> verB?.size()
             }
-            result = (latestVer == newVer) ? true : false
+            verA?.size() <=> verB?.size()
         }
-        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
-        return result
-    } catch (ex) {
-        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendChildExceptionData("camera", devVer(), ex.message, "isCodeUpdateAvailable")
+        result = (latestVer == newVer) ? true : false
     }
+    //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+    return result
 }
 
 def deviceVerEvent(ver) {
-    try {
-        def curData = device.currentState("devTypeVer")?.value.toString()
-        def pubVer = ver ?: null
-        def dVer = devVer() ?: null
-        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
-        state?.devTypeVer = newData
-        state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-        if(!curData?.equals(newData)) {
-            Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
-            sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-        } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
-    }
-    catch (ex) {
-        log.error "deviceVerEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "deviceVerEvent")
-    }
+    def curData = device.currentState("devTypeVer")?.value.toString()
+    def pubVer = ver ?: null
+    def dVer = devVer() ?: null
+    def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
+    state?.devTypeVer = newData
+    state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+    if(!curData?.equals(newData)) {
+        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+        sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def lastCheckinEvent(checkin) {
-    try {
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastConn = checkin ? tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin.toString())) : "Not Available"
-        def lastChk = device.currentState("lastConnection")?.value
-        state?.lastConnection = lastConn?.toString()
-        if(!lastChk.equals(lastConn?.toString())) {
-            Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-            sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
-        } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
-    }
-    catch (ex) {
-        log.error "lastCheckinEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastCheckinEvent")
-    }
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastConn = checkin ? tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin.toString())) : "Not Available"
+    def lastChk = device.currentState("lastConnection")?.value
+    state?.lastConnection = lastConn?.toString()
+    if(!lastChk.equals(lastConn?.toString())) {
+        Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
+        sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+    } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
 def lastOnlineEvent(dt) {
-    try {
-        def lastOnlVal = device.currentState("lastOnline")?.value
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
-        state?.lastOnl = lastOnl
-        if(!lastOnlVal.equals(lastOnl?.toString())) {
-            Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
-            sendEvent(name: 'lastOnline', value: lastOnl, displayed: true, isStateChange: true)
-        } else { Logger("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
-    }
-    catch (ex) {
-        log.error "lastOnlineEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastOnlineEvent")
-    }
+    def lastOnlVal = device.currentState("lastOnline")?.value
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
+    state?.lastOnl = lastOnl
+    if(!lastOnlVal.equals(lastOnl?.toString())) {
+        Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
+        sendEvent(name: 'lastOnline', value: lastOnl, displayed: true, isStateChange: true)
+    } else { Logger("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
 }
 
 def isStreamingEvent(isStreaming) {
     //log.trace "isStreamingEvent($isStreaming)..."
-    try {
-        def isOn = device.currentState("isStreaming")?.value
-        def isOnline = device.currentState("onlineStatus")?.value
-        def val = (isStreaming.toBoolean() == true) ? "on" : (!isOnline == "Online" ? "unavailable" : "off")
-        state?.isStreaming = val == "on" ? true : false
-        if(!isOn.equals(val)) {
-            log.debug("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "isStreamingEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "isStreamingEvent")
-    }
+    def isOn = device.currentState("isStreaming")?.value
+    def isOnline = device.currentState("onlineStatus")?.value
+    def val = (isStreaming.toBoolean() == true) ? "on" : (!isOnline == "Online" ? "unavailable" : "off")
+    state?.isStreaming = val == "on" ? true : false
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def audioInputEnabledEvent(on) {
-    try {
-        def isOn = device.currentState("audioInputEnabled")?.value
-        def val = (on.toString() == "true") ? "Enabled" : "Disabled"
-        state?.audioInputEnabled = val
-        if(!isOn.equals(val)) {
-            log.debug("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Audio Input Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "audioInputEnabledEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "audioInputEnabledEvent")
-    }
+    def isOn = device.currentState("audioInputEnabled")?.value
+    def val = (on.toString() == "true") ? "Enabled" : "Disabled"
+    state?.audioInputEnabled = val
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Audio Input Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def videoHistEnabledEvent(on) {
-    try {
-        def isOn = device.currentState("videoHistoryEnabled")?.value
-        def val = (on.toString() == "true") ? "Enabled" : "Disabled"
-        state?.videoHistoryEnabled = val
-        if(!isOn.equals(val)) {
-            log.debug("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Video History Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "videoHistEnabledEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "videoHistEnabledEvent")
-    }
+    def isOn = device.currentState("videoHistoryEnabled")?.value
+    def val = (on.toString() == "true") ? "Enabled" : "Disabled"
+    state?.videoHistoryEnabled = val
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Video History Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def publicShareEnabledEvent(on) {
-    try {
-        def isOn = device.currentState("publicShareEnabled")?.value
-        def val = on ? "Enabled" : "Disabled"
-        state?.publicShareEnabled = val
-        if(!isOn.equals(val)) {
-            log.debug("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "publicShareEnabledEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "publicShareEnabledEvent")
-    }
+    def isOn = device.currentState("publicShareEnabled")?.value
+    def val = on ? "Enabled" : "Disabled"
+    state?.publicShareEnabled = val
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def softwareVerEvent(ver) {
-    try {
-        def verVal = device.currentState("softwareVer")?.value
-        state?.softwareVer = ver
-        if(!verVal.equals(ver)) {
-            log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
-            sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
-        } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
-    }
-    catch (ex) {
-        log.error "softwareVerEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "softwareVerEvent")
-    }
+    def verVal = device.currentState("softwareVer")?.value
+    state?.softwareVer = ver
+    if(!verVal.equals(ver)) {
+        log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
+        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
+    } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
 def lastEventDataEvent(data) {
-    try {
-        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-            tf.setTimeZone(getTimeZone())
-        def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
-        def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
-        def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
-        def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
+    def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+        tf.setTimeZone(getTimeZone())
+    def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
+    def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
+    def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
+    def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
 
-        //log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
-        state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
-        state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
-        state?.lastEventData = data
+    //log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
+    state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
+    state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
+    state?.lastEventData = data
 
-        if(curStartDt != newStartDt || curEndDt != newEndDt) {
-            log.debug("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
-            sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is now ${newStartDt}", displayed: false)
-            log.debug("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
-            sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is now ${newEndDt}", displayed: false)
-        } else {
-            Logger("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
-            Logger("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
-        }
-    }
-    catch (ex) {
-        log.error "lastEventDataEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message.toString(), "lastEventDataEvent")
+    if(curStartDt != newStartDt || curEndDt != newEndDt) {
+        log.debug("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
+        sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is now ${newStartDt}", displayed: false)
+        log.debug("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
+        sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is now ${newEndDt}", displayed: false)
+    } else {
+        Logger("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
+        Logger("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
     }
 }
 
 def zoneMotionEvent(data) {
-    try {
-        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-            tf.setTimeZone(getTimeZone())
-        def nowDt = tf.format(new Date())
-        def isMotion = device.currentState("motion")?.stringValue
-        def isBtwn = false        
-        if(data?.start_time && data?.end_time) {
-            def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-            def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-            isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
-        }
-        def val = ((data?.has_motion == "true") && isBtwn) ? "active" : "inactive"
-        if(!isMotion.equals(val)) {
-            log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
-            sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
+    def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+        tf.setTimeZone(getTimeZone())
+    def nowDt = tf.format(new Date())
+    def isMotion = device.currentState("motion")?.stringValue
+    def isBtwn = false
+    if(data?.start_time && data?.end_time) {
+        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+        isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
     }
-    catch (ex) {
-        log.error "zoneMotionEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", devVer(), ex.message.toString(), "zoneMotionEvent")
-    }
+    def val = ((data?.has_motion == "true") && isBtwn) ? "active" : "inactive"
+    if(!isMotion.equals(val)) {
+        log.debug("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
+        sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
 }
 
 def zoneSoundEvent(data) {
-    try {
-        def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-            tf.setTimeZone(getTimeZone())
-        def nowDt = tf.format(new Date())
-        def isSound = device.currentState("sound")?.stringValue
-        def isBtwn = false        
-        if(data?.start_time && data?.end_time) {
-            def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-            def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-            isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
-        }
-        def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
-        if(!isSound.equals(val)) {
-            log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
-            sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Sound Sensor is: (${val}) | Original State: (${isSound})") }
+    def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+        tf.setTimeZone(getTimeZone())
+    def nowDt = tf.format(new Date())
+    def isSound = device.currentState("sound")?.stringValue
+    def isBtwn = false
+    if(data?.start_time && data?.end_time) {
+        def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
+        def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
+        isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
     }
-    catch (ex) {
-        log.error "zoneSoundEvent Exception: ${ex}"
-        //exceptionDataHandler(ex.message, "zoneSoundEvent")
-    }
+    def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
+    if(!isSound.equals(val)) {
+        log.debug("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
+        sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Sound Sensor is: (${val}) | Original State: (${isSound})") }
 }
 
 def activityZoneEvent(zones) {
     //log.trace "activityZoneEvent($zones)..."
-    try {
-        
-    } catch (ex) {
-        log.error "activityZoneEvent Exception: ${ex}"
-        //parent?.sendChildExceptionData("camera", ex.message, "activityZoneEvent")
-    }
 }
 
 def debugOnEvent(debug) {
-    try {
-        def val = device.currentState("debugOn")?.value
-        def dVal = debug ? "On" : "Off"
-        state?.debugStatus = dVal
-        state?.debug = debug.toBoolean() ? true : false
-        if(!val.equals(dVal)) {
-            log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
-            sendEvent(name: 'debugOn', value: dVal, displayed: false)
-        } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
-    }
-    catch (ex) {
-        log.error "debugOnEvent Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "debugOnEvent")
-    }
+    def val = device.currentState("debugOn")?.value
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false
+    if(!val.equals(dVal)) {
+        log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+    } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
-    try {
-        def curStat = device.currentState("apiStatus")?.value
-        def newStat = issue ? "Issues" : "Ok"
-        state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) {
-            log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
-            sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-        } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
-    }
-    catch (ex) {
-        log.error "apiStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "apiStatusEvent")
-    }
+    def curStat = device.currentState("apiStatus")?.value
+    def newStat = issue ? "Issues" : "Ok"
+    state?.apiStatus = newStat
+    if(!curStat.equals(newStat)) {
+        log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+        sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+    } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
 def lastUpdatedEvent() {
-    try {
-        def now = new Date()
-        def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastDt = "${tf?.format(now)}"
-        def lastUpd = device.currentState("lastUpdatedDt")?.value
-        state?.lastUpdatedDt = lastDt?.toString()
-        if(!lastUpd.equals(lastDt?.toString())) {
-            Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-            sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
-        }
-    }
-    catch (ex) {
-        log.error "lastUpdatedEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastUpdatedEvent")
+    def now = new Date()
+    def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastDt = "${tf?.format(now)}"
+    def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
+    if(!lastUpd.equals(lastDt?.toString())) {
+        Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+        sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
     }
 }
 
@@ -633,7 +536,7 @@ def take() {
         def listSize = 4
         if(list?.size() < listSize) {
             list.push(img)
-        } 
+        }
         else if (list?.size() > listSize) {
             def nSz = (list?.size()-listSize) + 1
             //log.debug ">listSize: ($nSz)"
@@ -648,12 +551,12 @@ def take() {
             nList?.push(img)
             list = nList
         }
-log.debug "img_list_size: ${list?.size()}"
+        log.debug "img_list_size: ${list?.size()}"
         if(list) { state?.last5ImageData = list }
     }
     catch (ex) {
         log.error "take Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "take")
+        exceptionDataHandler(ex.message, "take")
     }
 }
 
@@ -663,19 +566,13 @@ log.debug "img_list_size: ${list?.size()}"
 
 def formatDt(dt, mdy = false) {
     //log.trace "formatDt($dt, $mdy)..."
-    try {
-        def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
-        def tf = new SimpleDateFormat(formatVal)
-        if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-        else {
-            LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
-        }
-        return tf.format(dt)
+    def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
+    def tf = new SimpleDateFormat(formatVal)
+    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+    else {
+        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
     }
-    catch (ex) {
-        log.error "formatDt Exception: ${ex}"
-        parent?.sendChildExceptionData("camera", ex.message, "formatDt")
-    }
+    return tf.format(dt)
 }
 
 def epochToTime(tm) {
@@ -685,20 +582,15 @@ def epochToTime(tm) {
 }
 
 def isTimeBetween(start, end, now, tz) {
-    try {
-        def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", start).getTime()
-        def endDt = Date.parse("E MMM dd HH:mm:ss z yyyy", end).getTime()
-        def nowDt = Date.parse("E MMM dd HH:mm:ss z yyyy", now).getTime()
-        def result = false
-        if(nowDt > startDt && nowDt < endDt) {
-            result = true
-        }
-        //def result = timeOfDayIsBetween(startDt, endDt, nowDt, tz) ? true : false
-        return result
-    } catch (ex) {
-        log.error "isTimeBetween Exception: ${ex}"
-        //exceptionDataHandler(ex.message, "isTimeBetween")
+    def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", start).getTime()
+    def endDt = Date.parse("E MMM dd HH:mm:ss z yyyy", end).getTime()
+    def nowDt = Date.parse("E MMM dd HH:mm:ss z yyyy", now).getTime()
+    def result = false
+    if(nowDt > startDt && nowDt < endDt) {
+        result = true
     }
+    //def result = timeOfDayIsBetween(startDt, endDt, nowDt, tz) ? true : false
+    return result
 }
 
 // Local Application Logging
@@ -753,75 +645,51 @@ def exceptionDataHandler(msg, methodName) {
 }
 
 def getImgBase64(url,type) {
-    try {
-        def params = [
-            uri: url,
-            contentType: 'image/$type'
-        ]
-        httpGet(params) { resp ->
-            if(resp.data) {
-                def respData = resp?.data
-                ByteArrayOutputStream bos = new ByteArrayOutputStream()
-                int len
-                int size = 2048
-                byte[] buf = new byte[size]
-                while ((len = respData.read(buf, 0, size)) != -1)
-                       bos.write(buf, 0, len)
-                buf = bos.toByteArray()
-                //log.debug "buf: $buf"
-                String s = buf?.encodeBase64()
-                //log.debug "resp: ${s}"
-                return s ? "data:image/${type};base64,${s.toString()}" : null
-            }
+    def params = [
+        uri: url,
+        contentType: 'image/$type'
+    ]
+    httpGet(params) { resp ->
+        if(resp.data) {
+            def respData = resp?.data
+            ByteArrayOutputStream bos = new ByteArrayOutputStream()
+            int len
+            int size = 2048
+            byte[] buf = new byte[size]
+            while ((len = respData.read(buf, 0, size)) != -1)
+                   bos.write(buf, 0, len)
+            buf = bos.toByteArray()
+            //log.debug "buf: $buf"
+            String s = buf?.encodeBase64()
+            //log.debug "resp: ${s}"
+            return s ? "data:image/${type};base64,${s.toString()}" : null
         }
-    }
-    catch (ex) {
-        log.error "getImgBase64 Exception: $ex"
-        exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
 
 def getImg(imgName) {
-    try {
-        return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
-    }
-    catch (ex) {
-        log.error "getImg Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getImg")
-    }
+    return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
 def getCSS(){
-    try {
-        def params = [
-            //uri: state?.cssUrl.toString(),
-            uri: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css",
-            contentType: 'text/css'
-        ]
-        httpGet(params)  { resp ->
-            return resp?.data.text
-        }
-    }
-    catch (ex) {
-        log.error "Failed to load CSS - Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getCSS")
+    def params = [
+        //uri: state?.cssUrl.toString(),
+        uri: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css",
+        contentType: 'text/css'
+    ]
+    httpGet(params)  { resp ->
+        return resp?.data.text
     }
 }
 
 def getJS(url){
-    try {
-        def params = [
-            uri: url.toString(),
-            contentType: 'text/javascript'
-        ]
-        httpGet(params)  { resp ->
-            log.debug "JS Resp: ${resp?.data}"
-            return resp?.data.text
-        }
-    }
-    catch (ex) {
-        log.error "Failed to load JS - Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getJS")
+    def params = [
+        uri: url.toString(),
+        contentType: 'text/javascript'
+    ]
+    httpGet(params)  { resp ->
+        //log.debug "JS Resp: ${resp?.data}"
+        return resp?.data.text
     }
 }
 
@@ -882,11 +750,11 @@ def getCamApiServer(camUUID) {
 }
 
 def getCamBtnJsData() {
-    def data = 
+    def data =
     """<!--
         function toggle_visibility(id) {
             var id = document.getElementById(id);
-            
+
             var divsToHide = document.getElementsByClassName("hideable");
 
                 for(var i = 0; i < divsToHide.length; i++) {
@@ -901,7 +769,7 @@ def getCamBtnJsData() {
 def getCamHtml() {
     try {
         def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
-        
+
         // These are used to determine the URL for the nest cam stream
         def camUUID = getCamUUID(getPublicVideoId())
         def apiServer = getCamApiServer(camUUID)
