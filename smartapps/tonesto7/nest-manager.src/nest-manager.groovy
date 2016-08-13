@@ -467,7 +467,7 @@ def reviewSetupPage() {
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
             }
@@ -4404,6 +4404,7 @@ def mainAutoPage(params) {
     //log.trace "mainAutoPage()"
     if (!atomicState?.tempUnit) { atomicState?.tempUnit = getTemperatureScale()?.toString() }
     if (!atomicState?.disableAutomation) { atomicState.disableAutomation = false }
+    atomicState?.showHelp = (parent?.getShowHelp() != null) ? parent?.getShowHelp() : true
     def autoType = null
     //If params.autoType is not null then save to atomicState.
     if (!params?.autoType) { autoType = atomicState?.automationType }
@@ -5192,7 +5193,7 @@ def remSensorPage() {
                 }
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
@@ -6057,46 +6058,6 @@ def getRemSenFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, Bool
     return turnOn
 }
 
-/*
-def getRemSenFanRunOk(operState, fanState) {
-    //log.trace "getRemSenFanRunOk($operState, $fanState)"
-    def fanAlreadyOn = (fanState in ["on", "circulate"]) ? true : false
-    def ruleTypeOk = (remSenRuleType in ["Circ", "Heat_Circ", "Cool_Circ", "Heat_Cool_Circ"]) ? true : false
-    def tstatOperStateOk = (operState == "idle") ? true : false
-    def fanModeOk = (fanState == "auto") ? true : false
-
-    def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
-    def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > waitTimeVal) ? true : false
-
-    if (!tstatOperStateOk) {
-        LogAction("Remote Sensor Fan Run: The Thermostat OperatingState is Currently (${operState?.toString().toUpperCase()})... Skipping!!!", "info", true)
-    }
-    if (!ruleTypeOk) {
-        LogAction("Remote Sensor Fan Run: The Selected Rule-Type is not valid... Skipping... | RuleType: ${remSenRuleType}", "info", true)
-    }
-    if(!fanAlreadyOn && !timeSinceLastRunOk) {
-        LogAction("Remote Sensor Fan Run: Required Conditions to Run Fan are not met!!! | The Time Since Last Run (${getLastRemSenFanRunDtSec()} Seconds) is not greater than Required value (${waitTimeVal} seconds)", "info", true)
-    }
-
-    def result = (timeSinceLastRunOk && ruleTypeOk && tstatOperStateOk && (fanModeOk && !fanAlreadyOn)) ? true : false
-    LogAction("RemSenFanRunOk Debug:", "debug", false)
-    LogAction(" ├ RuleTypeOk: (${ruleTypeOk.toString().toUpperCase()}) | (RuleType: $remSenRuleType) ", "debug", false)
-    LogAction(" ├ ThermostatOperatingStateOk: (${tstatOperStateOk.toString().toUpperCase()}) | (Current: ${operState})", "debug", false)
-    LogAction(" ├ FanModeOk: (${fanModeOk.toString().toUpperCase()}) | (Current: ${fanState})", "debug", false)
-    LogAction(" ├ FanAlreadyOn: (${fanAlreadyOn.toString().toUpperCase()})", "debug", false)
-    LogAction(" ├ TimeSinceOk: (${timeSinceLastRunOk.toString().toUpperCase()}) (${getLastRemSenFanRunDtSec()} Seconds > $waitTimeVal Seconds)", "debug", false)
-    LogAction(" ├ LastFanRunSec: (${getLastRemSenFanRunDtSec()} Seconds)", "debug", false)
-    LogAction(" ┌ Final Fan Run OK Result: (${result.toString().toUpperCase()})", "debug", false)
-    return result
-}
-
-def getRemSenTempOk(modeType, Double senTemp, Double curTemp, Double threshold) {
-    def tempDiff = (modeType == "heat") ? ((curTemp - senTemp) > threshold) : ((senTemp - curTemp) > threshold)
-    //log.debug "getRemSenTempOk: ${tempDiff} | Heat: (${(curTemp - senTemp)}) | Cool: (${(senTemp - curTemp)})"
-    return tempDiff
-}
-*/
-
 def getRemSenTempsToList() {
     try {
         def sensors = getUseNightSensor() ? remSensorNight : remSensorDay
@@ -6530,7 +6491,7 @@ def extTempPage() {
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help and Instructions:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
@@ -6951,7 +6912,7 @@ def contactWatchPage() {
                         state: (getNotifConfigDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
@@ -7234,7 +7195,7 @@ def leakWatchPage() {
                         state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
@@ -7517,7 +7478,7 @@ def nestModePresPage() {
                         state: (getNotifConfigDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
@@ -7752,7 +7713,7 @@ def tstatModePage() {
                 }
             }
         }
-        if(parent?.showHelp()) {
+        if(atomicState?.showHelp) {
             section("Help:") {
                 href url:"${getAutoHelpPageUrl()}", style:"embedded", required:false, title:"Help and Instructions...", description:"", image: getAppImg("info.png")
             }
