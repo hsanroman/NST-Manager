@@ -1,10 +1,9 @@
 body {
-    width:80%;
-    margin:10% auto;
+    width:98%;
+    height:400px;
     background:#e6e6e6;
 }
 #visualization_wrap {
-    border:1px solid gray;
     position: relative;
     padding-bottom: 80%;
     height: 0;
