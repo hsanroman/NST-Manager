@@ -1,7 +1,7 @@
 /**
  *  Nest Weather
  *      Author: Anthony S. (@tonesto7)
- *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch) 
+ *  Author: Ben W. (@desertBlade)  Eric S. (@E_sch)
  *
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -34,10 +34,10 @@ metadata {
         capability "Refresh"
         capability "Relative Humidity Measurement"
         capability "Temperature Measurement"
-        
+
         command "refresh"
         command "log"
-        
+
         attribute "apiStatus", "string"
         attribute "debugOn", "string"
         attribute "devTypeVer", "string"
@@ -70,7 +70,7 @@ metadata {
     tiles(scale: 2) {
         htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 10)
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-            state("default", label:'${currentValue}°',  icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png", 
+            state("default", label:'${currentValue}°',  icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
         }
         valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -168,7 +168,7 @@ def processEvent() {
         Logger("------------START OF API RESULTS DATA------------", "warn")
         if(eventData) {
             state.tempUnit = getTemperatureScale()
-            
+
             state.useMilitaryTime = eventData?.mt ? true : false
             state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
             state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
@@ -176,7 +176,7 @@ def processEvent() {
             apiStatusEvent(eventData?.apiIssues)
             deviceVerEvent(eventData?.latestVer.toString())
             state?.cssUrl = eventData?.cssUrl
-            
+
             getWeatherAstronomy(eventData?.data?.weatAstronomy?.sun_phase ? eventData?.data?.weatAstronomy : null)
             getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
             getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
@@ -202,7 +202,7 @@ def getDeviceStateData() {
     return getState()
 }
 
-def getTimeZone() { 
+def getTimeZone() {
     def tz = null
     if (!state?.nestTimeZone) { tz = location?.timeZone }
     else { tz = TimeZone.getTimeZone(state?.nestTimeZone) }
@@ -213,10 +213,10 @@ def getTimeZone() {
 def isCodeUpdateAvailable(newVer, curVer) {
     try {
         def result = false
-        def latestVer 
+        def latestVer
         def versions = [newVer, curVer]
         if(newVer != curVer) {
-            latestVer = versions?.max { a, b -> 
+            latestVer = versions?.max { a, b ->
                 def verA = a?.tokenize('.')
                 def verB = b?.tokenize('.')
                 def commonIndices = Math.min(verA?.size(), verB?.size())
@@ -299,7 +299,7 @@ def apiStatusEvent(issue) {
         def curStat = device.currentState("apiStatus")?.value
         def newStat = issue ? "issue" : "ok"
         state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) { 
+        if(!curStat.equals(newStat)) {
             log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
             sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
         } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -370,45 +370,45 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
     }
 }
 
-def getTemp() { 
-    try { 
+def getTemp() {
+    try {
      if ( wantMetric() ) {
          return "${state?.curWeatherTemp_c}°C"
      } else {
          return "${state?.curWeatherTemp_f}°F"
-    }       
-    } catch (ex) { 
+    }
+    } catch (ex) {
         exceptionDataHandler(ex.message, "getTemp")
-        return 0 
+        return 0
     }
 }
 
-def getDewpoint() { 
-    try { 
+def getDewpoint() {
+    try {
      if ( wantMetric() ) {
          return "${state?.curWeatherDewPoint_c}°C"
      } else {
          return "${state?.curWeatherDewPoint_f}°F"
-    }       
-    } catch (ex) { 
+    }
+    } catch (ex) {
         exceptionDataHandler(ex.message, "getDewpoint")
-        return 0 
+        return 0
     }
 }
 
-def getCurWeather() { 
-    try { return state.curWeather } 
-    catch (ex) { 
+def getCurWeather() {
+    try { return state.curWeather }
+    catch (ex) {
         exceptionDataHandler(ex.message, "getCurWeather")
-        return 0 
+        return 0
     }
 }
 
-def getHumidity() { 
-    try { return device.currentValue("humidity") } 
-    catch (ex) { 
+def getHumidity() {
+    try { return device.currentValue("humidity") }
+    catch (ex) {
         exceptionDataHandler(ex.message, "getHumidity")
-        return 0 
+        return 0
     }
 }
 
@@ -426,7 +426,7 @@ def getWeatherConditions(Map weatData) {
             def cur = weatData
             if(cur) {
                 state.curWeather = cur
-                
+
                 state.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
                 state.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c.toDouble())
                 state.curFeelsTemp_f = Math.round(cur?.current_observation?.feelslike_f as Double)
@@ -632,9 +632,9 @@ private estimateDewPoint(double rh,double t) {
     def B = (L + (M/N)) / 17.27
     def dp = (237.3 * B) / (1 - B)
 
-    def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) ) 
+    def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) )
     def ave = (dp + dp1)/2
-    //log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}" 
+    //log.debug "dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}"
     ave = dp1
     return ave.round(1)
 }
@@ -650,7 +650,7 @@ private estimateLux(weatherIcon) {
         //log.debug "state.sunriseDate: ${state.sunriseDate} state.sunriseDate.time: ${state.sunriseDate.time}"
         //log.debug "state.sunsetDate: ${state.sunsetDate} state.sunsetDate.time: ${state.sunsetDate.time}"
 
-        if(!state?.sunriseDate?.time || !state?.sunsetDate?.time) { 
+        if(!state?.sunriseDate?.time || !state?.sunsetDate?.time) {
             log.warn "estimateLux: Weather Data missing..."
             return
         } else {
@@ -753,7 +753,7 @@ def formatDt(dt) {
 *************************************************************************************************/
 // Local Device Logging
 def Logger(msg, logType = "debug") {
-     if(state?.debug) { 
+     if(state?.debug) {
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -773,7 +773,7 @@ def Logger(msg, logType = "debug") {
         }
     }
 }
- 
+
  //This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
     switch (level) {
@@ -792,7 +792,7 @@ def log(message, level = "trace") {
         default:
             log.error "PARENT_Log>> " + message
             break
-    }            
+    }
     return null // always child interface call with a return value
 }
 
@@ -805,7 +805,7 @@ def exceptionDataHandler(msg, methodName) {
 
 def getImgBase64(url, type) {
     try {
-        def params = [ 
+        def params = [
             uri: url,
             contentType: 'image/$type'
         ]
@@ -831,24 +831,19 @@ def getImgBase64(url, type) {
     }
 }
 
-def getCSS(){
+def getCSS(url = null){
     try {
-        def params = [ 
-            uri: state?.cssUrl.toString(),
+        def params = [
+            uri: !url ? state?.cssUrl.toString() : url?.toString(),
             contentType: 'text/css'
         ]
-        try {
-            httpGet(params)  { resp ->
+        httpGet(params)  { resp ->
             return resp?.data.text
         }
     }
     catch (ex) {
         log.error "getCss Exception: ${ex}"
         exceptionDataHandler(ex.message, "getCSS")
-    }
-}
- catch (ex) {
-        log.error "Failed to load CSS - Exception: $ex"
     }
 }
 
@@ -902,7 +897,7 @@ def getSunriseSunset() {
         def today = localDate("GMT${state.curWeather?.current_observation?.local_tz_offset}")
 
         def ltf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
-                
+
         ltf.setTimeZone(TimeZone.getTimeZone("GMT${state.curWeather?.current_observation?.local_tz_offset}"))
 
         def utf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
@@ -930,11 +925,11 @@ def forecastDay(day) {
     def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
     def forecastImageLink = "<a href=\"#${day}\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
     def forecastTxt = ""
-    
+
     def modalHead = "<div id=\"${day}\" class=\"bottomModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
     def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
     def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
-    
+
     if ( wantMetric() ) {
         forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
     } else {
@@ -984,7 +979,7 @@ def getWeatherHtml() {
                             <h2>${getTemp()}</h2>
                             <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
                         </div>
-                    </div>  
+                    </div>
                     <div class="row topBorder">
                     <div class="centerText four columns">${forecastDay(0)}</div>
                     <div class="centerText four columns">${forecastDay(1)}</div>
@@ -1001,11 +996,11 @@ def getWeatherHtml() {
                     </div>
                     <div class="row topBorder">
                     <div class="centerText offset-by-three six columns">
-                        <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b> 
+                        <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
                         <b>${state?.curWeather?.current_observation?.observation_time}</b>
-                    </div>    
                     </div>
-            
+                    </div>
+
                 <div id="openModal" class="topModal">
                         <div>
                             <a href="#close" title="Close" class="close">X</a>
@@ -1166,7 +1161,7 @@ def getSomeData(devpoll = false) {
         state.remove("dewpointTable")
         state.remove("temperatureTable")
         state.remove("today")
-        
+
         state.eric = tryNum
         runIn( 33, "getSomeData", [overwrite: true])
         return
@@ -1230,6 +1225,54 @@ def getStartTime() {
     return startTime
 }
 
+def getChartCSS() {
+	"""
+            <style type="text/css">
+                body {
+                	font-family: 'San Francisco', 'Roboto', 'Arial';
+                  	font-size: 3.9vw;
+                }
+
+                h1 {
+                  font-size: 6vw;
+                  width: 100%;
+                  text-align: center;
+                  font-weight: normal;
+                }
+
+                h2 {
+                  font-size: 9vw;
+                  text-align: center;
+                  margin-left: auto;
+                  margin-right: auto;
+                  font-weight: normal;
+                }
+
+
+                h3, h3 a {
+                  font-size: 6vw;
+                  font-weight: bold;
+                  text-align: center;
+                  background: #B74C4C;
+                  color: #f5f5f5;
+                }
+
+                h4 {
+                  font-size: 4vw;
+                  font-weight: bold;
+                  text-align: center;
+                  background: #00a1db;
+                  color: #f5f5f5;
+                }
+
+                .centerText {
+                  text-align: center;
+                }
+            </style>
+               """
+}
+
+
 def getGraphHTML() {
     def tempStr = "°F"
     if ( wantMetric() ) {
@@ -1246,7 +1289,6 @@ def getGraphHTML() {
                     <meta http-equiv="pragma" content="no-cache"/>
                     <meta name="viewport" content="width = device-width">
                     <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
-                    <style type="text/css">body,div {margin:0;padding:0}</style>
                     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type="text/javascript">
                             google.charts.load('current', {packages: ['corechart']});
@@ -1254,10 +1296,10 @@ def getGraphHTML() {
                             function drawGraph() {
                                 var data = new google.visualization.DataTable();
                                 data.addColumn('timeofday', 'time');
-                                data.addColumn('number', 'Temperature (Yesterday)');
-                                data.addColumn('number', 'Dewpoint (Yesterday)');
-                                data.addColumn('number', 'Temperature (Today)');
-                                data.addColumn('number', 'Dewpoint (Today)');
+                                data.addColumn('number', 'Temp (Yesterday)');
+                                data.addColumn('number', 'Dew (Yesterday)');
+                                data.addColumn('number', 'Temp (Today)');
+                                data.addColumn('number', 'Dew (Today)');
                                 data.addRows([
                                     ${getDataString(1)}
                                     ${getDataString(2)}
@@ -1266,7 +1308,9 @@ def getGraphHTML() {
                                 ]);
                                 var options = {
                                         fontName: 'San Francisco, Roboto, Arial',
-                                        height: 240,
+                                        is3D: true,
+                                        width: '100%',
+                                        height: '100%',
                                         hAxis: {
                                                 format: 'H:mm',
                                                 minValue: [${getStartTime()},0,0],
@@ -1293,11 +1337,17 @@ def getGraphHTML() {
                                                 }
                                         },
                                         legend: {
-                                                position: 'none'
-                                            },
+                                            position: 'bottom',
+                                            maxLines: 3,
+                                            textStyle: {color: '#000000'}
+                                        },
                                         chartArea: {
-                                                width: '72%',
-                                                height: '85%'
+                                            left: '10%',
+                                            right: '10%',
+                                            top: '3%',
+                                            bottom: '15%',
+                                            height: '100%',
+                                            width: '100%'
                                         }
                                 };
                                 var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
@@ -1305,8 +1355,12 @@ def getGraphHTML() {
                             }
                     </script>
                 </head>
+                <style type="text/css">
+                    ${getChartCSS()}
+                </style>
                 <body>
-                    <div id="chart_div"></div>
+                	<h4> DewPoint/Temp History </h4>
+                    <div id="chart_div" style="width: 100%; height: 275px;"></div>
                 </body>
             </html>
                 """
