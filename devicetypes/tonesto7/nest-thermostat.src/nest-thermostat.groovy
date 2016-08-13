@@ -3,7 +3,7 @@
  *	Author: Anthony S. (@tonesto7)
  *	Contributor: Ben W. (@desertBlade) & Eric S. (@E_Sch)
  *
- * Based off of the EcoBee thermostat under Templates in the IDE 
+ * Based off of the EcoBee thermostat under Templates in the IDE
  * Copyright (C) 2016 Anthony S., Ben W.
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
@@ -44,10 +44,10 @@ metadata {
         capability "Thermostat Operating State"
         capability "Thermostat Setpoint"
         capability "Temperature Measurement"
-        
+
         command "refresh"
         command "poll"
-        
+
         command "away"
         command "present"
         //command "setAway"
@@ -97,7 +97,7 @@ metadata {
     simulator {
         // TODO: define status and reply messages here
     }
-                    
+
     tiles(scale: 2) {
         multiAttributeTile(name:"temperature", type:"thermostat", width:6, height:4, canChangeIcon: true) {
             tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
@@ -135,7 +135,7 @@ metadata {
             }
         }
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-            state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png", 
+            state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png",
                     backgroundColors: getTempColors())
         }
         standardTile("mode2", "device.thermostatMode", width: 2, height: 2, decoration: "flat") {
@@ -234,7 +234,7 @@ metadata {
             state "default", label:'${currentValue}'
         }
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
-        
+
         htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com"])
 
         main( tileMain() )
@@ -242,24 +242,24 @@ metadata {
     }
 }
 
-def tileMain() { 
+def tileMain() {
     return ["temp2"]
 }
 
-def tileSelect() { 
-    def type = null// Setting to 1 shows the Original ST Tiles 
+def tileSelect() {
+    def type = null// Setting to 1 shows the Original ST Tiles
     switch(type) { //Original ST Layout
-        case 1: 
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
-                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh", 
+        case 1:
+            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
+                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh",
                     "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
             break
         case 2:
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
                     "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
             break
         default:
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", 
+            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
 //                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
                     "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "devInfoHtml", "graphHTML", "refresh"]
             break
@@ -267,35 +267,29 @@ def tileSelect() {
 }
 
 def getTempColors() {
-    try {
-        def colorMap
-        if (wantMetric()) {
-            colorMap = [
-                // Celsius Color Range
-                [value: 0, color: "#153591"],
-                [value: 7, color: "#1e9cbb"],
-                [value: 15, color: "#90d2a7"],
-                [value: 23, color: "#44b621"],
-                [value: 29, color: "#f1d801"],
-                [value: 33, color: "#d04e00"],
-                [value: 36, color: "#bc2323"]
-                ]
-        } else {
-            colorMap = [
-                // Fahrenheit Color Range
-                [value: 40, color: "#153591"],
-                [value: 44, color: "#1e9cbb"],
-                [value: 59, color: "#90d2a7"],
-                [value: 74, color: "#44b621"],
-                [value: 84, color: "#f1d801"],
-                [value: 92, color: "#d04e00"],
-                [value: 96, color: "#bc2323"]
+    def colorMap
+    if (wantMetric()) {
+        colorMap = [
+            // Celsius Color Range
+            [value: 0, color: "#153591"],
+            [value: 7, color: "#1e9cbb"],
+            [value: 15, color: "#90d2a7"],
+            [value: 23, color: "#44b621"],
+            [value: 29, color: "#f1d801"],
+            [value: 33, color: "#d04e00"],
+            [value: 36, color: "#bc2323"]
             ]
-        }
-    }
-    catch (ex) {
-        log.error "getTempColors Exception: ${ex}"
-        parent?.sendChildExceptionData("thermostat", ex.toString(), "getTempColors")
+    } else {
+        colorMap = [
+            // Fahrenheit Color Range
+            [value: 40, color: "#153591"],
+            [value: 44, color: "#1e9cbb"],
+            [value: 59, color: "#90d2a7"],
+            [value: 74, color: "#44b621"],
+            [value: 84, color: "#f1d801"],
+            [value: 92, color: "#d04e00"],
+            [value: 96, color: "#bc2323"]
+        ]
     }
 }
 
@@ -350,7 +344,7 @@ def processEvent() {
             humidityEvent(eventData?.data?.humidity.toString())
             operatingStateEvent(eventData?.data?.hvac_state.toString())
             fanModeEvent(eventData?.data?.fan_timer_active.toString())
-            if(!eventData?.data?.last_connection) { lastCheckinEvent(null) } 
+            if(!eventData?.data?.last_connection) { lastCheckinEvent(null) }
             else { lastCheckinEvent(eventData?.data?.last_connection) }
 
             softwareVerEvent(eventData?.data?.software_version.toString())
@@ -361,24 +355,24 @@ def processEvent() {
             state?.cssUrl = eventData?.cssUrl.toString()
             if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
             if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
-            if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) } 
+            if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
             def hvacMode = state?.hvac_mode
             def tempUnit = state?.tempUnit
             switch (tempUnit) {
                 case "C":
                     def heatingSetpoint = 0.0
                     def coolingSetpoint = 0.0
-                    def temp = eventData?.data?.ambient_temperature_c.toDouble() 
+                    def temp = eventData?.data?.ambient_temperature_c.toDouble()
                     def targetTemp = eventData?.data?.target_temperature_c.toDouble()
 
-                    if (hvacMode == "cool") { 
+                    if (hvacMode == "cool") {
                         coolingSetpoint = targetTemp
                         //clearHeatingSetpoint()
-                    } 
-                    else if (hvacMode == "heat") { 
-                        heatingSetpoint = targetTemp 
+                    }
+                    else if (hvacMode == "heat") {
+                        heatingSetpoint = targetTemp
                         //clearCoolingSetpoint()
-                    } 
+                    }
                     else if (hvacMode == "auto") {
                         coolingSetpoint = Math.round(eventData?.data?.target_temperature_high_c.toDouble())
                         heatingSetpoint = Math.round(eventData?.data?.target_temperature_low_c.toDouble())
@@ -393,21 +387,21 @@ def processEvent() {
                     heatingSetpointEvent(heatingSetpoint)
                     if(eventData?.data?.locked_temp_min_c && eventData?.data?.locked_temp_max_c) { lockedTempEvent(eventData?.data?.locked_temp_min_c, eventData?.data?.locked_temp_max_c) }
                     break
-                    
+
                 case "F":
                     def heatingSetpoint = 0
                     def coolingSetpoint = 0
                     def temp = eventData?.data?.ambient_temperature_f
                     def targetTemp = eventData?.data?.target_temperature_f
-                    
-                    if (hvacMode == "cool") { 
+
+                    if (hvacMode == "cool") {
                         coolingSetpoint = targetTemp
                         //clearHeatingSetpoint()
-                    } 
-                    else if (hvacMode == "heat") { 
+                    }
+                    else if (hvacMode == "heat") {
                         heatingSetpoint = targetTemp
                         //clearCoolingSetpoint()
-                    } 
+                    }
                     else if (hvacMode == "auto") {
                         coolingSetpoint = eventData?.data?.target_temperature_high_f
                         heatingSetpoint = eventData?.data?.target_temperature_low_f
@@ -422,7 +416,7 @@ def processEvent() {
                     heatingSetpointEvent(heatingSetpoint)
                     if(eventData?.data?.locked_temp_min_f && eventData?.data?.locked_temp_max_f) { lockedTempEvent(eventData?.data?.locked_temp_min_f, eventData?.data?.locked_temp_max_f) }
                     break
-                
+
                 default:
                     Logger("no Temperature data $tempUnit")
                     break
@@ -448,181 +442,123 @@ def getDeviceStateData() {
     return getState()
 }
 
-def getTimeZone() { 
-    try {
-        def tz = null
-        if (location?.timeZone) { tz = location?.timeZone }
-        else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
-        if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
-        return tz
-    } catch (ex) {
-        log.error "getTimeZone Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getTimeZone")
-    }
+def getTimeZone() {
+    def tz = null
+    if (location?.timeZone) { tz = location?.timeZone }
+    else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
+    if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
+    return tz
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
-    try {
-        def result = false
-        def latestVer 
-        def versions = [newVer, curVer]
-        if(newVer != curVer) {
-            latestVer = versions?.max { a, b -> 
-                def verA = a?.tokenize('.')
-                def verB = b?.tokenize('.')
-                def commonIndices = Math.min(verA?.size(), verB?.size())
-                for (int i = 0; i < commonIndices; ++i) {
-                    //log.debug "comparing $numA and $numB"
-                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
-                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
-                    }
+    def result = false
+    def latestVer
+    def versions = [newVer, curVer]
+    if(newVer != curVer) {
+        latestVer = versions?.max { a, b ->
+            def verA = a?.tokenize('.')
+            def verB = b?.tokenize('.')
+            def commonIndices = Math.min(verA?.size(), verB?.size())
+            for (int i = 0; i < commonIndices; ++i) {
+                //log.debug "comparing $numA and $numB"
+                if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                    return verA[i]?.toInteger() <=> verB[i]?.toInteger()
                 }
-                verA?.size() <=> verB?.size()
             }
-            result = (latestVer == newVer) ? true : false
+            verA?.size() <=> verB?.size()
         }
-        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
-        return result
-    } catch (ex) {
-        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendChildExceptionData("thermostat", devVer(), ex?.toString(), "isCodeUpdateAvailable")
+        result = (latestVer == newVer) ? true : false
     }
+    //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+    return result
 }
 
 def deviceVerEvent(ver) {
-    try {
-        def curData = device.currentState("devTypeVer")?.value.toString()
-        def pubVer = ver ?: null
-        def dVer = devVer() ?: null
-        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
-        state?.devTypeVer = newData
-        state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-        if(!curData?.equals(newData)) {
-            Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
-            sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-        } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
-    }
-    catch (ex) {
-        log.error "deviceVerEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "deviceVerEvent")
-    }
+    def curData = device.currentState("devTypeVer")?.value.toString()
+    def pubVer = ver ?: null
+    def dVer = devVer() ?: null
+    def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
+    state?.devTypeVer = newData
+    state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+    if(!curData?.equals(newData)) {
+        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+        sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def debugOnEvent(debug) {
-    try {
-        def val = device.currentState("debugOn")?.value
-        def dVal = debug ? "On" : "Off"
-        state?.debugStatus = dVal
-        state?.debug = debug.toBoolean() ? true : false 
-        if(!val.equals(dVal)) {
-            log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
-            sendEvent(name: 'debugOn', value: dVal, displayed: false)
-        } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
-    }
-    catch (ex) {
-        log.error "debugOnEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "debugOnEvent")
-    }
+    def val = device.currentState("debugOn")?.value
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false
+    if(!val.equals(dVal)) {
+        log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+    } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def lastCheckinEvent(checkin) {
     //log.trace "lastCheckinEvent()..."
-    try {
-        def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-        def lastChk = device.currentState("lastConnection")?.value
-        state?.lastConnection = lastConn?.toString()
-        if(!lastChk.equals(lastConn?.toString())) {
-            log.debug("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-            sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false, isStateChange: true)
-        } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
-    }
-    catch (ex) {
-        log.error "lastCheckinEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastCheckinEvent")
-    }
+    def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+    def lastChk = device.currentState("lastConnection")?.value
+    state?.lastConnection = lastConn?.toString()
+    if(!lastChk.equals(lastConn?.toString())) {
+        log.debug("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
+        sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false, isStateChange: true)
+    } else { Logger("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
 def lastUpdatedEvent() {
-    try {
-        def now = new Date()
-        def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-        tf.setTimeZone(getTimeZone())
-        def lastDt = "${tf?.format(now)}"
-        def lastUpd = device.currentState("lastUpdatedDt")?.value
-        state?.lastUpdatedDt = lastDt?.toString()
-        if(!lastUpd.equals(lastDt?.toString())) {
-            Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-            sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
-        }
-    }
-    catch (ex) {
-        log.error "lastUpdatedEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastUpdatedEvent")
+    def now = new Date()
+    def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+    tf.setTimeZone(getTimeZone())
+    def lastDt = "${tf?.format(now)}"
+    def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
+    if(!lastUpd.equals(lastDt?.toString())) {
+        Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+        sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
     }
 }
 
 def softwareVerEvent(ver) {
-    try {
-        def verVal = device.currentState("softwareVer")?.value
-        state?.softwareVer = ver
-        if(!verVal.equals(ver)) {
-            log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
-            sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false, isStateChange: true)
-        } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
-    }
-    catch (ex) {
-        log.error "targetTempEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "targetTempEvent")
-    }
+    def verVal = device.currentState("softwareVer")?.value
+    state?.softwareVer = ver
+    if(!verVal.equals(ver)) {
+        log.debug("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
+        sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false, isStateChange: true)
+    } else { Logger("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
 def tempUnitEvent(unit) {
-    try {
-        def tmpUnit = device.currentState("temperatureUnit")?.value
-        state?.tempUnit = unit
-        if(!tmpUnit.equals(unit)) {   
-            log.debug("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
-            sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: true, isStateChange: true)
-        } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
-    }
-    catch (ex) {
-        log.error "tempUnitEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "tempUnitEvent")
-    }
+    def tmpUnit = device.currentState("temperatureUnit")?.value
+    state?.tempUnit = unit
+    if(!tmpUnit.equals(unit)) {
+        log.debug("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
+        sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: true, isStateChange: true)
+    } else { Logger("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
 def targetTempEvent(Double targetTemp) {
-    try {
-        def temp = device.currentState("targetTemperature")?.value.toString()
-        def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-        if(!temp.equals(rTargetTemp.toString())) {
-            log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-            sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-        } else { Logger("targetTemperature is (${rTargetTemp}) | Original Temp: (${temp})") }
-    }
-    catch (ex) {
-        log.error "targetTempEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "targetTempEvent")
-    }
+    def temp = device.currentState("targetTemperature")?.value.toString()
+    def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
+    if(!temp.equals(rTargetTemp.toString())) {
+        log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
+        sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
+    } else { Logger("targetTemperature is (${rTargetTemp}) | Original Temp: (${temp})") }
 }
 
 def thermostatSetpointEvent(Double targetTemp) {
-//    try {
-        def temp = device.currentState("thermostatSetpoint")?.value.toString()
-        def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-        if(!temp.equals(rTargetTemp.toString())) {
-            log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-            sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-        } else { Logger("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
-//    }
-//    catch (ex) {
-//        log.error "thermostatSetpointEvent Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "thermostatSetpointEvent")
-//    }
+    def temp = device.currentState("thermostatSetpoint")?.value.toString()
+    def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
+    if(!temp.equals(rTargetTemp.toString())) {
+        log.debug("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
+        sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
+    } else { Logger("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
 }
 
 def temperatureEvent(Double tempVal) {
@@ -642,47 +578,35 @@ def temperatureEvent(Double tempVal) {
 }
 
 def heatingSetpointEvent(Double tempVal) {
-//    try {
-        def temp = device.currentState("heatingSetpoint")?.value.toString()
-        if(tempVal.toInteger() == 0 || !state?.can_heat || (getHvacMode == "off")) { 
-            if(temp != "") { clearHeatingSetpoint() }
-        } else {
-            def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-            if(!temp.equals(rTempVal.toString())) {
-                log.debug("UPDATED | HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
-                def disp = false
-                def hvacMode = getHvacMode()
-                if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-                sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
-            } else { Logger("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
-        }
-//    }
-//    catch (ex) {
-//        log.error "heatingSetpointEvent Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "heatingSetpointEvent")
-//    }
+    def temp = device.currentState("heatingSetpoint")?.value.toString()
+    if(tempVal.toInteger() == 0 || !state?.can_heat || (getHvacMode == "off")) {
+        if(temp != "") { clearHeatingSetpoint() }
+    } else {
+        def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+        if(!temp.equals(rTempVal.toString())) {
+            log.debug("UPDATED | HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+            def disp = false
+            def hvacMode = getHvacMode()
+            if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
+            sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
+        } else { Logger("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+    }
 }
 
 def coolingSetpointEvent(Double tempVal) {
-//    try {
-        def temp = device.currentState("coolingSetpoint")?.value.toString()
-        if(tempVal.toInteger() == 0 || !state?.can_cool || (getHvacMode == "off")) { 
-            if(temp != "") { clearCoolingSetpoint() }
-        } else {
-            def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-            if(!temp.equals(rTempVal.toString())) {
-                log.debug("UPDATED | CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
-                def disp = false
-                def hvacMode = getHvacMode()
-                if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-                sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
-            } else { Logger("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
-        }
-//    }
-//    catch (ex) {
- //       log.error "coolingSetpointEvent Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "coolingSetpointEvent") 
-//    }
+    def temp = device.currentState("coolingSetpoint")?.value.toString()
+    if(tempVal.toInteger() == 0 || !state?.can_cool || (getHvacMode == "off")) {
+        if(temp != "") { clearCoolingSetpoint() }
+    } else {
+        def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+        if(!temp.equals(rTempVal.toString())) {
+            log.debug("UPDATED | CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+            def disp = false
+            def hvacMode = getHvacMode()
+            if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
+            sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
+        } else { Logger("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+    }
 }
 
 def hasLeafEvent(Boolean hasLeaf) {
@@ -716,266 +640,176 @@ def humidityEvent(humidity) {
 }
 
 def presenceEvent(presence) {
-    try {
-        def val = getPresence()
-        def pres = (presence == "home") ? "present" : "not present"
-        def nestPres = state?.nestPresence
-        def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
-        def statePres = state?.present
-        state?.present = (pres == "present") ? true : false
-        state?.nestPresence = newNestPres
-        if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
-            log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
-            sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
-            sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
-        } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
-    }
-    catch (ex) {
-        log.error "presenceEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "presenceEvent")
-    }
+    def val = getPresence()
+    def pres = (presence == "home") ? "present" : "not present"
+    def nestPres = state?.nestPresence
+    def newNestPres = (presence == "home") ? "home" : ((presence == "auto-away") ? "auto-away" : "away")
+    def statePres = state?.present
+    state?.present = (pres == "present") ? true : false
+    state?.nestPresence = newNestPres
+    if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
+        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+        sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
+        sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
+    } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
 def hvacModeEvent(mode) {
-    try {
-        def hvacMode = getHvacMode()
-        def newMode = (mode == "heat-cool") ? "auto" : mode
-        state?.hvac_mode = newMode
-        if(!hvacMode.equals(newMode)) {
-            log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
-            sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
-        } else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
-    }
-    catch (ex) {
-        log.error "hvacModeEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "hvacModeEvent")
-    }
-} 
+    def hvacMode = getHvacMode()
+    def newMode = (mode == "heat-cool") ? "auto" : mode
+    state?.hvac_mode = newMode
+    if(!hvacMode.equals(newMode)) {
+        log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
+        sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
+    } else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
+}
 
 def fanModeEvent(fanActive) {
-    try {
-        def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
-        def fanMode = device.currentState("thermostatFanMode")?.value
-        if(!fanMode.equals(val)) {
-            log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
-            sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
-    }
-    catch (ex) {
-        log.error "fanModeEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "fanModeEvent")
-    }
+    def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
+    def fanMode = device.currentState("thermostatFanMode")?.value
+    if(!fanMode.equals(val)) {
+        log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
+        sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
 }
 
 def operatingStateEvent(operatingState) {
-    try {
-        def hvacState = device.currentState("thermostatOperatingState")?.value
-        def operState = (operatingState == "off") ? "idle" : operatingState
-        if(!hvacState.equals(operState)) {
-            log.debug("UPDATED | OperatingState is (${operState}) | Original State: (${hvacState})")
-            sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
-        } else { Logger("OperatingState is (${operState}) | Original State: (${hvacState})") }
-    }
-    catch (ex) {
-        log.error "operatingStateEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "operatingStateEvent")
-    }
+    def hvacState = device.currentState("thermostatOperatingState")?.value
+    def operState = (operatingState == "off") ? "idle" : operatingState
+    if(!hvacState.equals(operState)) {
+        log.debug("UPDATED | OperatingState is (${operState}) | Original State: (${hvacState})")
+        sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
+    } else { Logger("OperatingState is (${operState}) | Original State: (${hvacState})") }
 }
 
 def tempLockOnEvent(isLocked) {
-    try {
-        def curState = device.currentState("tempLockOn")?.value.toString()
-        def newState = isLocked?.toString()
-        state?.tempLockOn = newState
-        if(!curState?.equals(newState)) {
-            log.debug("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
-            sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
-        } else { Logger("Temperature Lock is set to (${newState}) | Original State: (${curState})") }
-    }
-    catch (ex) {
-        log.error "tempLockOnEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "tempLockOnEvent")
-    }
+    def curState = device.currentState("tempLockOn")?.value.toString()
+    def newState = isLocked?.toString()
+    state?.tempLockOn = newState
+    if(!curState?.equals(newState)) {
+        log.debug("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
+        sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
+    } else { Logger("Temperature Lock is set to (${newState}) | Original State: (${curState})") }
 }
 
 def lockedTempEvent(Double minTemp, Double maxTemp) {
-    try {
-        def curMinTemp = device.currentState("lockedTempMin")?.doubleValue
-        def curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
-        //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-        if(curMinTemp != minTemp || curMaxTemp != maxTemp) {
-            log.debug("UPDATED | Temperature Lock Minimum is (${minTemp}) | Original Temp: (${curMinTemp})")
-            log.debug("UPDATED | Temperature Lock Maximum is (${maxTemp}) | Original Temp: (${curMaxTemp})")
-            sendEvent(name:'lockedTempMin', value: minTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Minimum is ${minTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-            sendEvent(name:'lockedTempMax', value: maxTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Maximum is ${maxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-        } else { 
-            Logger("Temperature Lock Minimum is (${minTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
-            Logger("Temperature Lock Maximum is (${maxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})") 
-        }
-    }
-    catch (ex) {
-        log.error "lockedTempEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lockedTempEvent")
+    def curMinTemp = device.currentState("lockedTempMin")?.doubleValue
+    def curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
+    //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+    if(curMinTemp != minTemp || curMaxTemp != maxTemp) {
+        log.debug("UPDATED | Temperature Lock Minimum is (${minTemp}) | Original Temp: (${curMinTemp})")
+        log.debug("UPDATED | Temperature Lock Maximum is (${maxTemp}) | Original Temp: (${curMaxTemp})")
+        sendEvent(name:'lockedTempMin', value: minTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Minimum is ${minTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+        sendEvent(name:'lockedTempMax', value: maxTemp, unit: state?.tempUnit, descriptionText: "Temperature Lock Maximum is ${maxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+    } else {
+        Logger("Temperature Lock Minimum is (${minTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
+        Logger("Temperature Lock Maximum is (${maxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})")
     }
 }
 
 def safetyTempsEvent(safetyTemps) {
-    try {
-        def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
-        def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
-        def newMinTemp = safetyTemps?.min.toDouble() ?: 0
-        def newMaxTemp = safetyTemps?.max.toDouble() ?: 0
-        
-        //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-        if(curMinTemp != newMinTemp || curMaxTemp != newMaxTemp) {
-            log.debug("UPDATED | Safety Temperature Minimum is (${newMinTemp}${state?.tempUnit}) | Original Temp: (${curMinTemp}${state?.tempUnit})")
-            log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}${state?.tempUnit}) | Original Temp: (${curMaxTemp}${state?.tempUnit})")
-            sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-            sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-            checkSafetyTemps()
-        } else { 
-            Logger("Safety Temperature Minimum is  (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
-            Logger("Safety Temperature Maximum is  (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})") 
-        }
-    }
-    catch (ex) {
-        log.error "safetyTempsEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "safetyTempsEvent")
+    def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
+    def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
+    def newMinTemp = safetyTemps?.min.toDouble() ?: 0
+    def newMaxTemp = safetyTemps?.max.toDouble() ?: 0
+
+    //def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+    if(curMinTemp != newMinTemp || curMaxTemp != newMaxTemp) {
+        log.debug("UPDATED | Safety Temperature Minimum is (${newMinTemp}${state?.tempUnit}) | Original Temp: (${curMinTemp}${state?.tempUnit})")
+        log.debug("UPDATED | Safety Temperature Maximum is (${newMaxTemp}${state?.tempUnit}) | Original Temp: (${curMaxTemp}${state?.tempUnit})")
+        sendEvent(name:'safetyTempMin', value: newMinTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Minimum is ${newMinTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+        sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+        checkSafetyTemps()
+    } else {
+        Logger("Safety Temperature Minimum is  (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
+        Logger("Safety Temperature Maximum is  (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})")
     }
 }
 
 def checkSafetyTemps() {
-    try {
-        def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
-        def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
-        def curTemp = device.currentState("temperature")?.doubleValue
-        def curRangeStr = device.currentState("safetyTempExceeded")?.toString()
-        def curInRange = !curRangeStr?.toBoolean()
-        def inRange = true
-        if(curMinTemp && curMaxTemp) {
-            if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
-        }
-        //log.debug("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curinRange: ${curinRange} inRange: ${inRange}")
-        if (curRangeStr == null || inRange != curInRange) {
-            sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-            log.debug("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
-        } else { 
-            Logger("Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
-        }
+    def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
+    def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
+    def curTemp = device.currentState("temperature")?.doubleValue
+    def curRangeStr = device.currentState("safetyTempExceeded")?.toString()
+    def curInRange = !curRangeStr?.toBoolean()
+    def inRange = true
+    if(curMinTemp && curMaxTemp) {
+        if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
     }
-    catch (ex) {
-        log.error "checkSafetyTemps Exception: ${ex}"
-        exceptionDataHandler(ex.message, "checkSafetyTemps")
+    //log.debug("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curinRange: ${curinRange} inRange: ${inRange}")
+    if (curRangeStr == null || inRange != curInRange) {
+        sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+        log.debug("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
+    } else {
+        Logger("Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
     }
 }
 
 def comfortHumidityEvent(comfortHum) {
-    try {
-        //def curMinHum = device.currentState("comfortHumidityMin")?.integerValue
-        def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
-        //def newMinHum = comfortHum?.min.toInteger() ?: 0
-        def newMaxHum = comfortHum?.toInteger() ?: 0
-        if(curMaxHum != newMaxHum) {
-            //log.debug("UPDATED | Comfort Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
-            log.debug("UPDATED | Comfort Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
-            sendEvent(name:'comfortHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
-        } else { 
-            //Logger("Comfort Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
-            Logger("Comfort Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)") 
-        }
-    }
-    catch (ex) {
-        log.error "comfortHumidityEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "comfortHumidityEvent")
+    //def curMinHum = device.currentState("comfortHumidityMin")?.integerValue
+    def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
+    //def newMinHum = comfortHum?.min.toInteger() ?: 0
+    def newMaxHum = comfortHum?.toInteger() ?: 0
+    if(curMaxHum != newMaxHum) {
+        //log.debug("UPDATED | Comfort Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
+        log.debug("UPDATED | Comfort Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
+        sendEvent(name:'comfortHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
+    } else {
+        //Logger("Comfort Humidity Minimum is (${newMinHum}) | Original Minimum Humidity: (${curMinHum})")
+        Logger("Comfort Humidity Maximum is (${newMaxHum}%) | Original Maximum Humidity: (${curMaxHum}%)")
     }
 }
 
 def comfortDewpointEvent(comfortDew) {
-    try {
-        //def curMinDew = device.currentState("comfortDewpointMin")?.integerValue
-        def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
-        //def newMinDew = comfortDew?.min.toInteger() ?: 0
-        def newMaxDew = comfortDew?.toDouble() ?: 0.0
-        if(curMaxDew != newMaxDew) {
-            //log.debug("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
-            log.debug("UPDATED | Comfort Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
-            //sendEvent(name:'comfortDewpointMin', value: newMinDew, unit: "%", descriptionText: "Comfort Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
-            sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Comfort Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
-        } else { 
-            //Logger("Comfort Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
-            Logger("Comfort Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})") 
-        }
-    }
-    catch (ex) {
-        log.error "comfortDewpointEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "comfortDewpointEvent")
+    //def curMinDew = device.currentState("comfortDewpointMin")?.integerValue
+    def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
+    //def newMinDew = comfortDew?.min.toInteger() ?: 0
+    def newMaxDew = comfortDew?.toDouble() ?: 0.0
+    if(curMaxDew != newMaxDew) {
+        //log.debug("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
+        log.debug("UPDATED | Comfort Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
+        //sendEvent(name:'comfortDewpointMin', value: newMinDew, unit: "%", descriptionText: "Comfort Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
+        sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Comfort Dewpoint Maximum is ${newMaxDew}" , displayed: true, isStateChange: true)
+    } else {
+        //Logger("Comfort Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
+        Logger("Comfort Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})")
     }
 }
 
 def onlineStatusEvent(online) {
-    try {
-        def isOn = device.currentState("onlineStatus")?.value
-        def val = online ? "Online" : "Offline"
-        state?.onlineStatus = val
-        if(!isOn.equals(val)) { 
-            log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
-        } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "onlineStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "onlineStatusEvent")
-    }
+    def isOn = device.currentState("onlineStatus")?.value
+    def val = online ? "Online" : "Offline"
+    state?.onlineStatus = val
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
+    } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def apiStatusEvent(issue) {
-    try {
-        def curStat = device.currentState("apiStatus")?.value
-        def newStat = issue ? "issue" : "ok"
-        state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) { 
-            log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
-            sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-        } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
-    }
-    catch (ex) {
-        log.error "apiStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "apiStatusEvent")
-    }
+    def curStat = device.currentState("apiStatus")?.value
+    def newStat = issue ? "issue" : "ok"
+    state?.apiStatus = newStat
+    if(!curStat.equals(newStat)) {
+        log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+        sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+    } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
 def canHeatCool(canHeat, canCool) {
-    try {
-        state?.can_heat = !canHeat ? false : true
-        state?.can_cool = !canCool ? false : true
-        sendEvent(name: "canHeat", value: state?.can_heat.toString())
-        sendEvent(name: "canCool", value: state?.can_cool.toString())
-    }
-    catch (ex) {
-        log.error "canHeatCool Exception: ${ex}"
-        exceptionDataHandler(ex.message, "canHeatCool")
-    }
+    state?.can_heat = !canHeat ? false : true
+    state?.can_cool = !canCool ? false : true
+    sendEvent(name: "canHeat", value: state?.can_heat.toString())
+    sendEvent(name: "canCool", value: state?.can_cool.toString())
 }
 
 def hasFan(hasFan) {
-    try {
-        state?.has_fan = (hasFan == "true") ? true : false
-        sendEvent(name: "hasFan", value: hasFan.toString())
-    }
-    catch (ex) {
-        log.error "hasFan Exception: ${ex}"
-        exceptionDataHandler(ex.message, "hasFan")
-    }
+    state?.has_fan = (hasFan == "true") ? true : false
+    sendEvent(name: "hasFan", value: hasFan.toString())
 }
 
 def isEmergencyHeat(val) {
-    try {
-        state?.is_using_emergency_heat = !val ? false : true
-    }
-    catch (ex) {
-        log.error "isEmergencyHeat Exception: ${ex}"
-        exceptionDataHandler(ex.message, "isEmergencyHeat")
-    }
+    state?.is_using_emergency_heat = !val ? false : true
 }
 
 def clearHeatingSetpoint() {
@@ -1000,53 +834,53 @@ def clearCoolingSetpoint() {
     }
 }
 
-def getCoolTemp() { 
-    return !device.currentValue("coolingSetpoint") ? 0 : device.currentValue("coolingSetpoint") 
+def getCoolTemp() {
+    return !device.currentValue("coolingSetpoint") ? 0 : device.currentValue("coolingSetpoint")
 }
 
-def getHeatTemp() { 
-    return !device.currentValue("heatingSetpoint") ? 0 : device.currentValue("heatingSetpoint") 
+def getHeatTemp() {
+    return !device.currentValue("heatingSetpoint") ? 0 : device.currentValue("heatingSetpoint")
 }
 
-def getFanMode() { 
-    return !device.currentState("thermostatFanMode")?.value ? "unknown" : device.currentState("thermostatFanMode")?.value.toString() 
+def getFanMode() {
+    return !device.currentState("thermostatFanMode")?.value ? "unknown" : device.currentState("thermostatFanMode")?.value.toString()
 }
 
-def getHvacMode() { 
+def getHvacMode() {
     return !state?.hvac_mode ? device.currentState("thermostatMode")?.value.toString() : state.hvac_mode
-    //return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.value.toString() 
+    //return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.value.toString()
 }
 
 def getHvacState() {
-    return !device.currentState("thermostatOperatingState") ? "unknown" : device.currentState("thermostatOperatingState")?.value.toString() 
+    return !device.currentState("thermostatOperatingState") ? "unknown" : device.currentState("thermostatOperatingState")?.value.toString()
 }
 
-def getNestPresence() { 
+def getNestPresence() {
     return !state?.nestPresence ? device.currentState("nestPresence")?.value.toString() : state.nestPresence
     //return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.value.toString()
 }
 
-def getPresence() { 
+def getPresence() {
     return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
-def getTargetTemp() { 
-    return !device.currentValue("targetTemperature") ? 0 : device.currentValue("targetTemperature") 
+def getTargetTemp() {
+    return !device.currentValue("targetTemperature") ? 0 : device.currentValue("targetTemperature")
 }
 
-def getThermostatSetpoint() { 
-    return !device.currentValue("thermostatSetpoint") ? 0 : device.currentValue("thermostatSetpoint") 
+def getThermostatSetpoint() {
+    return !device.currentValue("thermostatSetpoint") ? 0 : device.currentValue("thermostatSetpoint")
 }
 
-def getTemp() { 
-    return !device.currentValue("temperature") ? 0 : device.currentValue("temperature") 
+def getTemp() {
+    return !device.currentValue("temperature") ? 0 : device.currentValue("temperature")
 }
 
-def getHumidity() { 
-    return !device.currentValue("humidity") ? 0 : device.currentValue("humidity") 
+def getHumidity() {
+    return !device.currentValue("humidity") ? 0 : device.currentValue("humidity")
 }
 
-def getTempWaitVal() { 
+def getTempWaitVal() {
     return state?.childWaitVal ? state?.childWaitVal.toInteger() : 4
 }
 
@@ -1057,59 +891,35 @@ def wantMetric() { return (state?.tempUnit == "C") }
 |							Temperature Setpoint Functions for Buttons							|
 *************************************************************************************************/
 void heatingSetpointUp() {
-//   try {
-//        log.trace "heatingSetpointUp()..."
-        def operMode = getHvacMode()
-        if ( operMode == "heat" || operMode == "auto" ) {
-            levelUpDown(1,"heat")
-        }
-//    }
-//    catch (ex) {
-//        log.error "heatingSetpointUp Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "heatingSetpointUp")
-//    }
+    //log.trace "heatingSetpointUp()..."
+    def operMode = getHvacMode()
+    if ( operMode == "heat" || operMode == "auto" ) {
+        levelUpDown(1,"heat")
+    }
 }
 
 void heatingSetpointDown() {
-//    try {
-//        log.trace "heatingSetpointDown()..."
-        def operMode = getHvacMode()
-        if ( operMode == "heat" || operMode == "auto" ) {
-            levelUpDown(-1, "heat")
-        }
-//    }
-//    catch (ex) {
-//        log.error "heatingSetpointDown Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "heatingSetpointDown")
-//    }
+    //log.trace "heatingSetpointDown()..."
+    def operMode = getHvacMode()
+    if ( operMode == "heat" || operMode == "auto" ) {
+        levelUpDown(-1, "heat")
+    }
 }
 
 void coolingSetpointUp() {
-//    try {
-//        log.trace "coolingSetpointUp()..."
-        def operMode = getHvacMode()
-        if ( operMode == "cool" || operMode == "auto" ) {
-            levelUpDown(1, "cool")
-        }
-//    }
-//    catch (ex) {
-//        log.error "coolingSetpointUp Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "coolingSetpointUp")
-//    }
+    //log.trace "coolingSetpointUp()..."
+    def operMode = getHvacMode()
+    if ( operMode == "cool" || operMode == "auto" ) {
+        levelUpDown(1, "cool")
+    }
 }
 
 void coolingSetpointDown() {
-//    try {
-//        log.trace "coolingSetpointDown()..."
-        def operMode = getHvacMode()
-        if ( operMode == "cool" || operMode == "auto" ) {
-            levelUpDown(-1, "cool")
-        }
-//    }
- //   catch (ex) {
-//        log.error "coolingSetpointDown Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "coolingSetpointDown")
-//    }
+    //log.trace "coolingSetpointDown()..."
+    def operMode = getHvacMode()
+    if ( operMode == "cool" || operMode == "auto" ) {
+        levelUpDown(-1, "cool")
+    }
 }
 
 void levelUp() {
@@ -1122,125 +932,119 @@ void levelDown() {
 
 void levelUpDown(tempVal, chgType = null) {
     //log.trace "levelUpDown()...($tempVal | $chgType)"
-//    try {
-        def hvacMode = getHvacMode()
-        
-        if (canChangeTemp()) {
-        // From RBOY https://community.smartthings.com/t/multiattributetile-value-control/41651/23
-        // Determine OS intended behaviors based on value behaviors (urrgghhh.....ST!)
-            def upLevel 
-            
-            if (!state?.lastLevelUpDown) { state.lastLevelUpDown = 0 } // If it isn't defined lets baseline it
+    def hvacMode = getHvacMode()
 
-            if ((state.lastLevelUpDown == 1) && (tempVal == 1)) { upLevel = true } //Last time it was 1 and again it's 1 its increase
-                
-            else if ((state.lastLevelUpDown == 0) && (tempVal == 0)) { upLevel = false } //Last time it was 0 and again it's 0 then it's decrease
-                
-            else if ((state.lastLevelUpDown == -1) && (tempVal == -1)) { upLevel = false } //Last time it was -1 and again it's -1 then it's decrease
-                
-            else if ((tempVal - state.lastLevelUpDown) > 0) { upLevel = true } //If it's increasing then it's up
-                
-            else if ((tempVal - state.lastLevelUpDown) < 0) { upLevel = false } //If it's decreasing then it's down
-            
-            else { log.error "UNDEFINED STATE, CONTACT DEVELOPER. Last level $state.lastLevelUpDown, Current level, $value" }
+    if (canChangeTemp()) {
+    // From RBOY https://community.smartthings.com/t/multiattributetile-value-control/41651/23
+    // Determine OS intended behaviors based on value behaviors (urrgghhh.....ST!)
+        def upLevel
 
-            state.lastLevelUpDown = tempVal // Save it
+        if (!state?.lastLevelUpDown) { state.lastLevelUpDown = 0 } // If it isn't defined lets baseline it
 
-            def targetVal = 0.0
-            def tempUnit = device.currentValue('temperatureUnit')
-            def curHeatpoint = device.currentValue("heatingSetpoint")
-            def curCoolpoint = device.currentValue("coolingSetpoint")
-            def curThermSetpoint = device.latestValue("thermostatSetpoint")
-            targetVal = curThermSetpoint ?: 0.0
-            if (hvacMode == "auto") {
-                if (chgType == "cool") { 
-                    targetVal = curCoolpoint
-                    curThermSetpoint = targetVal
-                }
-                if (chgType == "heat") { 
-                    targetVal = curHeatpoint
-                    curThermSetpoint = targetVal
-                }
+        if ((state.lastLevelUpDown == 1) && (tempVal == 1)) { upLevel = true } //Last time it was 1 and again it's 1 its increase
+
+        else if ((state.lastLevelUpDown == 0) && (tempVal == 0)) { upLevel = false } //Last time it was 0 and again it's 0 then it's decrease
+
+        else if ((state.lastLevelUpDown == -1) && (tempVal == -1)) { upLevel = false } //Last time it was -1 and again it's -1 then it's decrease
+
+        else if ((tempVal - state.lastLevelUpDown) > 0) { upLevel = true } //If it's increasing then it's up
+
+        else if ((tempVal - state.lastLevelUpDown) < 0) { upLevel = false } //If it's decreasing then it's down
+
+        else { log.error "UNDEFINED STATE, CONTACT DEVELOPER. Last level $state.lastLevelUpDown, Current level, $value" }
+
+        state.lastLevelUpDown = tempVal // Save it
+
+        def targetVal = 0.0
+        def tempUnit = device.currentValue('temperatureUnit')
+        def curHeatpoint = device.currentValue("heatingSetpoint")
+        def curCoolpoint = device.currentValue("coolingSetpoint")
+        def curThermSetpoint = device.latestValue("thermostatSetpoint")
+        targetVal = curThermSetpoint ?: 0.0
+        if (hvacMode == "auto") {
+            if (chgType == "cool") {
+                targetVal = curCoolpoint
+                curThermSetpoint = targetVal
             }
+            if (chgType == "heat") {
+                targetVal = curHeatpoint
+                curThermSetpoint = targetVal
+            }
+        }
 
-            if (upLevel) {
-                //log.debug "Increasing by 1 increment"
-                if (tempUnit == "C" ) {
-                    targetVal = targetVal.toDouble() + 0.5
-                    if (targetVal < 9.0) { targetVal = 9.0 }
-                    if (targetVal > 32.0 ) { targetVal = 32.0 }
-                } else {
-                    targetVal = targetVal.toDouble() + 1.0
-                    if (targetVal < 50.0) { targetVal = 50 }
-                    if (targetVal > 90.0) { targetVal = 90 }
-                }
+        if (upLevel) {
+            //log.debug "Increasing by 1 increment"
+            if (tempUnit == "C" ) {
+                targetVal = targetVal.toDouble() + 0.5
+                if (targetVal < 9.0) { targetVal = 9.0 }
+                if (targetVal > 32.0 ) { targetVal = 32.0 }
             } else {
-                //log.debug "Reducing by 1 increment"
-                if (tempUnit == "C" ) {
-                    targetVal = targetVal.toDouble() - 0.5
-                    if (targetVal < 9.0) { targetVal = 9.0 }
-                    if (targetVal > 32.0 ) { targetVal = 32.0 }
-                } else {
-                    targetVal = targetVal.toDouble() - 1.0
-                    if (targetVal < 50.0) { targetVal = 50 }
-                    if (targetVal > 90.0) { targetVal = 90 }
-                }
+                targetVal = targetVal.toDouble() + 1.0
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
             }
+        } else {
+            //log.debug "Reducing by 1 increment"
+            if (tempUnit == "C" ) {
+                targetVal = targetVal.toDouble() - 0.5
+                if (targetVal < 9.0) { targetVal = 9.0 }
+                if (targetVal > 32.0 ) { targetVal = 32.0 }
+            } else {
+                targetVal = targetVal.toDouble() - 1.0
+                if (targetVal < 50.0) { targetVal = 50 }
+                if (targetVal > 90.0) { targetVal = 90 }
+            }
+        }
 
-            if (targetVal != curThermSetpoint ) {
-                switch (hvacMode) {
-                    case "heat":
-                        Logger("Sending changeSetpoint(Temp: ${targetVal})") 
-                        if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
-                        thermostatSetpointEvent(targetVal)
-                        heatingSetpointEvent(targetVal)
-                        if (!chgType) { chgType = "" }
+        if (targetVal != curThermSetpoint ) {
+            switch (hvacMode) {
+                case "heat":
+                    Logger("Sending changeSetpoint(Temp: ${targetVal})")
+                    if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
+                    thermostatSetpointEvent(targetVal)
+                    heatingSetpointEvent(targetVal)
+                    if (!chgType) { chgType = "" }
 //                        runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
-                        scheduleChangeSetpoint()
-                        break
-                    case "cool":
-                        Logger("Sending changeSetpoint(Temp: ${targetVal})") 
-                        if (state?.oldCool == null) { state.oldCool = curCoolpoint}
-                        thermostatSetpointEvent(targetVal)
-                        coolingSetpointEvent(targetVal)
-                        if (!chgType) { chgType = "" }
+                    scheduleChangeSetpoint()
+                    break
+                case "cool":
+                    Logger("Sending changeSetpoint(Temp: ${targetVal})")
+                    if (state?.oldCool == null) { state.oldCool = curCoolpoint}
+                    thermostatSetpointEvent(targetVal)
+                    coolingSetpointEvent(targetVal)
+                    if (!chgType) { chgType = "" }
 //                        runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
-                        scheduleChangeSetpoint()
-                        break
-                    case "auto":
-                        if (chgType) {
-                            switch (chgType) {
-                                case "cool":
-                                    Logger("Sending changeSetpoint(Temp: ${targetVal})")
-                                    if (state?.oldCool == null) { state.oldCool = curCoolpoint}
-                                    coolingSetpointEvent(targetVal)
+                    scheduleChangeSetpoint()
+                    break
+                case "auto":
+                    if (chgType) {
+                        switch (chgType) {
+                            case "cool":
+                                Logger("Sending changeSetpoint(Temp: ${targetVal})")
+                                if (state?.oldCool == null) { state.oldCool = curCoolpoint}
+                                coolingSetpointEvent(targetVal)
 //                                    runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
-                                    scheduleChangeSetpoint()
-                                    break
-                                case "heat":
-                                    Logger("Sending changeSetpoint(Temp: ${targetVal})")
-                                    if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
-                                    heatingSetpointEvent(targetVal)
+                                scheduleChangeSetpoint()
+                                break
+                            case "heat":
+                                Logger("Sending changeSetpoint(Temp: ${targetVal})")
+                                if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
+                                heatingSetpointEvent(targetVal)
 //                                    runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
-                                    scheduleChangeSetpoint()
-                                    break
-                                default:
-                                    log.warn "Can not change temp while in this mode ($chgType}!!!"
-                                    break
-                            }
-                        } else { log.warn "Temp Change without a chgType is not supported!!!" }
-                        break
-                    default:
-                        log.warn "Unsupported Mode Received: ($hvacMode}!!!"
-                        break
-                }
+                                scheduleChangeSetpoint()
+                                break
+                            default:
+                                log.warn "Can not change temp while in this mode ($chgType}!!!"
+                                break
+                        }
+                    } else { log.warn "Temp Change without a chgType is not supported!!!" }
+                    break
+                default:
+                    log.warn "Unsupported Mode Received: ($hvacMode}!!!"
+                    break
             }
-        } else { log.debug "levelUpDown: Cannot adjust temperature due to presence: $state?.present or hvacMode $hvacMode" }
-//    }
-//    catch (ex) {
-//        log.error "levelUpDown Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "levelUpDown")
-//    }
+        }
+    } else { log.debug "levelUpDown: Cannot adjust temperature due to presence: $state?.present or hvacMode $hvacMode" }
 }
 
 def scheduleChangeSetpoint() {
@@ -1269,50 +1073,37 @@ def formatDt(dt) {
 
 //Returns time differences is seconds
 def GetTimeDiffSeconds(lastDate) {
-//    try {
-        if(lastDate?.contains("dtNow")) { return 10000 }
-        def now = new Date()
-        def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
-        def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
-        def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
-        def diff = (int) (long) (stop - start) / 1000
-        return diff
-//    }
-//    catch (ex) {
-//        LogAction("GetTimeDiffSeconds Exception: ${ex}", "error", true)
-//        sendExceptionData(ex, "GetTimeDiffSeconds")
-//        return 10000
-//    }
+    if(lastDate?.contains("dtNow")) { return 10000 }
+    def now = new Date()
+    def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
+    def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
+    def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
+    def diff = (int) (long) (stop - start) / 1000
+    return diff
 }
 
 
 // Nest does not allow temp changes in away modes
 def canChangeTemp() {
     //log.trace "canChangeTemp()..."
-//    try {
-        def curPres = getNestPresence()
-        if (curPres == "home") {
-            def hvacMode = getHvacMode()
-            switch (hvacMode) {
-                case "heat":
-                    return true
-                    break
-                case "cool":
-                    return true
-                    break
-                case "auto":
-                    return true
-                    break
-                default:
-                    return false
-                    break
-            }
-        } else { return false }
-//    }
-//    catch (ex) {
-//        log.error "canChangeTemp Exception: ${ex}"
-//        exceptionDataHandler(ex.message, "canChangeTemp")
-//    }
+    def curPres = getNestPresence()
+    if (curPres == "home") {
+        def hvacMode = getHvacMode()
+        switch (hvacMode) {
+            case "heat":
+                return true
+                break
+            case "cool":
+                return true
+                break
+            case "auto":
+                return true
+                break
+            default:
+                return false
+                break
+        }
+    } else { return false }
 }
 
 void changeSetpoint() {
@@ -1347,7 +1138,7 @@ void changeSetpoint() {
                     def heatFirst
                     if(md) {
                         if (curHeatpoint >= curCoolpoint) {
-                            log.warn "changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint}" 
+                            log.warn "changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint}"
                         } else {
                             if("${md}" == "heat") { state.oldHeat = null; setHeatingSetpoint(curHeatpoint) }
                             else if ("${md}" == "cool") { state.oldCool = null; setCoolingSetpoint(curCoolpoint) }
@@ -1377,7 +1168,7 @@ void changeSetpoint() {
                     break
                 default:
                     if (curHeatpoint > curCoolpoint) {
-                        log.warn "changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint} ${val}" 
+                        log.warn "changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint} ${val}"
                     }
                     //thermostatSetpointEvent(temp)
                     break
@@ -1403,7 +1194,7 @@ void setHeatingSetpoint(Double reqtemp) {
         def temp = 0.0
         def canHeat = state?.can_heat.toBoolean()
         def result = false
-                    
+
         log.debug "Heat Temp Received: ${reqtemp} (${tempUnit})"
         if (state?.present && canHeat) {
             switch (tempUnit) {
@@ -1432,11 +1223,11 @@ void setHeatingSetpoint(Double reqtemp) {
                         if (temp > 90) { temp = 90 }
                         log.debug "Sending Heat Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempLow(this, tempUnit, temp) 
+                            parent.setTargetTempLow(this, tempUnit, temp)
                             heatingSetpointEvent(temp)
-                        }  
+                        }
                         if (hvacMode == 'heat') {
-                            parent.setTargetTemp(this, tempUnit, temp) 
+                            parent.setTargetTemp(this, tempUnit, temp)
                             thermostatSetpointEvent(temp)
                             heatingSetpointEvent(temp)
                         }
@@ -1447,8 +1238,8 @@ void setHeatingSetpoint(Double reqtemp) {
                     Logger("no Temperature data $tempUnit")
                 break
             }
-        } else { 
-            log.debug "Skipping heat change" 
+        } else {
+            log.debug "Skipping heat change"
             result = false
         }
     }
@@ -1470,7 +1261,7 @@ void setCoolingSetpoint(Double reqtemp) {
         def tempUnit = state?.tempUnit
         def canCool = state?.can_cool.toBoolean()
         def result = false
-        
+
         log.debug "Cool Temp Received: ${reqtemp} (${tempUnit})"
         if (state?.present && canCool) {
             switch (tempUnit) {
@@ -1481,30 +1272,30 @@ void setCoolingSetpoint(Double reqtemp) {
                         if (temp > 32.0) { temp = 32.0 }
                         log.debug "Sending Cool Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempHigh(this, tempUnit, temp) 
+                            parent.setTargetTempHigh(this, tempUnit, temp)
                             coolingSetpointEvent(temp)
-                        } 
+                        }
                         if (hvacMode == 'cool') {
-                            parent.setTargetTemp(this, tempUnit, temp) 
+                            parent.setTargetTemp(this, tempUnit, temp)
                             thermostatSetpointEvent(temp)
                             coolingSetpointEvent(temp)
                         }
                     }
                     result = true
                     break
-                    
+
                 case "F":
                     temp = reqtemp.round(0).toInteger()
                     if (temp) {
                         if (temp < 50) { temp = 50 }
                         if (temp > 90) { temp = 90 }
-                        log.debug "Sending Cool Temp ($temp)"        
+                        log.debug "Sending Cool Temp ($temp)"
                         if (hvacMode == 'auto') {
-                            parent.setTargetTempHigh(this, tempUnit, temp) 
+                            parent.setTargetTempHigh(this, tempUnit, temp)
                             coolingSetpointEvent(temp)
                         }
                         if (hvacMode == 'cool') {
-                            parent.setTargetTemp(this, tempUnit, temp) 
+                            parent.setTargetTemp(this, tempUnit, temp)
                             thermostatSetpointEvent(temp)
                             coolingSetpointEvent(temp)
                         }
@@ -1647,17 +1438,17 @@ def doChangeMode() {
         def errflag = true
         switch(currentMode) {
             case "auto":
-                if (parent.setHvacMode(this, "heat-cool")) { 
+                if (parent.setHvacMode(this, "heat-cool")) {
                     errflag = false
                 }
                 break
             case "heat":
-                if (parent.setHvacMode(this, "heat")) { 
+                if (parent.setHvacMode(this, "heat")) {
                     errflag = false
                 }
                 break
             case "cool":
-                if (parent.setHvacMode(this, "cool")) { 
+                if (parent.setHvacMode(this, "cool")) {
                     errflag = false
                 }
                 break
@@ -1689,7 +1480,7 @@ void off() {
 
 void heat() {
     log.trace "heat()..."
-    hvacModeEvent("heat") 
+    hvacModeEvent("heat")
     doChangeMode()
 }
 
@@ -1700,13 +1491,13 @@ void emergencyHeat() {
 
 void cool() {
     log.trace "cool()..."
-    hvacModeEvent("cool") 
+    hvacModeEvent("cool")
     doChangeMode()
 }
 
 void auto() {
     log.trace "auto()..."
-    hvacModeEvent("auto") 
+    hvacModeEvent("auto")
     doChangeMode()
 }
 
@@ -1802,7 +1593,7 @@ void setThermostatFanMode(fanModeStr) {
 *************************************************************************************************/
 // Local Application Logging
 def Logger(msg, logType = "debug") {
-    if(state?.debug) { 
+    if(state?.debug) {
         switch (logType) {
             case "trace":
                 log.trace "${msg}"
@@ -1822,7 +1613,7 @@ def Logger(msg, logType = "debug") {
         }
     }
 }
- 
+
 //This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
     switch (level) {
@@ -1841,7 +1632,7 @@ def log(message, level = "trace") {
         default:
             log.error "PARENT_Log>> " + message
             break
-    }            
+    }
     return null // always child interface call with a return value
 }
 
@@ -1854,7 +1645,7 @@ def exceptionDataHandler(msg, methodName) {
 
 def getImgBase64(url,type) {
     try {
-        def params = [ 
+        def params = [
             uri: url,
             contentType: 'image/$type'
         ]
@@ -1881,29 +1672,23 @@ def getImgBase64(url,type) {
     }
 }
 
-def getCSS(){
-    try {
-        def params = [ 
-            uri: state?.cssUrl.toString(),
-            contentType: 'text/css'
-        ]
-        httpGet(params)  { resp ->
-            return resp?.data.text
-        }
-    }
-    catch (ex) {
-        log.error "Failed to load CSS - Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getCSS")
+def getCSS(url = null){
+    def params = [
+        uri: !url ? state?.cssUrl.toString() : url?.toString(),
+        contentType: 'text/css'
+    ]
+    httpGet(params)  { resp ->
+        return resp?.data.text
     }
 }
 
-def getImg(imgName) { 
-    return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" 
+def getImg(imgName) {
+    return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
 def getInfoHtml() {
     try {
-        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" : 
+        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
                         "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def html = """
@@ -1939,15 +1724,15 @@ def getInfoHtml() {
                     </tr>
                 </tbody>
                 </table>
-                
+
                <p class="centerText">
                 	<a href="#openModal" class="button">More info</a>
                 </p>
-                
+
                   <div id="openModal" class="topModal">
                         <div>
                             <a href="#close" title="Close" class="close">X</a>
-                          <table>  
+                          <table>
                             <tr>
                                 <th>Firmware Version</th>
                                 <th>Debug</th>
@@ -2027,19 +1812,19 @@ String getDataString(Integer seriesIndex) {
     def myval
     def myindex
     def lastdataArray = null
-    
-    
+
+
     if (seriesIndex == 5) {
       // state.can_cool
     }
     if (seriesIndex == 6) {
        // state.can_heat
     }
-    
+
     dataTable.each() {
         myindex = seriesIndex
         if (state?.can_heat && state?.can_cool) { dataArray = [[it[0],it[1],0],null,null,null,null,null,null] }
-        else { 
+        else {
             dataArray = [[it[0],it[1],0],null,null,null,null,null]
             if (myindex == 6) {myindex = 5}
         }
@@ -2051,7 +1836,7 @@ String getDataString(Integer seriesIndex) {
         } else { myval = it[2] }
 
         dataArray[myindex] = myval
-        
+
         //reduce # of points to graph
         if (lastVal != myval) {
             lastAdded = true
@@ -2063,12 +1848,12 @@ String getDataString(Integer seriesIndex) {
             dataString += dataArray.toString() + ","
         } else { lastAdded = false; lastdataArray = dataArray }
     }
-    
+
     if (!lastAdded && dataString) {
         dataArray[myindex] = myval
         dataString += dataArray.toString() + ","
     }
-    
+
     if (dataString == "") {
         dataArray = [[0,0,0],null,null,null,null,null,null]
         dataArray[myindex] = 0
@@ -2372,31 +2157,31 @@ def getGraphHTML() {
     if ( wantMetric() ) {
         tempStr = "°C"
     }
-    
+
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
     def coolstr2 =  getDataString(5)
     def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
-    
+
     def heatstr1 = "data.addColumn('number', 'HeatSP');"
     def heatstr2 = getDataString(6)
     def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
-    
+
     if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
-    
+
     if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
-    
+
     if (!state?.can_cool) {
         coolstr1 = ""
         coolstr2 = ""
         coolstr3 = ""
     }
-    
+
     if (!state?.can_heat) {
         heatstr1 = ""
         heatstr2 = ""
         heatstr3 = ""
     }
-    
+
     def minval = getMinTemp()
     def minstr = "minValue: ${minval},"
 
@@ -2425,77 +2210,84 @@ def getGraphHTML() {
                     <style type="text/css">body,div {margin:0;padding:0}</style>
                     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type="text/javascript">
-                            google.charts.load('current', {packages: ['corechart']});
-                            google.charts.setOnLoadCallback(drawGraph);
-                            function drawGraph() {
-                                var data = new google.visualization.DataTable();
-                                data.addColumn('timeofday', 'time');
-                                data.addColumn('number', 'Temp (Y)');
-                                data.addColumn('number', 'Temp (T)');
-                                data.addColumn('number', 'Operating');
-                                data.addColumn('number', 'Humidity');
-                                ${coolstr1}
-                                ${heatstr1}
-                                data.addRows([
-                                    ${getDataString(1)}
-                                    ${getDataString(2)}
-                                    ${getDataString(3)}
-                                    ${getDataString(4)}
-                                    ${coolstr2}
-                                    ${heatstr2}
-                                ]);
-                                var options = {
-                                        fontName: 'San Francisco, Roboto, Arial',
-                                        height: 240,
-                                        width: 300,
-                                        hAxis: {
-                                                format: 'H:mm',
-                                                minValue: [${getStartTime()},0,0],
-                                                slantedText: false
-                                        },
-                                        series: {
-                                                0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                                                1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                                                2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                                                3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                                                ${coolstr3}
-                                                ${heatstr3}
-                                        },
-                                        vAxes: {
-                                                0: {
-                                                    title: 'Humidity (%)',
-                                                    format: 'decimal',
-                                                    minValue: 0,
-                                                    maxValue: 100,
-                                                    textStyle: {color: '#B8B8B8'},
-                                                    titleTextStyle: {color: '#B8B8B8'}
-                                                },
-                                                1: {
-                                                    title: 'Temperature (${tempStr})',
-                                                    format: 'decimal',
-                                                    ${minstr}
-                                                    ${maxstr}
-                                                    textStyle: {color: '#FF0000'},
-                                                    titleTextStyle: {color: '#FF0000'}
-                                                }
-                                        },
-                                        legend: {
-                                                position: 'top',
-                                                maxLines: 4,
-                                                textStyle: {color: '#000000'}
-                                            },
-                                        chartArea: {
-                                                width: '72%',
-                                                height: '85%'
-                                        }
-                                };
-                                var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-                                chart.draw(data, options);
-                            }
+                        google.charts.load('current', {packages: ['corechart']});
+                        google.charts.setOnLoadCallback(drawGraph);
+                        function drawGraph() {
+                            var data = new google.visualization.DataTable();
+                            data.addColumn('timeofday', 'time');
+                            data.addColumn('number', 'Temp (Y)');
+                            data.addColumn('number', 'Temp (T)');
+                            data.addColumn('number', 'Operating');
+                            data.addColumn('number', 'Humidity');
+                            ${coolstr1}
+                            ${heatstr1}
+                            data.addRows([
+                                ${getDataString(1)}
+                                ${getDataString(2)}
+                                ${getDataString(3)}
+                                ${getDataString(4)}
+                                ${coolstr2}
+                                ${heatstr2}
+                            ]);
+                            var options = {
+                            width: '100%',
+                            height: '100%',
+                                hAxis: {
+                                    format: 'H:mm',
+                                    minValue: [${getStartTime()},0,0],
+                                    slantedText: false
+                                },
+                                series: {
+                                    0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                                    1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                                    2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                                    3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                                    ${coolstr3}
+                                    ${heatstr3}
+                                },
+                                vAxes: {
+                                    0: {
+                                        title: 'Humidity (%)',
+                                        format: 'decimal',
+                                        minValue: 0,
+                                        maxValue: 100,
+                                        textStyle: {color: '#B8B8B8'},
+                                        titleTextStyle: {color: '#B8B8B8'}
+                                    },
+                                    1: {
+                                        title: 'Temperature (${tempStr})',
+                                        format: 'decimal',
+                                        ${minstr}
+                                        ${maxstr}
+                                        textStyle: {color: '#FF0000'},
+                                        titleTextStyle: {color: '#FF0000'}
+                                    }
+                                },
+                                legend: {
+                                    position: 'bottom',
+                                    maxLines: 4,
+                                    textStyle: {color: '#000000'}
+                                },
+                                chartArea: {
+                                    left: '12%',
+                                    right: '12%',
+                                    top: '3%',
+                                    bottom: '15%',
+                                    height: '100%',
+                                    width: '100%'
+                                }
+                            };
+                            var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+                            chart.draw(data, options);
+                        }
                     </script>
                 </head>
+                <style type="text/css">
+                    ${getCSS()}
+                </style>
                 <body>
-                    <div id="chart_div"></div>
+                  <h4>Event Value History</h4>
+                  <div id="chart_div" style="width: 100%; height: 200px;"></div>
                 </body>
             </html>
                 """

@@ -110,35 +110,29 @@ def parse(String description) {
 def configure() { }
 
 def getTempColors() {
-    try {
-        def colorMap
-        if (wantMetric()) {
-            colorMap = [
-                // Celsius Color Range
-                [value: 0, color: "#153591"],
-                [value: 7, color: "#1e9cbb"],
-                [value: 15, color: "#90d2a7"],
-                [value: 23, color: "#44b621"],
-                [value: 29, color: "#f1d801"],
-                [value: 33, color: "#d04e00"],
-                [value: 36, color: "#bc2323"]
-                ]
-        } else {
-            colorMap = [
-                // Fahrenheit Color Range
-                [value: 40, color: "#153591"],
-                [value: 44, color: "#1e9cbb"],
-                [value: 59, color: "#90d2a7"],
-                [value: 74, color: "#44b621"],
-                [value: 84, color: "#f1d801"],
-                [value: 92, color: "#d04e00"],
-                [value: 96, color: "#bc2323"]
-                ]
-        }
-    }
-    catch (ex) {
-        log.error "getTempColors Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getTempColors")
+    def colorMap
+    if (wantMetric()) {
+        colorMap = [
+            // Celsius Color Range
+            [value: 0, color: "#153591"],
+            [value: 7, color: "#1e9cbb"],
+            [value: 15, color: "#90d2a7"],
+            [value: 23, color: "#44b621"],
+            [value: 29, color: "#f1d801"],
+            [value: 33, color: "#d04e00"],
+            [value: 36, color: "#bc2323"]
+            ]
+    } else {
+        colorMap = [
+            // Fahrenheit Color Range
+            [value: 40, color: "#153591"],
+            [value: 44, color: "#1e9cbb"],
+            [value: 59, color: "#90d2a7"],
+            [value: 74, color: "#44b621"],
+            [value: 84, color: "#f1d801"],
+            [value: 92, color: "#d04e00"],
+            [value: 96, color: "#bc2323"]
+            ]
     }
 }
 
@@ -211,205 +205,136 @@ def getTimeZone() {
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
-    try {
-        def result = false
-        def latestVer
-        def versions = [newVer, curVer]
-        if(newVer != curVer) {
-            latestVer = versions?.max { a, b ->
-                def verA = a?.tokenize('.')
-                def verB = b?.tokenize('.')
-                def commonIndices = Math.min(verA?.size(), verB?.size())
-                for (int i = 0; i < commonIndices; ++i) {
-                    //log.debug "comparing $numA and $numB"
-                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
-                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
-                    }
+    def result = false
+    def latestVer
+    def versions = [newVer, curVer]
+    if(newVer != curVer) {
+        latestVer = versions?.max { a, b ->
+            def verA = a?.tokenize('.')
+            def verB = b?.tokenize('.')
+            def commonIndices = Math.min(verA?.size(), verB?.size())
+            for (int i = 0; i < commonIndices; ++i) {
+                //log.debug "comparing $numA and $numB"
+                if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                    return verA[i]?.toInteger() <=> verB[i]?.toInteger()
                 }
-                verA?.size() <=> verB?.size()
             }
-            result = (latestVer == newVer) ? true : false
+            verA?.size() <=> verB?.size()
         }
-        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
-        return result
-    } catch (ex) {
-        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendChildExceptionData("weather", devVer(), ex?.toString(), "isCodeUpdateAvailable")
+        result = (latestVer == newVer) ? true : false
     }
+    //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+    return result
 }
 
 def deviceVerEvent(ver) {
-    try {
-        def curData = device.currentState("devTypeVer")?.value.toString()
-        def pubVer = ver ?: null
-        def dVer = devVer() ?: null
-        def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
-        state?.devTypeVer = newData
-        state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-        if(!curData?.equals(newData)) {
-            Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
-            sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-        } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
-    }
-    catch (ex) {
-        log.error "deviceVerEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "deviceVerEvent")
-    }
+    def curData = device.currentState("devTypeVer")?.value.toString()
+    def pubVer = ver ?: null
+    def dVer = devVer() ?: null
+    def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}"
+    state?.devTypeVer = newData
+    state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+    if(!curData?.equals(newData)) {
+        Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
+        sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+    } else { Logger("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
 def debugOnEvent(debug) {
-    try {
-        def val = device.currentState("debugOn")?.value
-        def dVal = debug ? "On" : "Off"
-        state?.debugStatus = dVal
-        state?.debug = debug.toBoolean() ? true : false
-        if(!val.equals(dVal)) {
-            log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
-            sendEvent(name: 'debugOn', value: dVal, displayed: false)
-        } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
-    }
-    catch (ex) {
-        log.error "debugOnEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "debugOnEvent")
-    }
+    def val = device.currentState("debugOn")?.value
+    def dVal = debug ? "On" : "Off"
+    state?.debugStatus = dVal
+    state?.debug = debug.toBoolean() ? true : false
+    if(!val.equals(dVal)) {
+        log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        sendEvent(name: 'debugOn', value: dVal, displayed: false)
+    } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
 def lastUpdatedEvent() {
-    try {
-        def now = new Date()
-        def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-        def tf = new SimpleDateFormat(formatVal)
-            tf.setTimeZone(getTimeZone())
-        def lastDt = "${tf?.format(now)}"
-        def lastUpd = device.currentState("lastUpdatedDt")?.value
-        state?.lastUpdatedDt = lastDt?.toString()
-        if(!lastUpd.equals(lastDt?.toString())) {
-            Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-            sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
-        }
-    }
-    catch (ex) {
-        log.error "lastUpdatedEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "lastUpdatedEvent")
+    def now = new Date()
+    def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+    def tf = new SimpleDateFormat(formatVal)
+        tf.setTimeZone(getTimeZone())
+    def lastDt = "${tf?.format(now)}"
+    def lastUpd = device.currentState("lastUpdatedDt")?.value
+    state?.lastUpdatedDt = lastDt?.toString()
+    if(!lastUpd.equals(lastDt?.toString())) {
+        Logger("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
+        sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
     }
 }
 
 def apiStatusEvent(issue) {
-    try {
-        def curStat = device.currentState("apiStatus")?.value
-        def newStat = issue ? "issue" : "ok"
-        state?.apiStatus = newStat
-        if(!curStat.equals(newStat)) {
-            log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
-            sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-        } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
-    }
-    catch (ex) {
-        log.error "apiStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "apiStatusEvent")
-    }
+    def curStat = device.currentState("apiStatus")?.value
+    def newStat = issue ? "issue" : "ok"
+    state?.apiStatus = newStat
+    if(!curStat.equals(newStat)) {
+        log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+        sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+    } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
 def humidityEvent(humidity) {
-    try {
-        def hum = device.currentState("humidity")?.value
-        if(!hum.equals(humidity)) {
-            log.debug("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
-            sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
-        } else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
-    }
-    catch (ex) {
-        log.error "humidityEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "humidityEvent")
-    }
+    def hum = device.currentState("humidity")?.value
+    if(!hum.equals(humidity)) {
+        log.debug("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
+        sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
+    } else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
 }
 
 def illuminanceEvent(illum) {
-    try {
-        def cur = device.currentState("illuminance")?.value.toString()
-        if(!cur.equals(illum.toString())) {
-            log.debug("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
-            sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
-        } else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
-    }
-    catch (ex) {
-        log.error "illuminanceEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "illuminanceEvent")
-    }
+    def cur = device.currentState("illuminance")?.value.toString()
+    if(!cur.equals(illum.toString())) {
+        log.debug("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
+        sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
+    } else { Logger("Illuminance is (${illum}) | Original State: (${cur})") }
 }
 
 def dewpointEvent(Double tempVal) {
-    try {
-        def temp = device.currentState("dewpoint")?.value.toString()
-        def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-        if(!temp.equals(rTempVal.toString())) {
-            log.debug("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
-            sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
-        } else { Logger("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
-    }
-    catch (ex) {
-        log.error "dewpointEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "dewpointEvent")
-    }
+    def temp = device.currentState("dewpoint")?.value.toString()
+    def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+    if(!temp.equals(rTempVal.toString())) {
+        log.debug("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
+        sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+    } else { Logger("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
 def temperatureEvent(Double tempVal, Double feelsVal) {
-    try {
-        def temp = device.currentState("temperature")?.value.toString()
-        def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-        def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
-        if(!temp.equals(rTempVal.toString())) {
-            log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-            sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
-            sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
-        } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
-    }
-    catch (ex) {
-        log.error "temperatureEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "temperatureEvent")
-    }
+    def temp = device.currentState("temperature")?.value.toString()
+    def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+    def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
+    if(!temp.equals(rTempVal.toString())) {
+        log.debug("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
+        sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
+        sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
+    } else { Logger("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
 
 def getTemp() {
-    try {
-     if ( wantMetric() ) {
-         return "${state?.curWeatherTemp_c}°C"
-     } else {
-         return "${state?.curWeatherTemp_f}°F"
+    if ( wantMetric() ) {
+        return "${state?.curWeatherTemp_c}°C"
+    } else {
+        return "${state?.curWeatherTemp_f}°F"
     }
-    } catch (ex) {
-        exceptionDataHandler(ex.message, "getTemp")
-        return 0
-    }
+    return 0
 }
 
 def getDewpoint() {
-    try {
-     if ( wantMetric() ) {
-         return "${state?.curWeatherDewPoint_c}°C"
-     } else {
-         return "${state?.curWeatherDewPoint_f}°F"
+    if ( wantMetric() ) {
+        return "${state?.curWeatherDewPoint_c}°C"
+    } else {
+        return "${state?.curWeatherDewPoint_f}°F"
     }
-    } catch (ex) {
-        exceptionDataHandler(ex.message, "getDewpoint")
-        return 0
-    }
+    return 0
 }
 
 def getCurWeather() {
-    try { return state.curWeather }
-    catch (ex) {
-        exceptionDataHandler(ex.message, "getCurWeather")
-        return 0
-    }
+    return state.curWeather ?: 0
 }
 
 def getHumidity() {
-    try { return device.currentValue("humidity") }
-    catch (ex) {
-        exceptionDataHandler(ex.message, "getHumidity")
-        return 0
-    }
+    return device.currentValue("humidity") ?: 0
 }
 
 def wantMetric() { return (state?.tempUnit == "C") }
@@ -1225,54 +1150,6 @@ def getStartTime() {
     return startTime
 }
 
-def getChartCSS() {
-	"""
-            <style type="text/css">
-                body {
-                	font-family: 'San Francisco', 'Roboto', 'Arial';
-                  	font-size: 3.9vw;
-                }
-
-                h1 {
-                  font-size: 6vw;
-                  width: 100%;
-                  text-align: center;
-                  font-weight: normal;
-                }
-
-                h2 {
-                  font-size: 9vw;
-                  text-align: center;
-                  margin-left: auto;
-                  margin-right: auto;
-                  font-weight: normal;
-                }
-
-
-                h3, h3 a {
-                  font-size: 6vw;
-                  font-weight: bold;
-                  text-align: center;
-                  background: #B74C4C;
-                  color: #f5f5f5;
-                }
-
-                h4 {
-                  font-size: 4vw;
-                  font-weight: bold;
-                  text-align: center;
-                  background: #00a1db;
-                  color: #f5f5f5;
-                }
-
-                .centerText {
-                  text-align: center;
-                }
-            </style>
-               """
-}
-
-
 def getGraphHTML() {
     def tempStr = "°F"
     if ( wantMetric() ) {
@@ -1291,76 +1168,74 @@ def getGraphHTML() {
                     <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
                     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type="text/javascript">
-                            google.charts.load('current', {packages: ['corechart']});
-                            google.charts.setOnLoadCallback(drawGraph);
-                            function drawGraph() {
-                                var data = new google.visualization.DataTable();
-                                data.addColumn('timeofday', 'time');
-                                data.addColumn('number', 'Temp (Yesterday)');
-                                data.addColumn('number', 'Dew (Yesterday)');
-                                data.addColumn('number', 'Temp (Today)');
-                                data.addColumn('number', 'Dew (Today)');
-                                data.addRows([
-                                    ${getDataString(1)}
-                                    ${getDataString(2)}
-                                    ${getDataString(3)}
-                                    ${getDataString(4)}
-                                ]);
-                                var options = {
-                                        fontName: 'San Francisco, Roboto, Arial',
-                                        is3D: true,
-                                        width: '100%',
-                                        height: '100%',
-                                        hAxis: {
-                                                format: 'H:mm',
-                                                minValue: [${getStartTime()},0,0],
-                                                slantedText: false
-                                        },
-                                        series: {
-                                                0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-                                                1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
-                                                2: {targetAxisIndex: 1, color: '#FF0000'},
-                                                3: {targetAxisIndex: 0, color: '#004CFF'}
-                                        },
-                                        vAxes: {
-                                                0: {
-                                                        title: 'Dewpoint (${tempStr})',
-                                                        format: 'decimal',
-                                                        textStyle: {color: '#004CFF'},
-                                                        titleTextStyle: {color: '#004CFF'}
-                                                },
-                                                1: {
-                                                        title: 'Temperature (${tempStr})',
-                                                        format: 'decimal',
-                                                        textStyle: {color: '#FF0000'},
-                                                        titleTextStyle: {color: '#FF0000'}
-                                                }
-                                        },
-                                        legend: {
-                                            position: 'bottom',
-                                            maxLines: 3,
-                                            textStyle: {color: '#000000'}
-                                        },
-                                        chartArea: {
-                                            left: '10%',
-                                            right: '10%',
-                                            top: '3%',
-                                            bottom: '15%',
-                                            height: '100%',
-                                            width: '100%'
-                                        }
-                                };
-                                var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
-                                chart.draw(data, options);
-                            }
+                        google.charts.load('current', {packages: ['corechart']});
+                        google.charts.setOnLoadCallback(drawGraph);
+                        function drawGraph() {
+                            var data = new google.visualization.DataTable();
+                            data.addColumn('timeofday', 'time');
+                            data.addColumn('number', 'Temp (Yesterday)');
+                            data.addColumn('number', 'Dew (Yesterday)');
+                            data.addColumn('number', 'Temp (Today)');
+                            data.addColumn('number', 'Dew (Today)');
+                            data.addRows([
+                                ${getDataString(1)}
+                                ${getDataString(2)}
+                                ${getDataString(3)}
+                                ${getDataString(4)}
+                            ]);
+                            var options = {
+                                width: '100%',
+                                height: '100%',
+                                hAxis: {
+                                    format: 'H:mm',
+                                    minValue: [${getStartTime()},0,0],
+                                    slantedText: false
+                                },
+                                series: {
+                                    0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+                                    1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
+                                    2: {targetAxisIndex: 1, color: '#FF0000'},
+                                    3: {targetAxisIndex: 0, color: '#004CFF'}
+                                },
+                                vAxes: {
+                                    0: {
+                                        title: 'Dewpoint (${tempStr})',
+                                        format: 'decimal',
+                                        textStyle: {color: '#004CFF'},
+                                        titleTextStyle: {color: '#004CFF'}
+                                    },
+                                    1: {
+                                        title: 'Temperature (${tempStr})',
+                                        format: 'decimal',
+                                        textStyle: {color: '#FF0000'},
+                                        titleTextStyle: {color: '#FF0000'}
+                                    }
+                                },
+                                legend: {
+                                    position: 'bottom',
+                                    maxLines: 3,
+                                    textStyle: {color: '#000000'}
+                                },
+                                chartArea: {
+                                    left: '12%',
+                                    right: '12%',
+                                    top: '3%',
+                                    bottom: '15%',
+                                    height: '100%',
+                                    width: '100%'
+                                }
+                            };
+                            var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                            chart.draw(data, options);
+                        }
                     </script>
                 </head>
                 <style type="text/css">
-                    ${getChartCSS()}
+                    ${getCSS()}
                 </style>
                 <body>
-                	<h4> DewPoint/Temp History </h4>
-                    <div id="chart_div" style="width: 100%; height: 275px;"></div>
+                	<h4>Event Value History</h4>
+                  <div id="chart_div" style="width: 100%; height: 200px;"></div>
                 </body>
             </html>
                 """
