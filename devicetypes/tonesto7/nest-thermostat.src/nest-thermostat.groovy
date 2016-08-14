@@ -234,36 +234,14 @@ metadata {
         valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
             state "default", label:'${currentValue}'
         }
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 4)
 
-        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com"])
+        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
-        main( tileMain() )
-        details( tileSelect() )
-    }
-}
-
-def tileMain() {
-    return ["temp2"]
-}
-
-def tileSelect() {
-    def type = null// Setting to 1 shows the Original ST Tiles
-    switch(type) { //Original ST Layout
-        case 1:
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "onlineStatus", "weatherCond" , "hasLeaf", "lastConnection", "refresh",
-                    "lastUpdatedDt", "softwareVer", "apiStatus", "devTypeVer", "debugOn"]
-            break
-        case 2:
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
-            break
-        default:
-            return ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-//                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"]
-                    "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "devInfoHtml", "graphHTML", "refresh"]
-            break
+        main("temp2")
+        details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
+                  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "graphHTML", "refresh"])
+                  //"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "devInfoHtml", "graphHTML", "refresh"] )
     }
 }
 
@@ -461,7 +439,6 @@ def isCodeUpdateAvailable(newVer, curVer) {
             def verB = b?.tokenize('.')
             def commonIndices = Math.min(verA?.size(), verB?.size())
             for (int i = 0; i < commonIndices; ++i) {
-                //log.debug "comparing $numA and $numB"
                 if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
                     return verA[i]?.toInteger() <=> verB[i]?.toInteger()
                 }
@@ -1589,9 +1566,10 @@ void setThermostatFanMode(fanModeStr) {
 }
 
 
-/************************************************************************************************
-|										LOGGING FUNCTIONS										|
-*************************************************************************************************/
+/**************************************************************************
+|										        LOGGING FUNCTIONS										          |
+***************************************************************************/
+
 // Local Application Logging
 def Logger(msg, logType = "debug") {
     if(state?.debug) {
@@ -1644,6 +1622,11 @@ def exceptionDataHandler(msg, methodName) {
     }
 }
 
+
+/**************************************************************************
+|										  HTML TILE RENDER FUNCTIONS										      |
+***************************************************************************/
+
 def getImgBase64(url,type) {
     try {
         def params = [
@@ -1683,6 +1666,16 @@ def getCSS(url = null){
     }
 }
 
+def getJS(url){
+    def params = [
+        uri: url?.toString(),
+        contentType: "text/plain"
+    ]
+    httpGet(params)  { resp ->
+        return resp?.data.text
+    }
+}
+
 def getImg(imgName) {
     return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
@@ -1704,60 +1697,60 @@ def getInfoHtml() {
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
             </head>
             <body>
-                <style type="text/css">
+              <style type="text/css">
                 ${getCSS()}
-                </style>
-                ${updateAvail}
-                <table>
+              </style>
+              ${updateAvail}
+              <table>
                 <col width="40%">
-                <col width="20%">
-                <col width="40%">
-                <thead>
-                    <th>Network Status</th>
-                    <th>Leaf</th>
-                    <th>API Status</th>
-                </thead>
-                    <tbody>
+                  <col width="20%">
+                    <col width="40%">
+                      <thead>
+                        <th>Network Status</th>
+                        <th>Leaf</th>
+                        <th>API Status</th>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>${state?.onlineStatus.toString()}</td>
+                          <td>${leafImg}</td>
+                          <td>${state?.apiStatus}</td>
+                        </tr>
+                      </tbody>
+              </table>
+
+              <p class="centerText">
+                <a href="#openModal" class="button">More info</a>
+              </p>
+
+              <div id="openModal" class="topModal">
+                <div>
+                  <a href="#close" title="Close" class="close">X</a>
+                  <table>
                     <tr>
-                        <td>${state?.onlineStatus.toString()}</td>
-                        <td>${leafImg}</td>
-                        <td>${state?.apiStatus}</td>
+                      <th>Firmware Version</th>
+                      <th>Debug</th>
+                      <th>Device Type</th>
                     </tr>
-                </tbody>
-                </table>
-
-               <p class="centerText">
-                	<a href="#openModal" class="button">More info</a>
-                </p>
-
-                  <div id="openModal" class="topModal">
-                        <div>
-                            <a href="#close" title="Close" class="close">X</a>
-                          <table>
-                            <tr>
-                                <th>Firmware Version</th>
-                                <th>Debug</th>
-                                <th>Device Type</th>
-                            </tr>
-                            <td>${state?.softwareVer.toString()}</td>
-                            <td>${state?.debugStatus}</td>
-                            <td>${state?.devTypeVer.toString()}</td>
-                            </tbody>
-                        </table>
-                        <table>
-                        <thead>
-                            <th>Nest Checked-In</th>
-                            <th>Data Last Received</th>
-                        </thead>
-                        <tbody>
-                            <tr>
-                            <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                            <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                            </tr>
-                            </table>
-                        </div>
-                    </div>
+                    <td>${state?.softwareVer.toString()}</td>
+                    <td>${state?.debugStatus}</td>
+                    <td>${state?.devTypeVer.toString()}</td>
+                    </tbody>
+                  </table>
+                  <table>
+                    <thead>
+                      <th>Nest Checked-In</th>
+                      <th>Data Last Received</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                        <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                      </tr>
+                  </table>
                 </div>
+              </div>
+              </div>
             </body>
         </html>
         """
@@ -2159,6 +2152,9 @@ def getGraphHTML() {
         tempStr = "°C"
     }
 
+    def chartJs = "https://www.gstatic.com/charts/loader.js"
+    def chartJsText = getJS(chartJs)
+
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
     def coolstr2 =  getDataString(5)
     def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
@@ -2208,7 +2204,7 @@ def getGraphHTML() {
                     <meta http-equiv="pragma" content="no-cache"/>
                     <meta name="viewport" content="width = device-width">
                     <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
-                    <style type="text/css">body,div {margin:0;padding:0}</style>
+                    <style type="text/css" src="{state?.cssUrl}"></style>
                     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type="text/javascript">
                         google.charts.load('current', {packages: ['corechart']});
@@ -2283,10 +2279,13 @@ def getGraphHTML() {
                         }
                     </script>
                 </head>
-                <style type="text/css">
-                    ${getCSS()}
-                </style>
                 <body>
+                  <style type="text/css">
+                    ${getCSS()}
+                  </style>
+                  <script type="text/javascript">
+                    $chartJsText
+                  </script>
                   <h4>Event Value History</h4>
                   <div id="chart_div" style="width: 100%; height: 200px;"></div>
                 </body>
