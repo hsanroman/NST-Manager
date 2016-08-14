@@ -247,10 +247,6 @@ def getTimeZone() {
     else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
     if(!tz) { log.warn "getTimeZone: Hub or Nest TimeZone is not found ..." }
     return tz
-    } catch (ex) {
-        LogAction("getTimeZone Exception: ${ex}", "error", true)
-        sendChildExceptionData("camera", devVer(), ex.message, "getTimeZone")
-    }
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
@@ -466,30 +462,19 @@ def lastUpdatedEvent() {
 }
 
 def onlineStatusEvent(online) {
-    try {
-        def isOn = device.currentState("onlineStatus")?.value
-        def val = online ? "Online" : "Offline"
-        state?.onlineStatus = val
-        if(!isOn.equals(val)) {
-            log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
-            sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
-        } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
-    }
-    catch (ex) {
-        log.error "onlineStatusEvent Exception: ${ex}"
-        exceptionDataHandler(ex.message, "onlineStatusEvent")
-    }
+    def isOn = device.currentState("onlineStatus")?.value
+    def val = online ? "Online" : "Offline"
+    state?.onlineStatus = val
+    if(!isOn.equals(val)) {
+        log.debug("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
+        sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
+    } else { Logger("Online Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def getPublicVideoId() {
-    try {
-        if(state?.public_share_url) {
-            def vidId = state?.public_share_url.tokenize('/')
-            return vidId[3].toString()
-        }
-    } catch (ex) {
-        log.error "getPublicVideoId Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getPublicVideoId")
+    if(state?.public_share_url) {
+        def vidId = state?.public_share_url.tokenize('/')
+        return vidId[3].toString()
     }
 }
 
@@ -509,14 +494,9 @@ def streamingOn() {
 }
 
 def streamingOff() {
-    try {
-        log.trace "streamingOff..."
-        parent?.setCamStreaming(this, "false")
-        sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
-    } catch (ex) {
-        log.error "streamingOff Exception: ${ex}"
-        exceptionDataHandler(ex.message, "streamingOff")
-    }
+    log.trace "streamingOff..."
+    parent?.setCamStreaming(this, "false")
+    sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
 }
 
 def on() {
