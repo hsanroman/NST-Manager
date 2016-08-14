@@ -540,35 +540,6 @@ def take() {
 |							EXCEPTION HANDLING & LOGGING FUNCTIONS								|
 *************************************************************************************************/
 
-def formatDt(dt, mdy = false) {
-    //log.trace "formatDt($dt, $mdy)..."
-    def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
-    def tf = new SimpleDateFormat(formatVal)
-    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-    else {
-        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
-    }
-    return tf.format(dt)
-}
-
-def epochToTime(tm) {
-    def tf = new SimpleDateFormat("h:mm a")
-        tf?.setTimeZone(getTimeZone())
-    return tf.format(tm)
-}
-
-def isTimeBetween(start, end, now, tz) {
-    def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", start).getTime()
-    def endDt = Date.parse("E MMM dd HH:mm:ss z yyyy", end).getTime()
-    def nowDt = Date.parse("E MMM dd HH:mm:ss z yyyy", now).getTime()
-    def result = false
-    if(nowDt > startDt && nowDt < endDt) {
-        result = true
-    }
-    //def result = timeOfDayIsBetween(startDt, endDt, nowDt, tz) ? true : false
-    return result
-}
-
 // Local Application Logging
 def Logger(msg, logType = "debug") {
      if(state?.debug) {
