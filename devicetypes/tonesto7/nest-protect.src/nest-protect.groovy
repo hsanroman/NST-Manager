@@ -593,7 +593,11 @@ def getImgBase64(url,type) {
 
 def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
 def getImg(imgName) {
-    return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
+    if(imgName) {
+        return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
+    } else {
+        log.error "getImg Error: Missing imgName value..."
+    }
 }
 
 def getCSS(){
@@ -627,67 +631,64 @@ def getInfoHtml() {
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
             </head>
             <body>
-                <style type="text/css">
-                    ${getCSS()}
-                </style>
-                ${updateAvail}
-                ${testModeHTML}
-                    <div class="row">
-                        <div class="offset-by-two four columns centerText">
-                            $coImg
-                        </div>
-                        <div class="four columns centerText">
-                            $smokeImg
-                        </div>
-                        </div>
-                <table>
+              <style type="text/css">
+                ${getCSS()}
+              </style>
+              ${updateAvail} ${testModeHTML}
+              <div class="row">
+                <div class="offset-by-two four columns centerText">
+                  $coImg
+                </div>
+                <div class="four columns centerText">
+                  $smokeImg
+                </div>
+              </div>
+              <table>
                 <col width="50%">
-                <col width="50%">
-                <thead>
-                    <th>Network Status</th>
-                    <th>API Status</th>
-                </thead>
+                  <col width="50%">
+                    <thead>
+                      <th>Network Status</th>
+                      <th>API Status</th>
+                    </thead>
                     <tbody>
-                    <tr>
+                      <tr>
                         <td>${state?.onlineStatus.toString()}</td>
                         <td>${state?.apiStatus}</td>
-                    </tr>
-
-
+                      </tr>
                     </tbody>
-                    </table>
+              </table>
 
-                <p class="centerText">
-                	<a href="#openModal" class="button">More info</a>
-                </p>
-                 <div id="openModal" class="topModal">
-                        <div>
-                            <a href="#close" title="Close" class="close">X</a>
+              <p class="centerText">
+                <a href="#openModal" class="button">More info</a>
+              </p>
+              <div id="openModal" class="topModal">
+                <div>
+                  <a href="#close" title="Close" class="close">X</a>
                   <table>
                     <tr>
-                        <th>Firmware Version</th>
-                        <th>Debug</th>
-                        <th>Device Type</th>
+                      <th>Firmware Version</th>
+                      <th>Debug</th>
+                      <th>Device Type</th>
                     </tr>
                     <td>v${state?.softwareVer.toString()}</td>
                     <td>${state?.debugStatus}</td>
                     <td>${state?.devTypeVer.toString()}</td>
-                </table>
-                <table>
-                <thead>
-                    <th>Nest Last Checked-In</th>
-                    <th>Data Last Received</th>
-                </thead>
-                <tbody>
-                    <tr>
-                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                    </tr>
-                </tbody>
-                </table>
+                  </table>
+                  <table>
+                    <thead>
+                      <th>Nest Last Checked-In</th>
+                      <th>Data Last Received</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                        <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                    </div>
-                </div>
+              </div>
+              </div>
             </body>
         </html>
         """

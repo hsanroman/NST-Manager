@@ -83,7 +83,6 @@ metadata {
             tileAttribute("device.startLive", key: "START_LIVE") {
                 attributeState("live", action: "start", defaultState: true)
             }
-
             tileAttribute("device.stream", key: "STREAM_URL") {
                 attributeState("activeURL", defaultState: true)
             }
@@ -105,8 +104,6 @@ metadata {
         carouselTile("cameraDetails", "device.image", width: 4, height: 4) { }
         standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF"
-            //state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
-            //state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
         }
         standardTile("motion", "device.motion", width: 2, height: 2) {
             state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
@@ -148,9 +145,8 @@ metadata {
         htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 5, whitelist: ["raw.githubusercontent.com", "hammerjs.github.io"])
         htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5, whitelist: ["raw.githubusercontent.com", "hammerjs.github.io"])
 
-    main "isStreamingStatus"
-    details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "cameraDetails", "sound"])
-    //details(["alarmState", "filler", "batteryState", "filler", "devInfoHtml", "refresh"])
+        main "isStreamingStatus, "
+        details(["devCamHtml", "isStreaming", "take", "refresh", "devInfoHtml",  "motion", "cameraDetails", "sound"])
     }
 }
 
@@ -541,7 +537,7 @@ def take() {
 }
 
 /************************************************************************************************
-|										LOGGING FUNCTIONS										|
+|							EXCEPTION HANDLING & LOGGING FUNCTIONS								|
 *************************************************************************************************/
 
 def formatDt(dt, mdy = false) {
@@ -595,6 +591,7 @@ def Logger(msg, logType = "debug") {
         }
      }
  }
+
 // Print log message from parent
 def log(message, level = "trace") {
     switch (level) {
@@ -624,6 +621,39 @@ def exceptionDataHandler(msg, methodName) {
     }
 }
 
+/************************************************************************************************
+|										OTHER METHODS     										|
+*************************************************************************************************/
+
+def formatDt(dt, mdy = false) {
+    //log.trace "formatDt($dt, $mdy)..."
+    def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
+    def tf = new SimpleDateFormat(formatVal)
+    if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+    else {
+        LogAction("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn", true)
+    }
+    return tf.format(dt)
+}
+
+def epochToTime(tm) {
+    def tf = new SimpleDateFormat("h:mm a")
+        tf?.setTimeZone(getTimeZone())
+    return tf.format(tm)
+}
+
+def isTimeBetween(start, end, now, tz) {
+    def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", start).getTime()
+    def endDt = Date.parse("E MMM dd HH:mm:ss z yyyy", end).getTime()
+    def nowDt = Date.parse("E MMM dd HH:mm:ss z yyyy", now).getTime()
+    def result = false
+    if(nowDt > startDt && nowDt < endDt) {
+        result = true
+    }
+    //def result = timeOfDayIsBetween(startDt, endDt, nowDt, tz) ? true : false
+    return result
+}
+
 def getImgBase64(url,type) {
     def params = [
         uri: url,
@@ -634,14 +664,12 @@ def getImgBase64(url,type) {
             def respData = resp?.data
             ByteArrayOutputStream bos = new ByteArrayOutputStream()
             int len
-            int size = 2048
+            int size = 3072
             byte[] buf = new byte[size]
             while ((len = respData.read(buf, 0, size)) != -1)
-                   bos.write(buf, 0, len)
+                bos.write(buf, 0, len)
             buf = bos.toByteArray()
-            //log.debug "buf: $buf"
             String s = buf?.encodeBase64()
-            //log.debug "resp: ${s}"
             return s ? "data:image/${type};base64,${s.toString()}" : null
         }
     }
@@ -651,11 +679,10 @@ def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
-def getCSS(){
+def getCSS(url = null){
     def params = [
-        //uri: state?.cssUrl.toString(),
-        uri: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css",
-        contentType: 'text/css'
+        uri: (!url ? "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString()),
+        contentType: "text/css"
     ]
     httpGet(params)  { resp ->
         return resp?.data.text
@@ -732,23 +759,24 @@ def getCamApiServer(camUUID) {
 def getCamBtnJsData() {
     def data =
     """<!--
-        function toggle_visibility(id) {
-            var id = document.getElementById(id);
+      function toggle_visibility(id) {
+        var id = document.getElementById(id);
 
-            var divsToHide = document.getElementsByClassName("hideable");
+        var divsToHide = document.getElementsByClassName("hideable");
 
-                for(var i = 0; i < divsToHide.length; i++) {
-                    divsToHide[i].style.display="none";
-                }
+        for (var i = 0; i < divsToHide.length; i++) {
+          divsToHide[i].style.display = "none";
+        }
 
-                id.style.display = 'block'
-                }
-        //-->"""
+        id.style.display = 'block'
+      }
+    //-->"""
 }
 
 def getCamHtml() {
     try {
-        def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
+        def mainCss = getCSS(state?.cssUrl)
+        def camJs = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
 
         // These are used to determine the URL for the nest cam stream
         def camUUID = getCamUUID(getPublicVideoId())
@@ -760,7 +788,6 @@ def getCamHtml() {
         def pubVidUrl = state?.public_share_url
         def pubVidId = getPublicVideoId()
         def animationUrl = getImgBase64(state?.animation_url, 'gif')
-        //log.debug "Animation URL: $animationUrl"
         def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
 
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
@@ -771,47 +798,42 @@ def getCamHtml() {
         <!DOCTYPE html>
         <html>
             <head>
-                <meta charset="utf-8"/>
-                <meta http-equiv="cache-control" content="max-age=0"/>
-                <meta http-equiv="cache-control" content="no-cache"/>
-                <meta http-equiv="expires" content="0"/>
-                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-                <meta http-equiv="pragma" content="no-cache"/>
-                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
-                <script type="text/javascript" src="$cssJs1"></script>
-                <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer.min.js"></script>
-                <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer-time.min.js"></script>
+              <meta charset="utf-8"/>
+              <meta http-equiv="cache-control" content="max-age=0"/>
+              <meta http-equiv="cache-control" content="no-cache"/>
+              <meta http-equiv="expires" content="0"/>
+              <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+              <meta http-equiv="pragma" content="no-cache"/>
+              <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+              <link rel="stylesheet prefetch" href="${state?.cssUrl}"/>
+              <script type="text/javascript" src="$camJs"></script>
+              <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer.min.js"></script>
+              <script type="text/javascript" src="http://hammerjs.github.io/dist/hammer-time.min.js"></script>
             </head>
             <body>
-                <style type="text/css">
-                    ${getCSS()}
-                </style>
-                <script type="text/javascript">
-                    ${getCamBtnJsData()}
-                </script>
-                ${updateAvail}
-                <div class="hideable" id="liveStream">
-                    <video width="410" controls
-                        id="nest-video"
-                        class="video-js vjs-default-skin"
-                        poster="${camImgUrl}"
-                        data-video-url="${pubVidUrl}"
-                        data-video-title="">
-                        <source src="${camPlaylistUrl}" type="application/x-mpegURL">
-                    </video>
-                </div>
-                <div class="hideable" id="still" style="display:none">
-                    <img src="${pubSnapUrl}" width="100%"/>
-                </div>
-                <div class="hideable" id="animation" style="display:none">
-                    <img src="${animationUrl}" width="100%"/>
-                </div>
-                <div class="centerText">
-                  ${vidBtn}
-                  ${imgBtn}
-                  ${lastEvtBtn}
-                </div>
+              <style type="text/css">
+                $mainCss
+              </style>
+              <script type="text/javascript">
+                ${getCamBtnJsData()}
+              </script>
+              ${updateAvail}
+              <div class="hideable" id="liveStream">
+                <video width="410" controls id="nest-video" class="video-js vjs-default-skin" poster="${camImgUrl}" data-video-url="${pubVidUrl}" data-video-title="">
+                  <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+                </video>
+              </div>
+              <div class="hideable" id="still" style="display:none">
+                <img src="${pubSnapUrl}" width="100%" />
+              </div>
+              <div class="hideable" id="animation" style="display:none">
+                <img src="${animationUrl}" width="100%" />
+              </div>
+              <div class="centerText">
+                ${vidBtn}
+                ${imgBtn}
+                ${lastEvtBtn}
+              </div>
             </body>
         </html>
         """
@@ -825,102 +847,101 @@ def getCamHtml() {
 
 def getInfoHtml() {
     try {
+        def mainCss = getCSS(state?.cssUrl)
+
         def html = """
         <!DOCTYPE html>
         <html>
             <head>
-                <meta charset="utf-8"/>
-                <meta http-equiv="cache-control" content="max-age=0"/>
-                <meta http-equiv="cache-control" content="no-cache"/>
-                <meta http-equiv="expires" content="0"/>
-                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-                <meta http-equiv="pragma" content="no-cache"/>
-                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
+              <meta charset="utf-8"/>
+              <meta http-equiv="cache-control" content="max-age=0"/>
+              <meta http-equiv="cache-control" content="no-cache"/>
+              <meta http-equiv="expires" content="0"/>
+              <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+              <meta http-equiv="pragma" content="no-cache"/>
+              <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+              <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
             </head>
             <body>
-                <style type="text/css">
-                    ${getCSS()}
-                </style>
-                <table>
+              <style type="text/css">
+                $mainCss
+              </style>
+              <table>
                 <col width="50%">
-                <col width="50%">
-                <thead>
-                  <th>Last Event Start</th>
-                  <th>Last Event End</th>
-                </thead>
-                  <tbody>
-                     <tr>
-                         <td>${state?.lastEventStartDt}</td>
-                         <td>${state?.lastEventEndDt}</td>
-                     </tr>
-                  </tbody>
-                </table>
-​
-                <table>
+                  <col width="50%">
+                    <thead>
+                      <th>Last Event Start</th>
+                      <th>Last Event End</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>${state?.lastEventStartDt}</td>
+                        <td>${state?.lastEventEndDt}</td>
+                      </tr>
+                    </tbody>
+              </table>
+              <table>
                 <col width="33%">
-                <col width="33%">
-                <col width="33%">
-                <thead>
-                  <th>Public Video</th>
-                  <th>Audio Input</th>
-                  <th>Video History</th>
-                </thead>
-                  <tbody>
-                     <tr>
-                         <td>${state?.publicShareEnabled.toString()}</td>
-                         <td>${state?.audioInputEnabled.toString()}</td>
-                         <td>${state?.videoHistoryEnabled.toString()}</td>
-                     </tr>
-                  </tbody>
-                </table>
-​
-                <table>
+                  <col width="33%">
+                    <col width="33%">
+                      <thead>
+                        <th>Public Video</th>
+                        <th>Audio Input</th>
+                        <th>Video History</th>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>${state?.publicShareEnabled.toString()}</td>
+                          <td>${state?.audioInputEnabled.toString()}</td>
+                          <td>${state?.videoHistoryEnabled.toString()}</td>
+                        </tr>
+                      </tbody>
+              </table>
+              <table>
                 <col width="50%">
-                <col width="50%">
-                <thead>
-                  <th>Network Status</th>
-                  <th>API Status</th>
-                </thead>
-                  <tbody>
-                     <tr>
-                         <td>${state?.onlineStatus.toString()}</td>
-                         <td>${state?.apiStatus}</td>
-                     </tr>
-                  </tbody>
-                </table>
-​
-                <p class="centerText">
-                    <a href="#openModal" class="button">More info</a>
-                </p>
-                 <div id="openModal" class="topModal">
-                        <div>
-                            <a href="#close" title="Close" class="close">X</a>
+                  <col width="50%">
+                    <thead>
+                      <th>Network Status</th>
+                      <th>API Status</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>${state?.onlineStatus.toString()}</td>
+                        <td>${state?.apiStatus}</td>
+                      </tr>
+                    </tbody>
+              </table>
+              <p class="centerText">
+                <a href="#openModal" class="button">More info</a>
+              </p>
+              <div id="openModal" class="topModal">
+                <div>
+                  <a href="#close" title="Close" class="close">X</a>
                   <table>
                     <tr>
-                        <th>Firmware Version</th>
-                        <th>Debug</th>
-                        <th>Device Type</th>
+                      <th>Firmware Version</th>
+                      <th>Debug</th>
+                      <th>Device Type</th>
                     </tr>
                     <td>v${state?.softwareVer.toString()}</td>
                     <td>${state?.debugStatus}</td>
                     <td>${state?.devTypeVer.toString()}</td>
-                </table>
-                <table>
-                <thead>
-                    <th>Last Online Change</th>
-                    <th>Data Last Received</th>
-                </thead>
-                <tbody>
-                    <tr>
-                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                    </tr>
-                </tbody>
-                </table>
+                  </table>
+                  <table>
+                    <thead>
+                      <th>Last Online Change</th>
+                      <th>Data Last Received</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                        <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                    </div>
-                </div>
+              </div>
+              </div>
             </body>
         </html>
         """
