@@ -235,13 +235,13 @@ metadata {
             state "default", label:'${currentValue}'
         }
 
-        htmlTile(name:"devInfoHtml", action: "getInfoHtml", refreshInterval: 10, width: 6, height: 3, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
-        htmlTile(name:"graphHTML", action: "getGraphHTML", refreshInterval: 1, width: 6, height: 5, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        //htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 7, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main("temp2")
         details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-                  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "graphHTML", "refresh"])
-                  //"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "devInfoHtml", "graphHTML", "refresh"] )
+                  //"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"])
+                  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "graphHTML", "refresh"] )
     }
 }
 
@@ -1658,7 +1658,7 @@ def getImgBase64(url,type) {
 
 def getCSS(url = null){
     def params = [
-        uri: !url ? state?.cssUrl.toString() : url?.toString(),
+        uri: !url ? "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
         contentType: 'text/css'
     ]
     httpGet(params)  { resp ->
@@ -1677,89 +1677,7 @@ def getJS(url){
 }
 
 def getImg(imgName) {
-    return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
-}
-
-def getInfoHtml() {
-    try {
-        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
-                        "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        def html = """
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta http-equiv="cache-control" content="max-age=0"/>
-                <meta http-equiv="cache-control" content="no-cache"/>
-                <meta http-equiv="expires" content="0"/>
-                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-                <meta http-equiv="pragma" content="no-cache"/>
-                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-            </head>
-            <body>
-              <style type="text/css">
-                ${getCSS()}
-              </style>
-              ${updateAvail}
-              <table>
-                <col width="40%">
-                  <col width="20%">
-                    <col width="40%">
-                      <thead>
-                        <th>Network Status</th>
-                        <th>Leaf</th>
-                        <th>API Status</th>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>${state?.onlineStatus.toString()}</td>
-                          <td>${leafImg}</td>
-                          <td>${state?.apiStatus}</td>
-                        </tr>
-                      </tbody>
-              </table>
-
-              <p class="centerText">
-                <a href="#openModal" class="button">More info</a>
-              </p>
-
-              <div id="openModal" class="topModal">
-                <div>
-                  <a href="#close" title="Close" class="close">X</a>
-                  <table>
-                    <tr>
-                      <th>Firmware Version</th>
-                      <th>Debug</th>
-                      <th>Device Type</th>
-                    </tr>
-                    <td>${state?.softwareVer.toString()}</td>
-                    <td>${state?.debugStatus}</td>
-                    <td>${state?.devTypeVer.toString()}</td>
-                    </tbody>
-                  </table>
-                  <table>
-                    <thead>
-                      <th>Nest Checked-In</th>
-                      <th>Data Last Received</th>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                        <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                      </tr>
-                  </table>
-                </div>
-              </div>
-              </div>
-            </body>
-        </html>
-        """
-        render contentType: "text/html", data: html, status: 200
-    }
-    catch (ex) {
-        log.error "getInfoHtml Exception: ${ex}"
-        exceptionDataHandler(ex.message, "getInfoHtml")
-    }
+    return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
 /*
@@ -2147,13 +2065,17 @@ def getMaxTemp() {
 }
 
 def getGraphHTML() {
+    def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
+                    "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
+    def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+
     def tempStr = "°F"
     if ( wantMetric() ) {
         tempStr = "°C"
     }
 
-    def chartJs = "https://www.gstatic.com/charts/loader.js"
-    def chartJsText = getJS(chartJs)
+    def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
+    def chartJs = getJS(chartJsUrl)
 
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
     def coolstr2 =  getDataString(5)
@@ -2194,106 +2116,155 @@ def getGraphHTML() {
     }
 
     def html = """
-        <!DOCTYPE html>
-            <html>
-                <head>
-                    <meta http-equiv="cache-control" content="max-age=0"/>
-                    <meta http-equiv="cache-control" content="no-cache"/>
-                    <meta http-equiv="expires" content="0"/>
-                    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-                    <meta http-equiv="pragma" content="no-cache"/>
-                    <meta name="viewport" content="width = device-width">
-                    <meta name="viewport" content="initial-scale = 1.0, user-scalable=no">
-                    <style type="text/css" src="{state?.cssUrl}"></style>
-                    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-                    <script type="text/javascript">
-                        google.charts.load('current', {packages: ['corechart']});
-                        google.charts.setOnLoadCallback(drawGraph);
-                        function drawGraph() {
-                            var data = new google.visualization.DataTable();
-                            data.addColumn('timeofday', 'time');
-                            data.addColumn('number', 'Temp (Y)');
-                            data.addColumn('number', 'Temp (T)');
-                            data.addColumn('number', 'Operating');
-                            data.addColumn('number', 'Humidity');
-                            ${coolstr1}
-                            ${heatstr1}
-                            data.addRows([
-                                ${getDataString(1)}
-                                ${getDataString(2)}
-                                ${getDataString(3)}
-                                ${getDataString(4)}
-                                ${coolstr2}
-                                ${heatstr2}
-                            ]);
-                            var options = {
-                            width: '100%',
-                            height: '100%',
-                                hAxis: {
-                                    format: 'H:mm',
-                                    minValue: [${getStartTime()},0,0],
-                                    slantedText: false
-                                },
-                                series: {
-                                    0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                                    1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                                    2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                                    3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                                    ${coolstr3}
-                                    ${heatstr3}
-                                },
-                                vAxes: {
-                                    0: {
-                                        title: 'Humidity (%)',
-                                        format: 'decimal',
-                                        minValue: 0,
-                                        maxValue: 100,
-                                        textStyle: {color: '#B8B8B8'},
-                                        titleTextStyle: {color: '#B8B8B8'}
-                                    },
-                                    1: {
-                                        title: 'Temperature (${tempStr})',
-                                        format: 'decimal',
-                                        ${minstr}
-                                        ${maxstr}
-                                        textStyle: {color: '#FF0000'},
-                                        titleTextStyle: {color: '#FF0000'}
-                                    }
-                                },
-                                legend: {
-                                    position: 'bottom',
-                                    maxLines: 4,
-                                    textStyle: {color: '#000000'}
-                                },
-                                chartArea: {
-                                    left: '12%',
-                                    right: '12%',
-                                    top: '3%',
-                                    bottom: '15%',
-                                    height: '100%',
-                                    width: '100%'
-                                }
-                            };
-                            var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-                            chart.draw(data, options);
-                        }
-                    </script>
-                </head>
-                <body>
-                  <style type="text/css">
-                    ${getCSS()}
-                  </style>
-                  <script type="text/javascript">
-                    $chartJsText
-                  </script>
-                  <h4>Event Value History</h4>
-                  <div id="chart_div" style="width: 100%; height: 200px;"></div>
-                </body>
-            </html>
-                """
-        render contentType: "text/html", data: html, status: 200
-}
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta http-equiv="cache-control" content="max-age=0"/>
+            <meta http-equiv="cache-control" content="no-cache"/>
+            <meta http-equiv="expires" content="0"/>
+            <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+            <meta http-equiv="pragma" content="no-cache"/>
+            <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+        </head>
+        <body>
+            <style type="text/css">
+              ${getCSS()}
+            </style>
+            ${updateAvail}
+            <table>
+              <col width="40%">
+              <col width="20%">
+              <col width="40%">
+              <thead>
+                <th>Network Status</th>
+                <th>Leaf</th>
+                <th>API Status</th>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${state?.onlineStatus.toString()}</td>
+                  <td>${leafImg}</td>
+                  <td>${state?.apiStatus}</td>
+                </tr>
+              </tbody>
+            </table>
 
+            <p class="centerText">
+              <a href="#openModal" class="button">More info</a>
+            </p>
+
+            <div id="openModal" class="topModal">
+              <div>
+                <a href="#close" title="Close" class="close">X</a>
+                <table>
+                  <tr>
+                    <th>Firmware Version</th>
+                    <th>Debug</th>
+                    <th>Device Type</th>
+                  </tr>
+                  <td>${state?.softwareVer.toString()}</td>
+                  <td>${state?.debugStatus}</td>
+                  <td>${state?.devTypeVer.toString()}</td>
+                  </tbody>
+                </table>
+                <table>
+                  <thead>
+                    <th>Nest Checked-In</th>
+                    <th>Data Last Received</th>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                      <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                    </tr>
+                </table>
+              </div>
+            </div>
+
+            <br></br>
+
+            <script type="text/javascript">
+                ${chartJs}
+            </script>
+            <script type="text/javascript">
+                google.charts.load('current', {packages: ['corechart']});
+                google.charts.setOnLoadCallback(drawGraph);
+                function drawGraph() {
+                    var data = new google.visualization.DataTable();
+                    data.addColumn('timeofday', 'time');
+                    data.addColumn('number', 'Temp (Y)');
+                    data.addColumn('number', 'Temp (T)');
+                    data.addColumn('number', 'Operating');
+                    data.addColumn('number', 'Humidity');
+                    ${coolstr1}
+                    ${heatstr1}
+                    data.addRows([
+                        ${getDataString(1)}
+                        ${getDataString(2)}
+                        ${getDataString(3)}
+                        ${getDataString(4)}
+                        ${coolstr2}
+                        ${heatstr2}
+                    ]);
+                    var options = {
+                    width: '100%',
+                    height: '100%',
+                        hAxis: {
+                            format: 'H:mm',
+                            minValue: [${getStartTime()},0,0],
+                            slantedText: false
+                        },
+                        series: {
+                            0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                            1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                            2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                            3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                            ${coolstr3}
+                            ${heatstr3}
+                        },
+                        vAxes: {
+                            0: {
+                                title: 'Humidity (%)',
+                                format: 'decimal',
+                                minValue: 0,
+                                maxValue: 100,
+                                textStyle: {color: '#B8B8B8'},
+                                titleTextStyle: {color: '#B8B8B8'}
+                            },
+                            1: {
+                                title: 'Temperature (${tempStr})',
+                                format: 'decimal',
+                                ${minstr}
+                                ${maxstr}
+                                textStyle: {color: '#FF0000'},
+                                titleTextStyle: {color: '#FF0000'}
+                            }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            maxLines: 4,
+                            textStyle: {color: '#000000'}
+                        },
+                        chartArea: {
+                            left: '12%',
+                            right: '12%',
+                            top: '3%',
+                            bottom: '15%',
+                            height: '100%',
+                            width: '100%'
+                        }
+                    };
+                    var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+                    chart.draw(data, options);
+                }
+              </script>
+              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+              <div id="chart_div" style="width: 100%; height: 200px;"></div>            
+        </body>
+    </html>
+    """
+    render contentType: "text/html", data: html, status: 200
+}
 
 private def textDevName()  { return "Nest Thermostat${appDevName()}" }
 private def appDevType()   { return false }

@@ -5728,7 +5728,7 @@ private remSenEvtEval() {
                     def turnOn = false
                     def turnOff = false
 
-                    LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", true)
+                    LogAction("Remote Sensor: COOL - (Sensor Temp: ${curSenTemp} - Sensor CoolSetpoint: ${reqSenCoolSetPoint})", "trace", false)
                     if (curSenTemp <= offTemp) {
                         turnOff = true
                     } else if (curSenTemp >= onTemp) {
@@ -5758,7 +5758,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp + tempChangeVal
                         }
                         def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
-                        LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", true)
+                        LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
                         if (coolDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
@@ -5811,7 +5811,7 @@ private remSenEvtEval() {
                     def turnOn = false
                     def turnOff = false
 
-                    LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", true)
+                    LogAction("Remote Sensor: HEAT - (Sensor Temp: ${curSenTemp} - Sensor HeatSetpoint: ${reqSenHeatSetPoint})", "trace", false)
                     if (curSenTemp <= onTemp) {
                         turnOn = true
                     } else if (curSenTemp >= offTemp) {
@@ -5841,7 +5841,7 @@ private remSenEvtEval() {
                             chgval = curTstatTemp - tempChangeVal
                         }
                         def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
-                        LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1} tempChangeVal: ${tempChangeVal}", "trace", true)
+                        LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
                         if (heatDiff1 < (tempChangeVal / 2)) {
                             chg = true
                             LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to maintain state", "info", true)
