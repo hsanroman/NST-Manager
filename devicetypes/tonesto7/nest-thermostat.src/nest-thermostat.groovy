@@ -2115,6 +2115,98 @@ def getGraphHTML() {
         }
     }
 
+    def showChartHtml = """
+    <script type="text/javascript">
+        ${chartJs}
+    </script>
+    <script type="text/javascript">
+        google.charts.load('current', {packages: ['corechart']});
+        google.charts.setOnLoadCallback(drawGraph);
+        function drawGraph() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('timeofday', 'time');
+            data.addColumn('number', 'Temp (Y)');
+            data.addColumn('number', 'Temp (T)');
+            data.addColumn('number', 'Operating');
+            data.addColumn('number', 'Humidity');
+            ${coolstr1}
+            ${heatstr1}
+            data.addRows([
+                ${getDataString(1)}
+                ${getDataString(2)}
+                ${getDataString(3)}
+                ${getDataString(4)}
+                ${coolstr2}
+                ${heatstr2}
+            ]);
+            var options = {
+            width: '100%',
+            height: '100%',
+                hAxis: {
+                    format: 'H:mm',
+                    minValue: [${getStartTime()},0,0],
+                    slantedText: true,
+                    slantedTextAngle: 30
+                },
+                series: {
+                    0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                    1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                    2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                    3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                    ${coolstr3}
+                    ${heatstr3}
+                },
+                vAxes: {
+                    0: {
+                        title: 'Humidity (%)',
+                        format: 'decimal',
+                        minValue: 0,
+                        maxValue: 100,
+                        textStyle: {color: '#B8B8B8'},
+                        titleTextStyle: {color: '#B8B8B8'}
+                    },
+                    1: {
+                        title: 'Temperature (${tempStr})',
+                        format: 'decimal',
+                        ${minstr}
+                        ${maxstr}
+                        textStyle: {color: '#FF0000'},
+                        titleTextStyle: {color: '#FF0000'}
+                    }
+                },
+                legend: {
+                              position: 'bottom',
+                              maxLines: 4,
+                              textStyle: {color: '#000000'}
+                          },
+                          chartArea: {
+                              left: '12%',
+                              right: '18%',
+                              top: '3%',
+                              bottom: '20%',
+                              height: '85%',
+                              width: '100%'
+                }
+            };
+            var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+      </script>
+      <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+      <div id="chart_div" style="width: 100%; height: 225px;"></div>
+    """
+
+    def hideChartHtml = """
+        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+        <br></br>
+        <div class="centerText">
+          <p>Waiting for more collected data...</p>
+          <p>This may take at least 24 hours</p>
+        </div>
+    """
+
+    def chartHtml = (state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ? showChartHtml : hideChartHtml
+
     def html = """
     <!DOCTYPE html>
     <html>
@@ -2132,134 +2224,58 @@ def getGraphHTML() {
             </style>
             ${updateAvail}
 
-            <script type="text/javascript">
-                ${chartJs}
-            </script>
-            <script type="text/javascript">
-                google.charts.load('current', {packages: ['corechart']});
-                google.charts.setOnLoadCallback(drawGraph);
-                function drawGraph() {
-                    var data = new google.visualization.DataTable();
-                    data.addColumn('timeofday', 'time');
-                    data.addColumn('number', 'Temp (Y)');
-                    data.addColumn('number', 'Temp (T)');
-                    data.addColumn('number', 'Operating');
-                    data.addColumn('number', 'Humidity');
-                    ${coolstr1}
-                    ${heatstr1}
-                    data.addRows([
-                        ${getDataString(1)}
-                        ${getDataString(2)}
-                        ${getDataString(3)}
-                        ${getDataString(4)}
-                        ${coolstr2}
-                        ${heatstr2}
-                    ]);
-                    var options = {
-                    width: '100%',
-                    height: '100%',
-                        hAxis: {
-                            format: 'H:mm',
-                            minValue: [${getStartTime()},0,0],
-                            slantedText: true,
-                            slantedTextAngle: 30
-                        },
-                        series: {
-                            0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                            1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                            2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                            3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                            ${coolstr3}
-                            ${heatstr3}
-                        },
-                        vAxes: {
-                            0: {
-                                title: 'Humidity (%)',
-                                format: 'decimal',
-                                minValue: 0,
-                                maxValue: 100,
-                                textStyle: {color: '#B8B8B8'},
-                                titleTextStyle: {color: '#B8B8B8'}
-                            },
-                            1: {
-                                title: 'Temperature (${tempStr})',
-                                format: 'decimal',
-                                ${minstr}
-                                ${maxstr}
-                                textStyle: {color: '#FF0000'},
-                                titleTextStyle: {color: '#FF0000'}
-                            }
-                        },
-                        legend: {
-                                      position: 'bottom',
-                                      maxLines: 4,
-                                      textStyle: {color: '#000000'}
-                                  },
-                                  chartArea: {
-                                      left: '12%',
-                                      right: '18%',
-                                      top: '3%',
-                                      bottom: '20%',
-                                      height: '85%',
-                                      width: '100%'
-                        }
-                    };
-                    var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-                    chart.draw(data, options);
-                }
-              </script>
-              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-              <div id="chart_div" style="width: 100%; height: 225px;"></div>
-              <br></br>
+            ${chartHtml}
+
+            <br></br>
+            <table>
+            <col width="40%">
+            <col width="20%">
+            <col width="40%">
+            <thead>
+              <th>Network Status</th>
+              <th>Leaf</th>
+              <th>API Status</th>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${state?.onlineStatus.toString()}</td>
+                <td>${leafImg}</td>
+                <td>${state?.apiStatus}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="centerText">
+            <a href="#openModal" class="button">More info</a>
+          </p>
+
+          <div id="openModal" class="topModal">
+            <div>
+              <a href="#close" title="Close" class="close">X</a>
               <table>
-              <col width="40%">
-              <col width="20%">
-              <col width="40%">
-              <thead>
-                <th>Network Status</th>
-                <th>Leaf</th>
-                <th>API Status</th>
-              </thead>
-              <tbody>
                 <tr>
-                  <td>${state?.onlineStatus.toString()}</td>
-                  <td>${leafImg}</td>
-                  <td>${state?.apiStatus}</td>
+                  <th>Firmware Version</th>
+                  <th>Debug</th>
+                  <th>Device Type</th>
                 </tr>
-              </tbody>
-            </table>
-
-            <p class="centerText">
-              <a href="#openModal" class="button">More info</a>
-            </p>
-
-            <div id="openModal" class="topModal">
-              <div>
-                <a href="#close" title="Close" class="close">X</a>
-                <table>
+                <td>${state?.softwareVer.toString()}</td>
+                <td>${state?.debugStatus}</td>
+                <td>${state?.devTypeVer.toString()}</td>
+                </tbody>
+              </table>
+              <table>
+                <thead>
+                  <th>Nest Checked-In</th>
+                  <th>Data Last Received</th>
+                </thead>
+                <tbody>
                   <tr>
-                    <th>Firmware Version</th>
-                    <th>Debug</th>
-                    <th>Device Type</th>
+                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
                   </tr>
-                  <td>${state?.softwareVer.toString()}</td>
-                  <td>${state?.debugStatus}</td>
-                  <td>${state?.devTypeVer.toString()}</td>
-                  </tbody>
-                </table>
-                <table>
-                  <thead>
-                    <th>Nest Checked-In</th>
-                    <th>Data Last Received</th>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                      <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-                    </tr>
-                </table>
-              </div>
+              </table>
             </div>
+          </div>
         </body>
     </html>
     """

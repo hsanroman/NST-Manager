@@ -902,6 +902,92 @@ def getWeatherHtml() {
             }
         }
 
+        def showChartHtml = """
+            <script type="text/javascript">
+              ${chartJs}
+            </script>
+            <script type="text/javascript">
+              google.charts.load('current', {packages: ['corechart']});
+              google.charts.setOnLoadCallback(drawGraph);
+              function drawGraph() {
+                  var data = new google.visualization.DataTable();
+                  data.addColumn('timeofday', 'time');
+                  data.addColumn('number', 'Temp (Yesterday)');
+                  data.addColumn('number', 'Dew (Yesterday)');
+                  data.addColumn('number', 'Temp (Today)');
+                  data.addColumn('number', 'Dew (Today)');
+                  data.addRows([
+                      ${getDataString(1)}
+                      ${getDataString(2)}
+                      ${getDataString(3)}
+                      ${getDataString(4)}
+                  ]);
+                  var options = {
+                      width: '100%',
+                      height: '100%',
+                      hAxis: {
+                          format: 'H:mm',
+                          minValue: [${getStartTime()},0,0],
+                          slantedText: true,
+                          slantedTextAngle: 30
+                      },
+                      series: {
+                          0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+                          1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
+                          2: {targetAxisIndex: 1, color: '#FF0000'},
+                          3: {targetAxisIndex: 0, color: '#004CFF'}
+                      },
+                      vAxes: {
+                          0: {
+                              title: 'Dewpoint (${tempStr})',
+                              format: 'decimal',
+                              ${minstr}
+                              ${maxstr}
+                              textStyle: {color: '#004CFF'},
+                              titleTextStyle: {color: '#004CFF'}
+                          },
+                          1: {
+                              title: 'Temperature (${tempStr})',
+                              format: 'decimal',
+                              ${minstr}
+                              ${maxstr}
+                              textStyle: {color: '#FF0000'},
+                              titleTextStyle: {color: '#FF0000'}
+                          }
+                      },
+                      legend: {
+                          position: 'bottom',
+                          maxLines: 4,
+                          textStyle: {color: '#000000'}
+                      },
+                      chartArea: {
+                          left: '12%',
+                          right: '18%',
+                          top: '3%',
+                          bottom: '20%',
+                          height: '85%',
+                          width: '100%'
+                      }
+                  };
+                  var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                  chart.draw(data, options);
+              }
+          </script>
+          <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+          <div id="chart_div" style="width: 100%; height: 225px;"></div>
+        """
+
+        def hideChartHtml = """
+            <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+            <br></br>
+            <div class="centerText">
+              <p>Waiting for more collected data...</p>
+              <p>This may take at least 24 hours</p>
+            </div>
+        """
+
+        def chartHtml = (state.temperatureTable && state.dewpointTable && state.temperatureTableYesterday && state.dewpointTableYesterday) ? showChartHtml : hideChartHtml
+
         def html = """
         <!DOCTYPE html>
         <html>
@@ -919,132 +1005,64 @@ def getWeatherHtml() {
             <body>
                 	<style type="text/css">
                       ${getCSS()}
-                    </style>
-                    ${updateAvail}
-                    <div class="container">
-                    <h4>Current Weather Conditions</h4>
-                    <h3><a href="#openModal">${state?.walert}</a></h3>
-                    <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
-                        <div class="row">
-                            <div class="six columns">
-                                <b>Feels Like:</b> ${getFeelslike()} <br>
-                                <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
-                                <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-                                <b>Dew Point: </b>${getDewpoint()}<br>
-                                <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-                                <b>Visibility:</b> ${getVisibility()} <br>
-                                <b>Lux:</b> ${getLux()}<br>
-                                <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-                                <b>Wind:</b> ${state?.windStr} <br>
-                            </div>
-                            <div class="six columns">
-                                <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
-                                <h2>${getTemp()}</h2>
-                                <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
-                            </div>
-                        </div>
-                        <div class="row topBorder">
-                            <div class="centerText four columns">${forecastDay(0)}</div>
-                            <div class="centerText four columns">${forecastDay(1)}</div>
-                            <div class="centerText four columns">${forecastDay(2)}</div>
-                        </div>
-                        <div class="row">
-                            <div class="centerText four columns">${forecastDay(3)}</div>
-                            <div class="centerText four columns">${forecastDay(4)}</div>
-                            <div class="centerText four columns">${forecastDay(5)}</div>
-                        </div>
-                        <div class="row">
-                            <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
-                            <div class="centerText four columns">${forecastDay(7)}</div>
-                        </div>
-                        <div class="row topBorder">
-                            <div class="centerText offset-by-three six columns">
-                                <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-                                <b>${state?.curWeather?.current_observation?.observation_time}</b>
-                            </div>
-                        </div>
+                  </style>
+                  ${updateAvail}
+                  <div class="container">
+                  <h4>Current Weather Conditions</h4>
+                  <h3><a href="#openModal">${state?.walert}</a></h3>
+                  <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
+                      <div class="row">
+                          <div class="six columns">
+                              <b>Feels Like:</b> ${getFeelslike()} <br>
+                              <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+                              <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+                              <b>Dew Point: </b>${getDewpoint()}<br>
+                              <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+                              <b>Visibility:</b> ${getVisibility()} <br>
+                              <b>Lux:</b> ${getLux()}<br>
+                              <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+                              <b>Wind:</b> ${state?.windStr} <br>
+                          </div>
+                          <div class="six columns">
+                              <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+                              <h2>${getTemp()}</h2>
+                              <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+                          </div>
+                      </div>
+                      <div class="row topBorder">
+                          <div class="centerText four columns">${forecastDay(0)}</div>
+                          <div class="centerText four columns">${forecastDay(1)}</div>
+                          <div class="centerText four columns">${forecastDay(2)}</div>
+                      </div>
+                      <div class="row">
+                          <div class="centerText four columns">${forecastDay(3)}</div>
+                          <div class="centerText four columns">${forecastDay(4)}</div>
+                          <div class="centerText four columns">${forecastDay(5)}</div>
+                      </div>
+                      <div class="row">
+                          <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+                          <div class="centerText four columns">${forecastDay(7)}</div>
+                      </div>
+                      <p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
+                      <div class="row topBorder">
+                          <div class="centerText offset-by-three six columns">
+                              <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
+                              <b>${state?.curWeather?.current_observation?.observation_time}</b>
+                          </div>
+                      </div>
 
-                        <div id="openModal" class="topModal">
-                            <div>
-                                <a href="#close" title="Close" class="close">X</a>
-                                <h2>Special Message</h2>
-                                <p>${state?.walertMessage}</p>
-                            </div>
-                        </div>
+                      <div id="openModal" class="topModal">
+                          <div>
+                              <a href="#close" title="Close" class="close">X</a>
+                              <h2>Special Message</h2>
+                              <p>${state?.walertMessage}</p>
+                          </div>
+                      </div>
 
-                        <br></br>
-						        <script type="text/javascript">
-                    	${chartJs}
-                    </script>
-                    <script type="text/javascript">
-                          google.charts.load('current', {packages: ['corechart']});
-                          google.charts.setOnLoadCallback(drawGraph);
-                          function drawGraph() {
-                              var data = new google.visualization.DataTable();
-                              data.addColumn('timeofday', 'time');
-                              data.addColumn('number', 'Temp (Yesterday)');
-                              data.addColumn('number', 'Dew (Yesterday)');
-                              data.addColumn('number', 'Temp (Today)');
-                              data.addColumn('number', 'Dew (Today)');
-                              data.addRows([
-                                  ${getDataString(1)}
-                                  ${getDataString(2)}
-                                  ${getDataString(3)}
-                                  ${getDataString(4)}
-                              ]);
-                              var options = {
-                                  width: '100%',
-                                  height: '100%',
-                                  hAxis: {
-                                      format: 'H:mm',
-                                      minValue: [${getStartTime()},0,0],
-                                      slantedText: true,
-                                      slantedTextAngle: 30
-                                  },
-                                  series: {
-                                      0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-                                      1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
-                                      2: {targetAxisIndex: 1, color: '#FF0000'},
-                                      3: {targetAxisIndex: 0, color: '#004CFF'}
-                                  },
-                                  vAxes: {
-                                      0: {
-                                          title: 'Dewpoint (${tempStr})',
-                                          format: 'decimal',
-                                          ${minstr}
-                                          ${maxstr}
-                                          textStyle: {color: '#004CFF'},
-                                          titleTextStyle: {color: '#004CFF'}
-                                      },
-                                      1: {
-                                          title: 'Temperature (${tempStr})',
-                                          format: 'decimal',
-                                          ${minstr}
-                                          ${maxstr}
-                                          textStyle: {color: '#FF0000'},
-                                          titleTextStyle: {color: '#FF0000'}
-                                      }
-                                  },
-                                  legend: {
-                                      position: 'bottom',
-                                      maxLines: 4,
-                                      textStyle: {color: '#000000'}
-                                  },
-                                  chartArea: {
-                                      left: '12%',
-                                      right: '18%',
-                                      top: '3%',
-                                      bottom: '20%',
-                                      height: '85%',
-                                      width: '100%'
-                                  }
-                              };
-                              var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
-                              chart.draw(data, options);
-                          }
-                      </script>
-                        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-                        <div id="chart_div" style="width: 100%; height: 225px;"></div>
+                      <br></br>
+
+                      ${chartHtml}
+
                     </div>
             	</body>
         	</html>
