@@ -236,7 +236,7 @@ metadata {
         }
 
         //htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
-        htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 7, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main("temp2")
         details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
@@ -2131,7 +2131,87 @@ def getGraphHTML() {
               ${getCSS()}
             </style>
             ${updateAvail}
-            <table>
+
+            <script type="text/javascript">
+                ${chartJs}
+            </script>
+            <script type="text/javascript">
+                google.charts.load('current', {packages: ['corechart']});
+                google.charts.setOnLoadCallback(drawGraph);
+                function drawGraph() {
+                    var data = new google.visualization.DataTable();
+                    data.addColumn('timeofday', 'time');
+                    data.addColumn('number', 'Temp (Y)');
+                    data.addColumn('number', 'Temp (T)');
+                    data.addColumn('number', 'Operating');
+                    data.addColumn('number', 'Humidity');
+                    ${coolstr1}
+                    ${heatstr1}
+                    data.addRows([
+                        ${getDataString(1)}
+                        ${getDataString(2)}
+                        ${getDataString(3)}
+                        ${getDataString(4)}
+                        ${coolstr2}
+                        ${heatstr2}
+                    ]);
+                    var options = {
+                    width: '100%',
+                    height: '100%',
+                        hAxis: {
+                            format: 'H:mm',
+                            minValue: [${getStartTime()},0,0],
+                            slantedText: true,
+                            slantedTextAngle: 30
+                        },
+                        series: {
+                            0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                            1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                            2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                            3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                            ${coolstr3}
+                            ${heatstr3}
+                        },
+                        vAxes: {
+                            0: {
+                                title: 'Humidity (%)',
+                                format: 'decimal',
+                                minValue: 0,
+                                maxValue: 100,
+                                textStyle: {color: '#B8B8B8'},
+                                titleTextStyle: {color: '#B8B8B8'}
+                            },
+                            1: {
+                                title: 'Temperature (${tempStr})',
+                                format: 'decimal',
+                                ${minstr}
+                                ${maxstr}
+                                textStyle: {color: '#FF0000'},
+                                titleTextStyle: {color: '#FF0000'}
+                            }
+                        },
+                        legend: {
+                                      position: 'bottom',
+                                      maxLines: 4,
+                                      textStyle: {color: '#000000'}
+                                  },
+                                  chartArea: {
+                                      left: '12%',
+                                      right: '12%',
+                                      top: '3%',
+                                      bottom: '20%',
+                                      height: '85%',
+                                      width: '100%'
+                        }
+                    };
+                    var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+                    chart.draw(data, options);
+                }
+              </script>
+              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+              <div id="chart_div" style="width: 100%; height: 225px;"></div>
+              <br></br>
+              <table>
               <col width="40%">
               <col width="20%">
               <col width="40%">
@@ -2180,86 +2260,6 @@ def getGraphHTML() {
                 </table>
               </div>
             </div>
-
-            <br></br>
-
-            <script type="text/javascript">
-                ${chartJs}
-            </script>
-            <script type="text/javascript">
-                google.charts.load('current', {packages: ['corechart']});
-                google.charts.setOnLoadCallback(drawGraph);
-                function drawGraph() {
-                    var data = new google.visualization.DataTable();
-                    data.addColumn('timeofday', 'time');
-                    data.addColumn('number', 'Temp (Y)');
-                    data.addColumn('number', 'Temp (T)');
-                    data.addColumn('number', 'Operating');
-                    data.addColumn('number', 'Humidity');
-                    ${coolstr1}
-                    ${heatstr1}
-                    data.addRows([
-                        ${getDataString(1)}
-                        ${getDataString(2)}
-                        ${getDataString(3)}
-                        ${getDataString(4)}
-                        ${coolstr2}
-                        ${heatstr2}
-                    ]);
-                    var options = {
-                    width: '100%',
-                    height: '100%',
-                        hAxis: {
-                            format: 'H:mm',
-                            minValue: [${getStartTime()},0,0],
-                            slantedText: false
-                        },
-                        series: {
-                            0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                            1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                            2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                            3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                            ${coolstr3}
-                            ${heatstr3}
-                        },
-                        vAxes: {
-                            0: {
-                                title: 'Humidity (%)',
-                                format: 'decimal',
-                                minValue: 0,
-                                maxValue: 100,
-                                textStyle: {color: '#B8B8B8'},
-                                titleTextStyle: {color: '#B8B8B8'}
-                            },
-                            1: {
-                                title: 'Temperature (${tempStr})',
-                                format: 'decimal',
-                                ${minstr}
-                                ${maxstr}
-                                textStyle: {color: '#FF0000'},
-                                titleTextStyle: {color: '#FF0000'}
-                            }
-                        },
-                        legend: {
-                            position: 'bottom',
-                            maxLines: 4,
-                            textStyle: {color: '#000000'}
-                        },
-                        chartArea: {
-                            left: '12%',
-                            right: '12%',
-                            top: '3%',
-                            bottom: '15%',
-                            height: '100%',
-                            width: '100%'
-                        }
-                    };
-                    var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-                    chart.draw(data, options);
-                }
-              </script>
-              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-              <div id="chart_div" style="width: 100%; height: 200px;"></div>            
         </body>
     </html>
     """

@@ -69,7 +69,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 13, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 14, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
@@ -912,65 +912,75 @@ def getWeatherHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+             	<link rel="stylesheet prefetch" href="${state?.cssUrl}"/>
+                <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+            	<script src="https://www.amcharts.com/lib/3/amcharts.js"></script>
+                <script src="https://www.amcharts.com/lib/3/serial.js"></script>
+                <script src="https://www.amcharts.com/lib/3/plugins/export/export.min.js"></script>
+                <link rel="stylesheet" href="https://www.amcharts.com/lib/3/plugins/export/export.css" type="text/css" media="all" />
+                <script src="https://www.amcharts.com/lib/3/themes/light.js"></script>
 
-            </head>
-            <body>
-                <style type="text/css">
-                ${getCSS()}
-                </style>
-                ${updateAvail}
-                <div class="container">
-                <h4>Current Weather Conditions</h4>
-                <h3><a href="#openModal">${state?.walert}</a></h3>
-                <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
-                    <div class="row">
-                        <div class="six columns">
-                            <b>Feels Like:</b> ${getFeelslike()} <br>
-                            <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
-                            <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-                            <b>Dew Point: </b>${getDewpoint()}<br>
-                            <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-                            <b>Visibility:</b> ${getVisibility()} <br>
-                            <b>Lux:</b> ${getLux()}<br>
-                            <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-                            <b>Wind:</b> ${state?.windStr} <br>
-                        </div>
-                        <div class="six columns">
-                            <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
-                            <h2>${getTemp()}</h2>
-                            <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
-                        </div>
-                    </div>
-                    <div class="row topBorder">
-                    <div class="centerText four columns">${forecastDay(0)}</div>
-                    <div class="centerText four columns">${forecastDay(1)}</div>
-                    <div class="centerText four columns">${forecastDay(2)}</div>
-                    </div>
-                    <div class="row">
-                    <div class="centerText four columns">${forecastDay(3)}</div>
-                    <div class="centerText four columns">${forecastDay(4)}</div>
-                    <div class="centerText four columns">${forecastDay(5)}</div>
-                    </div>
-                    <div class="row">
-                    <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
-                    <div class="centerText four columns">${forecastDay(7)}</div>
-                    </div>
-                    <div class="row topBorder">
-                    <div class="centerText offset-by-three six columns">
-                        <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-                        <b>${state?.curWeather?.current_observation?.observation_time}</b>
-                    </div>
-                    </div>
 
-                	<div id="openModal" class="topModal">
-                        <div>
-                            <a href="#close" title="Close" class="close">X</a>
-                            <h2>Special Message</h2>
-                            <p>${state?.walertMessage} </p>
+
+            	</head>
+            	<body>
+                	<style type="text/css">
+                      ${getCSS()}
+                    </style>
+                    ${updateAvail}
+                    <div class="container">
+                    <h4>Current Weather Conditions</h4>
+                    <h3><a href="#openModal">${state?.walert}</a></h3>
+                    <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
+                        <div class="row">
+                            <div class="six columns">
+                                <b>Feels Like:</b> ${getFeelslike()} <br>
+                                <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+                                <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+                                <b>Dew Point: </b>${getDewpoint()}<br>
+                                <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+                                <b>Visibility:</b> ${getVisibility()} <br>
+                                <b>Lux:</b> ${getLux()}<br>
+                                <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+                                <b>Wind:</b> ${state?.windStr} <br>
+                            </div>
+                            <div class="six columns">
+                                <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+                                <h2>${getTemp()}</h2>
+                                <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+                            </div>
                         </div>
-                    </div>
-                    <br></br>
-                    <script type="text/javascript">
+                        <div class="row topBorder">
+                            <div class="centerText four columns">${forecastDay(0)}</div>
+                            <div class="centerText four columns">${forecastDay(1)}</div>
+                            <div class="centerText four columns">${forecastDay(2)}</div>
+                        </div>
+                        <div class="row">
+                            <div class="centerText four columns">${forecastDay(3)}</div>
+                            <div class="centerText four columns">${forecastDay(4)}</div>
+                            <div class="centerText four columns">${forecastDay(5)}</div>
+                        </div>
+                        <div class="row">
+                            <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+                            <div class="centerText four columns">${forecastDay(7)}</div>
+                        </div>
+                        <div class="row topBorder">
+                            <div class="centerText offset-by-three six columns">
+                                <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
+                                <b>${state?.curWeather?.current_observation?.observation_time}</b>
+                            </div>
+                        </div>
+
+                        <div id="openModal" class="topModal">
+                            <div>
+                                <a href="#close" title="Close" class="close">X</a>
+                                <h2>Special Message</h2>
+                                <p>${state?.walertMessage}</p>
+                            </div>
+                        </div>
+
+                        <br></br>
+						<script type="text/javascript">
                     	${chartJs}
                     </script>
                     <script type="text/javascript">
@@ -995,7 +1005,8 @@ def getWeatherHtml() {
                                   hAxis: {
                                       format: 'H:mm',
                                       minValue: [${getStartTime()},0,0],
-                                      slantedText: false
+                                      slantedText: true,
+                                      slantedTextAngle: 30
                                   },
                                   series: {
                                       0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
@@ -1023,15 +1034,15 @@ def getWeatherHtml() {
                                   },
                                   legend: {
                                       position: 'bottom',
-                                      maxLines: 3,
+                                      maxLines: 4,
                                       textStyle: {color: '#000000'}
                                   },
                                   chartArea: {
                                       left: '12%',
                                       right: '12%',
                                       top: '3%',
-                                      bottom: '15%',
-                                      height: '100%',
+                                      bottom: '20%',
+                                      height: '85%',
                                       width: '100%'
                                   }
                               };
@@ -1039,11 +1050,11 @@ def getWeatherHtml() {
                               chart.draw(data, options);
                           }
                       </script>
-                    <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-                    <div id="chart_div" style="width: 100%; height: 200px;"></div>
-                </div>
-            </body>
-        </html>
+                        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+                        <div id="chart_div" style="width: 100%; height: 225px;"></div>
+                    </div>
+            	</body>
+        	</html>
         """
         render contentType: "text/html", data: html, status: 200
     }
@@ -1343,54 +1354,6 @@ def getMaxTemp() {
     //log.trace "getMaxTemp: ${result.max()} result: ${result}"
     return result.max()
 }
-
-def getGraphHTML() {
-    def tempStr = "°F"
-    if ( wantMetric() ) {
-        tempStr = "°C"
-    }
-
-    def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-    def chartJs = getJS(chartJsUrl)
-
-    def minval = getMinTemp()
-    def minstr = "minValue: ${minval},"
-
-    def maxval = getMaxTemp()
-    def maxstr = "maxValue: ${maxval},"
-
-    def differ = maxval - minval
-    //log.trace "differ ${differ}"
-    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-        minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
-        if (differ < (wantMetric() ? 10:20) ) {
-            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
-        }
-    }
-    //log.trace "${minstr}   ${maxstr}"
-
-    def html = """
-        <!DOCTYPE html>
-            <html>
-            <head>
-               	<meta http-equiv="cache-control" content="max-age=0"/>
-                <meta http-equiv="cache-control" content="no-cache"/>
-                <meta http-equiv="expires" content="0"/>
-                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-                <meta http-equiv="pragma" content="no-cache"/>
-                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-
-            </head>
-            <body>
-
-              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-
-            </body>
-            </html>
-                """
-        render contentType: "text/html", data: html, status: 200
-}
-
 
 private def textDevName()  { return "Nest Weather${appDevName()}" }
 private def appDevType()   { return false }
