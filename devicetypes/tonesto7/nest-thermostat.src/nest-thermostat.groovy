@@ -235,13 +235,12 @@ metadata {
             state "default", label:'${currentValue}'
         }
 
-        //htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 4, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
         htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main("temp2")
         details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
                   //"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "devInfoHtml", "refresh"])
-                  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "graphHTML", "refresh"] )
+                  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "heatSliderControl", "coolSliderControl", "refresh"] )
     }
 }
 
@@ -273,7 +272,6 @@ def getTempColors() {
 }
 
 mappings {
-    path("/getInfoHtml") {action: [GET: "getInfoHtml"]}
     path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
@@ -1638,7 +1636,7 @@ def getImgBase64(url,type) {
                 def respData = resp?.data
                 ByteArrayOutputStream bos = new ByteArrayOutputStream()
                 int len
-                int size = 1024
+                int size = 3072
                 byte[] buf = new byte[size]
                 while ((len = respData.read(buf, 0, size)) != -1)
                     bos.write(buf, 0, len)
@@ -1653,6 +1651,35 @@ def getImgBase64(url,type) {
     catch (ex) {
         log.error "getImageBytes Exception: ${ex}"
         exceptionDataHandler(ex.message, "getImgBase64")
+    }
+}
+
+def getFileBase64(url,preType,fileType) {
+    try {
+        def params = [
+            uri: url,
+            contentType: '$preType/$fileType'
+        ]
+        httpGet(params) { resp ->
+            if(resp.data) {
+                def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+                int size = 4096
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                    bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+                String s = buf?.encodeBase64()
+                //log.debug "resp: ${s}"
+                return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+            }
+        }
+    }
+    catch (ex) {
+        log.error "getFileBase64 Exception: ${ex}"
+        exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
 
@@ -2075,7 +2102,8 @@ def getGraphHTML() {
     }
 
     def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-    def chartJs = getJS(chartJsUrl)
+    def chartJs = getFileBase64(chartJsUrl, "application", "javascript")
+    def cssData = getFileBase64(state?.cssUrl, "text", "css")
 
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
     def coolstr2 =  getDataString(5)
@@ -2116,84 +2144,81 @@ def getGraphHTML() {
     }
 
     def showChartHtml = """
-    <script type="text/javascript">
-        ${chartJs}
-    </script>
-    <script type="text/javascript">
-        google.charts.load('current', {packages: ['corechart']});
-        google.charts.setOnLoadCallback(drawGraph);
-        function drawGraph() {
-            var data = new google.visualization.DataTable();
-            data.addColumn('timeofday', 'time');
-            data.addColumn('number', 'Temp (Y)');
-            data.addColumn('number', 'Temp (T)');
-            data.addColumn('number', 'Operating');
-            data.addColumn('number', 'Humidity');
-            ${coolstr1}
-            ${heatstr1}
-            data.addRows([
-                ${getDataString(1)}
-                ${getDataString(2)}
-                ${getDataString(3)}
-                ${getDataString(4)}
-                ${coolstr2}
-                ${heatstr2}
-            ]);
-            var options = {
-            width: '100%',
-            height: '100%',
-                hAxis: {
-                    format: 'H:mm',
-                    minValue: [${getStartTime()},0,0],
-                    slantedText: true,
-                    slantedTextAngle: 30
-                },
-                series: {
-                    0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                    1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                    2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                    3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                    ${coolstr3}
-                    ${heatstr3}
-                },
-                vAxes: {
-                    0: {
-                        title: 'Humidity (%)',
-                        format: 'decimal',
-                        minValue: 0,
-                        maxValue: 100,
-                        textStyle: {color: '#B8B8B8'},
-                        titleTextStyle: {color: '#B8B8B8'}
+        <script type="text/javascript">
+            google.charts.load('current', {packages: ['corechart']});
+            google.charts.setOnLoadCallback(drawGraph);
+            function drawGraph() {
+                var data = new google.visualization.DataTable();
+                data.addColumn('timeofday', 'time');
+                data.addColumn('number', 'Temp (Y)');
+                data.addColumn('number', 'Temp (T)');
+                data.addColumn('number', 'Operating');
+                data.addColumn('number', 'Humidity');
+                ${coolstr1}
+                ${heatstr1}
+                data.addRows([
+                    ${getDataString(1)}
+                    ${getDataString(2)}
+                    ${getDataString(3)}
+                    ${getDataString(4)}
+                    ${coolstr2}
+                    ${heatstr2}
+                ]);
+                var options = {
+                width: '100%',
+                height: '100%',
+                    hAxis: {
+                        format: 'H:mm',
+                        minValue: [${getStartTime()},0,0],
+                        slantedText: true,
+                        slantedTextAngle: 30
                     },
-                    1: {
-                        title: 'Temperature (${tempStr})',
-                        format: 'decimal',
-                        ${minstr}
-                        ${maxstr}
-                        textStyle: {color: '#FF0000'},
-                        titleTextStyle: {color: '#FF0000'}
+                    series: {
+                        0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                        1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                        2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                        3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                        ${coolstr3}
+                        ${heatstr3}
+                    },
+                    vAxes: {
+                        0: {
+                            title: 'Humidity (%)',
+                            format: 'decimal',
+                            minValue: 0,
+                            maxValue: 100,
+                            textStyle: {color: '#B8B8B8'},
+                            titleTextStyle: {color: '#B8B8B8'}
+                        },
+                        1: {
+                            title: 'Temperature (${tempStr})',
+                            format: 'decimal',
+                            ${minstr}
+                            ${maxstr}
+                            textStyle: {color: '#FF0000'},
+                            titleTextStyle: {color: '#FF0000'}
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        maxLines: 4,
+                        textStyle: {color: '#000000'}
+                    },
+                    chartArea: {
+                        left: '12%',
+                        right: '18%',
+                        top: '3%',
+                        bottom: '20%',
+                        height: '85%',
+                        width: '100%'
                     }
-                },
-                legend: {
-                              position: 'bottom',
-                              maxLines: 4,
-                              textStyle: {color: '#000000'}
-                          },
-                          chartArea: {
-                              left: '12%',
-                              right: '18%',
-                              top: '3%',
-                              bottom: '20%',
-                              height: '85%',
-                              width: '100%'
-                }
-            };
-            var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-            chart.draw(data, options);
-        }
-      </script>
-      <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-      <div id="chart_div" style="width: 100%; height: 225px;"></div>
+                };
+                var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+                chart.draw(data, options);
+            }
+          </script>
+          <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+          <div id="chart_div" style="width: 100%; height: 225px;"></div>
     """
 
     def hideChartHtml = """
@@ -2217,11 +2242,10 @@ def getGraphHTML() {
             <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
             <meta http-equiv="pragma" content="no-cache"/>
             <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+            <link rel="stylesheet" href="${cssData}"></link>
+            <script type="text/javascript" src="${chartJs}"></script>
         </head>
         <body>
-            <style type="text/css">
-              ${getCSS()}
-            </style>
             ${updateAvail}
 
             ${chartHtml}
