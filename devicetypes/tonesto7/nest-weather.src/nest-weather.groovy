@@ -757,6 +757,35 @@ def getImgBase64(url, type) {
     }
 }
 
+def getFileBase64(url,preType,fileType) {
+    try {
+        def params = [
+            uri: url,
+            contentType: '$preType/$fileType'
+        ]
+        httpGet(params) { resp ->
+            if(resp.data) {
+                def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+                int size = 4096
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                    bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+                String s = buf?.encodeBase64()
+                //log.debug "resp: ${s}"
+                return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+            }
+        }
+    }
+    catch (ex) {
+        log.error "getFileBase64 Exception: ${ex}"
+        exceptionDataHandler(ex.message, "getFileBase64")
+    }
+}
+
 def getCSS(url = null){
     try {
         def params = [
@@ -885,7 +914,8 @@ def getWeatherHtml() {
         }
 
         def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-    	  def chartJs = getJS(chartJsUrl)
+        def chartJs = getFileBase64(chartJsUrl, "application", "javascript")
+        def cssData = getFileBase64(state?.cssUrl, "text", "css")
 
         def minval = getMinTemp()
         def minstr = "minValue: ${minval},"
@@ -903,9 +933,6 @@ def getWeatherHtml() {
         }
 
         def showChartHtml = """
-            <script type="text/javascript">
-              ${chartJs}
-            </script>
             <script type="text/javascript">
               google.charts.load('current', {packages: ['corechart']});
               google.charts.setOnLoadCallback(drawGraph);
@@ -999,13 +1026,10 @@ def getWeatherHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-             	  <link rel="stylesheet prefetch" href="${state?.cssUrl}"/>
-                <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+                <link rel="stylesheet" href="${cssData}"></link>
+                <script type="text/javascript" src="${chartJs}"></script>
             </head>
             <body>
-                	<style type="text/css">
-                      ${getCSS()}
-                  </style>
                   ${updateAvail}
                   <div class="container">
                   <h4>Current Weather Conditions</h4>
