@@ -69,7 +69,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 14, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 15, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
@@ -90,8 +90,8 @@ metadata {
         //htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 5, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main ("temp2")
-        //details ("weatherHtml", "refresh")
-        details ("weatherHtml", "graphHTML", "refresh")
+        details ("weatherHtml", "refresh")
+        //details ("weatherHtml", "graphHTML", "refresh")
     }
 }
 
@@ -1039,7 +1039,7 @@ def getWeatherHtml() {
                                   },
                                   chartArea: {
                                       left: '12%',
-                                      right: '12%',
+                                      right: '18%',
                                       top: '3%',
                                       bottom: '20%',
                                       height: '85%',
