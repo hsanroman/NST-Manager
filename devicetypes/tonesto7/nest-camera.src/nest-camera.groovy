@@ -728,7 +728,7 @@ def getCamApiServer(camUUID) {
 
 def getCamBtnJsData() {
     def data =
-    """<!--
+    """
       function toggle_visibility(id) {
         var id = document.getElementById(id);
 
@@ -740,7 +740,7 @@ def getCamBtnJsData() {
 
         id.style.display = 'block'
       }
-    //-->"""
+    """
 }
 
 def getCamHtml() {
