@@ -760,7 +760,7 @@ def getImgBase64(url, type) {
 def getCSS(url = null){
     try {
         def params = [
-            uri: !url ? "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
+            uri: !url ? "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
             contentType: 'text/css'
         ]
         httpGet(params)  { resp ->
@@ -885,7 +885,7 @@ def getWeatherHtml() {
         }
 
         def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-    	def chartJs = getJS(chartJsUrl)
+    	  def chartJs = getJS(chartJsUrl)
 
         def minval = getMinTemp()
         def minstr = "minValue: ${minval},"
@@ -906,24 +906,17 @@ def getWeatherHtml() {
         <!DOCTYPE html>
         <html>
             <head>
+                <meta charset="utf-8"/>
                 <meta http-equiv="cache-control" content="max-age=0"/>
                 <meta http-equiv="cache-control" content="no-cache"/>
                 <meta http-equiv="expires" content="0"/>
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-             	<link rel="stylesheet prefetch" href="${state?.cssUrl}"/>
+             	  <link rel="stylesheet prefetch" href="${state?.cssUrl}"/>
                 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-            	<script src="https://www.amcharts.com/lib/3/amcharts.js"></script>
-                <script src="https://www.amcharts.com/lib/3/serial.js"></script>
-                <script src="https://www.amcharts.com/lib/3/plugins/export/export.min.js"></script>
-                <link rel="stylesheet" href="https://www.amcharts.com/lib/3/plugins/export/export.css" type="text/css" media="all" />
-                <script src="https://www.amcharts.com/lib/3/themes/light.js"></script>
-
-
-
-            	</head>
-            	<body>
+            </head>
+            <body>
                 	<style type="text/css">
                       ${getCSS()}
                     </style>
@@ -980,7 +973,7 @@ def getWeatherHtml() {
                         </div>
 
                         <br></br>
-						<script type="text/javascript">
+						        <script type="text/javascript">
                     	${chartJs}
                     </script>
                     <script type="text/javascript">
