@@ -764,6 +764,36 @@ def getCamHtml() {
         def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
         def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
         def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+
+        def showCamHtml = """
+            <script type="text/javascript">
+                ${getCamBtnJsData()}
+            </script>
+            <div class="hideable" id="liveStream">
+                <video width="410" controls
+                    id="nest-video"
+                    class="video-js vjs-default-skin"
+                    poster="${camImgUrl}"
+                    data-video-url="${pubVidUrl}"
+                    data-video-title="">
+                    <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+                </video>
+            </div>
+            <div class="hideable" id="still" style="display:none">
+                <img src="${pubSnapUrl}" width="100%"/>
+            </div>
+            <div class="hideable" id="animation" style="display:none">
+                <img src="${animationUrl}" width="100%"/>
+            </div>
+            <div class="centerText">
+              ${vidBtn}
+              ${imgBtn}
+              ${lastEvtBtn}
+            </div>
+        """
+        def hideCamHtml = """<h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+
+        def camHtml = pubVidUrl ? hideCamHtml : showCamHtml
         def html = """
         <!DOCTYPE html>
         <html>
@@ -781,31 +811,9 @@ def getCamHtml() {
                 <style type="text/css">
                     ${getCSS()}
                 </style>
-                <script type="text/javascript">
-                    ${getCamBtnJsData()}
-                </script>
                 ${updateAvail}
-                <div class="hideable" id="liveStream">
-                    <video width="410" controls
-                        id="nest-video"
-                        class="video-js vjs-default-skin"
-                        poster="${camImgUrl}"
-                        data-video-url="${pubVidUrl}"
-                        data-video-title="">
-                        <source src="${camPlaylistUrl}" type="application/x-mpegURL">
-                    </video>
-                </div>
-                <div class="hideable" id="still" style="display:none">
-                    <img src="${pubSnapUrl}" width="100%"/>
-                </div>
-                <div class="hideable" id="animation" style="display:none">
-                    <img src="${animationUrl}" width="100%"/>
-                </div>
-                <div class="centerText">
-                  ${vidBtn}
-                  ${imgBtn}
-                  ${lastEvtBtn}
-                </div>
+
+                ${camHtml}
 
                 <br></br>
 
