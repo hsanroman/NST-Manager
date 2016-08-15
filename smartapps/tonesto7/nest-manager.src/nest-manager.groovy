@@ -708,22 +708,6 @@ def getSafetyValuesDesc() {
     return (str != "") ? "${str}" : null
 }
 
-def custWeatherPage() {
-    dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
-        section("Set Custom Weather Location") {
-            def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
-            href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
-                    description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-            def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode\n or 'pws:station_id'", required: false, defaultValue: defZip, submitOnChange: true,
-                    image: getAppImg("weather_icon_grey.png"))
-            paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
-            atomicState.lastWeatherUpdDt = 0
-            atomicState?.lastForecastUpdDt = 0
-        }
-    }
-}
-
 def installed() {
     log.debug "Installed with settings: ${settings}"
     initialize()
@@ -1271,34 +1255,29 @@ def apiIssues() {
 }
 
 def apiIssueEvent(issue, cmd = null) {
-    try {
-        def list = atomicState?.apiIssuesList ?: []
-        //log.debug "listIn: $list (${list?.size()})"
-        def listSize = 3
-        if(list?.size() < listSize) {
-            list.push(issue)
-        }
-        else if (list?.size() > listSize) {
-            def nSz = (list?.size()-listSize) + 1
-            //log.debug ">listSize: ($nSz)"
-            def nList = list?.drop(nSz)
-            //log.debug "nListIn: $list"
-            nList?.push(issue)
-            //log.debug "nListOut: $nList"
-            list = nList
-        }
-        else if (list?.size() == listSize) {
-            def nList = list?.drop(1)
-            nList?.push(issue)
-            list = nList
-        }
-
-        if(list) { atomicState?.apiIssuesList = list }
-        //log.debug "listOut: $list"
-    } catch (ex) {
-        LogAction("apiIssueEvent Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "apiIssueEvent")
+    def list = atomicState?.apiIssuesList ?: []
+    //log.debug "listIn: $list (${list?.size()})"
+    def listSize = 3
+    if(list?.size() < listSize) {
+        list.push(issue)
     }
+    else if (list?.size() > listSize) {
+        def nSz = (list?.size()-listSize) + 1
+        //log.debug ">listSize: ($nSz)"
+        def nList = list?.drop(nSz)
+        //log.debug "nListIn: $list"
+        nList?.push(issue)
+        //log.debug "nListOut: $nList"
+        list = nList
+    }
+    else if (list?.size() == listSize) {
+        def nList = list?.drop(1)
+        nList?.push(issue)
+        list = nList
+    }
+
+    if(list) { atomicState?.apiIssuesList = list }
+    //log.debug "listOut: $list"
 }
 
 def ok2PollDevice() {
@@ -1405,15 +1384,7 @@ def setCamStreaming(child, streamOn) {
     def val = streamOn.toBoolean() ? true : false
     LogAction("Nest Manager(setCamStreaming) - Setting Camera${!devId ? "" : " ${devId}"} Streaming to: (${val ? "On" : "Off"})", "debug", true)
     if(childDebug && child) { child?.log("setCamStreaming( devId: ${devId}, StreamOn: ${val})") }
-    try {
-        return sendNestApiCmd(devId, apiVar().rootTypes.cam, apiVar().cmdObjs.streaming, val, devId)
-    }
-    catch (ex) {
-        LogAction("setCamStreaming Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setCamStreaming")
-        if(childDebug) { child?.log("setCamStreaming Exception: ${ex}", "error") }
-        return false
-    }
+    return sendNestApiCmd(devId, apiVar().rootTypes.cam, apiVar().cmdObjs.streaming, val, devId)
 }
 
 def setStructureAway(child, value) {
@@ -1421,19 +1392,11 @@ def setStructureAway(child, value) {
     def val = value?.toBoolean()
     LogAction("Nest Manager(setStructureAway) - Setting Nest Location:${!devId ? "" : " ${devId}"} (${val ? "Away" : "Home"})", "debug", true)
     if(childDebug && child) { child?.log("setStructureAway: ${devId} | (${val})") }
-    try {
-        if(val) {
-            return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "away", devId)
-        }
-        else {
-            return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "home", devId)
-        }
+    if(val) {
+        return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "away", devId)
     }
-    catch (ex) {
-        LogAction("setStructureAway Exception: ${ex}", "debug", true)
-        sendExceptionData(ex.message, "setStructureAway")
-        if (childDebug && child) { child?.log("setStructureAway Exception: ${ex}", "error") }
-        return false
+    else {
+        return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "home", devId)
     }
 }
 
@@ -1442,15 +1405,7 @@ def setTstatLabel(child, label) {
     def val = label
     LogAction("Nest Manager(setTstatLabel) - Setting Thermostat${!devId ? "" : " ${devId}"} Label to: (${val ? "On" : "Auto"})", "debug", true)
     if(childDebug && child) { child?.log("setTstatLabel( devId: ${devId}, newLabel: ${val})") }
-    try {
-        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setLabel, val, devId)
-    }
-    catch (ex) {
-        LogAction("setTstatLabel Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setTstatLabel")
-        if(childDebug) { child?.log("setTstatLabel Exception: ${ex}", "error") }
-        return false
-    }
+    return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setLabel, val, devId)
 }
 
 def setFanMode(child, fanOn) {
@@ -1458,48 +1413,24 @@ def setFanMode(child, fanOn) {
     def val = fanOn.toBoolean()
     LogAction("Nest Manager(setFanMode) - Setting Thermostat${!devId ? "" : " ${devId}"} Fan Mode to: (${val ? "On" : "Auto"})", "debug", true)
     if(childDebug && child) { child?.log("setFanMode( devId: ${devId}, fanOn: ${val})") }
-    try {
-        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.fanActive, val, devId)
-    }
-    catch (ex) {
-        LogAction("setFanMode Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setFanMode")
-        if(childDebug) { child?.log("setFanMode Exception: ${ex}", "error") }
-        return false
-    }
+    return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.fanActive, val, devId)
 }
 
 def setHvacMode(child, mode) {
     def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
     LogAction("Nest Manager(setHvacMode) - Setting Thermostat${!devId ? "" : " ${devId}"} Mode to: (${mode})", "debug", true)
-    try {
-        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.hvacMode, mode.toString(), devId)
-    }
-    catch (ex) {
-        LogAction("setHvacMode Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setHvacMode")
-        if(childDebug && child) { child?.log("setHvacMode Received: ${devId} (${mode})", "debug") }
-        return false
-    }
+    return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.hvacMode, mode.toString(), devId)
 }
 
 def setTargetTemp(child, unit, temp) {
     def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
     LogAction("setTargetTemp: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTemp: ${devId} | (${temp})${unit}") }
-    try {
-        if(unit == "C") {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetC, temp, devId)
-        }
-        else {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetF, temp, devId)
-        }
+    if(unit == "C") {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetC, temp, devId)
     }
-    catch (ex) {
-        LogAction("setTargetTemp Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setTargetTemp")
-        if(childDebug && child) { child?.log("setTargetTemp Exception: ${ex}", "error") }
-        return false
+    else {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetF, temp, devId)
     }
 }
 
@@ -1507,19 +1438,11 @@ def setTargetTempLow(child, unit, temp) {
     def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
     LogAction("setTargetTempLow: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTempLow: ${devId} | (${temp})${unit}") }
-    try {
-        if(unit == "C") {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetLowC, temp, devId)
-        }
-        else {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetLowF, temp, devId)
-        }
+    if(unit == "C") {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetLowC, temp, devId)
     }
-    catch (ex) {
-        LogAction("setTargetTempLow Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setTargetTempLow")
-        if(childDebug && child) { child?.log("setTargetTempLow Exception: ${ex}", "error") }
-        return false
+    else {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetLowF, temp, devId)
     }
 }
 
@@ -1527,19 +1450,11 @@ def setTargetTempHigh(child, unit, temp) {
     def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
     LogAction("setTargetTempHigh: ${devId} | (${temp})${unit}", "debug", true)
     if(childDebug && child) { child?.log("setTargetTempHigh: ${devId} | (${temp})${unit}") }
-    try {
-        if(unit == "C") {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetHighC, temp, devId)
-        }
-        else {
-            return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetHighF, temp, devId)
-        }
+    if(unit == "C") {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetHighC, temp, devId)
     }
-    catch (ex) {
-        LogAction("setTargetTempHigh Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setTargetTempHigh")
-        if(childDebug && child) { child?.log("setTargetTempHigh Exception: ${ex}", "error") }
-        return false
+    else {
+        return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetHighF, temp, devId)
     }
 }
 
@@ -1859,41 +1774,31 @@ def notificationCheck() {
 }
 
 def missedPollNotify() {
-    try {
-        if(isMissedPoll()) {
-            if(getOk2Notify() && (getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger())) {
-                sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually.")
-                atomicState?.lastMisPollMsgDt = getDtNow()
-            }
+    if(isMissedPoll()) {
+        if(getOk2Notify() && (getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger())) {
+            sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually.")
+            atomicState?.lastMisPollMsgDt = getDtNow()
         }
-    } catch (ex) {
-        LogAction("missedPollNotify Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "missedPollNotify")
     }
 }
 
 def appUpdateNotify() {
-    try {
-        def appUpd = isAppUpdateAvail()
-        def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
-        def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
-        def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
-        def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
-        def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
-        if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
-            def str = ""
-            str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}, "
-            str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}, "
-            str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}, "
-            str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}, "
-            str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-            str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-            sendMsg("Info", "Update(s) are available: ${str}...  Please visit the IDE to Update your code...")
-            atomicState?.lastUpdMsgDt = getDtNow()
-        }
-    } catch (ex) {
-        LogAction("appUpdateNotify Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "appUpdateNotify")
+    def appUpd = isAppUpdateAvail()
+    def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
+    def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
+    def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
+    def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
+    def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+    if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
+        def str = ""
+        str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}, "
+        str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}, "
+        str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}, "
+        str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}, "
+        str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+        str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
+        sendMsg("Info", "Update(s) are available: ${str}...  Please visit the IDE to Update your code...")
+        atomicState?.lastUpdMsgDt = getDtNow()
     }
 }
 
@@ -1970,7 +1875,7 @@ def updateWebStuff(now = false) {
         if(now) {
             getWebFileData()
         } else {
-            if(canSchedule()) { runIn(10, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
+            if(canSchedule()) { runIn(3, "getWebFileData", [overwrite: true]) }  //This reads a JSON file from a web server with timing values and version numbers
         }
     }
     if (optInAppAnalytics && atomicState?.isInstalled) {
@@ -1982,7 +1887,7 @@ def updateWebStuff(now = false) {
         if(now) {
             getWeatherConditions(now)
         } else {
-            if(canSchedule()) { runIn(15, "getWeatherConditions", [overwrite: true]) }
+            if(canSchedule()) { runIn(3, "getWeatherConditions", [overwrite: true]) }
         }
     }
 }
@@ -2032,7 +1937,7 @@ def getWeatherConditions(force = false) {
             }
             if(curWeather || curAstronomy || curForecast || curAlerts) {
                 atomicState.needChildUpd = true
-                if (!force) { runIn(30, "postCmd", [overwrite: true]) }
+                if (!force) { runIn(3, "postCmd", [overwrite: true]) }
                 return true
             }
         }
@@ -2152,31 +2057,26 @@ def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toIn
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
 def isCodeUpdateAvailable(newVer, curVer, type) {
-    try {
-        def result = false
-        def latestVer
-        def versions = [newVer, curVer]
-        if(newVer != curVer) {
-            latestVer = versions?.max { a, b ->
-                def verA = a?.tokenize('.')
-                def verB = b?.tokenize('.')
-                def commonIndices = Math.min(verA?.size(), verB?.size())
-                for (int i = 0; i < commonIndices; ++i) {
-                    //log.debug "comparing $numA and $numB"
-                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
-                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
-                    }
+    def result = false
+    def latestVer
+    def versions = [newVer, curVer]
+    if(newVer != curVer) {
+        latestVer = versions?.max { a, b ->
+            def verA = a?.tokenize('.')
+            def verB = b?.tokenize('.')
+            def commonIndices = Math.min(verA?.size(), verB?.size())
+            for (int i = 0; i < commonIndices; ++i) {
+                //log.debug "comparing $numA and $numB"
+                if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                    return verA[i]?.toInteger() <=> verB[i]?.toInteger()
                 }
-                verA?.size() <=> verB?.size()
             }
-            result = (latestVer == newVer) ? true : false
+            verA?.size() <=> verB?.size()
         }
-        //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
-        return result
-    } catch (ex) {
-        LogAction("isCodeUpdateAvailable Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "isCodeUpdateAvailable")
+        result = (latestVer == newVer) ? true : false
     }
+    //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+    return result
 }
 
 def isAppUpdateAvail() {
@@ -2686,6 +2586,9 @@ def devNamePage() {
             if(atomicState?.custLabelUsed) {
                 paragraph "Custom Labels Are Active"
             }
+            if(atomicState?.useAltNames) {
+                paragraph "Using Location Name as Prefix is Active"
+            }
             //paragraph "Current Device Handler Names", image: ""
         }
         def str1 = "\n\nName does not match whats expected.\nName Should be:"
@@ -2700,12 +2603,13 @@ def devNamePage() {
                     found = true
                     def d = getChildDevice(getNestTstatDni(t))
                     def dstr = ""
+//ERS
                     if(d) {
                         dstr += "Found: ${d.displayName}"
                         if (d.displayName != getNestTstatLabel(t.value)) {
                             dstr += "$str1 ${getNestTstatLabel(t.value)}"
                         }
-                        else if (atomicState?.custLabelUsed) { dstr += "$str2" }
+                        else if (atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
                     } else {
                         dstr += "New Name: ${getNestTstatLabel(t.value)}"
                     }
@@ -2728,7 +2632,7 @@ def devNamePage() {
                         if (d1.displayName != getNestProtLabel(p.value)) {
                             dstr += "$str1 ${getNestProtLabel(p.value)}"
                         }
-                        else if (atomicState?.custLabelUsed) { dstr += "$str2" }
+                        else if (atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
                     } else {
                         dstr += "New Name: ${getNestProtLabel(p.value)}"
                     }
@@ -2751,7 +2655,7 @@ def devNamePage() {
                         if (d1.displayName != getNestCamLabel(c.value)) {
                             dstr += "$str1 ${getNestCamLabel(c.value)}"
                         }
-                        else if (atomicState?.custLabelUsed) { dstr += "$str2" }
+                        else if (atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
                     } else {
                         dstr += "New Name: ${getNestCamLabel(c.value)}"
                     }
@@ -2775,7 +2679,7 @@ def devNamePage() {
                     if (d3.displayName != pLbl) {
                         dstr += "$str1 ${pLbl}"
                     }
-                    else if (atomicState?.custLabelUsed) { dstr += "$str2" }
+                    else if (atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
                 } else {
                     dstr += "New Name: ${pLbl}"
                 }
@@ -2797,7 +2701,7 @@ def devNamePage() {
                     if (d4.displayName != wLbl) {
                         dstr += "$str1 ${wLbl}"
                     }
-                    else if (atomicState?.custLabelUsed) { dstr += "$str2" }
+                    else if (atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
                 } else {
                     dstr += "New Name: ${wLbl}"
                 }
@@ -3132,15 +3036,10 @@ def LogTrace(msg) {
 }
 
 def LogAction(msg, type = "debug", showAlways = false) {
-    try {
-        def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
-        if(showAlways) { Logger(msg, type) }
+    def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
+    if(showAlways) { Logger(msg, type) }
 
-        else if (isDbg && !showAlways) { Logger(msg, type) }
-    } catch (ex) {
-        log.error("LogAction Exception: ${ex}")
-        sendExceptionData(ex.message, "LogAction")
-    }
+    else if (isDbg && !showAlways) { Logger(msg, type) }
 }
 
 def Logger(msg, type) {
@@ -3174,26 +3073,21 @@ def debugAppendAppName = true
 
 def setStateVar(frc = false) {
     //log.trace "setStateVar..."
-    try {
-        //If the developer changes the version in the web appParams JSON it will trigger
-        //the app to create any new state values that might not exist or reset those that do to prevent errors
-        def stateVer = 3
-        def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
-        if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) {
-            if(!atomicState?.newSetupComplete) 	        { atomicState.newSetupComplete = false }
-            if(!atomicState?.setupVersion)              { atomicState?.setupVersion = 0 }
-            if(!atomicState?.misPollNotifyWaitVal) 	    { atomicState.misPollNotifyWaitVal = 900 }
-            if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
-            if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
-            if(!atomicState?.custLabelUsed)             { atomicState?.custLabelUsed = false }
-            if(!atomicState?.useAltNames)               { atomicState.useAltNames = false }
-            if(!atomicState?.apiCommandCnt)             { atomicState?.apiCommandCnt = 0 }
-            atomicState?.stateVarUpd = true
-            atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
-        }
-    } catch (ex) {
-        LogAction("setStateVar Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "setStateVar")
+    //If the developer changes the version in the web appParams JSON it will trigger
+    //the app to create any new state values that might not exist or reset those that do to prevent errors
+    def stateVer = 3
+    def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
+    if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) {
+        if(!atomicState?.newSetupComplete) 	        { atomicState.newSetupComplete = false }
+        if(!atomicState?.setupVersion)              { atomicState?.setupVersion = 0 }
+        if(!atomicState?.misPollNotifyWaitVal) 	    { atomicState.misPollNotifyWaitVal = 900 }
+        if(!atomicState?.misPollNotifyMsgWaitVal) 	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
+        if(!atomicState?.updNotifyWaitVal) 		    { atomicState.updNotifyWaitVal = 7200 }
+        if(!atomicState?.custLabelUsed)             { atomicState?.custLabelUsed = false }
+        if(!atomicState?.useAltNames)               { atomicState.useAltNames = false }
+        if(!atomicState?.apiCommandCnt)             { atomicState?.apiCommandCnt = 0 }
+        atomicState?.stateVarUpd = true
+        atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
     }
 }
 
@@ -3342,33 +3236,21 @@ def formatDt(dt) {
 
 //Returns time differences is seconds
 def GetTimeDiffSeconds(lastDate) {
-    try {
-        if(lastDate?.contains("dtNow")) { return 10000 }
-        def now = new Date()
-        def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
-        def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
-        def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
-        def diff = (int) (long) (stop - start) / 1000
-        return diff
-    }
-    catch (ex) {
-        LogAction("GetTimeDiffSeconds Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "GetTimeDiffSeconds")
-        return 10000
-    }
+    if(lastDate?.contains("dtNow")) { return 10000 }
+    def now = new Date()
+    def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
+    def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
+    def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
+    def diff = (int) (long) (stop - start) / 1000
+    return diff
 }
 
 def daysOk(days) {
-    try {
-        if(days) {
-            def dayFmt = new SimpleDateFormat("EEEE")
-            if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
-            return days.contains(dayFmt.format(new Date())) ? false : true
-        } else { return true }
-    } catch (ex) {
-        LogAction("daysOk() Exception: ${ex}", "error", true)
-        sendExceptionData(ex.message, "daysOk")
-    }
+    if(days) {
+        def dayFmt = new SimpleDateFormat("EEEE")
+        if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
+        return days.contains(dayFmt.format(new Date())) ? false : true
+    } else { return true }
 }
 
 def quietTimeOk() {
@@ -3661,7 +3543,7 @@ def devPrefPage() {
         }
         if(atomicState?.weatherDevice) {
             section("Weather Device:") {
-                href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
+                href "custWeatherPage", title: "Customize Weather Location?", description: (getWeatherConfDesc() ? "${getWeatherConfDesc()}\n\nTap to Modify..." : "Tap to configure..."), image: getAppImg("weather_icon_grey.png")
                 input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
                 //paragraph "Nothing to see here yet!!!"
             }
@@ -3669,9 +3551,34 @@ def devPrefPage() {
     }
 }
 
+def custWeatherPage() {
+    dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
+        section("Set Custom Weather Location") {
+            def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
+            href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
+                    description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
+            def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+            input("custLocStr", "text", title: "Set Custom Weather Location?", description: "Please enter a ZipCode or 'pws:station_id'", required: false, defaultValue: defZip, submitOnChange: true,
+                    image: getAppImg("weather_icon_grey.png"))
+            paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+            atomicState.lastWeatherUpdDt = 0
+            atomicState?.lastForecastUpdDt = 0
+        }
+    }
+}
+
+def getWeatherConfDesc() {
+    def str = ""
+    def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+    str += custLocStr ? "• Custom Weather Location: ${custLocStr}" : "• Default Weather Location: ${defZip}"
+    return (str != "") ? "${str}" : null
+}
+
 def devCustomizePageDesc() {
     def str = ""
-    str += weathAlertNotif  ? "• Weather Alerts: Enabled" : ""
+    def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+    str += custLocStr ? "• Custom Weather Location: ${custLocStr}" : "• Default Weather Location: ${defZip}"
+    str += weathAlertNotif  ? "\n• Weather Alerts: Enabled" : ""
     return (str != "") ? "${str}" : null
 }
 
@@ -4152,11 +4059,11 @@ def childAppDataPage() {
 }
 
 def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:30, install: false) {
+    dynamicPage(name: "childDevDataPage", refreshInterval:180, install: false) {
         getAllChildDevices().each { dev ->
             def str = ""
             section("${dev?.displayName.toString().capitalize()}:") {
-                str += "   ───────STATE DATA──────"
+                str += "  ───────STATE DATA──────"
                 dev?.getDeviceStateData()?.sort().each { par ->
                     str += "\n\n• ${par?.key.toString()}: (${par?.value})"
                 }
@@ -4245,40 +4152,32 @@ def removeInstallData() {
 }
 
 def sendExceptionData(exMsg, methodName, isChild = false, autoType = null) {
-    try {
-        def exCnt = 0
-        def exString = "${exMsg}"
-        exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
-        atomicState?.appExceptionCnt = exCnt ?: 1
-        if (optInSendExceptions) {
-            def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp"
-            def exData
-            if(isChild) {
-                exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
-            } else {
-                exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
-            }
-            def results = new groovy.json.JsonOutput().toJson(exData)
-            sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
+    def exCnt = 0
+    def exString = "${exMsg}"
+    exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
+    atomicState?.appExceptionCnt = exCnt ?: 1
+    if (optInSendExceptions) {
+        def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp"
+        def exData
+        if(isChild) {
+            exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
+        } else {
+            exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
         }
-    } catch (ex) {
-        LogAction("sendExceptionData Exception: ${ex}", "error", true)
+        def results = new groovy.json.JsonOutput().toJson(exData)
+        sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
     }
 }
 
 def sendChildExceptionData(devType, devVer, exMsg, methodName) {
-    try {
-        def exCnt = 0
-        def exString = "${exMsg}"
-        exCnt = atomicState?.childExceptionCnt ? atomicState?.childExceptionCnt + 1 : 1
-        atomicState?.childExceptionCnt = exCnt ?: 1
-        if (optInSendExceptions) {
-            def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
-            def results = new groovy.json.JsonOutput().toJson(exData)
-            sendFirebaseExceptionData(results, "errorData/${devType}/${methodName}.json")
-        }
-    } catch (ex) {
-        LogAction("sendChildExceptionData Exception: ${ex}", "error", true)
+    def exCnt = 0
+    def exString = "${exMsg}"
+    exCnt = atomicState?.childExceptionCnt ? atomicState?.childExceptionCnt + 1 : 1
+    atomicState?.childExceptionCnt = exCnt ?: 1
+    if (optInSendExceptions) {
+        def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
+        def results = new groovy.json.JsonOutput().toJson(exData)
+        sendFirebaseExceptionData(results, "errorData/${devType}/${methodName}.json")
     }
 }
 
@@ -6315,7 +6214,6 @@ def getFanCtrlSetpointTemp(curTemp) {
 
 def fanCtrlCheck() {
     //LogAction("FanControl Event | Fan Switch Check", "trace", false)
-//ERS
     try {
         if(disableAutomation) { return }
         if(!fanCtrlFanSwitches) { return }
