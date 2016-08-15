@@ -2197,7 +2197,7 @@ def getGraphHTML() {
                                   },
                                   chartArea: {
                                       left: '12%',
-                                      right: '12%',
+                                      right: '18%',
                                       top: '3%',
                                       bottom: '20%',
                                       height: '85%',
