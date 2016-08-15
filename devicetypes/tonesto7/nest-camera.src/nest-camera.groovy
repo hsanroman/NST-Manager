@@ -791,9 +791,9 @@ def getCamHtml() {
               ${lastEvtBtn}
             </div>
         """
-        def hideCamHtml = """<h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+        def hideCamHtml = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
 
-        def camHtml = pubVidUrl ? hideCamHtml : showCamHtml
+        def camHtml = !pubVidUrl ? hideCamHtml : showCamHtml
         def html = """
         <!DOCTYPE html>
         <html>
