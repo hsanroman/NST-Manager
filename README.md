@@ -52,12 +52,12 @@ Nest Camera Device | *v1.0.0* |
 
 ## What's New
 
- * Please see the [Nest Manager Community Forum Link](https://community.smartthings.com/t/release-nest-manager/) for New Features
+ * Please see the [Nest Manager Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-0/) for New Features
 
 ## Links
 #### [GitHub Project Issues Link](https://github.com/tonesto7/nest-manager/issues)
 
-#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager/)
+#### [SmartThings Community Forum Link](https://community.smartthings.com/t/release-nest-manager-3-0/)
 
 #### [Projects Help Page](https://cdn.rawgit.com/tonesto7/nest-manager/master/Documents/help-page.html)
 
