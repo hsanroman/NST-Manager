@@ -14,11 +14,6 @@
 |    ### every use case                                                                     |
 *********************************************************************************************/
 
-/*
-    * Create instructions on how to create individual nest tokens
-    * Update documentation with new features/functions
-*/
-
 import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
@@ -42,89 +37,13 @@ definition(
 }
 
 def appVersion() { "3.0.0" }
-def appVerDate() { "8-11-2016" }
+def appVerDate() { "8-16-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V3.0.0 BETA 3 (August 11th, 2016):"
+    str += "V3.0.0 (August 16th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: More and more tweaks and performance updates."
-    str += "\n • UPDATED: Thermostat now displays graph with dewpoint, temp, humidity, setpoints (Thanks @E_Sch)"
-    str += "\n • ADDED: Very basic automation stats."
-
-    str += "\n\nV3.0.0 BETA 2 (August 8th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Tweaks to help with the ST platform Timeouts."
-    str += "\n • ADDED: Very basic automation stats."
-
-    str += "\n\nV3.0.0 BETA 1 (August 3rd, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Lots of optimizations to Automations."
-    str += "\n • ADDED: Added new watchdog automation"
-
-    str += "\n\nV2.7.0 (August 1st, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Lots of optimizations to Automations."
-    str += "\n • ADDED: Added new watchdog automation"
-
-    str += "V\n\n2.6.7 (July 17th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Merged in Eric's latest patches."
-    str += "\n • UPDATED: Added in support for Dew point."
-
-    str += "\n\nV2.6.6 (July 17th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Merged in Eric's latest patches."
-    str += "\n • UPDATED: External, Contact, Leak Automations now support safety temps to automatically restore the thermostat."
-    str += "\n • ADDED: Added Thermostat Safety temps for each nest thermostat"
-    str += "\n • ADDED: Lot's of other changes."
-
-    str += "\n\nV2.6.5 (July 15th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Merged in Eric's Updated logic for the remote sensor temps."
-    str += "\n • FIXED: Redesigned the Code version check to be more robust and to support patch version levels greater than 9."
-
-    str += "\n\nV2.6.3 (July 12th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • NEW: Rebuilding the Remote sensor temp adjustment logic."
-
-    str += "\n\nV2.6.2 (July 11th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • NEW: Merged changes from v2.5.9 from Master Repo"
-
-    str += "\n\nV2.6.1 (July 5th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • NEW: Contact Voice Notification now allows selecting custom messages."
-    str += "\n • NEW: External Temp Voice Notifications are available."
-
-    str += "\n\nV2.6.0 (June 24th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • NEW: Nest Manager Now Has Support for Nest Cams (Still Needs Device Handler)."
-
-    str += "\n\nV2.5.4 (June 24th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • FIXED: Fixed null bug preventing child update on new installs."
-
-    str += "\n\nV2.5.3 (June 23rd, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • UPDATED: Modified the Thermostat setpoint automation to only show heat/cool temps if the device support them."
-    str += "\n • ADDED: The Manager App will no longer update device data if it's version is not greater than a minimum version."
-
-    str += "\n\nV2.5.2 (June 22nd, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • Minor Code cleanups."
-
-    str += "\n\nV2.5.2 (June 21st, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • FIXED: Minor Code cleanups."
-    str += "\n • FIXED: Phantom Info: null push notification has been fixed."
-    str += "\n • FIXED: Lot's of modifications to the remote sensor logic to hopefully address the fan circulation issues."
-    str += "\n • FIXED: Modified the change log to format properly in the Manager application."
-    str += "\n • I Changed Remote Sensor Evaluation Wait input from Decimal to Enum input."
-
-    str += "\n\nV2.5.0 (June 20th, 2016):"
-    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-    str += "\n • Version 2.5 Released to public."
+    str += "\n • UPDATED: V3.0 Release."
 
     return str
 }
@@ -3341,7 +3260,7 @@ def isInMode(modeList) {
 }
 
 def minDevVersions() {
-    return appData?.versions?.minDevVersions ?: ["thermostat":300, "protect":300, "presence":300, "weather":300, "camera":010]
+    return ["thermostat":300, "protect":300, "presence":300, "weather":300, "camera":100]
 }
 
 def notifValEnum(allowCust = true) {
@@ -8939,12 +8858,12 @@ private def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"
 private def appAuthor() 	{ return "Anthony S." }
 private def appNamespace() 	{ return "tonesto7" }
 private def gitBranch()     { return "master" }
-private def betaMarker()    { return true }
+private def betaMarker()    { return false }
 private def appDevType()    { return false }
 private def appDevName()    { return appDevType() ? " (Dev)" : "" }
 private def appInfoDesc() 	{
     def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
-    def beta = betaMarker() ? " (BETA 2)" : ""
+    def beta = betaMarker() ? "" : ""
     def str = ""
     str += "${textAppName()}"
     str += isAppUpdateAvail() ? "\n• ${textVersion()} (Lastest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"

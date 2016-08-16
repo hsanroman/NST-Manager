@@ -23,17 +23,17 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "0.3.0" }
+def devVer() { return "1.0.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
         capability "Sensor"
         capability "Switch"
-        capability "Motion Sensor"
-        capability "Sound Sensor"
+        //capability "Motion Sensor"
+        //capability "Sound Sensor"
         capability "Refresh"
         capability "Notification"
-        capability "Image Capture"
+        //capability "Image Capture"
         //capability "Video Camera"
         //capability "Video Capture"
 
@@ -146,7 +146,8 @@ metadata {
         htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main "isStreamingStatus"
-        details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
+        //details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
+        details(["devCamHtml", "isStreaming", "refresh"])
     }
 }
 
@@ -791,9 +792,11 @@ def getCamHtml() {
               ${lastEvtBtn}
             </div>
         """
-        def hideCamHtml = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+        def hideCamHtml = ""
+        if(state?.isStreaming == false) { hideCamHtml = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>""" }
+        else { hideCamHtml = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>""" }
 
-        def camHtml = !pubVidUrl ? hideCamHtml : showCamHtml
+        def camHtml = (!pubVidUrl || state?.isStreaming == false) ? hideCamHtml : showCamHtml
         def html = """
         <!DOCTYPE html>
         <html>
