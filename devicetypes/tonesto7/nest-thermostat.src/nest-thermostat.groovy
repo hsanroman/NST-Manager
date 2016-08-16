@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "3.0.0"}
+def devVer() { return "3.0.1"}
 
 // for the UI
 metadata {
@@ -1703,6 +1703,10 @@ def getJS(url){
     }
 }
 
+def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
+def chartJs() { if(chartJsUrl()) { return getFileBase64(chartJsUrl(), "application", "javascript") } }
+def cssData() { return getFileBase64((state?.cssUrl ?: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"), "text", "css") }
+
 def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
@@ -1724,22 +1728,22 @@ String getDataString(Integer seriesIndex) {
     def dataTable = []
     switch (seriesIndex) {
         case 1:
-            dataTable = state.temperatureTableYesterday
+            dataTable = state?.temperatureTableYesterday
             break
         case 2:
-           dataTable = state.temperatureTable
+           dataTable = state?.temperatureTable
             break
         case 3:
-            dataTable = state.operatingStateTable
+            dataTable = state?.operatingStateTable
             break
         case 4:
-            dataTable = state.humidityTable
+            dataTable = state?.humidityTable
             break
         case 5:
-            dataTable = state.coolSetpointTable
+            dataTable = state?.coolSetpointTable
             break
         case 6:
-            dataTable = state.heatSetpointTable
+            dataTable = state?.heatSetpointTable
             break
     }
 
@@ -1780,23 +1784,23 @@ String getDataString(Integer seriesIndex) {
         if (lastVal != myval) {
             lastAdded = true
             if (lastdataArray) {   //controls curves
-                dataString += lastdataArray.toString() + ","
+                dataString += lastdataArray?.toString() + ","
             }
             lastdataArray = null
             lastVal = myval
-            dataString += dataArray.toString() + ","
+            dataString += dataArray?.toString() + ","
         } else { lastAdded = false; lastdataArray = dataArray }
     }
 
     if (!lastAdded && dataString) {
         dataArray[myindex] = myval
-        dataString += dataArray.toString() + ","
+        dataString += dataArray?.toString() + ","
     }
 
     if (dataString == "") {
         dataArray = [[0,0,0],null,null,null,null,null,null]
         dataArray[myindex] = 0
-        dataString += dataArray.toString() + ","
+        dataString += dataArray?.toString() + ","
     }
     //log.debug "${dataString}"
     return dataString
@@ -1931,6 +1935,14 @@ def getSomeData(devpoll = false) {
     coolSetpointTable = state?.coolSetpointTable
     heatSetpointTable = state?.heatSetpointTable
 
+    if (temperatureTable == null) {
+        temperatureTable = []
+        operatingStateTable =  []
+        humidityTable =  []
+        coolSetpointTable = []
+        heatSetpointTable = []
+    }
+
     if (!state?.today || state.today != todayDay) {
 
 // debugging
@@ -1949,13 +1961,13 @@ def getSomeData(devpoll = false) {
         state.coolSetpointTableYesterday = coolSetpointTable
         state.heatSetpointTableYesterday = heatSetpointTable
 
-        temperatureTable = temperatureTable ? [] : null
-        operatingStateTable = operatingStateTable ? [] : null
-        humidityTable = humidityTable ? [] : null
-        coolSetpointTable = coolSetpointTable ? [] : null
-        heatSetpointTable = heatSetpointTable ? [] : null
+        temperatureTable = []
+        operatingStateTable =  []
+        humidityTable =  []
+        coolSetpointTable = []
+        heatSetpointTable = []
 
-// these are commented out as the platform continuously times out
+    // these are commented out as the platform continuously times out
         //getSomeOldData("temperature", "temperature", true, devpoll)
         //getSomeOldData("operatingState", "thermostatOperatingState", false, devpoll)
         //getSomeOldData("humidity", "humidity", false, devpoll)
@@ -1980,11 +1992,11 @@ def getSomeData(devpoll = false) {
 
     // add latest coolSetpoint & temperature readings for the graph
     def newDate = new Date()
-    temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
-    operatingStateTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentoperatingState])
-    humidityTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currenthumidity])
-    coolSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
-    heatSetpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
+    temperatureTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
+    operatingStateTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentoperatingState])
+    humidityTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currenthumidity])
+    coolSetpointTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentcoolSetPoint])
+    heatSetpointTable?.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentheatSetPoint])
 
     state.coolSetpointTable = coolSetpointTable
     state.temperatureTable = temperatureTable
@@ -1996,102 +2008,103 @@ def getSomeData(devpoll = false) {
 def getStartTime() {
     def startTime = 24
     if (state?.temperatureTable?.size()) {
-        startTime = state.temperatureTable.min{it[0].toInteger()}[0].toInteger()
+        startTime = state?.temperatureTable?.min{it[0].toInteger()}[0].toInteger()
     }
     if (state?.temperatureTableYesterday?.size()) {
-        startTime = Math.min(startTime, state.temperatureTableYesterday.min{it[0].toInteger()}[0].toInteger())
+        startTime = Math.min(startTime, state?.temperatureTableYesterday?.min{it[0].toInteger()}[0].toInteger())
     }
     //log.trace "startTime ${startTime}"
     return startTime
 }
 
 def getMinTemp() {
-    def ytmin
-    def tmin
-    def cmin
-    def hmin
+    def ytmin = 0
+    def tmin = 0
+    def cmin = 0
+    def hmin = 0
     def dataTable = []
     if (state?.temperatureTableYesterday?.size()) {
         dataTable = []
         def temperatureData = state?.temperatureTableYesterday
-        temperatureData.each() {
-            dataTable.add(it[2])
+        temperatureData?.each() {
+            dataTable?.add(it[2])
         }
-        ytmin = dataTable.min().toInteger()
+        ytmin = dataTable?.min()?.toInteger()
     }
     if (state?.temperatureTable?.size()) {
         dataTable = []
         def temperatureData = state?.temperatureTable
-        temperatureData.each() {
-            dataTable.add(it[2])
+        temperatureData?.each() {
+            dataTable?.add(it[2])
         }
-        tmin = dataTable.min().toInteger()
+        tmin = dataTable?.min()?.toInteger()
     }
     if (state?.can_cool && state?.coolSetpointTable?.size()) {
         dataTable = []
         def coolData = state?.coolSetpointTable
-        coolData.each() {
-            dataTable.add(it[2])
+        coolData?.each() {
+            dataTable?.add(it[2])
         }
-        cmin = dataTable.min().toInteger()
+        cmin = dataTable?.min()?.toInteger()
     }
     if (state?.can_heat && state?.heatSetpointTable?.size()) {
         dataTable = []
         def heatData = state?.heatSetpointTable
-        heatData.each() {
-            dataTable.add(it[2])
+        heatData?.each() {
+            dataTable?.add(it[2])
         }
-        hmin = dataTable.min().toInteger()
+        hmin = dataTable?.min()?.toInteger()
     }
     def result = [ytmin, tmin, cmin, hmin]
     //log.trace "getMinTemp: ${result.min()} result: ${result}"
-    return result.min()
+    return result?.min()
 }
 
 def getMaxTemp() {
-    def ytmax
-    def tmax
-    def cmax
-    def hmax
+    def ytmax = 0
+    def tmax = 0
+    def cmax = 0
+    def hmax = 0
     def dataTable = []
     if (state?.temperatureTableYesterday?.size()) {
         dataTable = []
         def temperatureData = state?.temperatureTableYesterday
-        temperatureData.each() {
-            dataTable.add(it[2])
+        temperatureData?.each() {
+            dataTable?.add(it[2])
         }
-        ytmax = dataTable.max().toInteger()
+        ytmax = dataTable?.max()?.toInteger()
     }
     if (state?.temperatureTable?.size()) {
         dataTable = []
         def temperatureData = state?.temperatureTable
-        temperatureData.each() {
-            dataTable.add(it[2])
+        temperatureData?.each() {
+            dataTable?.add(it[2])
         }
-        tmax = dataTable.max().toInteger()
+        tmax = dataTable?.max()?.toInteger()
     }
     if (state?.can_cool && state?.coolSetpointTable?.size()) {
         dataTable = []
         def coolData = state?.coolSetpointTable
-        coolData.each() {
-            dataTable.add(it[2])
+        coolData?.each() {
+            dataTable?.add(it[2])
         }
-        cmax = dataTable.max().toInteger()
+        cmax = dataTable?.max()?.toInteger()
     }
     if (state?.can_heat && state?.heatSetpointTable?.size()) {
         dataTable = []
         def heatData = state?.heatSetpointTable
-        heatData.each() {
-            dataTable.add(it[2])
+        heatData?.each() {
+            dataTable?.add(it[2])
         }
-        hmax = dataTable.max().toInteger()
+        hmax = dataTable?.max()?.toInteger()
     }
     def result = [ytmax, tmax, cmax, hmax]
     //log.trace "getMaxTemp: ${result.max()} result: ${result}"
-    return result.max()
+    return result?.max()
 }
 
 def getGraphHTML() {
+    log.debug "getGraphHTML"
     def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
                     "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
     def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
@@ -2100,10 +2113,6 @@ def getGraphHTML() {
     if ( wantMetric() ) {
         tempStr = "°C"
     }
-
-    def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-    def chartJs = getFileBase64(chartJsUrl, "application", "javascript")
-    def cssData = getFileBase64(state?.cssUrl, "text", "css")
 
     def coolstr1 = "data.addColumn('number', 'CoolSP');"
     def coolstr2 =  getDataString(5)
@@ -2143,94 +2152,8 @@ def getGraphHTML() {
         }
     }
 
-    def showChartHtml = """
-        <script type="text/javascript">
-            google.charts.load('current', {packages: ['corechart']});
-            google.charts.setOnLoadCallback(drawGraph);
-            function drawGraph() {
-                var data = new google.visualization.DataTable();
-                data.addColumn('timeofday', 'time');
-                data.addColumn('number', 'Temp (Y)');
-                data.addColumn('number', 'Temp (T)');
-                data.addColumn('number', 'Operating');
-                data.addColumn('number', 'Humidity');
-                ${coolstr1}
-                ${heatstr1}
-                data.addRows([
-                    ${getDataString(1)}
-                    ${getDataString(2)}
-                    ${getDataString(3)}
-                    ${getDataString(4)}
-                    ${coolstr2}
-                    ${heatstr2}
-                ]);
-                var options = {
-                width: '100%',
-                height: '100%',
-                    hAxis: {
-                        format: 'H:mm',
-                        minValue: [${getStartTime()},0,0],
-                        slantedText: true,
-                        slantedTextAngle: 30
-                    },
-                    series: {
-                        0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-                        1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-                        2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-                        3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-                        ${coolstr3}
-                        ${heatstr3}
-                    },
-                    vAxes: {
-                        0: {
-                            title: 'Humidity (%)',
-                            format: 'decimal',
-                            minValue: 0,
-                            maxValue: 100,
-                            textStyle: {color: '#B8B8B8'},
-                            titleTextStyle: {color: '#B8B8B8'}
-                        },
-                        1: {
-                            title: 'Temperature (${tempStr})',
-                            format: 'decimal',
-                            ${minstr}
-                            ${maxstr}
-                            textStyle: {color: '#FF0000'},
-                            titleTextStyle: {color: '#FF0000'}
-                        }
-                    },
-                    legend: {
-                        position: 'bottom',
-                        maxLines: 4,
-                        textStyle: {color: '#000000'}
-                    },
-                    chartArea: {
-                        left: '12%',
-                        right: '18%',
-                        top: '3%',
-                        bottom: '20%',
-                        height: '85%',
-                        width: '100%'
-                    }
-                };
-                var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
-                chart.draw(data, options);
-            }
-          </script>
-          <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-          <div id="chart_div" style="width: 100%; height: 225px;"></div>
-    """
-
-    def hideChartHtml = """
-        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-        <br></br>
-        <div class="centerText">
-          <p>Waiting for more data to be collected...</p>
-          <p>This may take at least 24 hours</p>
-        </div>
-    """
-
-    def chartHtml = (state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ? showChartHtml : hideChartHtml
+    def chartHtml = ((state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ||
+    		(state.temperatureTable != [] && state.operatingStateTable != [] && state.temperatureTableYesterday != [] && state.humidityTable != [] && state.coolSetpointTable != [] && state.heatSetpointTable != [])) ? showChartHtml() : hideChartHtml()
 
     def html = """
     <!DOCTYPE html>
@@ -2242,8 +2165,8 @@ def getGraphHTML() {
             <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
             <meta http-equiv="pragma" content="no-cache"/>
             <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-            <link rel="stylesheet" href="${cssData}"></link>
-            <script type="text/javascript" src="${chartJs}"></script>
+            <link rel="stylesheet" href="${cssData()}"></link>
+            <script type="text/javascript" src="${chartJs()}"></script>
         </head>
         <body>
             ${updateAvail}
@@ -2304,6 +2227,99 @@ def getGraphHTML() {
     </html>
     """
     render contentType: "text/html", data: html, status: 200
+}
+
+def showChartHtml() {
+    def data = """
+    <script type="text/javascript">
+        google.charts.load('current', {packages: ['corechart']});
+        google.charts.setOnLoadCallback(drawGraph);
+        function drawGraph() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('timeofday', 'time');
+            data.addColumn('number', 'Temp (Y)');
+            data.addColumn('number', 'Temp (T)');
+            data.addColumn('number', 'Operating');
+            data.addColumn('number', 'Humidity');
+            ${coolstr1}
+            ${heatstr1}
+            data.addRows([
+                ${getDataString(1)}
+                ${getDataString(2)}
+                ${getDataString(3)}
+                ${getDataString(4)}
+                ${coolstr2}
+                ${heatstr2}
+            ]);
+            var options = {
+            width: '100%',
+            height: '100%',
+                hAxis: {
+                    format: 'H:mm',
+                    minValue: [${getStartTime()},0,0],
+                    slantedText: true,
+                    slantedTextAngle: 30
+                },
+                series: {
+                    0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+                    1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+                    2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+                    3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+                    ${coolstr3}
+                    ${heatstr3}
+                },
+                vAxes: {
+                    0: {
+                        title: 'Humidity (%)',
+                        format: 'decimal',
+                        minValue: 0,
+                        maxValue: 100,
+                        textStyle: {color: '#B8B8B8'},
+                        titleTextStyle: {color: '#B8B8B8'}
+                    },
+                    1: {
+                        title: 'Temperature (${tempStr})',
+                        format: 'decimal',
+                        ${minstr}
+                        ${maxstr}
+                        textStyle: {color: '#FF0000'},
+                        titleTextStyle: {color: '#FF0000'}
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    maxLines: 4,
+                    textStyle: {color: '#000000'}
+                },
+                chartArea: {
+                    left: '12%',
+                    right: '18%',
+                    top: '3%',
+                    bottom: '20%',
+                    height: '85%',
+                    width: '100%'
+                }
+            };
+            var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+      </script>
+      <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+      <div id="chart_div" style="width: 100%; height: 225px;"></div>
+    """
+    return data
+}
+
+def hideChartHtml() {
+    def data = """
+    <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+    <br></br>
+    <div class="centerText">
+      <p>Waiting for more data to be collected...</p>
+      <p>This may take at least 24 hours</p>
+    </div>
+    """
+    return data
 }
 
 private def textDevName()  { return "Nest Thermostat${appDevName()}" }

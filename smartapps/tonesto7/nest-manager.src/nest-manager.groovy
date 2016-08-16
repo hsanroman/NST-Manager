@@ -295,7 +295,7 @@ def mainPage() {
 }
 
 def deviceSelectPage() {
-    return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "mainPage", install: false, uninstall: false) {
+    return dynamicPage(name: "deviceSelectPage", title: "Device Selection", nextPage: "startPage", install: false, uninstall: false) {
         def structs = getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
@@ -381,7 +381,7 @@ def reviewSetupPage() {
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             if (optInAppAnalytics != false) {
-                input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
+                input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone"]],
                                 image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
@@ -419,7 +419,7 @@ def prefsPage() {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone", "decline":"Decline"]],
+            input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone"]],
                                 image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
         }
         section ("Misc. Options:") {
@@ -452,8 +452,10 @@ def automationsPage() {
                         "We are not responsible for any damages caused by using this SmartApp.\n\n               USE AT YOUR OWN RISK!!!"
             paragraph "${rText}"//, required: true, state: null
         }
-        section("Automation Statistics:") {
-            href "automationStatisticsPage", title: "View Automation Statistics", description: "Tap to view...", image: getAppImg("app_analytics_icon.png")
+        if(isAutoAppInst()) {
+            section("Automation Statistics:") {
+                href "automationStatisticsPage", title: "View Automation Statistics", description: "Tap to view...", image: getAppImg("app_analytics_icon.png")
+            }
         }
         section("Global Automation Preferences:") {
             def descStr = ""
@@ -467,7 +469,7 @@ def automationsPage() {
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
         }
         section("Automation Repair:") {
-            href "automationKickStartPage", title: "Repair All Automations", description: "Tap to call the Update() action on each automation.\nTap to Begin...", image: getAppImg("reset_icon.png")
+            href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to call the Update() action on each automation.\nTap to Begin...", image: getAppImg("reset_icon.png")
         }
     }
 }
@@ -522,34 +524,6 @@ def automationKickStartPage() {
             } else {
                 paragraph "No Automations Found..."
             }
-        }
-    }
-}
-
-def getAutoIcon(type) {
-    if(type) {
-        switch(type) {
-            case "remSen":
-                return getAppImg("remote_sensor_icon.png")
-                break
-            case "fanCtrl":
-                return getAppImg("fan_control_icon.png")
-                break
-            case "conWat":
-                return getAppImg("open_window.png")
-                break
-            case "leakWat":
-                return getAppImg("leak_icon.png")
-                break
-            case "extTmp":
-                return getAppImg("external_temp_icon.png")
-                break
-            case "nMode":
-                return getAppImg("mode_automation_icon.png")
-                break
-            case "tMode":
-                return getAppImg("mode_setpoints_icon.png")
-                break
         }
     }
 }
@@ -3133,6 +3107,34 @@ def getLocationModes() {
 }
 
 def getAutoType() { return !parent ? "" : atomicState?.automationType }
+
+def getAutoIcon(type) {
+    if(type) {
+        switch(type) {
+            case "remSen":
+                return getAppImg("remote_sensor_icon.png")
+                break
+            case "fanCtrl":
+                return getAppImg("fan_control_icon.png")
+                break
+            case "conWat":
+                return getAppImg("open_window.png")
+                break
+            case "leakWat":
+                return getAppImg("leak_icon.png")
+                break
+            case "extTmp":
+                return getAppImg("external_temp_icon.png")
+                break
+            case "nMode":
+                return getAppImg("mode_automation_icon.png")
+                break
+            case "tMode":
+                return getAppImg("mode_setpoints_icon.png")
+                break
+        }
+    }
+}
 
 def getShowHelp() { return atomicState?.showHelp == false ? false : true }
 

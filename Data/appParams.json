@@ -12,7 +12,7 @@
         },
         "thermostat": {
             "type": "rel",
-            "ver": "3.0.0"
+            "ver": "3.0.1"
         },
         "protect": {
             "type": "rel",
@@ -35,8 +35,8 @@
         "tokenNum": 1
     },
     "broadcast": {
-        "msgId": "48vm9GiNju",
-        "message": "Nest Manager Broadcast: Please remember that after updating your code to v2.5 that you must update the device handler code as well.",
+        "msgId": "eavl9D2vry",
+        "message": "Nest Manager Broadcast: Version 3.0 is now available.  Please make sure to update the SmartApp and Devices...",
         "type": "info"
     },
     "updater": {
