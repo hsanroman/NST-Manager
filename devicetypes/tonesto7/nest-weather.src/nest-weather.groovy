@@ -69,7 +69,7 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 15, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
@@ -674,6 +674,16 @@ def formatDt(dt) {
     }
     return tf.format(dt)
 }
+
+def convertRfc822toDt(dt) {
+    if(dt) {
+        def tf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss a")
+        if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+        def result = tf.format(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", dt))
+        return result
+    }
+    return null
+}
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
@@ -908,6 +918,8 @@ def getWeatherHtml() {
     try {
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
+        def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
+
         def tempStr = "°F"
         if ( wantMetric() ) {
             tempStr = "°C"
@@ -1071,7 +1083,7 @@ def getWeatherHtml() {
                       <div class="row topBorder">
                           <div class="centerText offset-by-three six columns">
                               <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-                              <b>${state?.curWeather?.current_observation?.observation_time}</b>
+                              <b>${obsrvTime}</b>
                           </div>
                       </div>
 
