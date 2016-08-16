@@ -8,7 +8,7 @@
     "versions": {
         "app": {
             "type": "rel",
-            "ver": "3.0.0"
+            "ver": "3.0.1"
         },
         "thermostat": {
             "type": "rel",
@@ -28,7 +28,7 @@
         },
         "weather": {
             "type": "rel",
-            "ver": "3.0.0"
+            "ver": "3.0.1"
         }
     },
     "token": {

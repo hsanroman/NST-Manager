@@ -2018,10 +2018,10 @@ def getStartTime() {
 }
 
 def getMinTemp() {
-    def ytmin = 0
-    def tmin = 0
-    def cmin = 0
-    def hmin = 0
+    def ytmin
+    def tmin
+    def cmin
+    def hmin
     def dataTable = []
     if (state?.temperatureTableYesterday?.size()) {
         dataTable = []
@@ -2061,10 +2061,10 @@ def getMinTemp() {
 }
 
 def getMaxTemp() {
-    def ytmax = 0
-    def tmax = 0
-    def cmax = 0
-    def hmax = 0
+    def ytmax
+    def tmax
+    def cmax
+    def hmax
     def dataTable = []
     if (state?.temperatureTableYesterday?.size()) {
         dataTable = []
@@ -2104,7 +2104,6 @@ def getMaxTemp() {
 }
 
 def getGraphHTML() {
-    log.debug "getGraphHTML"
     def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
                     "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
     def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"

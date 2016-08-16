@@ -36,12 +36,16 @@ definition(
     appSetting "clientSecret"
 }
 
-def appVersion() { "3.0.0" }
+def appVersion() { "3.0.1" }
 def appVerDate() { "8-16-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V3.0.0 (August 16th, 2016):"
+    str += "V3.0.1 (August 16th, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • UPDATED: Lot's of little bugfixes"
+
+    str += "\n\nV3.0.0 (August 16th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: V3.0 Release."
 
@@ -121,7 +125,7 @@ mappings {
         //Renders Json Data
         path("/renderInstallId")  {action: [GET: "renderInstallId"]}
         path("/renderInstallData"){action: [GET: "renderInstallData"]}
-        path("/receiveEventData") {action: [POST: "receiveEventData"]}
+        //path("/receiveEventData") {action: [POST: "receiveEventData"]}
     }
 }
 
@@ -228,7 +232,8 @@ def mainPage() {
                 }
             }
             if (structures) {
-                atomicState.structures = structures ? structures : null
+                atomicState.structures = settings?.structures ? structures : null
+
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
                 LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
@@ -242,26 +247,26 @@ def mainPage() {
                 LogAction("Cameras: Found ${cams.size()} (${cams})", "info", false)
 
                 section("Select your Devices:") {
-                    if (!stats?.size() && !coSmokes.size()) { paragraph "No Devices were found..." }
+                    if (!stats?.size() && !coSmokes.size() && !cams.size()) { paragraph "No Devices were found..." }
                     if (stats?.size() > 0) {
                         input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
                                 image: getAppImg("thermostat_icon.png"))
                     }
-                    atomicState.thermostats =  thermostats ? statState(thermostats) : null
+                    atomicState.thermostats =  settings?.thermostats ? statState(thermostats) : null
                     if (coSmokes.size() > 0) {
                         input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
                                 image: getAppImg("protect_icon.png"))
                     }
-                    atomicState.protects = protects ? coState(protects) : null
+                    atomicState.protects = settings?.protects ? coState(protects) : null
                     if (cams.size() > 0) {
                         input(name: "cameras", title:"Nest Cameras", type: "enum", required: false, multiple: true, submitOnChange: true, description: camDesc, metadata: [values:cams],
                                 image: getAppImg("camera_icon.png"))
                     }
-                    atomicState.cameras = cameras ? camState(cameras) : null
+                    atomicState.cameras = settings?.cameras ? camState(cameras) : null
                     input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
-                    atomicState.presDevice = presDevice ? true : false
+                    atomicState.presDevice = settings?.presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                    atomicState.weatherDevice = weatherDevice ? true : false
+                    atomicState.weatherDevice = settings?.weatherDevice ? true : false
                 }
             }
         }
@@ -310,7 +315,8 @@ def deviceSelectPage() {
             }
         }
         if (structures) {
-            atomicState.structures = structures ? structures : null
+            atomicState.structures = settings?.structures ? structures : null
+
             def stats = getNestThermostats()
             def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
             LogAction("Thermostats: Found ${stats?.size()} (${stats})", "info", false)
@@ -329,21 +335,21 @@ def deviceSelectPage() {
                     input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
                             image: getAppImg("thermostat_icon.png"))
                 }
-                atomicState.thermostats =  thermostats ? statState(thermostats) : null
+                atomicState.thermostats =  settings?.thermostats ? statState(thermostats) : null
                 if (coSmokes.size() > 0) {
                     input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
                             image: getAppImg("protect_icon.png"))
                 }
-                atomicState.protects = protects ? coState(protects) : null
+                atomicState.protects = settings?.protects ? coState(protects) : null
                 if (cams.size() > 0) {
                     input(name: "cameras", title:"Nest Cameras", type: "enum", required: false, multiple: true, submitOnChange: true, description: camDesc, metadata: [values:cams],
                             image: getAppImg("camera_icon.png"))
                 }
-                atomicState.cameras = cameras ? camState(cameras) : null
+                atomicState.cameras = settings?.cameras ? camState(cameras) : null
                 input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
-                atomicState.presDevice = presDevice ? true : false
+                atomicState.presDevice = settings?.presDevice ? true : false
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                atomicState.weatherDevice = weatherDevice ? true : false
+                atomicState.weatherDevice = settings?.settings?.weatherDevice ? true : false
             }
         }
     }
@@ -617,11 +623,11 @@ def updated() {
 }
 
 def uninstalled() {
-    //log.debug "uninstalled..."
-    if(!parent) {
-        uninstManagerApp()
+    log.debug "uninstalled..."
+    if(parent) {
+        uninstAutomationApp()
     } else {
-        uninstallAutomationApp()
+        uninstManagerApp()
     }
     sendNotificationEvent("${textAppName()} is uninstalled...")
 }
@@ -658,12 +664,14 @@ def initManagerApp() {
 }
 
 def uninstManagerApp() {
+    log.trace "uninstManagerApp"
     try {
         if(addRemoveDevices(true)) {
             //removes analytic data from the server
             if (optInAppAnalytics) {
-                removeInstallData()
-                atomicState?.installationId = null
+                if(removeInstallData()) {
+                    atomicState?.installationId = null
+                }
             }
             //Revokes Smartthings endpoint token...
             revokeAccessToken()
@@ -2438,7 +2446,7 @@ def addRemoveDevices(uninst = null) {
         delete = getChildDevices().findAll { !devsInUse?.toString()?.contains(it?.deviceNetworkId) }
 
         if(delete?.size() > 0) {
-            LogAction("delete: ${delete}, deleting ${delete.size()} devices", "debug", true)
+            LogAction("Deleting: ${delete}, Removing ${delete.size()} devices", "debug", true)
             delete.each { deleteChildDevice(it.deviceNetworkId) }
         }
         retVal = true
@@ -3505,12 +3513,12 @@ def devCustomizePageDesc() {
 
 def getDevicesDesc() {
     def str = ""
-    str += thermostats ? "\n• [${thermostats?.size()}] Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
-    str += protects ? "\n• [${protects?.size()}] Protect${(protects?.size() > 1) ? "s" : ""}" : ""
-    str += cameras ? "\n• [${cameras?.size()}] Camera${(cameras?.size() > 1) ? "s" : ""}" : ""
-    str += presDevice ? "\n• [1] Presence Device" : ""
-    str += weatherDevice ? "\n• [1] Weather Device" : ""
-    str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "• No Devices Selected..." : ""
+    str += thermostats ? "\n • [${thermostats?.size()}] Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
+    str += protects ? "\n • [${protects?.size()}] Protect${(protects?.size() > 1) ? "s" : ""}" : ""
+    str += cameras ? "\n • [${cameras?.size()}] Camera${(cameras?.size() > 1) ? "s" : ""}" : ""
+    str += presDevice ? "\n • [1] Presence Device" : ""
+    str += weatherDevice ? "\n • [1] Weather Device" : ""
+    str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "\n • No Devices Selected..." : ""
     return (str != "") ? str : null
 }
 
@@ -4068,7 +4076,7 @@ def sendInstallData() {
 
 def removeInstallData() {
     if (optInAppAnalytics) {
-        removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
+        return removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
     }
 }
 
@@ -4465,9 +4473,7 @@ def initAutoApp() {
     watchDogAutomation()
 }
 
-def uninstallAutomationApp() {
-
-}
+def uninstAutomationApp() { log.trace "uninstAutomationApp..." }
 
 def getAutoTypeLabel() {
     def type = atomicState?.automationType
