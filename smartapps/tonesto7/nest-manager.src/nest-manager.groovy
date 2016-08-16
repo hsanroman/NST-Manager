@@ -349,7 +349,7 @@ def deviceSelectPage() {
                 input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
                 atomicState.presDevice = settings?.presDevice ? true : false
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                atomicState.weatherDevice = settings?.settings?.weatherDevice ? true : false
+                atomicState.weatherDevice = settings?.weatherDevice ? true : false
             }
         }
     }
