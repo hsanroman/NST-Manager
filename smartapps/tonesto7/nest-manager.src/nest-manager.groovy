@@ -1960,21 +1960,23 @@ def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitV
 def isCodeUpdateAvailable(newVer, curVer, type) {
     def result = false
     def latestVer
-    def versions = [newVer, curVer]
-    if(newVer != curVer) {
-        latestVer = versions?.max { a, b ->
-            def verA = a?.tokenize('.')
-            def verB = b?.tokenize('.')
-            def commonIndices = Math.min(verA?.size(), verB?.size())
-            for (int i = 0; i < commonIndices; ++i) {
-                //log.debug "comparing $numA and $numB"
-                if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
-                    return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+    if(newVer && curVer) {
+        def versions = [newVer, curVer]
+        if(newVer != curVer) {
+            latestVer = versions?.max { a, b ->
+                def verA = a?.tokenize('.')
+                def verB = b?.tokenize('.')
+                def commonIndices = Math.min(verA?.size(), verB?.size())
+                for (int i = 0; i < commonIndices; ++i) {
+                    //log.debug "comparing $numA and $numB"
+                    if (verA[i]?.toInteger() != verB[i]?.toInteger()) {
+                        return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+                    }
                 }
+                verA?.size() <=> verB?.size()
             }
-            verA?.size() <=> verB?.size()
+            result = (latestVer == newVer) ? true : false
         }
-        result = (latestVer == newVer) ? true : false
     }
     //log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
     return result
