@@ -123,7 +123,7 @@ def processEvent() {
             presenceEvent(eventData?.pres)
             apiStatusEvent((!eventData?.apiIssues ? false : true))
             deviceVerEvent(eventData?.latestVer.toString())
-
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
             lastUpdatedEvent()
         }
         //This will return all of the devices state data to the logs.
@@ -310,9 +310,13 @@ def log(message, level = "trace") {
 }
 
 def exceptionDataHandler(msg, methodName) {
-    if(msg && methodName) {
-        def msgString = "${msg}"
-        parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
+    if(state?.allowDbException == false) {
+        return
+    } else {
+        if(msg && methodName) {
+            def msgString = "${msg}"
+            parent?.sendChildExceptionData("presence", devVer(), msgString, methodName)
+        }
     }
 }
 

@@ -329,7 +329,8 @@ def processEvent() {
             deviceVerEvent(eventData?.latestVer.toString())
             apiStatusEvent(eventData?.apiIssues)
             state?.childWaitVal = eventData?.childWaitVal.toInteger()
-            state?.cssUrl = eventData?.cssUrl.toString()
+            if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
             if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
             if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
             if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
@@ -1591,9 +1592,13 @@ def log(message, level = "trace") {
 }
 
 def exceptionDataHandler(msg, methodName) {
-    if(msg && methodName) {
-        def msgString = "${msg}"
-        parent?.sendChildExceptionData("thermostat", devVer(), msgString, methodName)
+    if(state?.allowDbException == false) {
+        return
+    } else {
+        if(msg && methodName) {
+            def msgString = "${msg}"
+            parent?.sendChildExceptionData("thermostat", devVer(), msgString, methodName)
+        }
     }
 }
 
@@ -1661,12 +1666,18 @@ def getFileBase64(url,preType,fileType) {
 }
 
 def getCSS(url = null){
-    def params = [
-        uri: !url ? "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
-        contentType: 'text/css'
-    ]
-    httpGet(params)  { resp ->
-        return resp?.data.text
+    try {
+        def params = [
+            uri: !url ? cssUrl() : url?.toString(),
+            contentType: 'text/css'
+        ]
+        httpGet(params)  { resp ->
+            return resp?.data.text
+        }
+    }
+    catch (ex) {
+        log.error "getCss Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getCSS")
     }
 }
 
@@ -1680,9 +1691,46 @@ def getJS(url){
     }
 }
 
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo && state?.cssData) {
+        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
+            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+            cssData = state?.cssData
+        } else {
+            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
+            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def getChartJsData() {
+    def chartJsData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo && state?.chartJsData) {
+        if(state?.chartJsData && (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger())) {
+            log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+            chartJsData = state?.chartJsData
+        } else {
+            log.debug "getChartJsData: Chart Javascript Data is Missing/Outdated | Loading Data from Source..."
+            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+            state?.chartJsVer = htmlInfo?.chartJsVer
+        }
+    } else {
+        log.debug "getChartJsData: No Stored HTML Info Data Found Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "css")
+    }
+    return chartJsData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
-def chartJs() { if(chartJsUrl()) { return getFileBase64(chartJsUrl(), "application", "javascript") } }
-def cssData() { return getFileBase64((state?.cssUrl ?: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"), "text", "css") }
 
 def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
@@ -2037,8 +2085,8 @@ def getGraphHTML() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet" href="${cssData()}"></link>
-                <script type="text/javascript" src="${chartJs()}"></script>
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
+                <script type="text/javascript" src="${getChartJsData()}"></script>
             </head>
             <body>
                 ${updateAvail}

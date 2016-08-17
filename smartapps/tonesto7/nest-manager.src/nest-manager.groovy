@@ -1022,6 +1022,8 @@ def updateChildData(force = false) {
         def dbg = !childDebug ? false : true
         def nestTz = getNestTimeZone()?.toString()
         def api = !apiIssues() ? false : true
+        def htmlInfo = getHtmlInfo()
+        def allowDbException = allowDbException()
         getAllChildDevices()?.each {
             def devId = it?.deviceNetworkId
             if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
@@ -1032,7 +1034,8 @@ def updateChildData(force = false) {
                 atomicState?.tDevVer = it?.devVer() ?: ""
                 if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
                     def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
-                                "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "cssUrl":getCssUrl(), "latestVer":latestTstatVer()?.ver?.toString()]
+                                "comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":getHtmlInfo(), "allowDbException":allowDbException(),
+                                "latestVer":latestTstatVer()?.ver?.toString()]
                     def oldTstatData = atomicState?."oldTstatData${devId}"
                     def tDataChecksum = generateMD5_A(tData.toString())
                     atomicState."oldTstatData${devId}" = tDataChecksum
@@ -1052,7 +1055,7 @@ def updateChildData(force = false) {
                 atomicState?.pDevVer = it?.devVer() ?: ""
                 if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
                     def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
-                                "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestProtVer()?.ver?.toString()]
+                                "tz":nestTz, "htmlInfo":getHtmlInfo(), "apiIssues":api, "allowDbException":allowDbException(), "latestVer":latestProtVer()?.ver?.toString()]
                     def oldProtData = atomicState?."oldProtData${devId}"
                     def pDataChecksum = generateMD5_A(pData.toString())
                     atomicState."oldProtData${devId}" = pDataChecksum
@@ -1072,7 +1075,7 @@ def updateChildData(force = false) {
                 atomicState?.camDevVer = it?.devVer() ?: ""
                 if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera)) {
                     def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
-                                "tz":nestTz, "cssUrl":getCssUrl(), "apiIssues":api, "latestVer":latestCamVer()?.ver?.toString()]
+                                "tz":nestTz, "htmlInfo":getHtmlInfo(), "apiIssues":api, "allowDbException":allowDbException(), "latestVer":latestCamVer()?.ver?.toString()]
                     def oldCamData = atomicState?."oldCamData${devId}"
                     def cDataChecksum = generateMD5_A(camData.toString())
                     if (force || nforce || (oldCamData != cDataChecksum)) {
@@ -1089,7 +1092,7 @@ def updateChildData(force = false) {
             else if(atomicState?.presDevice && devId == getNestPresId()) {
                 atomicState?.presDevVer = it?.devVer() ?: ""
                 if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
-                    def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "latestVer":latestPresVer()?.ver?.toString()]
+                    def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "allowDbException":allowDbException(), "latestVer":latestPresVer()?.ver?.toString()]
                     def oldPresData = atomicState?."oldPresData${devId}"
                     def pDataChecksum = generateMD5_A(pData.toString())
                     atomicState."oldPresData${devId}" = pDataChecksum
@@ -1116,7 +1119,7 @@ def updateChildData(force = false) {
                     if (force || nforce || (oldWeatherData != wDataChecksum)) {
                         //log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
                         LogTrace("UpdateChildData >> Weather id: ${devId}")
-                        it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "cssUrl":getCssUrl(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
+                        it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "htmlInfo":getHtmlInfo(), "allowDbException":allowDbException(), "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString()])
                     }
                     return true
                 } else {
@@ -1953,12 +1956,22 @@ def helpHandler() {
     }
 }
 
-def getCssUrl() {
-    if(atomicState?.appData?.css?.cssUrl) {
-        return atomicState?.appData?.css?.cssUrl
+def getHtmlInfo() {
+    if(atomicState?.appData?.css?.cssUrl && atomicState?.appData?.css?.cssVer && atomicState?.appData?.html?.chartJsUrl && atomicState?.appData?.html?.chartJsVer ) {
+        return ["cssUrl":atomicState?.appData?.html?.cssUrl, "cssVer":atomicState?.appData?.html?.cssUrl, "chartJsUrl":atomicState?.appData?.html?.chartJsUrl, "cssVer":atomicState?.appData?.html?.chartJsVer]
     } else {
         if(getWebFileData()) {
-            return atomicState?.appData?.css?.cssUrl
+            return ["cssUrl":atomicState?.appData?.html?.cssUrl, "cssVer":atomicState?.appData?.html?.cssUrl, "chartJsUrl":atomicState?.appData?.html?.chartJsUrl, "chartJsVer":atomicState?.appData?.html?.chartJsVer]
+        }
+    }
+}
+
+def allowDbException() {
+    if(atomicState?.appData?.database?.allowDbException) {
+        return atomicState?.appData?.database?.allowDbException == false ? false : true
+    } else {
+        if(getWebFileData()) {
+            return atomicState?.appData?.database?.allowDbException == false ? false : true
         }
     }
 }

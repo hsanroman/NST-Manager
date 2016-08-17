@@ -199,6 +199,8 @@ def processEvent() {
             publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
             if(!results?.last_is_online_change) { lastCheckinEvent(null) }
             else { lastCheckinEvent(results?.last_is_online_change?.toString()) }
+            if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
             apiStatusEvent(eventData?.apiIssues)
             debugOnEvent(eventData?.debug ? true : false)
             onlineStatusEvent(results?.is_online?.toString())
@@ -217,7 +219,6 @@ def processEvent() {
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
             deviceVerEvent(eventData?.latestVer.toString())
-            state?.cssUrl = eventData?.cssUrl
             lastUpdatedEvent()
         }
         //log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
@@ -586,9 +587,13 @@ def log(message, level = "trace") {
 }
 
 def exceptionDataHandler(msg, methodName) {
-    if(msg && methodName) {
-        def msgString = "${msg}"
-        parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
+    if(state?.allowDbException == false) {
+        return
+    } else {
+        if(msg && methodName) {
+            def msgString = "${msg}"
+            parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
+        }
     }
 }
 
@@ -671,6 +676,46 @@ def getJS(url){
     }
 }
 
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo && state?.cssData) {
+        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
+            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+            cssData = state?.cssData
+        } else {
+            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
+            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def getChartJsData() {
+    def chartJsData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo && state?.chartJsData) {
+        if(state?.chartJsData && (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger())) {
+            log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+            chartJsData = state?.chartJsData
+        } else {
+            log.debug "getChartJsData: Chart Javascript Data is Missing/Outdated | Loading Data from Source..."
+            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+            state?.chartJsVer = htmlInfo?.chartJsVer
+        }
+    } else {
+        log.debug "getChartJsData: No Stored HTML Info Data Found Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "css")
+    }
+    return chartJsData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+
 //this scrapes the public nest cam page for its unique id for using in render html tile
 def getCamUUID(pubVidId) {
     try {
@@ -746,7 +791,6 @@ def getCamBtnJsData() {
 
 def getCamHtml() {
     try {
-        def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
         // These are used to determine the URL for the nest cam stream
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def pubVidUrl = state?.public_share_url
@@ -763,7 +807,7 @@ def getCamHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
             </head>
             <body>
                 <style type="text/css">

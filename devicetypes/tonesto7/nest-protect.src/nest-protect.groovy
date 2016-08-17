@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "3.0.1" }
+def devVer() { return "3.0.2" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -265,7 +265,8 @@ def processEvent() {
             uiColorEvent(results?.ui_color_state.toString())
             softwareVerEvent(results?.software_version.toString())
             deviceVerEvent(eventData?.latestVer.toString())
-            state?.cssUrl = eventData?.cssUrl
+            if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 
             lastUpdatedEvent()
         }
@@ -610,6 +611,27 @@ def getCSS(){
     }
 }
 
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo && state?.cssData) {
+        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
+            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+            cssData = state?.cssData
+        } else {
+            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
+            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+
 def getInfoHtml() {
     try {
         def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
@@ -629,11 +651,9 @@ def getInfoHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
             </head>
             <body>
-              <style type="text/css">
-                ${getCSS()}
-              </style>
               ${updateAvail} ${testModeHTML}
               <div class="row">
                 <div class="offset-by-two four columns centerText">
