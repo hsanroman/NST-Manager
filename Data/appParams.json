@@ -48,11 +48,11 @@
         "versions": {
             "app": {
                 "type": "rel",
-                "ver": "3.0.1"
+                "ver": "3.0.2"
             },
             "thermostat": {
                 "type": "rel",
-                "ver": "3.0.1"
+                "ver": "3.0.2"
             },
             "protect": {
                 "type": "rel",
@@ -60,7 +60,7 @@
             },
             "camera": {
                 "type": "rel",
-                "ver": "1.0.1"
+                "ver": "1.0.2"
             },
             "presence": {
                 "type": "rel",
@@ -68,7 +68,7 @@
             },
             "weather": {
                 "type": "rel",
-                "ver": "3.0.1"
+                "ver": "3.0.2"
             }
         }
     },
