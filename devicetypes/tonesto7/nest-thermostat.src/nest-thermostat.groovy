@@ -2019,6 +2019,7 @@ def getGraphHTML() {
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
         def chartHtml = (
+                getMinTemp() && getMaxTemp() &&
                 state.temperatureTable?.size() > 0 &&
                 state.operatingStateTable?.size() > 0 &&
                 state.temperatureTableYesterday?.size() > 0 &&
