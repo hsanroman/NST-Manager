@@ -211,8 +211,8 @@ def processEvent() {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
                 if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-                zoneMotionEvent(results?.last_event)
-                zoneSoundEvent(results?.last_event)
+                //zoneMotionEvent(results?.last_event)
+                //zoneSoundEvent(results?.last_event)
                 if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
@@ -220,11 +220,12 @@ def processEvent() {
             state?.cssUrl = eventData?.cssUrl
             lastUpdatedEvent()
         }
+        def xe = 8 - q
         //log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}"
+        log.error "generateEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -484,7 +485,7 @@ def streamingOn() {
         parent?.setCamStreaming(this, "true")
         sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
     } catch (ex) {
-        log.error "streamingOn Exception: ${ex}"
+        log.error "streamingOn Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "streamingOn")
     }
 }
@@ -531,7 +532,7 @@ def take() {
         if(list) { state?.last5ImageData = list }
     }
     catch (ex) {
-        log.error "take Exception: ${ex}"
+        log.error "take Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "take")
     }
 }
@@ -685,7 +686,7 @@ def getCamUUID(pubVidId) {
             }
         } else { LogAction("getCamUUID PublicVideoId is missing....", "warn", true) }
     } catch (ex) {
-        log.error "getCamUUID Exception: ${ex}"
+        log.error "getCamUUID Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamUUID")
     }
 }
@@ -703,7 +704,7 @@ def getLiveStreamHost(camUUID) {
         } else { LogAction("getLiveStreamHost camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getLiveStreamHost Exception: ${ex}"
+        log.error "getLiveStreamHost Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getLiveStreamHost")
     }
 }
@@ -722,7 +723,7 @@ def getCamApiServer(camUUID) {
         } else { LogAction("getCamApiServer camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getCamApiServer Exception: ${ex}"
+        log.error "getCamApiServer Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamApiServer")
     }
 }
@@ -901,7 +902,7 @@ def getCamHtml() {
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getCamHtml Exception: ${ex}"
+        log.error "getCamHtml Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamHtml")
     }
 }

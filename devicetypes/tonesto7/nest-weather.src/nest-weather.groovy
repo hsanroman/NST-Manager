@@ -184,7 +184,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}"
+        log.error "generateEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -409,7 +409,7 @@ def getWeatherConditions(Map weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherConditions Exception: ${ex}"
+        log.error "getWeatherConditions Exception: ${ex}", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherConditions")
     }
 }
@@ -435,7 +435,7 @@ def getWeatherForecast(Map weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherForecast Exception: ${ex}"
+        log.error "getWeatherForecast Exception: ${ex}", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherForecast")
     }
 }
@@ -457,7 +457,7 @@ def getWeatherAstronomy(weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherAstronomy Exception: ${ex}"
+        log.error "getWeatherAstronomy Exception: ${ex}", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAstronomy")
     }
 }
@@ -525,7 +525,7 @@ def getWeatherAlerts(weatData) {
         }
     }
     catch (ex) {
-        log.error "getWeatherAlerts Exception: ${ex}"
+        log.error "getWeatherAlerts Exception: ${ex}", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "getWeatherAlerts")
     }
 }
@@ -545,7 +545,7 @@ private pad(String s, size = 25) {
         }
     }
     catch (ex) {
-        log.error "pad Exception: ${ex}"
+        log.error "pad Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "pad")
     }
 }
@@ -647,7 +647,7 @@ private estimateLux(weatherIcon) {
         }
     }
     catch (ex) {
-        log.error "estimateLux Exception: ${ex}"
+        log.error "estimateLux Exception: ${ex}", ex
         parent?.sendChildExceptionData("weather", devVer(), ex, "estimateLux")
     }
 }
@@ -762,7 +762,7 @@ def getImgBase64(url, type) {
         }
     }
     catch (ex) {
-        log.error "getImageBase64 Exception: ${ex}"
+        log.error "getImageBase64 Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
@@ -791,7 +791,7 @@ def getFileBase64(url,preType,fileType) {
         }
     }
     catch (ex) {
-        log.error "getFileBase64 Exception: ${ex}"
+        log.error "getFileBase64 Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
@@ -807,7 +807,7 @@ def getCSS(url = null){
         }
     }
     catch (ex) {
-        log.error "getCss Exception: ${ex}"
+        log.error "getCss Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCSS")
     }
 }
@@ -827,7 +827,7 @@ def getWeatherIcon(weatherIcon) {
         return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
     }
     catch (ex) {
-        log.error "getWeatherIcon Exception: ${ex}"
+        log.error "getWeatherIcon Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getWeatherIcon")
     }
 }
@@ -890,7 +890,7 @@ def getSunriseSunset() {
         state.localSunrise = localSunrise
         state.localSunset = localSunset
     } catch (ex) {
-        log.error "getSunriseSunset Exception: ${ex}"
+        log.error "getSunriseSunset Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getSunriseSunset")
     }
 }
@@ -915,28 +915,28 @@ def forecastDay(day) {
 }
 
 String getDataString(Integer seriesIndex) {
-        def dataString = ""
-        def dataTable = []
-        switch (seriesIndex) {
-                case 1:
-                        dataTable = state?.temperatureTableYesterday
-                        break
-                case 2:
-                        dataTable = state?.dewpointTableYesterday
-                        break
-                case 3:
-                        dataTable = state?.temperatureTable
-                        break
-                case 4:
-                        dataTable = state?.dewpointTable
-                        break
-        }
-        dataTable.each() {
-                def dataArray = [[it[0],it[1],0],null,null,null,null]
-                dataArray[seriesIndex] = it[2]
-                dataString += dataArray?.toString() + ","
-        }
-        return dataString
+    def dataString = ""
+    def dataTable = []
+    switch (seriesIndex) {
+        case 1:
+                dataTable = state?.temperatureTableYesterday
+                break
+        case 2:
+                dataTable = state?.dewpointTableYesterday
+                break
+        case 3:
+                dataTable = state?.temperatureTable
+                break
+        case 4:
+                dataTable = state?.dewpointTable
+                break
+    }
+    dataTable.each() {
+        def dataArray = [[it[0],it[1],0],null,null,null,null]
+        dataArray[seriesIndex] = it[2]
+        dataString += dataArray?.toString() + ","
+    }
+    return dataString
 }
 
 def getSomeOldData(devpoll = false) {
@@ -1317,7 +1317,7 @@ def getWeatherHtml() {
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getWeatherHtml Exception: ${ex}"
+        log.error "getWeatherHtml Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getWeatherHtml")
     }
 }

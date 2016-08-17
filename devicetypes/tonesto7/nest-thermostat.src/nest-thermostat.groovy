@@ -406,7 +406,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}"
+        log.error "generateEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -548,7 +548,7 @@ def temperatureEvent(Double tempVal) {
         checkSafetyTemps()
     }
     catch (ex) {
-        log.error "temperatureEvent Exception: ${ex}"
+        log.error "temperatureEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "temperatureEvent")
     }
 }
@@ -596,7 +596,7 @@ def hasLeafEvent(Boolean hasLeaf) {
         } else { Logger("Leaf is set to (${lf}) | Original State: (${leaf})") }
     }
     catch (ex) {
-        log.error "hasLeafEvent Exception: ${ex}"
+        log.error "hasLeafEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "hasLeafEvent")
     }
 }
@@ -610,7 +610,7 @@ def humidityEvent(humidity) {
         } else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
     }
     catch (ex) {
-        log.error "humidityEvent Exception: ${ex}"
+        log.error "humidityEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "humidityEvent")
     }
 }
@@ -794,7 +794,7 @@ def clearHeatingSetpoint() {
         state?.heating_setpoint = ""
     }
     catch (ex) {
-        log.error "clearHeatingSetpoint Exception: ${ex}"
+        log.error "clearHeatingSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "clearHeatingSetpoint")
     }
 }
@@ -805,7 +805,7 @@ def clearCoolingSetpoint() {
         state?.cooling_setpoint = ""
     }
     catch (ex) {
-        log.error "clearCoolingSetpoint Exception: ${ex}"
+        log.error "clearCoolingSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "clearCoolingSetpoint")
     }
 }
@@ -1152,7 +1152,7 @@ void changeSetpoint() {
         }
     }
     catch (ex) {
-        log.error "changeSetpoint Exception: ${ex}"
+        log.error "changeSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "changeSetpoint")
     }
 }
@@ -1220,7 +1220,7 @@ void setHeatingSetpoint(Double reqtemp) {
         }
     }
     catch (ex) {
-        log.error "setHeatingSetpoint Exception: ${ex}"
+        log.error "setHeatingSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setHeatingSetpoint")
     }
 }
@@ -1288,7 +1288,7 @@ void setCoolingSetpoint(Double reqtemp) {
         }
     }
     catch (ex) {
-        log.error "setCoolingSetpoint Exception: ${ex}"
+        log.error "setCoolingSetpoint Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setCoolingSetpoint")
     }
 }
@@ -1309,7 +1309,7 @@ void setPresence() {
         }
     }
     catch (ex) {
-        log.error "setPresence Exception: ${ex}"
+        log.error "setPresence Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setPresence")
     }
 }
@@ -1321,7 +1321,7 @@ void away() {
         setAway()
     }
     catch (ex) {
-        log.error "away Exception: ${ex}"
+        log.error "away Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "away")
     }
 }
@@ -1333,7 +1333,7 @@ void present() {
         setHome()
     }
     catch (ex) {
-        log.error "present Exception: ${ex}"
+        log.error "present Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "present")
     }
 }
@@ -1344,7 +1344,7 @@ def setAway() {
         if (parent.setStructureAway(this, "true")) { presenceEvent("away") }
     }
     catch (ex) {
-        log.error "setAway Exception: ${ex}"
+        log.error "setAway Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setAway")
     }
 }
@@ -1355,7 +1355,7 @@ def setHome() {
         if (parent.setStructureAway(this, "false") ) { presenceEvent("home") }
     }
     catch (ex) {
-        log.error "setHome Exception: ${ex}"
+        log.error "setHome Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setHome")
     }
 }
@@ -1386,7 +1386,7 @@ def changeMode() {
         setHvacMode(nextMode)
     }
     catch (ex) {
-        log.error "changeMode Exception: ${ex}"
+        log.error "changeMode Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "changeMode")
     }
 }
@@ -1402,7 +1402,7 @@ def setHvacMode(nextMode) {
         }
     }
     catch (ex) {
-        log.error "setHvacMode Exception: ${ex}"
+        log.error "setHvacMode Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "setHvacMode")
     }
 }
@@ -1443,7 +1443,7 @@ def doChangeMode() {
         }
     }
     catch (ex) {
-        log.error "doChangeMode Exception: ${ex}"
+        log.error "doChangeMode Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "doChangeMode")
     }
 }
@@ -1513,7 +1513,7 @@ void fanOn() {
         } else { log.error "Error setting fanOn" }
     }
     catch (ex) {
-        log.error "fanOn Exception: ${ex}"
+        log.error "fanOn Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "fanOn")
     }
 }
@@ -1537,7 +1537,7 @@ void fanAuto() {
         } else { log.error "Error setting fanAuto" }
     }
     catch (ex) {
-        log.error "fanAuto Exception: ${ex}"
+        log.error "fanAuto Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "fanAuto")
     }
 }
@@ -1649,7 +1649,7 @@ def getImgBase64(url,type) {
         }
     }
     catch (ex) {
-        log.error "getImageBytes Exception: ${ex}"
+        log.error "getImageBytes Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getImgBase64")
     }
 }
@@ -1678,7 +1678,7 @@ def getFileBase64(url,preType,fileType) {
         }
     }
     catch (ex) {
-        log.error "getFileBase64 Exception: ${ex}"
+        log.error "getFileBase64 Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getFileBase64")
     }
 }
@@ -2104,128 +2104,134 @@ def getMaxTemp() {
 }
 
 def getGraphHTML() {
-    def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
-                    "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
-    def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+    try {
+        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
+                        "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
-    def tempStr = "°F"
-    if ( wantMetric() ) {
-        tempStr = "°C"
-    }
-
-    def coolstr1 = "data.addColumn('number', 'CoolSP');"
-    def coolstr2 =  getDataString(5)
-    def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
-
-    def heatstr1 = "data.addColumn('number', 'HeatSP');"
-    def heatstr2 = getDataString(6)
-    def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
-
-    if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
-
-    if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
-
-    if (!state?.can_cool) {
-        coolstr1 = ""
-        coolstr2 = ""
-        coolstr3 = ""
-    }
-
-    if (!state?.can_heat) {
-        heatstr1 = ""
-        heatstr2 = ""
-        heatstr3 = ""
-    }
-
-    def minval = getMinTemp()
-    def minstr = "minValue: ${minval},"
-
-    def maxval = getMaxTemp()
-    def maxstr = "maxValue: ${maxval},"
-
-    def differ = maxval - minval
-    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-        minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
-        if (differ < (wantMetric() ? 10:20) ) {
-            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
+        def tempStr = "°F"
+        if ( wantMetric() ) {
+            tempStr = "°C"
         }
-    }
 
-    def chartHtml = ((state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ||
-    		(state.temperatureTable != [] && state.operatingStateTable != [] && state.temperatureTableYesterday != [] && state.humidityTable != [] && state.coolSetpointTable != [] && state.heatSetpointTable != [])) ? showChartHtml() : hideChartHtml()
+        def coolstr1 = "data.addColumn('number', 'CoolSP');"
+        def coolstr2 =  getDataString(5)
+        def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
 
-    def html = """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <meta http-equiv="cache-control" content="max-age=0"/>
-            <meta http-equiv="cache-control" content="no-cache"/>
-            <meta http-equiv="expires" content="0"/>
-            <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-            <meta http-equiv="pragma" content="no-cache"/>
-            <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-            <link rel="stylesheet" href="${cssData()}"></link>
-            <script type="text/javascript" src="${chartJs()}"></script>
-        </head>
-        <body>
-            ${updateAvail}
+        def heatstr1 = "data.addColumn('number', 'HeatSP');"
+        def heatstr2 = getDataString(6)
+        def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
 
-            ${chartHtml}
+        if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
 
-            <br></br>
-            <table>
-            <col width="40%">
-            <col width="20%">
-            <col width="40%">
-            <thead>
-              <th>Network Status</th>
-              <th>Leaf</th>
-              <th>API Status</th>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${state?.onlineStatus.toString()}</td>
-                <td>${leafImg}</td>
-                <td>${state?.apiStatus}</td>
-              </tr>
-            </tbody>
-          </table>
+        if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
 
-          <p class="centerText">
-            <a href="#openModal" class="button">More info</a>
-          </p>
+        if (!state?.can_cool) {
+            coolstr1 = ""
+            coolstr2 = ""
+            coolstr3 = ""
+        }
 
-          <div id="openModal" class="topModal">
-            <div>
-              <a href="#close" title="Close" class="close">X</a>
-              <table>
-                <tr>
-                  <th>Firmware Version</th>
-                  <th>Debug</th>
-                  <th>Device Type</th>
-                </tr>
-                <td>${state?.softwareVer.toString()}</td>
-                <td>${state?.debugStatus}</td>
-                <td>${state?.devTypeVer.toString()}</td>
-                </tbody>
-              </table>
-              <table>
+        if (!state?.can_heat) {
+            heatstr1 = ""
+            heatstr2 = ""
+            heatstr3 = ""
+        }
+
+        def minval = getMinTemp()
+        def minstr = "minValue: ${minval},"
+
+        def maxval = getMaxTemp()
+        def maxstr = "maxValue: ${maxval},"
+
+        def differ = maxval - minval
+        if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+            minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
+            if (differ < (wantMetric() ? 10:20) ) {
+                maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
+            }
+        }
+
+        def chartHtml = ((state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ||
+        		(state.temperatureTable != [] && state.operatingStateTable != [] && state.temperatureTableYesterday != [] && state.humidityTable != [] && state.coolSetpointTable != [] && state.heatSetpointTable != [])) ? showChartHtml() : hideChartHtml()
+
+        def html = """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta http-equiv="cache-control" content="max-age=0"/>
+                <meta http-equiv="cache-control" content="no-cache"/>
+                <meta http-equiv="expires" content="0"/>
+                <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+                <meta http-equiv="pragma" content="no-cache"/>
+                <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <link rel="stylesheet" href="${cssData()}"></link>
+                <script type="text/javascript" src="${chartJs()}"></script>
+            </head>
+            <body>
+                ${updateAvail}
+
+                ${chartHtml}
+
+                <br></br>
+                <table>
+                <col width="40%">
+                <col width="20%">
+                <col width="40%">
                 <thead>
-                  <th>Nest Checked-In</th>
-                  <th>Data Last Received</th>
+                  <th>Network Status</th>
+                  <th>Leaf</th>
+                  <th>API Status</th>
                 </thead>
                 <tbody>
                   <tr>
-                    <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-                    <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                    <td>${state?.onlineStatus.toString()}</td>
+                    <td>${leafImg}</td>
+                    <td>${state?.apiStatus}</td>
                   </tr>
+                </tbody>
               </table>
-            </div>
-          </div>
-        </body>
-    </html>
-    """
-    render contentType: "text/html", data: html, status: 200
+
+              <p class="centerText">
+                <a href="#openModal" class="button">More info</a>
+              </p>
+
+              <div id="openModal" class="topModal">
+                <div>
+                  <a href="#close" title="Close" class="close">X</a>
+                  <table>
+                    <tr>
+                      <th>Firmware Version</th>
+                      <th>Debug</th>
+                      <th>Device Type</th>
+                    </tr>
+                    <td>${state?.softwareVer.toString()}</td>
+                    <td>${state?.debugStatus}</td>
+                    <td>${state?.devTypeVer.toString()}</td>
+                    </tbody>
+                  </table>
+                  <table>
+                    <thead>
+                      <th>Nest Checked-In</th>
+                      <th>Data Last Received</th>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                        <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                      </tr>
+                  </table>
+                </div>
+              </div>
+            </body>
+        </html>
+        """
+        render contentType: "text/html", data: html, status: 200
+    } catch (ex) {
+        log.error "graphHTML Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "graphHTML")
+    }
+
 }
 
 def showChartHtml() {
