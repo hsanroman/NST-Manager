@@ -48,32 +48,35 @@
         "versions": {
             "app": {
                 "type": "rel",
-                "ver": "3.0.0"
+                "ver": "3.0.1"
             },
             "thermostat": {
                 "type": "rel",
-                "ver": "3.0.0"
+                "ver": "3.0.1"
             },
             "protect": {
                 "type": "rel",
-                "ver": "3.0.0"
+                "ver": "3.0.1"
             },
             "camera": {
                 "type": "rel",
-                "ver": "1.0.0"
+                "ver": "1.0.1"
             },
             "presence": {
                 "type": "rel",
-                "ver": "3.0.0"
+                "ver": "3.0.1"
             },
             "weather": {
                 "type": "rel",
-                "ver": "3.0.0"
+                "ver": "3.0.1"
             }
         }
     },
     "css": {
         "cssVer": 1,
         "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+    },
+    "database": {
+        "disableExceptions": true
     }
 }
