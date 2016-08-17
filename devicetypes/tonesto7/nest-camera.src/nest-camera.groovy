@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "1.0.0" }
+def devVer() { return "1.0.1" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -101,11 +101,11 @@ metadata {
             state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
         }
         carouselTile("cameraDetails", "device.image", width: 4, height: 4) { }
-        standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
+        /*standardTile("take", "device.image", width: 2, height: 2, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "take", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF"
             //state "taking", label:'Taking', action: "", icon: "st.camera.take-photo", backgroundColor: "#53a7c0"
             //state "image", label: "Take", action: "Image Capture.take", icon: "st.camera.camera", backgroundColor: "#FFFFFF", nextState:"taking"
-        }
+        }*/
         standardTile("motion", "device.motion", width: 2, height: 2) {
             state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
             state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
@@ -211,8 +211,8 @@ def processEvent() {
             if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
             if(results?.last_event) {
                 if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-                zoneMotionEvent(results?.last_event)
-                zoneSoundEvent(results?.last_event)
+                //zoneMotionEvent(results?.last_event)
+                //zoneSoundEvent(results?.last_event)
                 if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
@@ -224,7 +224,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}"
+        log.error "generateEvent Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -484,7 +484,7 @@ def streamingOn() {
         parent?.setCamStreaming(this, "true")
         sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
     } catch (ex) {
-        log.error "streamingOn Exception: ${ex}"
+        log.error "streamingOn Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "streamingOn")
     }
 }
@@ -531,7 +531,7 @@ def take() {
         if(list) { state?.last5ImageData = list }
     }
     catch (ex) {
-        log.error "take Exception: ${ex}"
+        log.error "take Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "take")
     }
 }
@@ -685,7 +685,7 @@ def getCamUUID(pubVidId) {
             }
         } else { LogAction("getCamUUID PublicVideoId is missing....", "warn", true) }
     } catch (ex) {
-        log.error "getCamUUID Exception: ${ex}"
+        log.error "getCamUUID Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamUUID")
     }
 }
@@ -703,7 +703,7 @@ def getLiveStreamHost(camUUID) {
         } else { LogAction("getLiveStreamHost camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getLiveStreamHost Exception: ${ex}"
+        log.error "getLiveStreamHost Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getLiveStreamHost")
     }
 }
@@ -722,7 +722,7 @@ def getCamApiServer(camUUID) {
         } else { LogAction("getCamApiServer camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getCamApiServer Exception: ${ex}"
+        log.error "getCamApiServer Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamApiServer")
     }
 }
@@ -901,7 +901,7 @@ def getCamHtml() {
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getCamHtml Exception: ${ex}"
+        log.error "getCamHtml Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamHtml")
     }
 }
