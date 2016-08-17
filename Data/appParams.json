@@ -16,15 +16,15 @@
         },
         "protect": {
             "type": "rel",
-            "ver": "3.0.0"
+            "ver": "3.0.1"
         },
         "camera": {
             "type": "rel",
-            "ver": "1.0.0"
+            "ver": "1.0.1"
         },
         "presence": {
             "type": "rel",
-            "ver": "3.0.0"
+            "ver": "3.0.1"
         },
         "weather": {
             "type": "rel",
