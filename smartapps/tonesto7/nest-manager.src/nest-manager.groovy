@@ -1158,7 +1158,7 @@ def locationPresence() {
 }
 
 def apiIssues() {
-    def result = atomicState?.apiIssuesList.toString().contains("true") ? true : false
+    def result = state?.apiIssuesList.toString().contains("true") ? true : false
     if(result) {
         LogAction("Nest API Issues Detected... (${getDtNow()})", "warn", true)
     }
@@ -1166,7 +1166,7 @@ def apiIssues() {
 }
 
 def apiIssueEvent(issue, cmd = null) {
-    def list = atomicState?.apiIssuesList ?: []
+    def list = state?.apiIssuesList ?: []
     //log.debug "listIn: $list (${list?.size()})"
     def listSize = 3
     if(list?.size() < listSize) {
@@ -1187,7 +1187,7 @@ def apiIssueEvent(issue, cmd = null) {
         list = nList
     }
 
-    if(list) { atomicState?.apiIssuesList = list }
+    if(list) { state?.apiIssuesList = list }
     //log.debug "listOut: $list"
 }
 
@@ -4093,20 +4093,24 @@ def removeInstallData() {
 }
 
 def sendExceptionData(exMsg, methodName, isChild = false, autoType = null) {
-    def exCnt = 0
-    def exString = "${exMsg}"
-    exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
-    atomicState?.appExceptionCnt = exCnt ?: 1
-    if (optInSendExceptions) {
-        def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp"
-        def exData
-        if(isChild) {
-            exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
-        } else {
-            exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
+    if(atomicState?.appData?.database?.disableExceptions == true) {
+      return
+    } else {
+        def exCnt = 0
+        def exString = "${exMsg}"
+        exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
+        atomicState?.appExceptionCnt = exCnt ?: 1
+        if (optInSendExceptions) {
+            def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp"
+            def exData
+            if(isChild) {
+                exData = ["methodName":methodName, "automationType":autoType, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
+            } else {
+                exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
+            }
+            def results = new groovy.json.JsonOutput().toJson(exData)
+            sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
         }
-        def results = new groovy.json.JsonOutput().toJson(exData)
-        sendFirebaseExceptionData(results, "errorData/${appType}/${methodName}.json")
     }
 }
 

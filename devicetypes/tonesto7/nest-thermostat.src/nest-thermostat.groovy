@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "3.0.1"}
+def devVer() { return "3.0.2"}
 
 // for the UI
 metadata {
@@ -586,33 +586,22 @@ def coolingSetpointEvent(Double tempVal) {
 }
 
 def hasLeafEvent(Boolean hasLeaf) {
-    try {
-        def leaf = device.currentState("hasLeaf")?.value
-        def lf = hasLeaf ? "On" : "Off"
-        state?.hasLeaf = hasLeaf
-        if(!leaf.equals(lf)) {
-            log.debug("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
-            sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
-        } else { Logger("Leaf is set to (${lf}) | Original State: (${leaf})") }
-    }
-    catch (ex) {
-        log.error "hasLeafEvent Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "hasLeafEvent")
-    }
+    def leaf = device.currentState("hasLeaf")?.value
+    def lf = hasLeaf ? "On" : "Off"
+    state?.hasLeaf = hasLeaf
+    if(!leaf.equals(lf)) {
+        log.debug("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
+        sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
+    } else { Logger("Leaf is set to (${lf}) | Original State: (${leaf})") }
 }
 
 def humidityEvent(humidity) {
-    try {
-        def hum = device.currentState("humidity")?.value
-        if(!hum.equals(humidity)) {
-            log.debug("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
-            sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
-        } else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
-    }
-    catch (ex) {
-        log.error "humidityEvent Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "humidityEvent")
-    }
+
+    def hum = device.currentState("humidity")?.value
+    if(!hum.equals(humidity)) {
+        log.debug("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
+        sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
+    } else { Logger("Humidity is (${humidity}) | Original State: (${hum})") }
 }
 
 def presenceEvent(presence) {
@@ -789,25 +778,13 @@ def isEmergencyHeat(val) {
 }
 
 def clearHeatingSetpoint() {
-    try {
-        sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true )
-        state?.heating_setpoint = ""
-    }
-    catch (ex) {
-        log.error "clearHeatingSetpoint Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "clearHeatingSetpoint")
-    }
+    sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true )
+    state?.heating_setpoint = ""
 }
 
 def clearCoolingSetpoint() {
-    try {
-        sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true)
-        state?.cooling_setpoint = ""
-    }
-    catch (ex) {
-        log.error "clearCoolingSetpoint Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "clearCoolingSetpoint")
-    }
+    sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true)
+    state?.cooling_setpoint = ""
 }
 
 def getCoolTemp() {
@@ -1748,8 +1725,10 @@ String getDataString(Integer seriesIndex) {
     }
 
     def lastVal = 200
+
     //log.debug "getDataString ${seriesIndex} ${dataTable}"
     //log.debug "getDataString ${seriesIndex}"
+
     def lastAdded = false
     def dataArray
     def myval
@@ -1831,10 +1810,10 @@ def getSomeOldData(type, attributestr, gfloat, devpoll = false, nostate = true) 
     if (( nostate || state?."${type}TableYesterday" == null) && attributestr ) {
         log.trace "Querying DB for yesterday's ${type} data…"
         def yesterdayData = device.statesBetween("${attributestr}", startOfToday - 1, startOfToday, [max: 100])
-        //log.debug "got ${yesterdayData.size()}"
+        log.debug "got ${yesterdayData.size()}"
         if (yesterdayData.size() > 0) {
             while ((newValues = device.statesBetween("${attributestr}", startOfToday - 1, yesterdayData.last().date, [max: 100])).size()) {
-                //log.debug "got ${newValues.size()}"
+                log.debug "got ${newValues.size()}"
                 yesterdayData += newValues
             }
         }
@@ -1853,10 +1832,10 @@ def getSomeOldData(type, attributestr, gfloat, devpoll = false, nostate = true) 
     if ( nostate || state?."${type}Table" == null) {
         log.trace "Querying DB for today's ${type} data…"
         def todayData = device.statesSince("${attributestr}", startOfToday, [max: 100])
-        //log.debug "got ${todayData.size()}"
+        log.debug "got ${todayData.size()}"
         if (todayData.size() > 0) {
             while ((newValues = device.statesBetween("${attributestr}", startOfToday, todayData.last().date, [max: 100])).size()) {
-                //log.debug "got ${newValues.size()}"
+                log.debug "got ${newValues.size()}"
                 todayData += newValues
             }
         }
@@ -2007,100 +1986,30 @@ def getSomeData(devpoll = false) {
 
 def getStartTime() {
     def startTime = 24
-    if (state?.temperatureTable?.size()) {
-        startTime = state?.temperatureTable?.min{it[0].toInteger()}[0].toInteger()
-    }
-    if (state?.temperatureTableYesterday?.size()) {
-        startTime = Math.min(startTime, state?.temperatureTableYesterday?.min{it[0].toInteger()}[0].toInteger())
-    }
+    if (state?.temperatureTable?.size()) { startTime = state?.temperatureTable?.min{it[0].toInteger()}[0].toInteger() }
+    if (state?.temperatureTableYesterday?.size()) { startTime = Math.min(startTime, state?.temperatureTableYesterday?.min{it[0].toInteger()}[0].toInteger()) }
     //log.trace "startTime ${startTime}"
     return startTime
 }
 
 def getMinTemp() {
-    def ytmin
-    def tmin
-    def cmin
-    def hmin
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) {
-        dataTable = []
-        def coolData = state?.coolSetpointTable
-        coolData?.each() {
-            dataTable?.add(it[2])
-        }
-        cmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) {
-        dataTable = []
-        def heatData = state?.heatSetpointTable
-        heatData?.each() {
-            dataTable?.add(it[2])
-        }
-        hmin = dataTable?.min()?.toInteger()
-    }
-    def result = [ytmin, tmin, cmin, hmin]
-    //log.trace "getMinTemp: ${result.min()} result: ${result}"
-    return result?.min()
+    def list = []
+    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    if (state?.can_cool && state?.coolSetpointTable?.size()) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
+    if (state?.can_heat && state?.heatSetpointTable?.size()) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+    //log.trace "getMinTemp: ${list.min()} result: ${list}"
+    return list?.min()
 }
 
 def getMaxTemp() {
-    def ytmax
-    def tmax
-    def cmax
-    def hmax
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) {
-        dataTable = []
-        def coolData = state?.coolSetpointTable
-        coolData?.each() {
-            dataTable?.add(it[2])
-        }
-        cmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) {
-        dataTable = []
-        def heatData = state?.heatSetpointTable
-        heatData?.each() {
-            dataTable?.add(it[2])
-        }
-        hmax = dataTable?.max()?.toInteger()
-    }
-    def result = [ytmax, tmax, cmax, hmax]
-    //log.trace "getMaxTemp: ${result.max()} result: ${result}"
-    return result?.max()
+    def list = []
+    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
+    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    if (state?.can_cool && state?.coolSetpointTable?.size()) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
+    if (state?.can_heat && state?.heatSetpointTable?.size()) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+    //log.trace "getMaxTemp: ${list.max()} result: ${list}"
+    return list?.max()
 }
 
 def getGraphHTML() {
@@ -2109,51 +2018,13 @@ def getGraphHTML() {
                         "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
-        def tempStr = "°F"
-        if ( wantMetric() ) {
-            tempStr = "°C"
-        }
-
-        def coolstr1 = "data.addColumn('number', 'CoolSP');"
-        def coolstr2 =  getDataString(5)
-        def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
-
-        def heatstr1 = "data.addColumn('number', 'HeatSP');"
-        def heatstr2 = getDataString(6)
-        def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
-
-        if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
-
-        if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
-
-        if (!state?.can_cool) {
-            coolstr1 = ""
-            coolstr2 = ""
-            coolstr3 = ""
-        }
-
-        if (!state?.can_heat) {
-            heatstr1 = ""
-            heatstr2 = ""
-            heatstr3 = ""
-        }
-
-        def minval = getMinTemp()
-        def minstr = "minValue: ${minval},"
-
-        def maxval = getMaxTemp()
-        def maxstr = "maxValue: ${maxval},"
-
-        def differ = maxval - minval
-        if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-            minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
-            if (differ < (wantMetric() ? 10:20) ) {
-                maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
-            }
-        }
-
-        def chartHtml = ((state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ||
-        		(state.temperatureTable != [] && state.operatingStateTable != [] && state.temperatureTableYesterday != [] && state.humidityTable != [] && state.coolSetpointTable != [] && state.heatSetpointTable != [])) ? showChartHtml() : hideChartHtml()
+        def chartHtml = (
+                state.temperatureTable?.size() > 0 &&
+                state.operatingStateTable?.size() > 0 &&
+                state.temperatureTableYesterday?.size() > 0 &&
+                state.humidityTable?.size() > 0 &&
+                state.coolSetpointTable?.size() > 0 &&
+                state.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
 
         def html = """
         <!DOCTYPE html>
@@ -2235,6 +2106,49 @@ def getGraphHTML() {
 }
 
 def showChartHtml() {
+    def tempStr = "°F"
+    if ( wantMetric() ) {
+        tempStr = "°C"
+    }
+
+    def coolstr1 = "data.addColumn('number', 'CoolSP');"
+    def coolstr2 =  getDataString(5)
+    def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
+
+    def heatstr1 = "data.addColumn('number', 'HeatSP');"
+    def heatstr2 = getDataString(6)
+    def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
+
+    if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
+
+    if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
+
+    if (!state?.can_cool) {
+        coolstr1 = ""
+        coolstr2 = ""
+        coolstr3 = ""
+    }
+
+    if (!state?.can_heat) {
+        heatstr1 = ""
+        heatstr2 = ""
+        heatstr3 = ""
+    }
+
+    def minval = getMinTemp()
+    def minstr = "minValue: ${minval},"
+
+    def maxval = getMaxTemp()
+    def maxstr = "maxValue: ${maxval},"
+
+    def differ = maxval - minval
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
+        }
+    }
+
     def data = """
     <script type="text/javascript">
         google.charts.load('current', {packages: ['corechart']});

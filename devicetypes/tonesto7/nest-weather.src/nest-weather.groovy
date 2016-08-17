@@ -69,7 +69,6 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
@@ -84,20 +83,18 @@ metadata {
         standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
             state "default", action:"refresh.refresh", icon:"st.secondary.refresh-icon"
         }
-        valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
+        valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
         }
-        //htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 5, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main ("temp2")
-        details ("weatherHtml", "refresh")
-        //details ("weatherHtml", "graphHTML", "refresh")
+        details ("graphHTML")
     }
 }
 
 mappings {
-    path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
-    //path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
+    path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
 def initialize() {
@@ -550,7 +547,6 @@ private pad(String s, size = 25) {
     }
 }
 
-
 private estimateDewPoint(double rh,double t) {
     def L = Math.log(rh/100)
     def M = 17.27 * t
@@ -821,6 +817,10 @@ def getJS(url){
         return resp?.data.text
     }
 }
+
+def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
+def chartJs() { if(chartJsUrl()) { return getFileBase64(chartJsUrl(), "application", "javascript") } }
+def cssData() { return getFileBase64((state?.cssUrl ?: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"), "text", "css") }
 
 def getWeatherIcon(weatherIcon) {
     try {
@@ -1120,95 +1120,28 @@ def getStartTime() {
 }
 
 def getMinTemp() {
-    def ytmin
-    def tmin
-    def dtmin
-    def dmin
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData.each() {
-            dataTable.add(it[2])
-        }
-        ytmin = dataTable.min().toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.dewpointTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dtmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.dewpointTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dmin = dataTable?.min()?.toInteger()
-    }
-    def result = [ytmin, tmin, dtmin, dmin]
-    //log.trace "getMinTemp: ${result.min()} result: ${result}"
-    return result?.min()
+    def list = []
+    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    if (state?.dewpointTableYesterday?.size()) { list.add(state?.dewpointTableYesterday.min { it[2] }[2].toInteger()) }
+    if (state?.dewpointTable?.size()) { list.add(state?.dewpointTable.min { it[2] }[2].toInteger()) }
+    //log.trace "getMinTemp: ${list.min()} result: ${list}"
+    return list?.min()
 }
 
 def getMaxTemp() {
-    def ytmax
-    def tmax
-    def dtmax
-    def dmax
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.dewpointTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dtmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.dewpointTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dmax = dataTable?.max()?.toInteger()
-    }
-    def result = [ytmax, tmax, dtmax, dmax]
-    //log.trace "getMaxTemp: ${result.max()} result: ${result}"
-    return result?.max()
+    def list = []
+    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
+    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    if (state?.dewpointTableYesterday?.size()) { list.add(state?.dewpointTableYesterday.max { it[2] }[2].toInteger()) }
+    if (state?.dewpointTable?.size()) { list.add(state?.dewpointTable.max { it[2] }[2].toInteger()) }
+    //log.trace "getMaxTemp: ${list.max()} result: ${list}"
+    return list?.max()
 }
 
-def getWeatherHtml() {
+def getGraphHTML() {
     try {
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-
         def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 
         def tempStr = "°F"
@@ -1216,27 +1149,7 @@ def getWeatherHtml() {
             tempStr = "°C"
         }
 
-        def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-        def chartJs = getFileBase64(chartJsUrl, "application", "javascript")
-        def cssData = getFileBase64(state?.cssUrl, "text", "css")
-
-        def minval = getMinTemp()
-        def minstr = "minValue: ${minval},"
-
-        def maxval = getMaxTemp()
-        def maxstr = "maxValue: ${maxval},"
-
-        def differ = maxval - minval
-        //log.trace "differ ${differ}"
-        if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-            minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
-            if (differ < (wantMetric() ? 10:20) ) {
-                maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
-            }
-        }
-
-        def chartHtml = ((state.temperatureTable && state.dewpointTable && state.temperatureTableYesterday && state.dewpointTableYesterday) ||
-                (state.temperatureTable != [] && state.dewpointTable != [] && state.temperatureTableYesterday != [] && state.dewpointTableYesterday != [])) ? showChartHtml() : hideChartHtml()
+        def chartHtml = (getMinTemp() && getMaxTemp() && state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0 && state?.temperatureTableYesterday?.size() > 0 && state?.dewpointTableYesterday?.size() > 0) ? showChartHtml() : hideChartHtml()
 
         def html = """
         <!DOCTYPE html>
@@ -1249,8 +1162,8 @@ def getWeatherHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet" href="${cssData}"></link>
-                <script type="text/javascript" src="${chartJs}"></script>
+             	<link rel="stylesheet prefetch" href="${cssData()}"/>
+                <script type="text/javascript" src="${chartJs()}"></script>
             </head>
             <body>
                   ${updateAvail}
@@ -1294,10 +1207,9 @@ def getWeatherHtml() {
                       <div class="row topBorder">
                           <div class="centerText offset-by-three six columns">
                               <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-                              <b>${obsrvTime}</b>
+                              <b>${state?.curWeather?.current_observation?.observation_time}</b>
                           </div>
                       </div>
-
                       <div id="openModal" class="topModal">
                           <div>
                               <a href="#close" title="Close" class="close">X</a>
@@ -1305,12 +1217,9 @@ def getWeatherHtml() {
                               <p>${state?.walertMessage}</p>
                           </div>
                       </div>
-
-                      <br></br>
-
-                      ${chartHtml}
-
                     </div>
+                    <br></br>
+                    ${chartHtml}
             	</body>
         	</html>
         """
@@ -1323,6 +1232,23 @@ def getWeatherHtml() {
 }
 
 def showChartHtml() {
+    def tempStr = "°F"
+    if ( wantMetric() ) { tempStr = "°C" }
+    def minval = getMinTemp()
+    def minstr = "minValue: ${minval},"
+
+    def maxval = getMaxTemp()
+    def maxstr = "maxValue: ${maxval},"
+
+    def differ = maxval - minval
+    //log.trace "differ ${differ}"
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+          maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
+        }
+    }
+
     def data = """
         <script type="text/javascript">
           google.charts.load('current', {packages: ['corechart']});
@@ -1391,6 +1317,7 @@ def showChartHtml() {
               chart.draw(data, options);
           }
       </script>
+      <script type="text/javascript">${getJS(chartJsUrl())}</script>
       <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
       <div id="chart_div" style="width: 100%; height: 225px;"></div>
     """

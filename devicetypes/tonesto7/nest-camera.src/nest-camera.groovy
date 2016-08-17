@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "1.0.1" }
+def devVer() { return "1.0.2" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -747,56 +747,11 @@ def getCamBtnJsData() {
 def getCamHtml() {
     try {
         def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
-
         // These are used to determine the URL for the nest cam stream
-        def camUUID = getCamUUID(getPublicVideoId())
-        def apiServer = getCamApiServer(camUUID)
-        def liveStreamURL = getLiveStreamHost(camUUID)
-        def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
-
-        def pubVidUrl = state?.public_share_url
-        def pubVidId = getPublicVideoId()
-        def animationUrl = getImgBase64(state?.animation_url, 'gif')
-        //log.debug "Animation URL: $animationUrl"
-        def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
-
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
-        def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+        def pubVidUrl = state?.public_share_url
+        def camHtml = (pubVidUrl || state?.isStreaming) ? showCamHtml() : hideCamHtml()
 
-        def showCamHtml = """
-            <script type="text/javascript">
-                ${getCamBtnJsData()}
-            </script>
-            <div class="hideable" id="liveStream">
-                <video width="410" controls
-                    id="nest-video"
-                    class="video-js vjs-default-skin"
-                    poster="${camImgUrl}"
-                    data-video-url="${pubVidUrl}"
-                    data-video-title="">
-                    <source src="${camPlaylistUrl}" type="application/x-mpegURL">
-                </video>
-            </div>
-            <div class="hideable" id="still" style="display:none">
-                <img src="${pubSnapUrl}" width="100%"/>
-            </div>
-            <div class="hideable" id="animation" style="display:none">
-                <img src="${animationUrl}" width="100%"/>
-            </div>
-            <div class="centerText">
-              ${vidBtn}
-              ${imgBtn}
-              ${lastEvtBtn}
-            </div>
-        """
-        def hideCamHtml = ""
-        if(state?.isStreaming == false) { hideCamHtml = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>""" }
-        else { hideCamHtml = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>""" }
-
-        def camHtml = (!pubVidUrl || state?.isStreaming == false) ? hideCamHtml : showCamHtml
         def html = """
         <!DOCTYPE html>
         <html>
@@ -904,6 +859,60 @@ def getCamHtml() {
         log.error "getCamHtml Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamHtml")
     }
+}
+
+def showCamHtml() {
+    def camUUID = getCamUUID(getPublicVideoId())
+    def apiServer = getCamApiServer(camUUID)
+    def liveStreamURL = getLiveStreamHost(camUUID)
+    def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
+    def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
+
+    def pubVidUrl = state?.public_share_url
+    def pubVidId = getPublicVideoId()
+    def animationUrl = getImgBase64(state?.animation_url, 'gif')
+    def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
+
+    def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+    def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
+    def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+
+    def data = """
+        <script type="text/javascript">
+            ${getCamBtnJsData()}
+        </script>
+        <div class="hideable" id="liveStream">
+            <video width="410" controls
+                id="nest-video"
+                class="video-js vjs-default-skin"
+                poster="${camImgUrl}"
+                data-video-url="${pubVidUrl}"
+                data-video-title="">
+                <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+            </video>
+        </div>
+        <div class="hideable" id="still" style="display:none">
+            <img src="${pubSnapUrl}" width="100%"/>
+        </div>
+        <div class="hideable" id="animation" style="display:none">
+            <img src="${animationUrl}" width="100%"/>
+        </div>
+        <div class="centerText">
+          ${vidBtn}
+          ${imgBtn}
+          ${lastEvtBtn}
+        </div>
+    """
+}
+
+def hideCamHtml() {
+    def data = ""
+    if(state?.isStreaming == false) {
+        data = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>"""
+    } else {
+        data = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+    }
+    return data
 }
 
 private def textDevName()   { return "Nest Camera${appDevName()}" }
