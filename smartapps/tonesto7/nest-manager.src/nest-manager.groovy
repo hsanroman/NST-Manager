@@ -231,8 +231,8 @@ def mainPage() {
                             image: getAppImg("nest_structure_icon.png"))
                 }
             }
-            if (structures) {
-                atomicState.structures = settings?.structures ? structures : null
+            if (settings?.structures) {
+                atomicState.structures = settings?.structures ?: null
 
                 def stats = getNestThermostats()
                 def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
@@ -252,17 +252,17 @@ def mainPage() {
                         input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
                                 image: getAppImg("thermostat_icon.png"))
                     }
-                    atomicState.thermostats =  settings?.thermostats ? statState(thermostats) : null
+                    atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
                     if (coSmokes.size() > 0) {
                         input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
                                 image: getAppImg("protect_icon.png"))
                     }
-                    atomicState.protects = settings?.protects ? coState(protects) : null
+                    atomicState.protects = settings?.protects ? coState(settings?.protects) : null
                     if (cams.size() > 0) {
                         input(name: "cameras", title:"Nest Cameras", type: "enum", required: false, multiple: true, submitOnChange: true, description: camDesc, metadata: [values:cams],
                                 image: getAppImg("camera_icon.png"))
                     }
-                    atomicState.cameras = settings?.cameras ? camState(cameras) : null
+                    atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
                     input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
                     atomicState.presDevice = settings?.presDevice ? true : false
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
@@ -314,8 +314,8 @@ def deviceSelectPage() {
                         image: getAppImg("nest_structure_icon.png"))
             }
         }
-        if (structures) {
-            atomicState.structures = settings?.structures ? structures : null
+        if (settings?.structures) {
+            atomicState.structures = settings?.structures ?: null
 
             def stats = getNestThermostats()
             def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats..." : "No Thermostats"
@@ -335,17 +335,17 @@ def deviceSelectPage() {
                     input(name: "thermostats", title:"Nest Thermostats", type: "enum", required: false, multiple: true, submitOnChange: true, description: statDesc, metadata: [values:stats],
                             image: getAppImg("thermostat_icon.png"))
                 }
-                atomicState.thermostats =  settings?.thermostats ? statState(thermostats) : null
+                atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
                 if (coSmokes.size() > 0) {
                     input(name: "protects", title:"Nest Protects", type: "enum", required: false, multiple: true, submitOnChange: true, description: coDesc, metadata: [values:coSmokes],
                             image: getAppImg("protect_icon.png"))
                 }
-                atomicState.protects = settings?.protects ? coState(protects) : null
+                atomicState.protects = settings?.protects ? coState(settings?.protects) : null
                 if (cams.size() > 0) {
                     input(name: "cameras", title:"Nest Cameras", type: "enum", required: false, multiple: true, submitOnChange: true, description: camDesc, metadata: [values:cams],
                             image: getAppImg("camera_icon.png"))
                 }
-                atomicState.cameras = settings?.cameras ? camState(cameras) : null
+                atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
                 input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
                 atomicState.presDevice = settings?.presDevice ? true : false
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
@@ -369,10 +369,10 @@ def reviewSetupPage() {
                     href "custWeatherPage", title: "Customize Weather Location?", description: "Tap to configure...", image: getAppImg("weather_icon_grey.png")
                 }
             }
-            if(!atomicState?.isInstalled && (thermostats || protects || cameras || presDevice || weatherDevice)) {
+            if(!atomicState?.isInstalled && (settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice)) {
                 href "devNamePage", title: "Customize Device Names?", description: atomicState?.custLabelUsed ? "Tap to Modify..." : "Tap to configure...", state: (atomicState?.custLabelUsed ? "complete" : null), image: getAppImg("device_name_icon.png")
             }
-            if(weatherDevice) {
+            if(settings?.weatherDevice) {
                 input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
             }
         }
@@ -653,7 +653,7 @@ def initManagerApp() {
     if (addRemoveDevices()) { // if we changed devices, reset queues and polling
         atomicState.cmdQlist = []
     }
-    if(thermostats || protects || cameras || presDevice || weatherDevice) {
+    if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
         atomicState?.isInstalled = true
     } else { atomicState.isInstalled = false }
     subscriber()
@@ -1256,7 +1256,7 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
             def pres = (objVal?.toString() == "home") ? "present" : "not present"
             def nestPres = (objVal?.toString() == "home") ? "home" : ((objVal?.toString() == "auto-away") ? "auto-away" : "away")
             def devIds = []
-            if(presDevice) { devIds?.push(getNestPresId()) }
+            if(settings?.presDevice) { devIds?.push(getNestPresId()) }
             if(atomicState?.thermostats) {
                 atomicState?.thermostats.each { tstat ->
                     //log.debug "tstat: ${tstat.key}"
@@ -2038,7 +2038,7 @@ def getNestStructures() {
                 def dni = [strucData?.structure_id].join('.')
                 struct[dni] = strucData?.name.toString()
 
-                if (strucData?.structure_id.toString() == structures.toString()) {
+                if (strucData?.structure_id.toString() == settings?.structures.toString()) {
                     thisstruct[dni] = strucData?.name.toString()
                 } else {
                     if (atomicState?.structures) {
@@ -2046,7 +2046,7 @@ def getNestStructures() {
                             thisstruct[dni] = strucData?.name.toString()
                         }
                     } else {
-                        if (!structures) {
+                        if (!settings?.structures) {
                             thisstruct[dni] = strucData?.name.toString()
                         }
                     }
@@ -2883,7 +2883,7 @@ def connectionStatus(message, redirectUrl = null) {
 }
 
 def getChildTstatsIdString() {
-    return thermostats.collect { it.split(/\./).last() }.join(',')
+    return settings?.thermostats.collect { it.split(/\./).last() }.join(',')
 }
 
 def getChildProtectsIdString() {
@@ -3446,7 +3446,7 @@ def devPrefPage() {
         section("") {
             paragraph "Device Preferences", image: getAppImg("device_pref_icon.png")
         }
-        if(thermostats || protects || presDevice || weatherDevice) {
+        if(settings?.thermostats || settings?.protects || settings?.presDevice || settings?.weatherDevice) {
             section("Device Names:") {
                 def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\n\nTap to Modify..." : "Tap to Configure..."
                 href "devNamePage", title: "Device Names...", description: devDesc, image: getAppImg("device_name_icon.png")
@@ -3515,12 +3515,12 @@ def devCustomizePageDesc() {
 
 def getDevicesDesc() {
     def str = ""
-    str += thermostats ? "\n • [${thermostats?.size()}] Thermostat${(thermostats?.size() > 1) ? "s" : ""}" : ""
-    str += protects ? "\n • [${protects?.size()}] Protect${(protects?.size() > 1) ? "s" : ""}" : ""
-    str += cameras ? "\n • [${cameras?.size()}] Camera${(cameras?.size() > 1) ? "s" : ""}" : ""
-    str += presDevice ? "\n • [1] Presence Device" : ""
-    str += weatherDevice ? "\n • [1] Weather Device" : ""
-    str += (!thermostats && !protects && !presDevice && !weatherDevice) ? "\n • No Devices Selected..." : ""
+    str += settings?.thermostats ? "\n • [${settings?.thermostats?.size()}] Thermostat${(settings?.thermostats?.size() > 1) ? "s" : ""}" : ""
+    str += settings?.protects ? "\n • [${settings?.protects?.size()}] Protect${(settings?.protects?.size() > 1) ? "s" : ""}" : ""
+    str += settings?.cameras ? "\n • [${settings?.cameras?.size()}] Camera${(settings?.cameras?.size() > 1) ? "s" : ""}" : ""
+    str += settings?.presDevice ? "\n • [1] Presence Device" : ""
+    str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
+    str += (!settings?.thermostats && !settings?.protects && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected..." : ""
     return (str != "") ? str : null
 }
 
@@ -7283,7 +7283,7 @@ def nestModePresPage() {
                     input "nModeDelayVal", "enum", title: "Delay before Changing?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()],
                             submitOnChange: true, image: getAppImg("delay_time_icon.png")
                 }
-                if(parent?.cameras) {
+                if(parent?.settings?.cameras) {
                     input (name: "nModeCamOnAway", type: "bool", title: "Turn On Nest Cams when Away?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_green_icon.png"))
                     input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_gray_icon.png"))
                 }
@@ -7444,7 +7444,7 @@ def checkNestMode() {
                         sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info")
                     }
                     if(nModeCamOnAway) {
-                        def cams = parent?.cameras
+                        def cams = parent?.settings?.cameras
                         cams?.each { cam ->
                             def dev = getChildDevice(cam)
                             if(dev) {
@@ -7467,7 +7467,7 @@ def checkNestMode() {
                         sendEventPushNotifications("${awayDesc} Nest 'Home'", "Info")
                     }
                     if(nModeCamOffHome) {
-                        def cams = parent?.cameras
+                        def cams = parent?.settings?.cameras
                         cams?.each { cam ->
                             def dev = getChildDevice(cam)
                             if(dev) {
