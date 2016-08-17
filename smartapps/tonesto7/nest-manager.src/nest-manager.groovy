@@ -264,9 +264,9 @@ def mainPage() {
                     }
                     atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
                     input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
-                    atomicState.presDevice = settings?.presDevice ? true : false
+                    atomicState.presDevice = settings?.presDevice ?: null
                     input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                    atomicState.weatherDevice = settings?.weatherDevice ? true : false
+                    atomicState.weatherDevice = settings?.weatherDevice ?: null
                 }
             }
         }
@@ -304,7 +304,7 @@ def deviceSelectPage() {
         def structs = getNestStructures()
         def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations..."
         LogAction("Locations: Found ${structs?.size()} (${structs})", "info", false)
-        if (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice || isAutoAppInst() ) {  // if devices are configured, you cannot change the structure until they are removed
+        if (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice ) {  // if devices are configured, you cannot change the structure until they are removed
             section("Your Location:") {
                  paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
             }
@@ -347,9 +347,9 @@ def deviceSelectPage() {
                 }
                 atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
                 input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
-                atomicState.presDevice = settings?.presDevice ? true : false
+                atomicState.presDevice = settings?.presDevice ?: null
                 input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", description: "", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
-                atomicState.weatherDevice = settings?.weatherDevice ? true : false
+                atomicState.weatherDevice = settings?.weatherDevice ?: null
             }
         }
     }
@@ -395,6 +395,11 @@ def reviewSetupPage() {
         if(atomicState?.showHelp) {
             section(" ") {
                 href "infoPage", title: "Help, Info and Instructions", description: "Tap to view...", image: getAppImg("info.png")
+            }
+        }
+        if(!atomicState?.isInstalled) {
+            section("  ") {
+                href "uninstallPage", title: "Uninstall this App", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
             }
         }
     }
@@ -809,7 +814,7 @@ def setPollingState() {
             def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
             def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
             def weatherTimer = pollTime
-            if(atomicState?.weatherDevice) { weatherTimer = (pollWeatherValue ? pollWeatherValue.toInteger() : 900) }
+            if(atomicState?.weatherDevice) { weatherTimer = (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900) }
             def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
             def random = new Random()
             def random_int = random.nextInt(60)
@@ -1658,7 +1663,7 @@ def increaseCmdCnt() {
 /************************************************************************************************
 |								Push Notification Functions										|
 *************************************************************************************************/
-def pushStatus() { return (recipients || phone || usePush) ? (usePush ? "Push Enabled" : "Enabled") : null }
+def pushStatus() { return (settings?.recipients || settings?.phone || settings?.usePush) ? (settings?.usePush ? "Push Enabled" : "Enabled") : null }
 def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt).toInteger() }
 def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt).toInteger() }
 def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt).toInteger() }
@@ -1668,7 +1673,7 @@ def getOk2Notify() { return (daysOk(settings?."${getAutoType()}quietDays") && no
 def isMissedPoll() { return (getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger()) ? true : false }
 
 def notificationCheck() {
-    if((recipients || usePush) && getOk2Notify()) {
+    if((settings?.recipients || settings?.usePush) && getOk2Notify()) {
         if (sendMissedPollMsg) { missedPollNotify() }
         if (sendAppUpdateMsg && !appDevType()) { appUpdateNotify() }
     }
@@ -1726,7 +1731,7 @@ def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null
         } else {
             def newMsg = "${msgType}: ${msg}"
             if(!brdcast) {
-                def who = people ? people : recipients
+                def who = people ? people : settings?.recipients
                 if (location.contactBookEnabled) {
                     if(who) {
                         sendNotificationToContacts(newMsg, who)
@@ -1784,7 +1789,7 @@ def updateWebStuff(now = false) {
             sendInstallData()
         }
     }
-    if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (pollWeatherValue ? pollWeatherValue.toInteger() : 900)) {
+    if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900)) {
         if(now) {
             getWeatherConditions(now)
         } else {
@@ -3305,7 +3310,7 @@ def waitValEnum() {
 }
 
 def getInputEnumLabel(inputName, enumName) {
-    def result = "unknown"
+    def result = "Not Set"
     if(input && enumName) {
         enumName.each { item ->
             if(item?.key.toString() == inputName?.toString()) {
@@ -3327,24 +3332,24 @@ def pollPrefPage() {
             paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
         }
         section("Device Polling:") {
-            def pollValDesc = !pollValue ? "Default: 3 Minutes" : pollValue
+            def pollValDesc = !settings?.pollValue ? "Default: 3 Minutes" : settings?.pollValue
             input ("pollValue", "enum", title: "Device Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
                     description: pollValDesc, submitOnChange: true)
         }
         section("Location Polling:") {
-            def pollStrValDesc = !pollStrValue ? "Default: 3 Minutes" : pollStrValue
+            def pollStrValDesc = !settings?.pollStrValue ? "Default: 3 Minutes" : settings?.pollStrValue
             input ("pollStrValue", "enum", title: "Location Poll Rate\nDefault is (3 Minutes)", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
                     description: pollStrValDesc, submitOnChange: true)
         }
         if(atomicState?.weatherDevice) {
             section("Weather Polling:") {
-                def pollWeatherValDesc = !pollWeatherValue ? "Default: 15 Minutes" : pollWeatherValue
+                def pollWeatherValDesc = !settings?.pollWeatherValue ? "Default: 15 Minutes" : settings?.pollWeatherValue
                 input ("pollWeatherValue", "enum", title: "Weather Refresh Rate\nDefault is (15 Minutes)", required: false, defaultValue: 900, metadata: [values:notifValEnum(false)],
                         description: pollWeatherValDesc, submitOnChange: true)
             }
         }
         section("Wait Values:") {
-            def pollWaitValDesc = !pollWaitVal ? "Default: 10 Seconds" : pollWaitVal
+            def pollWaitValDesc = !settings?.pollWaitVal ? "Default: 10 Seconds" : settings?.pollWaitVal
             input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit\nDefault is (10 sec)", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
                     description: pollWaitValDesc,submitOnChange: true)
         }
@@ -3360,9 +3365,9 @@ def pollPrefPage() {
 def getPollingConfDesc() {
     def pStr = ""
     pStr += "Polling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
-    pStr += "\n• Device: (${getInputEnumLabel(pollValue, pollValEnum())})"
-    pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue, pollValEnum())})"
-    pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue, notifValEnum())})" : ""
+    pStr += "\n• Device: (${getInputEnumLabel(settings?.pollValue, pollValEnum())})"
+    pStr += "\n• Structure: (${getInputEnumLabel(settings?.pollStrValue, pollValEnum())})"
+    pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(settings?.pollWeatherValue, notifValEnum())})" : ""
     return pStr
 }
 
@@ -3379,8 +3384,8 @@ def notifPrefPage() {
             }
         }
 
-        if (recipients || phone || usePush) {
-            if(recipients && !atomicState?.pushTested) {
+        if (settings?.recipients || settings?.phone || settings?.usePush) {
+            if(settings?.recipients && !atomicState?.pushTested) {
                 sendMsg("Info", "Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}")
                 atomicState.pushTested = true
             } else { atomicState.pushTested = true }
@@ -3433,10 +3438,10 @@ def notifPrefPage() {
 def getAppNotifConfDesc() {
     def str = ""
     str += pushStatus() ? "Notifications:" : ""
-    str += (pushStatus() && recipients) ? "\n • Contacts: (${recipients?.size()})" : ""
-    str += (pushStatus() && usePush) ? "\n • Push Messages: Enabled" : ""
+    str += (pushStatus() && settings?.recipients) ? "\n • Contacts: (${settings?.recipients?.size()})" : ""
+    str += (pushStatus() && settings?.usePush) ? "\n • Push Messages: Enabled" : ""
     str += (pushStatus() && sms) ? "\n • SMS: (${sms?.size()})" : ""
-    str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
+    str += (pushStatus() && settings?.phone) ? "\n • SMS: (${settings?.phone?.size()})" : ""
     str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
     return pushStatus() ? "${str}" : null
 }
