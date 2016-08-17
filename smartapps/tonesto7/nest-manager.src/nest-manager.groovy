@@ -386,9 +386,9 @@ def reviewSetupPage() {
             paragraph "These options will send the developer non-identifiable app information as well as error data to help diagnose issues quicker and catch trending issues."
             input ("optInAppAnalytics", "bool", title: "Send Install Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Send Error Data?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
-            if (optInAppAnalytics != false) {
+            if (settings?.optInAppAnalytics != false) {
                 input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: true, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone"]],
-                                image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
+                                image: getAppImg("${(settings?.mobileClientType && settings?.mobileClientType != "decline") ? "${settings?.mobileClientType}_icon" : "mobile_device_icon"}.png"))
                 href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data that will be Shared with the Developer", description: "Tap to view Data...", required:false, image: getAppImg("view_icon.png")
             }
         }
@@ -426,7 +426,7 @@ def prefsPage() {
             input ("optInAppAnalytics", "bool", title: "Opt In App Analytics?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("app_analytics_icon.png"))
             input ("optInSendExceptions", "bool", title: "Opt In Send Errors?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("diag_icon.png"))
             input(name: "mobileClientType", title:"Primary Mobile Device?", type: "enum", required: false, submitOnChange: true, metadata: [values:["android":"Android", "ios":"iOS", "winphone":"Windows Phone"]],
-                                image: getAppImg("${(mobileClientType && mobileClientType != "decline") ? "${mobileClientType}_icon" : "mobile_device_icon"}.png"))
+                                image: getAppImg("${(settings?.mobileClientType && settings?.mobileClientType != "decline") ? "${settings?.mobileClientType}_icon" : "mobile_device_icon"}.png"))
         }
         section ("Misc. Options:") {
             input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", description: "", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
@@ -465,12 +465,12 @@ def automationsPage() {
         }
         section("Global Automation Preferences:") {
             def descStr = ""
-            descStr += (locDesiredCoolTemp || locDesiredHeatTemp) ? "Comfort Settings:" : ""
-            descStr += locDesiredHeatTemp ? "\n • Desired Heat Temp: ($locDesiredHeatTemp°${getTemperatureScale()})" : ""
-            descStr += locDesiredCoolTemp ? "\n • Desired Cool Temp: ($locDesiredCoolTemp°${getTemperatureScale()})" : ""
-            //descStr += (comfortDewpointMax) ? "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
-            descStr += comfortDewpointMax ? "\n • Max Dew Point: ($comfortDewpointMax${getTemperatureScale()})" : ""
-            //descStr += "${(locDesiredCoolTemp || locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
+            descStr += (settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "Comfort Settings:" : ""
+            descStr += settings?.locDesiredHeatTemp ? "\n • Desired Heat Temp: (${settings?.locDesiredHeatTemp}°${getTemperatureScale()})" : ""
+            descStr += settings?.locDesiredCoolTemp ? "\n • Desired Cool Temp: (${settings?.locDesiredCoolTemp}°${getTemperatureScale()})" : ""
+            //descStr += (settings?.comfortDewpointMax) ? "${(settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
+            descStr += settings?.comfortDewpointMax ? "\n • Max Dew Point: (${settings?.comfortDewpointMax}${getTemperatureScale()})" : ""
+            //descStr += "${(settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
             def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify..." : "Tap to Configure..."
             href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
         }
