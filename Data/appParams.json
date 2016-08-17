@@ -75,5 +75,14 @@
     "css": {
         "cssVer": 1,
         "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
+    },
+    "html": {
+        "cssVer": 1,
+        "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css",
+        "chartJsVer": 1,
+        "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
+    },
+    "database": {
+        "disableExceptions": true
     }
 }
