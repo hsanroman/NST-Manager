@@ -518,6 +518,11 @@ def automationStatisticsPage() {
                         paragraph "${str}", state: "complete", image: getAutoIcon(autoType)
                     }
                 }
+                else if (autoType == "watchDog") {
+                    section("") {
+                        paragraph "No Valid Automations Installed..."
+                    }
+                }
             }
         }
     }
@@ -6083,7 +6088,7 @@ def getFanCtrlFanSwitchesSpdChk() {
 }
 
 def fanCtrlFanSwitchEvt(evt) {
-    LogAction("FanControl Event | Fan Switch: ${evt?.displayName} - is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    LogAction("FanControl Event | Fan Switch: ${evt?.displayName} is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
         scheduleAutomationEval()
@@ -6092,7 +6097,7 @@ def fanCtrlFanSwitchEvt(evt) {
 }
 
 def fanCtrlTstatFanEvt(evt) {
-    LogAction("FanControl Event | Thermostat Fan: ${evt?.displayName} - Fan is (${evt?.value.toString().toUpperCase()})", "trace", true)
+    LogAction("FanControl Event | Thermostat Fan: ${evt?.displayName} Fan is (${evt?.value.toString().toUpperCase()})", "trace", true)
     if(disableAutomation) { return }
     else {
         scheduleAutomationEval()
@@ -6101,7 +6106,7 @@ def fanCtrlTstatFanEvt(evt) {
 }
 
 def fanCtrlTstatTempEvt(evt) {
-    LogAction("FanControl Event | Thermostat Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
+    LogAction("FanControl Event | Thermostat Temp: ${evt?.displayName} Temperature is (${evt?.value}°${atomicState?.tempUnit})", "trace", true)
     if(disableAutomation) { return }
     else {
         scheduleAutomationEval()
@@ -6153,6 +6158,7 @@ def fanCtrlCheck() {
         if(!fanCtrlFanSwitches) { return }
 
         def execTime = now()
+        atomicState?.lastEvalDt = getDtNow()
         def hvacMode = fanCtrlTstat ? fanCtrlTstat?.currentThermostatMode.toString() : null
         def curTstatOperState = fanCtrlTstat?.currentThermostatOperatingState.toString()
         def curTstatFanMode = fanCtrlTstat?.currentThermostatFanMode.toString()
@@ -7808,6 +7814,7 @@ def storeLastEventData(evt) {
 }
 
 def storeExecutionHistory(val, method = null) {
+    //log.debug "storeExecutionHistory($val, $method)"
     try {
         if(method) {
             log.debug "${method} Execution Time: (${val} milliseconds)"
