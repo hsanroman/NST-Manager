@@ -89,7 +89,7 @@ metadata {
         htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main ("temp2")
-        details ("graphHTML")
+        details ("graphHTML", "refresh")
     }
 }
 
@@ -825,13 +825,22 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.cssData) {
-        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
-            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
-            cssData = state?.cssData
+    log.debug "htmlInfo: $htmlInfo"
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
         } else {
-            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
-            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
             state?.cssVer = htmlInfo?.cssVer
         }
     } else {
@@ -844,18 +853,27 @@ def getCssData() {
 def getChartJsData() {
     def chartJsData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.chartJsData) {
-        if(state?.chartJsData && (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger())) {
-            log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
-            chartJsData = state?.chartJsData
+    log.debug "htmlInfo: $htmlInfo"
+    if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
+        if(state?.chartJsData) {
+            if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                chartJsData = state?.chartJsData
+            } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+                state.chartJsData = chartJsData
+                state?.chartJsVer = htmlInfo?.chartJsVer
+            }
         } else {
-            log.debug "getChartJsData: Chart Javascript Data is Missing/Outdated | Loading Data from Source..."
+            log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
             chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+            state?.chartJsData = chartJsData
             state?.chartJsVer = htmlInfo?.chartJsVer
         }
     } else {
-        log.debug "getChartJsData: No Stored HTML Info Data Found Loading for Static URL..."
-        chartJsData = getFileBase64(chartJsUrl(), "text", "css")
+        log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
     }
     return chartJsData
 }

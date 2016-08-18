@@ -651,6 +651,35 @@ def getImgBase64(url,type) {
     }
 }
 
+def getFileBase64(url,preType,fileType) {
+    try {
+        def params = [
+            uri: url,
+            contentType: '$preType/$fileType'
+        ]
+        httpGet(params) { resp ->
+            if(resp.data) {
+                def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+                int size = 4096
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                    bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+                String s = buf?.encodeBase64()
+                //log.debug "resp: ${s}"
+                return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+            }
+        }
+    }
+    catch (ex) {
+        log.error "getFileBase64 Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getFileBase64")
+    }
+}
+
 def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
@@ -679,39 +708,29 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.cssData) {
-        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
-            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
-            cssData = state?.cssData
+    log.debug "htmlInfo: $htmlInfo"
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
         } else {
-            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
-            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
             state?.cssVer = htmlInfo?.cssVer
         }
     } else {
-        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        log.debug "getCssData: No Stored CSS Data Found for Device... Loading for Static URL..."
         cssData = getFileBase64(cssUrl(), "text", "css")
     }
     return cssData
-}
-
-def getChartJsData() {
-    def chartJsData = null
-    def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.chartJsData) {
-        if(state?.chartJsData && (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger())) {
-            log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
-            chartJsData = state?.chartJsData
-        } else {
-            log.debug "getChartJsData: Chart Javascript Data is Missing/Outdated | Loading Data from Source..."
-            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
-            state?.chartJsVer = htmlInfo?.chartJsVer
-        }
-    } else {
-        log.debug "getChartJsData: No Stored HTML Info Data Found Loading for Static URL..."
-        chartJsData = getFileBase64(chartJsUrl(), "text", "css")
-    }
-    return chartJsData
 }
 
 def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }

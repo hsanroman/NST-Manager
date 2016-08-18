@@ -469,7 +469,7 @@ def debugOnEvent(debug) {
     state?.debugStatus = dVal
     state?.debug = debug.toBoolean() ? true : false
     if(!val.equals(dVal)) {
-        log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+        log.debug("UPDATED | debugOn: (${dVal}) | Original State: (${val.toString().capitalize()})")
         sendEvent(name: 'debugOn', value: dVal, displayed: false)
     } else { Logger("debugOn: (${dVal}) | Original State: (${val})") }
 }
@@ -597,7 +597,6 @@ def hasLeafEvent(Boolean hasLeaf) {
 }
 
 def humidityEvent(humidity) {
-
     def hum = device.currentState("humidity")?.value
     if(!hum.equals(humidity)) {
         log.debug("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
@@ -614,7 +613,7 @@ def presenceEvent(presence) {
     state?.present = (pres == "present") ? true : false
     state?.nestPresence = newNestPres
     if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
-        log.debug("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
+        log.debug("UPDATED | Presence: ${pres.toString().capitalize()} | Original State: ${val.toString().capitalize()} | State Variable: ${statePres}")
         sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true, state: pres )
         sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
     } else { Logger("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
@@ -625,7 +624,7 @@ def hvacModeEvent(mode) {
     def newMode = (mode == "heat-cool") ? "auto" : mode
     state?.hvac_mode = newMode
     if(!hvacMode.equals(newMode)) {
-        log.debug("UPDATED | Hvac Mode is (${newMode}) | Original State: (${hvacMode})")
+        log.debug("UPDATED | Hvac Mode is (${newMode.toString().capitalize()}) | Original State: (${hvacMode.toString().capitalize()})")
         sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
     } else { Logger("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
 }
@@ -634,7 +633,7 @@ def fanModeEvent(fanActive) {
     def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
     def fanMode = device.currentState("thermostatFanMode")?.value
     if(!fanMode.equals(val)) {
-        log.debug("UPDATED | Fan Mode: (${val}) | Original State: (${fanMode})")
+        log.debug("UPDATED | Fan Mode: (${val.toString().capitalize()}) | Original State: (${fanMode.toString().capitalize()})")
         sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
     } else { Logger("Fan Active: (${val}) | Original State: (${fanMode})") }
 }
@@ -643,7 +642,7 @@ def operatingStateEvent(operatingState) {
     def hvacState = device.currentState("thermostatOperatingState")?.value
     def operState = (operatingState == "off") ? "idle" : operatingState
     if(!hvacState.equals(operState)) {
-        log.debug("UPDATED | OperatingState is (${operState}) | Original State: (${hvacState})")
+        log.debug("UPDATED | OperatingState is (${operState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
         sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
     } else { Logger("OperatingState is (${operState}) | Original State: (${hvacState})") }
 }
@@ -757,7 +756,7 @@ def apiStatusEvent(issue) {
     def newStat = issue ? "issue" : "ok"
     state?.apiStatus = newStat
     if(!curStat.equals(newStat)) {
-        log.debug("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+        log.debug("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
         sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
     } else { Logger("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
@@ -1694,13 +1693,21 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.cssData) {
-        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
-            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
-            cssData = state?.cssData
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
         } else {
-            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
-            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
             state?.cssVer = htmlInfo?.cssVer
         }
     } else {
@@ -1713,18 +1720,27 @@ def getCssData() {
 def getChartJsData() {
     def chartJsData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.chartJsData) {
-        if(state?.chartJsData && (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger())) {
-            log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
-            chartJsData = state?.chartJsData
+    log.debug "htmlInfo: $htmlInfo"
+    if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
+        if(state?.chartJsData) {
+            if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                chartJsData = state?.chartJsData
+            } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+                state.chartJsData = chartJsData
+                state?.chartJsVer = htmlInfo?.chartJsVer
+            }
         } else {
-            log.debug "getChartJsData: Chart Javascript Data is Missing/Outdated | Loading Data from Source..."
+            log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
             chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
+            state?.chartJsData = chartJsData
             state?.chartJsVer = htmlInfo?.chartJsVer
         }
     } else {
-        log.debug "getChartJsData: No Stored HTML Info Data Found Loading for Static URL..."
-        chartJsData = getFileBase64(chartJsUrl(), "text", "css")
+        log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
     }
     return chartJsData
 }

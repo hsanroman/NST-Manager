@@ -601,6 +601,35 @@ def getImg(imgName) {
     }
 }
 
+def getFileBase64(url,preType,fileType) {
+    try {
+        def params = [
+            uri: url,
+            contentType: '$preType/$fileType'
+        ]
+        httpGet(params) { resp ->
+            if(resp.data) {
+                def respData = resp?.data
+                ByteArrayOutputStream bos = new ByteArrayOutputStream()
+                int len
+                int size = 4096
+                byte[] buf = new byte[size]
+                while ((len = respData.read(buf, 0, size)) != -1)
+                    bos.write(buf, 0, len)
+                buf = bos.toByteArray()
+                //log.debug "buf: $buf"
+                String s = buf?.encodeBase64()
+                //log.debug "resp: ${s}"
+                return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+            }
+        }
+    }
+    catch (ex) {
+        log.error "getFileBase64 Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getFileBase64")
+    }
+}
+
 def getCSS(){
     def params = [
         uri: state?.cssUrl.toString(),
@@ -614,17 +643,26 @@ def getCSS(){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    if(htmlInfo && state?.cssData) {
-        if(state?.cssData && (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger())) {
-            log.debug "getCssData: CSS Data is Current | Loading Data from State..."
-            cssData = state?.cssData
+    log.debug "htmlInfo: $htmlInfo"
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
         } else {
-            log.debug "getCssData: CSS Data is Missing/Outdated | Loading Data from Source..."
-            getFileBase64(htmlInfo.cssUrl, "text", "css")
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
             state?.cssVer = htmlInfo?.cssVer
         }
     } else {
-        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        log.debug "getCssData: No Stored CSS Data Found for Device... Loading for Static URL..."
         cssData = getFileBase64(cssUrl(), "text", "css")
     }
     return cssData
@@ -636,8 +674,7 @@ def getInfoHtml() {
     try {
         def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
                 "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
-        def coImg = "<img class='alarmImg' src=\"${getCarbonImg()}\">"
-        def smokeImg = "<img class='alarmImg' src=\"${getSmokeImg()}\">"
+
         def testVal = device.currentState("isTesting")?.value
         def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
@@ -654,13 +691,14 @@ def getInfoHtml() {
                 <link rel="stylesheet prefetch" href="${getCssData()}"/>
             </head>
             <body>
-              ${updateAvail} ${testModeHTML}
+              ${updateAvail}
+              ${testModeHTML}
               <div class="row">
                 <div class="offset-by-two four columns centerText">
-                  $coImg
+                  <img class='alarmImg' src="${getCarbonImg()}">
                 </div>
                 <div class="four columns centerText">
-                  $smokeImg
+                  <img class='alarmImg' src="${getSmokeImg()}">
                 </div>
               </div>
               <table>
