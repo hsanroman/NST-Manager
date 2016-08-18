@@ -413,6 +413,9 @@ def processEvent() {
     }
 }
 
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
@@ -1730,7 +1733,6 @@ def getCssData() {
 def getChartJsData() {
     def chartJsData = null
     def htmlInfo = state?.htmlInfo
-    log.debug "htmlInfo: $htmlInfo"
     if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
         if(state?.chartJsData) {
             if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
@@ -2082,6 +2084,7 @@ def getMaxTemp() {
 
 def getGraphHTML() {
     try {
+        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
                         "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"

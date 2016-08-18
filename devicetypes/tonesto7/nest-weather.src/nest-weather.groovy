@@ -186,6 +186,9 @@ def processEvent() {
     }
 }
 
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
@@ -825,7 +828,6 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    log.debug "htmlInfo: $htmlInfo"
     if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
         if(state?.cssData) {
             if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
@@ -1194,6 +1196,7 @@ def getMaxTemp() {
 
 def getGraphHTML() {
     try {
+        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 
@@ -1215,7 +1218,7 @@ def getGraphHTML() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-             	<link rel="stylesheet prefetch" href="${getCssData()}"/>
+             	  <link rel="stylesheet prefetch" href="${getCssData()}"/>
                 <script type="text/javascript" src="${getChartJsData()}"></script>
             </head>
             <body>
@@ -1370,7 +1373,6 @@ def showChartHtml() {
               chart.draw(data, options);
           }
       </script>
-      <script type="text/javascript">${getJS(chartJsUrl())}</script>
       <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
       <div id="chart_div" style="width: 100%; height: 225px;"></div>
     """

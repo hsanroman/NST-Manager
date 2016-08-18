@@ -230,6 +230,9 @@ def processEvent() {
     }
 }
 
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
@@ -809,6 +812,7 @@ def getCamBtnJsData() {
 
 def getCamHtml() {
     try {
+        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         // These are used to determine the URL for the nest cam stream
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def pubVidUrl = state?.public_share_url

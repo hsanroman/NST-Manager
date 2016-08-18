@@ -281,6 +281,9 @@ def processEvent() {
     }
 }
 
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
 }
@@ -671,6 +674,7 @@ def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile
 
 def getInfoHtml() {
     try {
+        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
                 "<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
 
