@@ -1097,14 +1097,10 @@ def getSomeOldData(devpoll = false) {
 
 def getSomeData(devpoll = false) {
     //log.trace "getSomeData ${state.curWeatherLoc}"
-// hackery to test getting old data
-    def dewpointTable
-    def temperatureTable
 
+// hackery to test getting old data
     def tryNum = 1
     if (state.eric != tryNum ) {
-        dewpointTable = null
-        temperatureTable = null
         state.dewpointTableYesterday = null
         state.temperatureTableYesterday = null
         state.dewpointTable = null
@@ -1121,50 +1117,49 @@ def getSomeData(devpoll = false) {
     }
 
     def todayDay = new Date().format("dd",location.timeZone)
-    dewpointTable = state?.dewpointTable
-    temperatureTable = state?.temperatureTable
 
-    def currentTemperature = wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
-    def currentDewpoint = wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f
+    if (state?.temperatureTable == null) {
+        //getSomeOldData(devpoll)
+
+        state.temperatureTable = []
+        state.dewpointTable = []
+        addNewData()
+    }
+
+    def temperatureTable = state?.temperatureTable
+    def dewpointTable = state?.dewpointTable
+
+    if (state?.temperatureTableYesterday?.size() == 0) {
+        state.temperatureTableYesterday = temperatureTable
+        state.dewpointTableYesterday = dewpointTable
+    }
 
     if (!state.today || state.today != todayDay) {
 
-        //debugging
-        if (dewpointTable == null) {
-            dewpointTable = []
-            temperatureTable = []
-        }
         state.today = todayDay
         state.dewpointTableYesterday = dewpointTable
         state.temperatureTableYesterday = temperatureTable
 
-// these are commented out as the platform continuously times out
-        //dewpointTable = dewpointTable ? [] : null
-        //temperatureTable = temperatureTable ? [] : null
-
-// these are in due to platform timeouts
-        dewpointTable = []
-        temperatureTable = []
-
-// these are commented out as the platform continuously times out
-        //getSomeOldData(devpoll)
-        //dewpointTable = state?.dewpointTable
-        //temperatureTable = state?.temperatureTable
-
-
-        dewpointTable.add([0,0,currentDewpoint])
-        temperatureTable.add([0,0,currentTemperature])
-        state.dewpointTable = dewpointTable
-        state.temperatureTable = temperatureTable
-        return
+        state.temperatureTable = []
+        state.dewpointTable = []
     }
+    addNewData()
+}
+
+def addNewData() {
+    def currentTemperature = wantMetric() ? state?.curWeatherTemp_c : state?.curWeatherTemp_f
+    def currentDewpoint = wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f
+
+    def temperatureTable = state?.temperatureTable
+    def dewpointTable = state?.dewpointTable
 
     // add latest dewpoint & temperature readings for the graph
     def newDate = new Date()
-    dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
     temperatureTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentTemperature])
-    state.dewpointTable = dewpointTable
+    dewpointTable.add([newDate.format("H", location.timeZone),newDate.format("m", location.timeZone),currentDewpoint])
+
     state.temperatureTable = temperatureTable
+    state.dewpointTable = dewpointTable
 }
 
 def getStartTime() {
