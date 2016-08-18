@@ -708,7 +708,6 @@ def getJS(url){
 def getCssData() {
     def cssData = null
     def htmlInfo = state?.htmlInfo
-    log.debug "htmlInfo: $htmlInfo"
     if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
         if(state?.cssData) {
             if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {

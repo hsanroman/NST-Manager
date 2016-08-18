@@ -853,7 +853,6 @@ def getCssData() {
 def getChartJsData() {
     def chartJsData = null
     def htmlInfo = state?.htmlInfo
-    log.debug "htmlInfo: $htmlInfo"
     if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
         if(state?.chartJsData) {
             if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
