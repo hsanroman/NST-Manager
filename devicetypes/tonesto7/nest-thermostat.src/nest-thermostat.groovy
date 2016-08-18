@@ -2085,8 +2085,7 @@ def getMaxTemp() {
 def getGraphHTML() {
     try {
         log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
-        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
-                        "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
+        def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif")} : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
         def chartHtml = (
@@ -2129,7 +2128,7 @@ def getGraphHTML() {
                 <tbody>
                   <tr>
                     <td>${state?.onlineStatus.toString()}</td>
-                    <td>${leafImg}</td>
+                    <td><img src="${leafImg}" class="leafImg"></img></td>
                     <td>${state?.apiStatus}</td>
                   </tr>
                 </tbody>
