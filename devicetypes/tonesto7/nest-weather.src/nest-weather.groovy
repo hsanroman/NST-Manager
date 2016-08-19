@@ -1205,7 +1205,11 @@ def getGraphHTML() {
             tempStr = "°C"
         }
 
-        def chartHtml = (getMinTemp() && getMaxTemp() && state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0 && state?.temperatureTableYesterday?.size() > 0 && state?.dewpointTableYesterday?.size() > 0) ? showChartHtml() : hideChartHtml()
+        def chartHtml = (
+                state?.temperatureTable?.size() > 0 &&
+                state?.dewpointTable?.size() > 0 &&
+                state?.temperatureTableYesterday?.size() > 0 &&
+                state?.dewpointTableYesterday?.size() > 0) ? showChartHtml() : hideChartHtml()
 
         def html = """
         <!DOCTYPE html>

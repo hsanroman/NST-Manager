@@ -2085,11 +2085,10 @@ def getMaxTemp() {
 def getGraphHTML() {
     try {
         log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
-        def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif")} : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
+        def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
         def chartHtml = (
-                getMinTemp() && getMaxTemp() &&
                 state.temperatureTable?.size() > 0 &&
                 state.operatingStateTable?.size() > 0 &&
                 state.temperatureTableYesterday?.size() > 0 &&
