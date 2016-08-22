@@ -1684,12 +1684,18 @@ def getFileBase64(url,preType,fileType) {
 }
 
 def getCSS(url = null){
-    def params = [
-        uri: !url ? "https://cdn.rawgit.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
-        contentType: 'text/css'
-    ]
-    httpGet(params)  { resp ->
-        return resp?.data.text
+    try {
+        def params = [
+            uri: !url ? cssUrl() : url?.toString(),
+            contentType: 'text/css'
+        ]
+        httpGet(params)  { resp ->
+            return resp?.data.text
+        }
+    }
+    catch (ex) {
+        log.error "getCss Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getCSS")
     }
 }
 
@@ -1703,9 +1709,70 @@ def getJS(url){
     }
 }
 
+def getCssData() {
+    def cssData = null
+    //def htmlInfo = state?.htmlInfo
+//ERS
+    def htmlInfo
+    state.cssData = null
+
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
+        } else {
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def getChartJsData() {
+    def chartJsData = null
+    //def htmlInfo = state?.htmlInfo
+//ERS
+    def htmlInfo
+    state.chartJsData = null
+
+    if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
+        if(state?.chartJsData) {
+            if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                chartJsData = state?.chartJsData
+            } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
+                log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
+                state.chartJsData = chartJsData
+                state?.chartJsVer = htmlInfo?.chartJsVer
+            }
+        } else {
+            log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
+            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
+            state?.chartJsData = chartJsData
+            state?.chartJsVer = htmlInfo?.chartJsVer
+        }
+    } else {
+        log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
+    }
+    return chartJsData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
-def chartJs() { if(chartJsUrl()) { return getFileBase64(chartJsUrl(), "application", "javascript") } }
-def cssData() { return getFileBase64((state?.cssUrl ?: "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"), "text", "css") }
 
 def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
@@ -2018,142 +2085,45 @@ def getStartTime() {
 }
 
 def getMinTemp() {
-    def ytmin
-    def tmin
-    def cmin
-    def hmin
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) {
-        dataTable = []
-        def coolData = state?.coolSetpointTable
-        coolData?.each() {
-            dataTable?.add(it[2])
-        }
-        cmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) {
-        dataTable = []
-        def heatData = state?.heatSetpointTable
-        heatData?.each() {
-            dataTable?.add(it[2])
-        }
-        hmin = dataTable?.min()?.toInteger()
-    }
-    def result = [ytmin, tmin, cmin, hmin]
-    //log.trace "getMinTemp: ${result.min()} result: ${result}"
-    return result?.min()
+    def list = []
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    //log.trace "getMinTemp: ${list.min()} result: ${list}"
+    return list?.min()
 }
 
 def getMaxTemp() {
-    def ytmax
-    def tmax
-    def cmax
-    def hmax
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) {
-        dataTable = []
-        def coolData = state?.coolSetpointTable
-        coolData?.each() {
-            dataTable?.add(it[2])
-        }
-        cmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) {
-        dataTable = []
-        def heatData = state?.heatSetpointTable
-        heatData?.each() {
-            dataTable?.add(it[2])
-        }
-        hmax = dataTable?.max()?.toInteger()
-    }
-    def result = [ytmax, tmax, cmax, hmax]
-    //log.trace "getMaxTemp: ${result.max()} result: ${result}"
-    return result?.max()
+    def list = []
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    //log.trace "getMaxTemp: ${list.max()} result: ${list}"
+    return list?.max()
 }
 
 def getGraphHTML() {
     try {
-        def leafImg = state?.hasLeaf ? "<img src=\"${getImgBase64(getImg("nest_leaf_on.gif"), "gif")}\" class='leafImg'>" :
-                        "<img src=\"${getImgBase64(getImg("nest_leaf_off.gif"), "gif")}\" class='leafImg'>"
+        def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 
-        def tempStr = "°F"
-        if ( wantMetric() ) {
-            tempStr = "°C"
-        }
-
-        def coolstr1 = "data.addColumn('number', 'CoolSP');"
-        def coolstr2 =  getDataString(5)
-        def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
-
-        def heatstr1 = "data.addColumn('number', 'HeatSP');"
-        def heatstr2 = getDataString(6)
-        def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
-
-        if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
-
-        if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
-
-        if (!state?.can_cool) {
-            coolstr1 = ""
-            coolstr2 = ""
-            coolstr3 = ""
-        }
-
-        if (!state?.can_heat) {
-            heatstr1 = ""
-            heatstr2 = ""
-            heatstr3 = ""
-        }
-
-        def minval = getMinTemp()
-        def minstr = "minValue: ${minval},"
-
-        def maxval = getMaxTemp()
-        def maxstr = "maxValue: ${maxval},"
-
-        def differ = maxval - minval
-        if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-            minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
-            if (differ < (wantMetric() ? 10:20) ) {
-                maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
-            }
-        }
-
-        def chartHtml = ((state.temperatureTable && state.operatingStateTable && state.temperatureTableYesterday && state.humidityTable && state.coolSetpointTable && state.heatSetpointTable) ||
-        		(state.temperatureTable != [] && state.operatingStateTable != [] && state.temperatureTableYesterday != [] && state.humidityTable != [] && state.coolSetpointTable != [] && state.heatSetpointTable != [])) ? showChartHtml() : hideChartHtml()
+        def chartHtml = (
+                state.temperatureTable?.size() > 0 &&
+                state.operatingStateTable?.size() > 0 &&
+                state.temperatureTableYesterday?.size() > 0 &&
+                state.humidityTable?.size() > 0 &&
+                state.coolSetpointTable?.size() > 0 &&
+                state.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
 
         def html = """
         <!DOCTYPE html>
@@ -2165,8 +2135,8 @@ def getGraphHTML() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet" href="${cssData()}"></link>
-                <script type="text/javascript" src="${chartJs()}"></script>
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
+                <script type="text/javascript" src="${getChartJsData()}"></script>
             </head>
             <body>
                 ${updateAvail}
@@ -2186,7 +2156,7 @@ def getGraphHTML() {
                 <tbody>
                   <tr>
                     <td>${state?.onlineStatus.toString()}</td>
-                    <td>${leafImg}</td>
+                    <td><img src="${leafImg}" class="leafImg"></img></td>
                     <td>${state?.apiStatus}</td>
                   </tr>
                 </tbody>
@@ -2235,6 +2205,49 @@ def getGraphHTML() {
 }
 
 def showChartHtml() {
+    def tempStr = "°F"
+    if ( wantMetric() ) {
+        tempStr = "°C"
+    }
+
+    def coolstr1 = "data.addColumn('number', 'CoolSP');"
+    def coolstr2 =  getDataString(5)
+    def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
+
+    def heatstr1 = "data.addColumn('number', 'HeatSP');"
+    def heatstr2 = getDataString(6)
+    def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
+
+    if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
+
+    if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
+
+    if (!state?.can_cool) {
+        coolstr1 = ""
+        coolstr2 = ""
+        coolstr3 = ""
+    }
+
+    if (!state?.can_heat) {
+        heatstr1 = ""
+        heatstr2 = ""
+        heatstr3 = ""
+    }
+
+    def minval = getMinTemp()
+    def minstr = "minValue: ${minval},"
+
+    def maxval = getMaxTemp()
+    def maxstr = "maxValue: ${maxval},"
+
+    def differ = maxval - minval
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+            maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
+        }
+    }
+
     def data = """
     <script type="text/javascript">
         google.charts.load('current', {packages: ['corechart']});

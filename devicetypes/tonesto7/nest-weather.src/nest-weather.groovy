@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "3.0.1" }
+def devVer() { return "3.0.2" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -69,7 +69,6 @@ metadata {
     simulator { }
 
     tiles(scale: 2) {
-        htmlTile(name:"weatherHtml", action: "getWeatherHtml", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
         valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
             state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
                     backgroundColors: getTempColors() )
@@ -87,16 +86,15 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
         }
-        //htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 5, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"weatherHTML", action: "getWeatherHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main ("temp2")
-        details ("weatherHtml", "refresh")
-        //details ("weatherHtml", "graphHTML", "refresh")
+        details ("weatherHTML", "refresh")
     }
 }
 
 mappings {
-    path("/getWeatherHtml") {action: [GET: "getWeatherHtml"]}
+    path("/getWeatherHTML") {action: [GET: "getWeatherHTML"]}
     //path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
@@ -796,32 +794,6 @@ def getFileBase64(url,preType,fileType) {
     }
 }
 
-def getCSS(url = null){
-    try {
-        def params = [
-            uri: !url ? "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString(),
-            contentType: 'text/css'
-        ]
-        httpGet(params)  { resp ->
-            return resp?.data.text
-        }
-    }
-    catch (ex) {
-        log.error "getCss Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "getCSS")
-    }
-}
-
-def getJS(url){
-    def params = [
-        uri: url?.toString(),
-        contentType: "text/plain"
-    ]
-    httpGet(params)  { resp ->
-        return resp?.data.text
-    }
-}
-
 def getWeatherIcon(weatherIcon) {
     try {
         return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
@@ -1120,95 +1092,131 @@ def getStartTime() {
 }
 
 def getMinTemp() {
-    def ytmin
-    def tmin
-    def dtmin
-    def dmin
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData.each() {
-            dataTable.add(it[2])
-        }
-        ytmin = dataTable.min().toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.dewpointTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dtmin = dataTable?.min()?.toInteger()
-    }
-    if (state?.dewpointTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dmin = dataTable?.min()?.toInteger()
-    }
-    def result = [ytmin, tmin, dtmin, dmin]
-    //log.trace "getMinTemp: ${result.min()} result: ${result}"
-    return result?.min()
+    def list = []
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.min { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    //log.trace "getMinTemp: ${list.min()} result: ${list}"
+    return list?.min()
 }
+
 
 def getMaxTemp() {
-    def ytmax
-    def tmax
-    def dtmax
-    def dmax
-    def dataTable = []
-    if (state?.temperatureTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        ytmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.temperatureTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.temperatureTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        tmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.dewpointTableYesterday?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTableYesterday
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dtmax = dataTable?.max()?.toInteger()
-    }
-    if (state?.dewpointTable?.size()) {
-        dataTable = []
-        def temperatureData = state?.dewpointTable
-        temperatureData?.each() {
-            dataTable?.add(it[2])
-        }
-        dmax = dataTable?.max()?.toInteger()
-    }
-    def result = [ytmax, tmax, dtmax, dmax]
-    //log.trace "getMaxTemp: ${result.max()} result: ${result}"
-    return result?.max()
+    def list = []
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.max { it[2] }[2].toInteger()) }
+    else {list.add(0)}
+    //log.trace "getMinTemp: ${list.min()} result: ${list}"
+    return list?.min()
 }
 
-def getWeatherHtml() {
+def getCSS(url = null){
     try {
-        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+        def params = [
+            uri: !url ? cssUrl() : url?.toString(),
+            contentType: 'text/css',
+        ]
+        httpGet(params)  { resp ->
+            return resp?.data.text
+        }
+    }
+    catch (ex) {
+        log.error "getCss Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getCSS")
+    }
+}
 
+def getJS(url){
+    def params = [
+        uri: url?.toString(),
+        contentType: "text/plain; charset=UTF-8",
+        requestContentType: "text/javascript"
+    ]
+    httpGet(params)  { resp ->
+        if(resp?.status == 200) {
+            return resp.data.text
+        } else {
+            log.error "getJS Response Error | Status Code: (${resp?.status})"
+        }
+    }
+}
+
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                //log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                //log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
+        } else {
+            //log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        //log.debug "getCssData: No Stored CSS Info Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def getChartJsData() {
+    def chartJsData = null
+    //def htmlInfo = state?.htmlInfo
+    def htmlInfo
+    state.chartJsData = null
+
+    if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
+        if(state?.chartJsData) {
+            if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
+                //log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                chartJsData = state?.chartJsData
+            } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
+                //log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
+                state.chartJsData = chartJsData
+                state?.chartJsVer = htmlInfo?.chartJsVer
+            }
+        } else {
+            //log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
+            chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
+            state?.chartJsData = chartJsData
+            state?.chartJsVer = htmlInfo?.chartJsVer
+        }
+    } else {
+        //log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
+    }
+    return chartJsData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+def chartJsUrl() { return "https://dl.dropboxusercontent.com/s/uwwklgxj7cvsww4/loader.js" } //"https://www.gstatic.com/charts/loader.js" }
+
+def getWeatherHTML() {
+    try {
+        //state?.chartJsData = null
+        //log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
+
+        def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
         def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 
         def tempStr = "°F"
@@ -1216,27 +1224,7 @@ def getWeatherHtml() {
             tempStr = "°C"
         }
 
-        def chartJsUrl = "https://www.gstatic.com/charts/loader.js"
-        def chartJs = getFileBase64(chartJsUrl, "application", "javascript")
-        def cssData = getFileBase64(state?.cssUrl, "text", "css")
-
-        def minval = getMinTemp()
-        def minstr = "minValue: ${minval},"
-
-        def maxval = getMaxTemp()
-        def maxstr = "maxValue: ${maxval},"
-
-        def differ = maxval - minval
-        //log.trace "differ ${differ}"
-        if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-            minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
-            if (differ < (wantMetric() ? 10:20) ) {
-                maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
-            }
-        }
-
-        def chartHtml = ((state.temperatureTable && state.dewpointTable && state.temperatureTableYesterday && state.dewpointTableYesterday) ||
-                (state.temperatureTable != [] && state.dewpointTable != [] && state.temperatureTableYesterday != [] && state.dewpointTableYesterday != [])) ? showChartHtml() : hideChartHtml()
+        def chartHtml = (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0 && state?.temperatureTableYesterday?.size() > 0 && state?.dewpointTableYesterday?.size() > 0) ? showChartHtml() : hideChartHtml()
 
         def html = """
         <!DOCTYPE html>
@@ -1249,8 +1237,8 @@ def getWeatherHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet" href="${cssData}"></link>
-                <script type="text/javascript" src="${chartJs}"></script>
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
+                <script type="text/javascript" src="${getChartJsData()}"></script>
             </head>
             <body>
                   ${updateAvail}
@@ -1294,10 +1282,9 @@ def getWeatherHtml() {
                       <div class="row topBorder">
                           <div class="centerText offset-by-three six columns">
                               <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-                              <b>${obsrvTime}</b>
+                              <b>${state?.curWeather?.current_observation?.observation_time}</b>
                           </div>
                       </div>
-
                       <div id="openModal" class="topModal">
                           <div>
                               <a href="#close" title="Close" class="close">X</a>
@@ -1305,24 +1292,38 @@ def getWeatherHtml() {
                               <p>${state?.walertMessage}</p>
                           </div>
                       </div>
-
-                      <br></br>
-
-                      ${chartHtml}
-
                     </div>
+                    <br></br>
+                    $chartHtml
             	</body>
         	</html>
         """
         render contentType: "text/html", data: html, status: 200
     }
     catch (ex) {
-        log.error "getWeatherHtml Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "getWeatherHtml")
+        log.error "getWeatherHTML Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getWeatherHTML")
     }
 }
 
 def showChartHtml() {
+    def tempStr = "°F"
+    if ( wantMetric() ) { tempStr = "°C" }
+    def minval = getMinTemp()
+    def minstr = "minValue: ${minval},"
+
+    def maxval = getMaxTemp()
+    def maxstr = "maxValue: ${maxval},"
+
+    def differ = maxval - minval
+    //log.trace "differ ${differ}"
+    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+        minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
+        if (differ < (wantMetric() ? 10:20) ) {
+          maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
+        }
+    }
+
     def data = """
         <script type="text/javascript">
           google.charts.load('current', {packages: ['corechart']});
