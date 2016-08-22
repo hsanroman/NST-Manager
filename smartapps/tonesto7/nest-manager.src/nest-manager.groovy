@@ -1549,7 +1549,7 @@ def setTargetTemp(child, unit, temp, mode, virtual=false) {
             def pdevId = atomicState?."vThermostatMirrorId${devId}"
             def pChild
             if(pdevId) { pChild = getChildDevice(pdevId) }
-            def appId = atomicState?."vThermostatChildAppId${devId}" 
+            def appId = atomicState?."vThermostatChildAppId${devId}"
             def automationChildApp
             if(appId) { automationChildApp = getChildApps().find{ it.id == appId } }
             if(automationChildApp) {
@@ -1587,7 +1587,7 @@ def setTargetTempLow(child, unit, temp, virtual=false) {
             def pChild
             if(pdevId) { pChild = getChildDevice(pdevId) }
 
-            def appId = atomicState?."vThermostatChildAppId${devId}" 
+            def appId = atomicState?."vThermostatChildAppId${devId}"
             def automationChildApp
             if(appId) { automationChildApp = getChildApps().find{ it.id == appId } }
 
@@ -1623,7 +1623,7 @@ def setTargetTempHigh(child, unit, temp, virtual=false) {
             def pChild
             if(pdevId) { pChild = getChildDevice(pdevId) }
 
-            def appId = atomicState?."vThermostatChildAppId${devId}" 
+            def appId = atomicState?."vThermostatChildAppId${devId}"
             def automationChildApp
             if(appId) { automationChildApp = getChildApps().find{ it.id == appId } }
 
@@ -4853,8 +4853,9 @@ def nameAutoPage() {
             if(getAutoType() == "watchDog") {
                 paragraph "${app?.label}"
             } else {
-                label title: "Name this Automation\nNew:\n${getAutoTypeLabel()}", defaultValue: "${getAutoTypeLabel()}", required: true
-                paragraph "Make sure to name it something that will help you easily identify the app later."
+                label title: "Name this Automation:", defaultValue: "${getAutoTypeLabel()}", submitOnChange: true, required: true
+                paragraph "New Name:\n${getAutoTypeLabel()}", required: true, state: null
+                paragraph "FYI:\nMake sure to name it something that will help you easily identify the app later."
             }
         }
     }
@@ -5271,7 +5272,7 @@ def remSenPrefix() { return "remSen" }
 def remSensorPage() {
     def pName = remSenPrefix()
     dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
-        def req = (remSensorDay || remSensorNight || remSenTstat) ? true : false
+        def req = (remSensorDay || remSensorNight || remSenTstat || !remSenTstat) ? true : false
         def dupTstat
         def tStatPhys
         def tStatHeatSp
@@ -5298,7 +5299,7 @@ def remSensorPage() {
             }
 
             if(remSenTstat && tStatPhys) {
-                if(getMyLockId()) { 
+                if(getMyLockId()) {
                     if(atomicState?.remSenTstat && (remSenTstat.deviceNetworkId != atomicState?.remSenTstat)) {
                         parent?.addRemoveVthermostat(atomicState.remSenTstat, false, getMyLockId())
                     }
@@ -5368,10 +5369,10 @@ def remSensorPage() {
                                 submitOnChange: true, required: remSenCoolTempsReq(), defaultValue: defCool, image: getAppImg("cool_icon.png")
 
                         }
-                        paragraph "Action Threshold Temp:\nThe temperature difference trigger for Action Type.", image: getAppImg("instruct_icon.png")
+                        paragraph "Action Threshold Temp:\nIs the temp difference trigger for Action Type.", image: getAppImg("instruct_icon.png")
                         input "remSenTempDiffDegrees", "decimal", title: "Action Threshold Temp (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         if(remSenRuleType != "Circ") {
-                            paragraph "Thermostat Change Temp Increment:\n The amount the thermostat temp is adjusted +/- to enable the HVAC system.", image: getAppImg("instruct_icon.png")
+                            paragraph "Temp Increments:\nIs the amount the thermostat temp is adjusted +/- to enable the HVAC system.", image: getAppImg("instruct_icon.png")
                             input "remSenTstatTempChgVal", "decimal", title: "Change Temp Increments (°${atomicState?.tempUnit})", required: true, defaultValue: 5.0, submitOnChange: true, image: getAppImg("temp_icon.png")
                         }
                     }
@@ -6432,7 +6433,7 @@ def remSenTempUpdate(temp, mode) {
     return res
 }
 
- 
+
 def getRemSenCoolSetTemp() {
     if (getLastOverrideCoolSec() < (3600 * 4)) {
         if (atomicState?.CoolOverride != null) {
