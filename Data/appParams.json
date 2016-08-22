@@ -54,6 +54,10 @@
                 "type": "rel",
                 "ver": "3.0.2"
             },
+            "virThermostat": {
+                "type": "rel",
+                "ver": "1.0.0"
+            }
             "protect": {
                 "type": "rel",
                 "ver": "3.0.2"
