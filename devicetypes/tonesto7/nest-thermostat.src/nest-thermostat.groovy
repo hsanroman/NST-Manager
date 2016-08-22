@@ -1732,7 +1732,7 @@ def getCssData() {
     if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
         if(state?.cssData) {
             if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
-                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                //log.debug "getCssData: CSS Data is Current | Loading Data from State..."
                 cssData = state?.cssData
             } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
                 log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
@@ -1763,22 +1763,22 @@ def getChartJsData() {
     if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
         if(state?.chartJsData) {
             if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
-                log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                //log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
                 chartJsData = state?.chartJsData
             } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
-                log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
-                chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
+                //log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                //chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
                 state.chartJsData = chartJsData
                 state?.chartJsVer = htmlInfo?.chartJsVer
             }
         } else {
-            log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
+            //log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
             chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "javascript")
             state?.chartJsData = chartJsData
             state?.chartJsVer = htmlInfo?.chartJsVer
         }
     } else {
-        log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        //log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
         chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
     }
     return chartJsData
@@ -2091,20 +2091,28 @@ def getStartTime() {
 
 def getMinTemp() {
     def list = []
-    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
-    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
     //log.trace "getMinTemp: ${list.min()} result: ${list}"
     return list?.min()
 }
 
 def getMaxTemp() {
     def list = []
-    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
-    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
-    if (state?.can_cool && state?.coolSetpointTable?.size()) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
-    if (state?.can_heat && state?.heatSetpointTable?.size()) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
     //log.trace "getMaxTemp: ${list.max()} result: ${list}"
     return list?.max()
 }

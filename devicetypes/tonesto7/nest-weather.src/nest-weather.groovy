@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "3.0.1" }
+def devVer() { return "3.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -86,15 +86,15 @@ metadata {
         valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
             state("default", label: 'Device Type:\nv${currentValue}')
         }
-        htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+        htmlTile(name:"weatherHTML", action: "getWeatherHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
         main ("temp2")
-        details ("graphHTML", "refresh")
+        details ("weatherHTML", "refresh")
     }
 }
 
 mappings {
-    path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
+    path("/getWeatherHTML") {action: [GET: "getWeatherHTML"]}
 }
 
 def initialize() {
@@ -175,6 +175,7 @@ def processEvent() {
             getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
             getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 
+            //resetDataTables()
             lastUpdatedEvent()
         }
         //log.debug "Device State Data: ${getState()}"
@@ -831,7 +832,7 @@ def getCssData() {
     if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
         if(state?.cssData) {
             if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
-                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                //log.debug "getCssData: CSS Data is Current | Loading Data from State..."
                 cssData = state?.cssData
             } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
                 log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
@@ -854,26 +855,28 @@ def getCssData() {
 
 def getChartJsData() {
     def chartJsData = null
-    def htmlInfo = state?.htmlInfo
+    //def htmlInfo = state?.htmlInfo
+    def htmlInfo
+    state.chartJsData = null
     if(htmlInfo?.chartJsUrl && htmlInfo?.chartJsVer) {
         if(state?.chartJsData) {
             if (state?.chartJsVer?.toInteger() == htmlInfo?.chartJsVer?.toInteger()) {
-                log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
+                //log.debug "getChartJsData: Chart Javascript Data is Current | Loading Data from State..."
                 chartJsData = state?.chartJsData
             } else if (state?.chartJsVer?.toInteger() < htmlInfo?.chartJsVer?.toInteger()) {
-                log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
+                //log.debug "getChartJsData: Chart Javascript Data is Outdated | Loading Data from Source..."
                 chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
                 state.chartJsData = chartJsData
                 state?.chartJsVer = htmlInfo?.chartJsVer
             }
         } else {
-            log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
+            //log.debug "getChartJsData: Chart Javascript Data is Missing | Loading Data from Source..."
             chartJsData = getFileBase64(htmlInfo.chartJsUrl, "text", "css")
             state?.chartJsData = chartJsData
             state?.chartJsVer = htmlInfo?.chartJsVer
         }
     } else {
-        log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
+        //log.debug "getChartJsData: No Stored Chart Javascript Data Found for Device... Loading for Static URL..."
         chartJsData = getFileBase64(chartJsUrl(), "text", "javascript")
     }
     return chartJsData
@@ -889,6 +892,16 @@ def getWeatherIcon(weatherIcon) {
     catch (ex) {
         log.error "getWeatherIcon Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getWeatherIcon")
+    }
+}
+
+def getFavIcon() {
+    try {
+        return getImgBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "ico")
+    }
+    catch (ex) {
+        log.error "getFavIcon Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getFavIcon")
     }
 }
 
@@ -974,25 +987,33 @@ def forecastDay(day) {
     return  dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
+def resetDataTables() {
+    log.warn "Resetting Data Tables..."
+    state.temperatureTable = null
+    state.temperatureTableYesterday = null
+    state.dewpointTable = null
+    state.dewpointTableYesterday = null
+}
+
 String getDataString(Integer seriesIndex) {
     def dataString = ""
     def dataTable = []
     switch (seriesIndex) {
         case 1:
-                dataTable = state?.temperatureTableYesterday
-                break
+            dataTable = state?.temperatureTableYesterday
+            break
         case 2:
-                dataTable = state?.dewpointTableYesterday
-                break
+            dataTable = state?.dewpointTableYesterday
+            break
         case 3:
-                dataTable = state?.temperatureTable
-                break
+            dataTable = state?.temperatureTable
+            break
         case 4:
-                dataTable = state?.dewpointTable
-                break
+            dataTable = state?.dewpointTable
+            break
     }
     dataTable.each() {
-        def dataArray = [[it[0],it[1],0],null,null,null,null]
+        def dataArray = [[it[0],it[1],0],null,null,null,null,null,null]
         dataArray[seriesIndex] = it[2]
         dataString += dataArray?.toString() + ","
     }
@@ -1013,7 +1034,7 @@ def getSomeOldData(devpoll = false) {
     def dataTable = []
 
     if (state.dewpointTableYesterday == null) {
-        log.trace "Querying DB for yesterday's data…"
+        log.trace "Querying DB for yesterday's dewpoint data…"
         def dewpointData = device.statesBetween("dewpoint", startOfToday - 1, startOfToday, [max: 100]) // 24h in 15min intervals should be more than sufficient…
         log.debug "got ${dewpointData.size()}"
 
@@ -1034,7 +1055,7 @@ def getSomeOldData(devpoll = false) {
     }
 
     if (state.temperatureTableYesterday == null) {
-        log.trace "2"
+        log.trace "Querying DB for yesterday's temperature data…"
         def temperatureData = device.statesBetween("temperature", startOfToday - 1, startOfToday, [max: 100])
         log.debug "got ${temperatureData.size()}"
         while ((newValues = device.statesBetween("temperature", startOfToday - 1, temperatureData.last().date, [max: 100])).size()) {
@@ -1059,7 +1080,7 @@ def getSomeOldData(devpoll = false) {
     }
 */
     if (dewpointTable == null) {
-        log.trace "Querying DB for today's data…"
+        log.trace "Querying DB for today's dewpoint data…"
         def dewpointData = device.statesSince("dewpoint", startOfToday, [max: 100])
         log.debug "got ${dewpointData.size()}"
         while ((newValues = device.statesBetween("dewpoint", startOfToday, dewpointData.last().date, [max: 100])).size()) {
@@ -1077,7 +1098,7 @@ def getSomeOldData(devpoll = false) {
     }
 
     if (temperatureTable == null) {
-        log.trace "4"
+        log.trace "Querying DB for today's temperature data…"
         def temperatureData = device.statesSince("temperature", startOfToday, [max: 100])
         log.debug "got ${temperatureData.size()}"
         while ((newValues = device.statesBetween("temperature", startOfToday, temperatureData.last().date, [max: 100])).size()) {
@@ -1106,6 +1127,8 @@ def getSomeData(devpoll = false) {
         state.temperatureTableYesterday = null
         state.dewpointTable = null
         state.temperatureTable = null
+        state.humidityTableYesterday = null
+        state.humidityTable = null
         state.remove("dewpointTableYesterday")
         state.remove("temperatureTableYesterday")
         state.remove("dewpointTable")
@@ -1129,6 +1152,7 @@ def getSomeData(devpoll = false) {
 
     def temperatureTable = state?.temperatureTable
     def dewpointTable = state?.dewpointTable
+    def humidityTable = state?.humidityTable
 
     if (state?.temperatureTableYesterday?.size() == 0) {
         state.temperatureTableYesterday = temperatureTable
@@ -1136,7 +1160,6 @@ def getSomeData(devpoll = false) {
     }
 
     if (!state.today || state.today != todayDay) {
-
         state.today = todayDay
         state.dewpointTableYesterday = dewpointTable
         state.temperatureTableYesterday = temperatureTable
@@ -1176,42 +1199,146 @@ def getStartTime() {
 
 def getMinTemp() {
     def list = []
-    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
-    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
-    if (state?.dewpointTableYesterday?.size()) { list.add(state?.dewpointTableYesterday.min { it[2] }[2].toInteger()) }
-    if (state?.dewpointTable?.size()) { list.add(state?.dewpointTable.min { it[2] }[2].toInteger()) }
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.min { it[2] }[2].toInteger()) }
+    else { list.add(0) }
     //log.trace "getMinTemp: ${list.min()} result: ${list}"
     return list?.min()
 }
 
 def getMaxTemp() {
     def list = []
-    if (state?.temperatureTableYesterday?.size()) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
-    if (state?.temperatureTable?.size()) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
-    if (state?.dewpointTableYesterday?.size()) { list.add(state?.dewpointTableYesterday.max { it[2] }[2].toInteger()) }
-    if (state?.dewpointTable?.size()) { list.add(state?.dewpointTable.max { it[2] }[2].toInteger()) }
+    if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.dewpointTableYesterday?.size() > 0) { list.add(state?.dewpointTableYesterday.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
+    if (state?.dewpointTable?.size() > 0) { list.add(state?.dewpointTable.max { it[2] }[2].toInteger()) }
+    else { list.add(0) }
     //log.trace "getMaxTemp: ${list.max()} result: ${list}"
     return list?.max()
 }
 
-def getGraphHTML() {
+def getWeatherHTML() {
     try {
-        log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
+        //log.debug "State Size: ${getStateSize()} (${getStateSizePerc()}%)"
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
+        //def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
+        def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
 
         def tempStr = "°F"
         if ( wantMetric() ) {
             tempStr = "°C"
         }
 
-        def chartHtml = (
-                state?.temperatureTable?.size() > 0 &&
-                state?.dewpointTable?.size() > 0 &&
-                state?.temperatureTableYesterday?.size() > 0 &&
-                state?.dewpointTableYesterday?.size() > 0) ? showChartHtml() : hideChartHtml()
+        def hData = ""
+        if (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0) {
+            def minval = getMinTemp()
+            def minstr = "minValue: ${minval},"
 
-        def html = """
+            def maxval = getMaxTemp()
+            def maxstr = "maxValue: ${maxval},"
+
+            def differ = maxval - minval
+            //log.trace "differ ${differ}"
+            if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
+                minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
+                if (differ < (wantMetric() ? 10:20) ) {
+                  maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
+                }
+            }
+
+            hData = """
+                <script type="text/javascript">
+                  google.charts.load('current', {packages: ['corechart']});
+                  google.charts.setOnLoadCallback(drawGraph);
+                  function drawGraph() {
+                      var data = new google.visualization.DataTable();
+                      data.addColumn('timeofday', 'time');
+                      data.addColumn('number', 'Temp (Yesterday)');
+                      data.addColumn('number', 'Dew (Yesterday)');
+                      data.addColumn('number', 'Temp (Today)');
+                      data.addColumn('number', 'Dew (Today)');
+                      data.addColumn('number', 'Humidity (Yest)');
+                      data.addColumn('number', 'Humidity (Today)');
+                      data.addRows([
+                          ${getDataString(1)}
+                          ${getDataString(2)}
+                          ${getDataString(3)}
+                          ${getDataString(4)}
+                      ]);
+                      var options = {
+                          width: '100%',
+                          height: '100%',
+                          hAxis: {
+                              format: 'H:mm',
+                              minValue: [${getStartTime()},0,0],
+                              slantedText: true,
+                              slantedTextAngle: 30
+                          },
+                          series: {
+                              0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+                              1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
+                              2: {targetAxisIndex: 1, color: '#FF0000'},
+                              3: {targetAxisIndex: 0, color: '#004CFF'}
+                          },
+                          vAxes: {
+                              0: {
+                                  title: 'Dewpoint (${tempStr})',
+                                  format: 'decimal',
+                                  ${minstr}
+                                  ${maxstr}
+                                  textStyle: {color: '#004CFF'},
+                                  titleTextStyle: {color: '#004CFF'}
+                              },
+                              1: {
+                                  title: 'Temperature (${tempStr})',
+                                  format: 'decimal',
+                                  ${minstr}
+                                  ${maxstr}
+                                  textStyle: {color: '#FF0000'},
+                                  titleTextStyle: {color: '#FF0000'}
+                              }
+                          },
+                          legend: {
+                              position: 'bottom',
+                              maxLines: 4,
+                              textStyle: {color: '#000000'}
+                          },
+                          chartArea: {
+                              left: '12%',
+                              right: '18%',
+                              top: '3%',
+                              bottom: '20%',
+                              height: '85%',
+                              width: '100%'
+                          }
+                      };
+                      var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                      chart.draw(data, options);
+                  }
+              </script>
+              <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+              <div id="chart_div" style="width: 100%; height: 225px;"></div>
+            """
+        } else {
+            hData = """
+                <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+                <br></br>
+                <div class="centerText">
+                  <p>Waiting for more data to be collected</p>
+                  <p>This may take at a couple hours</p>
+                </div>
+            """
+        }
+
+        def mainHtml = """
         <!DOCTYPE html>
         <html>
             <head>
@@ -1222,7 +1349,8 @@ def getGraphHTML() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-             	  <link rel="stylesheet prefetch" href="${getCssData()}"/>
+                <link rel="icon" href="${getFavIcon()}" type="image/x-icon" />
+             	<link rel="stylesheet prefetch" href="${getCssData()}"/>
                 <script type="text/javascript" src="${getChartJsData()}"></script>
             </head>
             <body>
@@ -1279,120 +1407,16 @@ def getGraphHTML() {
                       </div>
                     </div>
                     <br></br>
-                    ${chartHtml}
+                    ${hData}
             	</body>
         	</html>
         """
-        render contentType: "text/html", data: html, status: 200
+        render contentType: "text/html", data: mainHtml, status: 200
     }
     catch (ex) {
-        log.error "getWeatherHtml Exception: ${ex}", ex
-        exceptionDataHandler(ex.message, "getWeatherHtml")
+        log.error "getWeatherHTML Exception: ${ex}", ex
+        exceptionDataHandler(ex.message, "getWeatherHTML")
     }
-}
-
-def showChartHtml() {
-    def tempStr = "°F"
-    if ( wantMetric() ) { tempStr = "°C" }
-    def minval = getMinTemp()
-    def minstr = "minValue: ${minval},"
-
-    def maxval = getMaxTemp()
-    def maxstr = "maxValue: ${maxval},"
-
-    def differ = maxval - minval
-    //log.trace "differ ${differ}"
-    if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-        minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
-        if (differ < (wantMetric() ? 10:20) ) {
-          maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
-        }
-    }
-
-    def data = """
-        <script type="text/javascript">
-          google.charts.load('current', {packages: ['corechart']});
-          google.charts.setOnLoadCallback(drawGraph);
-          function drawGraph() {
-              var data = new google.visualization.DataTable();
-              data.addColumn('timeofday', 'time');
-              data.addColumn('number', 'Temp (Yesterday)');
-              data.addColumn('number', 'Dew (Yesterday)');
-              data.addColumn('number', 'Temp (Today)');
-              data.addColumn('number', 'Dew (Today)');
-              data.addRows([
-                  ${getDataString(1)}
-                  ${getDataString(2)}
-                  ${getDataString(3)}
-                  ${getDataString(4)}
-              ]);
-              var options = {
-                  width: '100%',
-                  height: '100%',
-                  hAxis: {
-                      format: 'H:mm',
-                      minValue: [${getStartTime()},0,0],
-                      slantedText: true,
-                      slantedTextAngle: 30
-                  },
-                  series: {
-                      0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-                      1: {targetAxisIndex: 0, color: '#D1DFFF', lineWidth: 1},
-                      2: {targetAxisIndex: 1, color: '#FF0000'},
-                      3: {targetAxisIndex: 0, color: '#004CFF'}
-                  },
-                  vAxes: {
-                      0: {
-                          title: 'Dewpoint (${tempStr})',
-                          format: 'decimal',
-                          ${minstr}
-                          ${maxstr}
-                          textStyle: {color: '#004CFF'},
-                          titleTextStyle: {color: '#004CFF'}
-                      },
-                      1: {
-                          title: 'Temperature (${tempStr})',
-                          format: 'decimal',
-                          ${minstr}
-                          ${maxstr}
-                          textStyle: {color: '#FF0000'},
-                          titleTextStyle: {color: '#FF0000'}
-                      }
-                  },
-                  legend: {
-                      position: 'bottom',
-                      maxLines: 4,
-                      textStyle: {color: '#000000'}
-                  },
-                  chartArea: {
-                      left: '12%',
-                      right: '18%',
-                      top: '3%',
-                      bottom: '20%',
-                      height: '85%',
-                      width: '100%'
-                  }
-              };
-              var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
-              chart.draw(data, options);
-          }
-      </script>
-      <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-      <div id="chart_div" style="width: 100%; height: 225px;"></div>
-    """
-    return data
-}
-
-def hideChartHtml() {
-    def data = """
-        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-        <br></br>
-        <div class="centerText">
-          <p>Waiting for more data to be collected</p>
-          <p>This may take at least 24 hours</p>
-        </div>
-    """
-    return data
 }
 
 private def textDevName()  { return "Nest Weather${appDevName()}" }
