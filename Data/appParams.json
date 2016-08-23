@@ -20,7 +20,7 @@
         },
         "camera": {
             "type": "rel",
-            "ver": "1.0.2"
+            "ver": "1.0.3"
         },
         "presence": {
             "type": "rel",
@@ -28,7 +28,7 @@
         },
         "weather": {
             "type": "rel",
-            "ver": "3.0.1"
+            "ver": "3.0.2"
         }
     },
     "token": {
@@ -64,7 +64,7 @@
             },
             "camera": {
                 "type": "rel",
-                "ver": "1.0.2"
+                "ver": "1.0.3"
             },
             "presence": {
                 "type": "rel",
@@ -72,7 +72,7 @@
             },
             "weather": {
                 "type": "rel",
-                "ver": "3.0.2"
+                "ver": "3.1.0"
             }
         }
     },
