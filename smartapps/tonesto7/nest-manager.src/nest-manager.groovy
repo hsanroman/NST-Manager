@@ -753,7 +753,7 @@ def uninstManagerApp() {
             sendNotificationEvent("${textAppName()} is uninstalled...")
         }
     } catch (ex) {
-        log.error "uninstManagerApp Exception: ${ex}", ex
+        log.error "uninstManagerApp Exception:", ex
         sendExceptionData(ex.message, "uninstManagerApp")
     }
 }
@@ -1046,7 +1046,7 @@ def getApiData(type = null) {
                 log.warn "Received '${ex.message}' response code..."
             }
         } else {
-            log.error "getApiData (type: $type) Exception: ${ex}", ex
+            log.error "getApiData (type: $type) Exception:", ex
             if(type == "str") { atomicState.needStrPoll = true }
             else if(type == "dev") { atomicState?.needDevPoll = true }
         }
@@ -1289,7 +1289,7 @@ def updateChildData(force = false) {
         atomicState.needChildUpd = false
     }
     catch (ex) {
-        log.error "updateChildData Exception: ${ex}", ex
+        log.error "updateChildData Exception:", ex
         sendExceptionData(ex.message, "updateChildData")
         atomicState?.lastChildUpdDt = null
         return
@@ -1436,7 +1436,7 @@ def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
             }
         }
     } catch (ex) {
-        log.error "sendEvtUpdateToDevice Exception: ${ex}", ex
+        log.error "sendEvtUpdateToDevice Exception:", ex
         sendExceptionData(ex.message, "sendEvtUpdateToDevice")
     }
 }
@@ -1701,9 +1701,9 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
         }
     }
     catch (ex) {
-        log.error "sendNestApiCmd Exception: ${ex}", ex
+        log.error "sendNestApiCmd Exception:", ex
         sendExceptionData(ex.message, "sendNestApiCmd")
-        if(childDebug && childDev) { childDev?.log("sendNestApiCmd Exception: ${ex}", "error") }
+        if(childDebug && childDev) { childDev?.log("sendNestApiCmd Exception: ${ex.message}", "error") }
         return false
     }
 }
@@ -1876,7 +1876,7 @@ void workQueue() {
         } else { atomicState.pollBlocked = false }
     }
     catch (ex) {
-        log.error "workQueue Exception Error: ${ex}", ex
+        log.error "workQueue Exception Error:", ex
         sendExceptionData(ex.message, "workQueue")
         cmdProcState(false)
         atomicState.needDevPoll = true
@@ -1941,7 +1941,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
         }
     }
     catch (ex) {
-        log.error "procNestApiCmd Exception: ${ex} | ($type | $obj:$objVal)", ex
+        log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
         sendExceptionData(ex.message, "procNestApiCmd")
         apiIssueEvent(true)
         atomicState?.lastCmdSentStatus = "failed"
@@ -1956,7 +1956,7 @@ def increaseCmdCnt() {
         LogAction("Api CmdCnt: $cmdCnt", "info", false)
         if(cmdCnt) { atomicState?.apiCommandCnt = cmdCnt?.toInteger() }
     } catch (ex) {
-        log.error "increaseCmdCnt Exception: ${ex}", ex
+        log.error "increaseCmdCnt Exception:", ex
         sendExceptionData(ex.message, "increaseCmdCnt")
     }
 }
@@ -2068,7 +2068,7 @@ def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null
             }
         }
     } catch (ex) {
-        log.error "sendMsg Exception: ${ex}", ex
+        log.error "sendMsg Exception:", ex
         sendExceptionData(ex.message, "sendMsg")
     }
 }
@@ -2156,7 +2156,7 @@ def getWeatherConditions(force = false) {
             }
         }
         catch (ex) {
-            log.error "getWeatherConditions Exception: ${ex}", ex
+            log.error "getWeatherConditions Exception:", ex
             sendExceptionData(ex.message, "getWeatherConditions")
             return false
         }
@@ -2230,7 +2230,7 @@ def getWebFileData() {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
                log.warn  "appParams.json file not found..."
         } else {
-            log.error "getWebFileData Exception: ${ex}", ex
+            log.error "getWebFileData Exception:", ex
         }
         sendExceptionData(ex.message, "getWebFileData")
     }
@@ -2390,7 +2390,7 @@ def getNestStructures() {
         } else { LogAction("Missing: atomicState.structData  ${atomicState?.structData}", "warn", true) }
 
     } catch (ex) {
-        log.error "getNestStructures Exception: ${ex}", ex
+        log.error "getNestStructures Exception:", ex
         sendExceptionData(ex.message, "getNestStructures")
     }
     return struct
@@ -2835,7 +2835,7 @@ def addRemoveDevices(uninst = null) {
             sendPush(msg)
             LogAction("addRemoveDevices Exception | $msg", "warn", true)
         }
-        else { log.error "addRemoveDevices Exception: ${ex}", ex }
+        else { log.error "addRemoveDevices Exception:", ex }
         sendExceptionData(ex.message, "addRemoveDevices")
         retVal = false
     }
@@ -3037,7 +3037,7 @@ def deviceHandlerTest() {
         if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
             LogAction("Device Handlers are missing: ${getThermostatChildName()}, ${getPresenceChildName()}, and ${getProtectChildName()}, Verify the Device Handlers are installed and Published via the IDE", "error", true)
         } else {
-            log.error "deviceHandlerTest Exception: ${ex}", ex
+            log.error "deviceHandlerTest Exception:", ex
             sendExceptionData(ex.message, "deviceHandlerTest")
         }
         atomicState.devHandlersTested = false
@@ -3057,7 +3057,7 @@ def removeTestDevs() {
             }
         }
     } catch (ex) {
-        log.error "deviceHandlerTest Exception: ${ex}", ex
+        log.error "deviceHandlerTest Exception:", ex
         sendExceptionData(ex.message, "removeTestDevs")
     }
 }
@@ -3089,7 +3089,7 @@ def getEndpointUrl() {
             return resp?.data?.uri
         }
     } catch (ex) {
-        log.error "getEndpointUrl Exception: ${ex}", ex
+        log.error "getEndpointUrl Exception:", ex
         sendExceptionData(ex.message, "getEndpointUrl")
     }
 }
@@ -3163,7 +3163,7 @@ def callback() {
         else { LogAction("callback() failed oauthState != atomicState.oauthInitState", "error", true) }
     }
     catch (ex) {
-        log.error "Callback Exception: ${ex}", ex
+        log.error "Callback Exception:", ex
         sendExceptionData(ex.message, "callback")
     }
 }
@@ -3184,7 +3184,7 @@ def revokeNestToken() {
         }
     }
     catch (ex) {
-        log.error "revokeNestToken Exception: ${ex}", ex
+        log.error "revokeNestToken Exception:", ex
         sendExceptionData(ex.message, "revokeNestToken")
         return false
     }
@@ -3597,7 +3597,7 @@ def quietTimeOk() {
             return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
     } catch (ex) {
-        log.error "timeOk Exception: ${ex}", ex
+        log.error "timeOk Exception:", ex
         sendExceptionData(ex.message, "quietTimeOk")
     }
 }
@@ -3622,7 +3622,7 @@ def notificationTimeOk() {
             return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
         } else { return true }
     } catch (ex) {
-        log.error "notificationTimeOk Exception: ${ex}", ex
+        log.error "notificationTimeOk Exception:", ex
         sendExceptionData(ex.message, "notificationTimeOk")
     }
 }
@@ -4457,7 +4457,7 @@ def createInstallDataJson() {
         return resultJson
 
     } catch (ex) {
-        log.error "createInstallDataJson: Exception: ${ex}", ex
+        log.error "createInstallDataJson: Exception:", ex
         sendExceptionData(ex.message, "createInstallDataJson")
     }
 }
@@ -4467,14 +4467,14 @@ def renderInstallData() {
         def resultJson = createInstallDataJson()
         def resultString = new groovy.json.JsonOutput().prettyPrint(resultJson)
         render contentType: "application/json", data: resultString
-    } catch (ex) { log.error "renderInstallData Exception: ${ex}", ex }
+    } catch (ex) { log.error "renderInstallData Exception:", ex }
 }
 
 def renderInstallId() {
     try {
         def resultJson = new groovy.json.JsonOutput().toJson(atomicState?.installationId)
         render contentType: "application/json", data: resultJson
-    } catch (ex) { log.error "renderInstallId Exception: ${ex}", ex }
+    } catch (ex) { log.error "renderInstallId Exception:", ex }
 }
 
 def sendInstallData() {
@@ -4546,16 +4546,16 @@ def sendFirebaseData(data, pathVal) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendFirebaseData: 'HttpResponseException' Exception: ${ex}", "error", true)
+            LogAction("sendFirebaseData: 'HttpResponseException' Exception: ${ex.message}", "error", true)
         }
-        else { log.error "sendFirebaseData: Exception: ${ex}", ex }
+        else { log.error "sendFirebaseData: Exception:", ex }
         sendExceptionData(ex.message, "sendFirebaseData")
     }
     return result
 }
 
 def sendFirebaseExceptionData(data, pathVal) {
-    //log.trace "sendExceptionData(${data}, ${pathVal}"
+    //log.trace "sendFirebaseExceptionData(${data}, ${pathVal}"
     def json = new groovy.json.JsonOutput().prettyPrint(data)
     def result = false
     def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
@@ -4577,9 +4577,9 @@ def sendFirebaseExceptionData(data, pathVal) {
     }
     catch (ex) {
         if(ex instanceof groovyx.net.http.HttpResponseException) {
-            LogAction("sendFirebaseExceptionData: 'HttpResponseException' Exception: ${ex}", "error", true)
+            LogAction("sendFirebaseExceptionData: 'HttpResponseException' Exception: ${ex.message}", "error", true)
         }
-        else { log.error "sendFirebaseExceptionData: Exception: ${ex}", ex }
+        else { log.error "sendFirebaseExceptionData: Exception:", ex }
     }
     return result
 }
@@ -4596,7 +4596,7 @@ def removeFirebaseData(pathVal) {
         if(ex instanceof groovyx.net.http.ResponseParseException) {
             LogAction("removeFirebaseData: Response: ${ex.message}", "info", true)
         } else {
-            LogAction("removeFirebaseData: Exception: ${ex}", "error", true)
+            LogAction("removeFirebaseData: Exception: ${ex.message}", "error", true)
             sendExceptionData(ex.message, "removeFirebaseData")
             result = false
         }
@@ -5782,8 +5782,8 @@ def remSenTstatFanSwitchCheck() {
 
         //storeExecutionHistory((now()-execTime), "remSenTstatFanSwitchCheck")
     } catch (ex) {
-        log.error "remSenTstatFanSwitchCheck Exception: (${ex})", ex
-        parent?.sendExceptionData(ex, "remSenTstatFanSwitchCheck", true, getAutoType())
+        log.error "remSenTstatFanSwitchCheck Exception", ex
+        parent?.sendExceptionData(ex.message, "remSenTstatFanSwitchCheck", true, getAutoType())
     }
 }
 
@@ -6075,7 +6075,7 @@ private remSenEvtEval() {
         }
         storeExecutionHistory((now() - execTime), "remSenEvtEval")
     } catch (ex) {
-        log.error "remSenEvtEval Exception: ${ex}", ex
+        log.error "remSenEvtEval Exception:", ex
         parent?.sendExceptionData(ex.message, "remSenEvtEval", true, getAutoType())
     }
 }
@@ -6230,7 +6230,7 @@ def getRemSenTempsToList() {
             return info
         }
     } catch (ex) {
-        log.error "getRemSenTempsToList Exception: ${ex}", ex
+        log.error "getRemSenTempsToList Exception:", ex
     }
 }
 
@@ -6536,7 +6536,7 @@ def fanCtrlCheck() {
         storeExecutionHistory((now()-execTime), "fanCtrlCheck")
 
     } catch (ex) {
-        log.error "fanCtrlCheck Exception: (${ex})", ex
+        log.error "fanCtrlCheck Exception:", ex
         parent?.sendExceptionData(ex.message, "fanCtrlCheck", true, getAutoType())
     }
 }
@@ -6641,7 +6641,7 @@ def doFanOperation(tempDiff) {
             }
         }
     } catch (ex) {
-        log.error "doFanOperation Exception: (${ex})", ex
+        log.error "doFanOperation Exception:", ex
         parent?.sendExceptionData(ex.message, "doFanOperation", true, getAutoType())
     }
 }
@@ -6881,7 +6881,7 @@ def extTmpTempOk() {
         storeExecutionHistory((now() - execTime), "getExtTmpTempOk")
         return retval
     } catch (ex) {
-        log.error "getExtTmpTempOk Exception: ${ex}", ex
+        log.error "getExtTmpTempOk Exception:", ex
         parent?.sendExceptionData(ex.message, "extTmpTempOk", true, getAutoType())
     }
 }
@@ -7011,7 +7011,7 @@ def extTmpTempCheck(cTimeOut = false) {
             storeExecutionHistory((now() - execTime), "extTmpTempCheck")
         }
     } catch (ex) {
-        log.error "extTmpTempCheck Exception: (${ex})", ex
+        log.error "extTmpTempCheck Exception:", ex
         parent?.sendExceptionData(ex.message, "extTmpTempCheck", true, getAutoType())
     }
 }
@@ -7337,7 +7337,7 @@ def conWatCheck(cTimeOut = false) {
             storeExecutionHistory((now() - execTime), "conWatCheck")
         }
     } catch (ex) {
-        log.error "conWatCheck Exception: (${ex})", "error", ex
+        log.error "conWatCheck Exception:", "error", ex
         parent?.sendExceptionData(ex.message, "conWatCheck", true, getAutoType())
     }
 }
@@ -7600,7 +7600,7 @@ def leakWatCheck() {
             storeExecutionHistory((now() - execTime), "leakWatCheck")
         }
     } catch (ex) {
-        log.error "leakWatCheck Exception: (${ex})", ex
+        log.error "leakWatCheck Exception:", ex
         parent?.sendExceptionData(ex.message, "leakWatCheck", true, getAutoType())
     }
 }
@@ -7920,7 +7920,7 @@ def checkNestMode() {
             storeExecutionHistory((now() - execTime), "checkNestMode")
         }
     } catch (ex) {
-        log.error "checkNestMode Exception: (${ex})", ex
+        log.error "checkNestMode Exception:", ex
         parent?.sendExceptionData(ex.message, "checkNestMode", true, getAutoType())
     }
 }
@@ -8212,7 +8212,7 @@ def checkTstatMode() {
         }
         storeExecutionHistory((now() - execTime), "checkTstaMode")
     } catch (ex) {
-        log.error "checkTstaMode Exception: (${ex})", ex
+        log.error "checkTstaMode Exception:", ex
         parent?.sendExceptionData(ex.message, "checkTstatMode", true, getAutoType())
     }
 }
@@ -8259,8 +8259,8 @@ def storeExecutionHistory(val, method = null) {
         }
         if(list) { atomicState?.evalExecutionHistory = list }
     } catch (ex) {
-        log.error "storeExecutionHistory Exception: ${ex}", ex
-        sendExceptionData(ex.message, "storeExecutionHistory")
+        log.error "storeExecutionHistory Exception:", ex
+        parent?.sendExceptionData(ex.message, "storeExecutionHistory", true, getAutoType())
     }
 }
 
@@ -8509,7 +8509,7 @@ def voiceNotifString(phrase) {
         if (phrase.toLowerCase().contains("%offdelay%")) { phrase = phrase.toLowerCase().replace('%offdelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffDelay").toString()) }
         if (phrase.toLowerCase().contains("%ondelay%")) { phrase = phrase.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OnDelay").toString()) }
     } catch (ex) {
-        log.error "voiceNotifString Exception: ${ex}", ex
+        log.error "voiceNotifString Exception:", ex
         parent?.sendExceptionData(ex.message, "voiceNotifString", true, getAutoType())
     }
     return phrase
@@ -8739,7 +8739,7 @@ def autoScheduleOk(autoType) {
         LogAction("autoScheduleOk( dayOk: $dayOk | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | inverted: ${inverted})", "info", false)
         return (modeOk && dayOk && timeOk) ? true : false
     } catch (ex) {
-        log.error "${autoType}-autoScheduleOk Exception: ${ex}", ex
+        log.error "${autoType}-autoScheduleOk Exception:", ex
         parent?.sendExceptionData(ex.message, "${autoType}-autoScheduleOk", true, getAutoType())
     }
 }
@@ -8860,7 +8860,7 @@ def sendEventAlarmAction(evtNum) {
             }
         }
     } catch (ex) {
-        log.error "sendEventAlarmAction Exception: ($evtNum) - (${ex})", ex
+        log.error "sendEventAlarmAction Exception: ($evtNum) - ", ex
         parent?.sendExceptionData(ex.message, "sendEventAlarmAction", true, getAutoType())
     }
    return resval
@@ -8968,8 +8968,8 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
         atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
         atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
     } catch (ex) {
-        log.error "getTstatCapabilities Exception: ${ex}", ex
-        parent?.sendExceptionData("${tstat} - ${autoType} | ${ex}", "getTstatCapabilities", true, getAutoType())
+        log.error "getTstatCapabilities Exception:", ex
+        parent?.sendExceptionData("${tstat} - ${autoType} | ${ex.message}", "getTstatCapabilities", true, getAutoType())
     }
 }
 
@@ -9105,7 +9105,7 @@ def setTstatMode(tstat, mode) {
         }
     }
     catch (ex) {
-        log.error "setTstatMode() Exception | ${ex}", ex
+        log.error "setTstatMode() Exception:", ex
         parent?.sendExceptionData(ex.message, "setTstatMode", true, getAutoType())
     }
     return result
@@ -9125,7 +9125,7 @@ def setMultipleTstatMode(tstats, mode) {
             }
         }
     } catch (ex) {
-        log.error "setMultipleTstatMode() Exception | ${ex}", ex
+        log.error "setMultipleTstatMode() Exception:", ex
         parent?.sendExceptionData(ex.message, "setMultipleTstatMode", true, getAutoType())
     }
     return result
@@ -9309,7 +9309,7 @@ void sendTTS(txt) {
             }
         }
     } catch (ex) {
-        log.error "sendTTS Exception: (${ex})", ex
+        log.error "sendTTS Exception:", ex
         parent?.sendExceptionData(ex.message, "sendTTS", true, getAutoType())
     }
 }
