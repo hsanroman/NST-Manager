@@ -37,11 +37,16 @@ definition(
 }
 
 def appVersion() { "3.1.0" }
-def appVerDate() { "8-22-2016" }
+def appVerDate() { "8-23-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V3.0.2 (August 17th, 2016):"
+    str += "V3.1.0 (August 23rd, 2016):"
+    str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+    str += "\n • ADDED: Remote sensor automation virtual thermostat"
+    str += "\n • ADDED: Initial Commit of Web Dashboard"
+
+    str += "\n\nV3.0.2 (August 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • UPDATED: Timeout bugfixes"
 
@@ -752,7 +757,7 @@ def api_dashboard() {
     			</div>
     			<footer id="footer">
     				<div id="footer-inner">
-    					<p>&copy; Copyright <a href="#">Dashboard Link</a> &#124; <a href="#"SmartApp Version: v${appVersion()}</a></p>
+    					<p><a href="#">Dashboard Link</a> &#124; <a href="#">SmartApp Version: v${appVersion()}</a></p>
     					<div class="clr"></div>
     				</div>
     			</footer>
