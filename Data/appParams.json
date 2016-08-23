@@ -24,7 +24,7 @@
         },
         "presence": {
             "type": "rel",
-            "ver": "3.0.1"
+            "ver": "3.0.2"
         },
         "weather": {
             "type": "rel",
@@ -68,7 +68,7 @@
             },
             "weather": {
                 "type": "rel",
-                "ver": "3.0.1"
+                "ver": "3.0.2"
             }
         }
     },
