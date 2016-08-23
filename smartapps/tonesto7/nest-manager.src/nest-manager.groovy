@@ -9400,7 +9400,7 @@ def api_dashboard() {
     		    <title>Nest Manager Dashboard</title>
 
                 <link href="${urlRoot}/css/bootstrap.min.css" rel="stylesheet">
-                <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+                <link href="${urlRoot}/css/font-awesome.min.css" rel="stylesheet">
                 <script src="${urlRoot}/js/jquery.js"></script>
                 <script src="${urlRoot}/js/bootstrap.min.js"></script>
     	    </head>
@@ -9448,7 +9448,6 @@ def api_dashboard() {
                 				<span class="icon-bar"></span>
                 				<span class="icon-bar"></span>
                 			</button>
-                			<a class="navbar-brand" href="#">Brand</a>
                 		</div>
                 		<!-- Collect the nav links, forms, and other content for toggling -->
                 		<div class="collapse navbar-collapse" id="bs-sidebar-navbar-collapse-1">
@@ -9492,8 +9491,8 @@ def api_dashboard() {
                 <div class="container">
                     <div class="row">
                         <div class="col-lg-12">
-                            <h1>Logo Nav by Start Bootstrap</h1>
-                            <p>Note: You may need to adjust some CSS based on the size of your logo. The default logo size is 150x50 pixels.</p>
+                            <h1>Nest Manager Dashboard</h1>
+                            <p>Note: Things need to go below this point :)</p>
                         </div>
                     </div>
                 </div>
