@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "1.0.1" }
+def devVer() { return "1.0.2" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -199,6 +199,8 @@ def processEvent() {
             publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
             if(!results?.last_is_online_change) { lastCheckinEvent(null) }
             else { lastCheckinEvent(results?.last_is_online_change?.toString()) }
+            if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
+            if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
             apiStatusEvent(eventData?.apiIssues)
             debugOnEvent(eventData?.debug ? true : false)
             onlineStatusEvent(results?.is_online?.toString())
@@ -217,7 +219,6 @@ def processEvent() {
                 if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
             }
             deviceVerEvent(eventData?.latestVer.toString())
-            state?.cssUrl = eventData?.cssUrl
             lastUpdatedEvent()
         }
         //log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
@@ -228,6 +229,9 @@ def processEvent() {
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
+
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def getDataByName(String name) {
     state[name] ?: device.getDataValue(name)
@@ -468,9 +472,13 @@ def onlineStatusEvent(online) {
 }
 
 def getPublicVideoId() {
-    if(state?.public_share_url) {
-        def vidId = state?.public_share_url.tokenize('/')
-        return vidId[3].toString()
+    try {
+        if(state?.public_share_url) {
+            def vidId = state?.public_share_url.tokenize('/')
+            return vidId[3].toString()
+        }
+    } catch (ex) {
+        log.error "getPublicVideoId Exception..", ex
     }
 }
 
@@ -586,9 +594,13 @@ def log(message, level = "trace") {
 }
 
 def exceptionDataHandler(msg, methodName) {
-    if(msg && methodName) {
-        def msgString = "${msg}"
-        parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
+    if(state?.allowDbException == false) {
+        return
+    } else {
+        if(msg && methodName) {
+            def msgString = "${msg}"
+            parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
+        }
     }
 }
 
@@ -646,6 +658,29 @@ def getImgBase64(url,type) {
     }
 }
 
+def getFileBase64(url,preType,fileType) {
+    def params = [
+        uri: url,
+        contentType: '$preType/$fileType'
+    ]
+    httpGet(params) { resp ->
+        if(resp.data) {
+            def respData = resp?.data
+            ByteArrayOutputStream bos = new ByteArrayOutputStream()
+            int len
+            int size = 4096
+            byte[] buf = new byte[size]
+            while ((len = respData.read(buf, 0, size)) != -1)
+                bos.write(buf, 0, len)
+            buf = bos.toByteArray()
+            //log.debug "buf: $buf"
+            String s = buf?.encodeBase64()
+            //log.debug "resp: ${s}"
+            return s ? "data:${preType}/${fileType};base64,${s.toString()}" : null
+        }
+    }
+}
+
 def getImg(imgName) {
     return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
@@ -670,6 +705,35 @@ def getJS(url){
         return resp?.data.text
     }
 }
+
+def getCssData() {
+    def cssData = null
+    def htmlInfo = state?.htmlInfo
+    if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
+        if(state?.cssData) {
+            if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Current | Loading Data from State..."
+                cssData = state?.cssData
+            } else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
+                log.debug "getCssData: CSS Data is Outdated | Loading Data from Source..."
+                cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+                state.cssData = cssData
+                state?.cssVer = htmlInfo?.cssVer
+            }
+        } else {
+            log.debug "getCssData: CSS Data is Missing | Loading Data from Source..."
+            cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+            state?.cssData = cssData
+            state?.cssVer = htmlInfo?.cssVer
+        }
+    } else {
+        log.debug "getCssData: No Stored CSS Data Found for Device... Loading for Static URL..."
+        cssData = getFileBase64(cssUrl(), "text", "css")
+    }
+    return cssData
+}
+
+def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 
 //this scrapes the public nest cam page for its unique id for using in render html tile
 def getCamUUID(pubVidId) {
@@ -746,58 +810,12 @@ def getCamBtnJsData() {
 
 def getCamHtml() {
     try {
-        def camJs1 = "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/js/camera.js"
-
         // These are used to determine the URL for the nest cam stream
-        def camUUID = getCamUUID(getPublicVideoId())
-        def apiServer = getCamApiServer(camUUID)
-        def liveStreamURL = getLiveStreamHost(camUUID)
-        def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
-        def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
-
-        def pubVidUrl = state?.public_share_url
-        def pubVidId = getPublicVideoId()
-        def animationUrl = getImgBase64(state?.animation_url, 'gif')
-        //log.debug "Animation URL: $animationUrl"
-        def pubSnapUrl = getImgBase64(state?.snapshot_url,'jpeg')
-
         def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-        def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-        def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
-        def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+        def pubVidUrl = state?.public_share_url
+        def camHtml = (pubVidUrl || state?.isStreaming) ? showCamHtml() : hideCamHtml()
 
-        def showCamHtml = """
-            <script type="text/javascript">
-                ${getCamBtnJsData()}
-            </script>
-            <div class="hideable" id="liveStream">
-                <video width="410" controls
-                    id="nest-video"
-                    class="video-js vjs-default-skin"
-                    poster="${camImgUrl}"
-                    data-video-url="${pubVidUrl}"
-                    data-video-title="">
-                    <source src="${camPlaylistUrl}" type="application/x-mpegURL">
-                </video>
-            </div>
-            <div class="hideable" id="still" style="display:none">
-                <img src="${pubSnapUrl}" width="100%"/>
-            </div>
-            <div class="hideable" id="animation" style="display:none">
-                <img src="${animationUrl}" width="100%"/>
-            </div>
-            <div class="centerText">
-              ${vidBtn}
-              ${imgBtn}
-              ${lastEvtBtn}
-            </div>
-        """
-        def hideCamHtml = ""
-        if(state?.isStreaming == false) { hideCamHtml = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>""" }
-        else { hideCamHtml = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>""" }
-
-        def camHtml = (!pubVidUrl || state?.isStreaming == false) ? hideCamHtml : showCamHtml
-        def html = """
+        def mainHtml = """
         <!DOCTYPE html>
         <html>
             <head>
@@ -808,7 +826,7 @@ def getCamHtml() {
                 <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
                 <meta http-equiv="pragma" content="no-cache"/>
                 <meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <link rel="stylesheet prefetch" href="${state.cssUrl}"/>
+                <link rel="stylesheet prefetch" href="${getCssData()}"/>
             </head>
             <body>
                 <style type="text/css">
@@ -898,12 +916,66 @@ def getCamHtml() {
             </body>
         </html>
         """
-        render contentType: "text/html", data: html, status: 200
+        render contentType: "text/html", data: mainHtml, status: 200
     }
     catch (ex) {
         log.error "getCamHtml Exception: ${ex}", ex
         exceptionDataHandler(ex.message, "getCamHtml")
     }
+}
+
+def showCamHtml() {
+    def pubVidUrl = state?.public_share_url
+    def pubVidId = getPublicVideoId()
+    def camUUID = getCamUUID(pubVidId)
+    def apiServer = getCamApiServer(camUUID)
+    def liveStreamURL = getLiveStreamHost(camUUID)
+    def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
+    def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
+
+    def animationUrl = state?.animationUrl ? getImgBase64(state?.animation_url, 'gif') : null
+    def pubSnapUrl = state?.snapshot_url ? getImgBase64(state?.snapshot_url,'jpeg') : null
+
+    def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+    def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
+    def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+
+    def data = """
+        <script type="text/javascript">
+            ${getCamBtnJsData()}
+        </script>
+        <div class="hideable" id="liveStream">
+            <video width="410" controls
+                id="nest-video"
+                class="video-js vjs-default-skin"
+                poster="${camImgUrl}"
+                data-video-url="${pubVidUrl}"
+                data-video-title="">
+                <source src="${camPlaylistUrl}" type="application/x-mpegURL">
+            </video>
+        </div>
+        <div class="hideable" id="still" style="display:none">
+            <img src="${pubSnapUrl}" width="100%"/>
+        </div>
+        <div class="hideable" id="animation" style="display:none">
+            <img src="${animationUrl}" width="100%"/>
+        </div>
+        <div class="centerText">
+          ${vidBtn}
+          ${imgBtn}
+          ${lastEvtBtn}
+        </div>
+    """
+}
+
+def hideCamHtml() {
+    def data = ""
+    if(state?.isStreaming == false) {
+        data = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>"""
+    } else {
+        data = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+    }
+    return data
 }
 
 private def textDevName()   { return "Nest Camera${appDevName()}" }
