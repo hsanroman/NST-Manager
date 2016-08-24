@@ -939,7 +939,7 @@ def poll(force = false, type = null) {
         if (atomicState?.pollBlocked) { schedNextWorkQ(null); return }
         if (dev || str || atomicState?.needChildUpd ) { updateChildData() }
 
-        updateWebStuff(force)
+        updateWebStuff()
         notificationCheck() //Checks if a notification needs to be sent for a specific event
     }
 }
@@ -1987,18 +1987,14 @@ def appUpdateNotify() {
     def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
     if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
         def str = ""
-        str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}, "
-        str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}, "
-        str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}, "
-        str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}, "
+        str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
+        str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
+        str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
+        str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
         str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-
-//ERS  FIX once app file is updated with variables
         str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.vthermostat?.ver?.toString()}"
-//        str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-
         str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-        sendMsg("Info", "Update(s) are available: ${str}...  Please visit the IDE to Update your code...")
+        sendMsg("Info", "Nest Manager Update(s) are Available:${str}...  \n\nPlease visit the IDE to Update your code...")
         atomicState?.lastUpdMsgDt = getDtNow()
     }
 }
@@ -2072,7 +2068,7 @@ def getNestTimeZone() { return atomicState?.structData[atomicState?.structures].
 
 def updateWebStuff(now = false) {
     //log.trace "updateWebStuff..."
-    if (!atomicState?.appData || (getLastWebUpdSec() > (3600*6))) {
+    if (!atomicState?.appData || (getLastWebUpdSec() > (3600*4))) {
         if(now) {
             getWebFileData()
         } else {
@@ -4220,7 +4216,11 @@ mappings {
 
         //Web Dashboard EndPoints
         path("/dashboard")      {action: [GET: "api_dashboard"]}
-        path("/managerData")    {action: [GET: "api_managerData"]}
+        path("/childAppData")                       {action: [GET: "api_childAppData"]}
+        path("/childAppData/:autoType")             {action: [GET: "api_childAppData"]}
+        path("/childAppData/:autoType/:dataType")             {action: [GET: "api_childAppData"]}
+        path("/childAppData/:autoType/:dataType/:variable")   {action: [GET: "api_childAppData"]}
+        path("/managerData")                        {action: [GET: "api_managerData"]}
         path("/managerData/:dataType")              {action: [GET: "api_managerData"]}
         path("/managerData/:dataType/:variable")    {action: [GET: "api_managerData"]}
         path("/deviceData")                 {action: [GET: "api_deviceData"]}
@@ -4256,9 +4256,10 @@ def getDevIdsByType(type) {
                 devs = getNestWeatherId()
                 break
         }
-        devs.each {
-            def r = it?.key ?: it
-            results.push(r)
+        if(devs instanceof Map) {
+            devs.each { results.push(it?.key) }
+        } else {
+            results.push(devs)
         }
     }
     return results
@@ -4374,7 +4375,6 @@ def api_managerData() {
         //log.debug "data: $data"
         if(!params.dataType || params.dataType == "state") {
             data.states = [:]
-            def staData = [:]
             if(!params.variable || (!params.dataType && !params.variable)) {
                 stateData = state?.findAll { !(it.key in noShow) }
                 data.states = stateData
@@ -4384,7 +4384,6 @@ def api_managerData() {
         }
         if(!params.dataType || params.dataType == "settings") {
             data.settings = [:]
-            def setData = [:]
             if(!params.variable || (!params.dataType && !params.variable)) {
                 settingData = settings?.findAll { !(it.key in noShow) }
                 data.settings = settingData
@@ -4392,11 +4391,56 @@ def api_managerData() {
                 data.settings = ["${params?.variable}":settings["${params?.variable}"]]
             }
         }
-        def result = ["manData":data.toString()]
+        def result = ["appData":data.toString()]
         return result
     } catch (ex) {
         log.error "api_managerData: Exception:", ex
         sendExceptionData(ex.message, "api_managerData")
+        return null
+    }
+}
+
+def api_childAppData() {
+    try {
+        def noShow = ["accessToken", "authToken", "cmdQlist", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
+        def settingData
+        def stateData
+        def data = [:]
+        def chldApp
+        if(params.autoType) {
+            chldApp = getChildApps().sort().findAll { it.getAutomationType() == params?.autoType }
+        } else {
+            chldApp = getChildApps()
+        }
+        if(chldApp) {
+            chldApp?.each { ca ->
+                data."${ca?.id}" = [:]
+                data."${ca?.id}".childLabel = ca.label.toString()
+                if(!params.dataType || params.dataType == "state") {
+                    data."${ca?.id}".states = [:]
+                    if(!params.variable || (!params.dataType && !params.variable)) {
+                        stateData = ca.getAppStateData()?.findAll { !(it.key in noShow) }
+                        data."${ca?.id}".states = stateData
+                    } else {
+                        data."${ca?.id}".states = ["${params?.variable}":ca?.getStateVal("${params?.variable}")]
+                    }
+                }
+                if(!params.dataType || params.dataType == "settings") {
+                    data."${ca?.id}".settings = [:]
+                    if(!params.variable || (!params.dataType && !params.variable)) {
+                        settingData = ca.getSettingsData()?.findAll { !(it.key in noShow) }
+                        data."${ca?.id}".settings = settingData
+                    } else {
+                        data."${ca?.id}".settings = ["${params?.variable}":ca?.getSettingVal("${params?.variable}")]
+                    }
+                }
+            }
+        }
+        def result = ["childData":data.toString()]
+        return result
+    } catch (ex) {
+        log.error "api_childAppData: Exception:", ex
+        sendExceptionData(ex.message, "api_childAppData")
         return null
     }
 }
@@ -4949,8 +4993,12 @@ def getSettingsData() {
 }
 
 def getSettingVal(var) {
-    def val = settings[var]
-    return val ?: null
+    return settings[var] ?: null
+
+}
+
+def getStateVal(var) {
+    return state[var] ?: null
 }
 
 def automationsInst() {
