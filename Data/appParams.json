@@ -8,7 +8,7 @@
     "versions": {
         "app": {
             "type": "rel",
-            "ver": "3.0.2"
+            "ver": "3.0.1"
         },
         "thermostat": {
             "type": "rel",
@@ -48,7 +48,7 @@
         "versions": {
             "app": {
                 "type": "rel",
-                "ver": "3.0.2"
+                "ver": "3.0.1"
             },
             "thermostat": {
                 "type": "rel",
