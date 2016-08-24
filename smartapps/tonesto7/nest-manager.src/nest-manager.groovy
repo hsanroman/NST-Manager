@@ -204,15 +204,15 @@ def mainPage() {
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
-			if (!atomicState.endpoint) {
-				href "pageInitDashboard", title: "Nest Manager Dashboard", description: "Tap here to initialize Dashboard", image: getAppImg("dashboard_icon.png"), required: false
-			} else {
-				initNestManagerEndpoint()
-				def url = "${atomicState?.endpoint}dashboard"
-				//log.debug "Dashboard URL: $url *** DO NOT SHARE THIS LINK WITH ANYONE ***"
-				href "", title: "Nest Manager Dashboard", style: "external", url: url, image: getAppImg("dashboard_icon.png"), required: false
-			}
-
+			input name:"enableDashboard", type:"bool" title: "Nest Manager Dashboard", defaultValue: false, description: "Enable Web Dashboard", image: getAppImg("dashboard_icon.png"), required: false
+			if(settings?.enableDashboard) {
+                if(atomicState?.dashboardActive && atomicState?.endpoint) {
+                    def url = "${atomicState?.endpoint}dashboard"
+                    href "", title: "Nest Manager Dashboard", style: "external", url: url, image: getAppImg("dashboard_icon.png"), required: false
+                } else {
+                    initDashboardApp()
+                }
+            }
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!!!",
                         description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
@@ -756,13 +756,42 @@ def initWatchdogApp() {
         }
     }
     if(watDogCnt <= 0) {
-        //log.debug "adding New WatchDogApp..."
         addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
     } else {
-        //log.debug "updating watDogApp..."
         watDogApp?.update()
     }
-    //log.debug "watDogCnt: $watDogCnt | watDogApp: $watDogApp"
+}
+
+def initDashboardApp() {
+    //log.trace "initDashboardApp"
+    def dashCnt = 0
+    def dashApp
+    childApps?.each { cApp ->
+        if(cApp?.getAutomationType() == "webDash") {
+            dashCnt = dashCnt+1
+            dashApp = cApp
+            atomicState.endpoint = cApp?.getEndpointUrl()
+        }
+    }
+    if(dashCnt <= 0) {
+        addChildApp(textNamespace(), appName(), "Nest Web Dashboard", [settings:[webDashFlag: true]])
+        atomicState.endpoint = null
+        atomicState.dashboardActive = true
+    } else {
+        dashApp?.update()
+    }
+}
+
+def removeDashboardApp() {
+    def dashApp
+    childApps?.each { cApp ->
+        if(cApp?.getAutomationType() == "webDash") {
+            dashApp = cApp
+        }
+    }
+    if(dashApp) {
+        dashApp.uninstall()
+    }
 }
 
 def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
@@ -794,6 +823,7 @@ def getInstAutoTypesDesc() {
     def nModeCnt = 0
     def tModeCnt = 0
     def watchDogCnt = 0
+    def dashCnt = 0
     def disCnt = 0
     childApps?.each { a ->
         def type = a?.getAutomationType()
@@ -825,14 +855,18 @@ def getInstAutoTypesDesc() {
                 case "watchDog":
                     watchDogCnt = watchDogCnt+1
                     break
+                case "webDash":
+                    dashCnt = dashCnt+1
+                    break
             }
         }
     }
-    atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "fanCtrl":fanCtrlCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt]
+    atomicState?.installedAutomations = ["remoteSensor":remSenCnt, "contact":conWatCnt, "leak":leakWatCnt, "fanCtrl":fanCtrlCnt, "externalTemp":extTmpCnt, "nestMode":nModeCnt, "tstatMode":tModeCnt, "watchDog":watchDogCnt, "webDash":dashCnt]
 
     def str = ""
     str += "Installed Automations:"
     str += (watchDogCnt > 0) ? "\n• Nest Watchdog: (Active)" : ""
+    str += (dashCnt > 0) ? "\n• Web Dashboard: (Active)" : ""
     str += (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
     str += (fanCtrlCnt > 0) ? "\n• Fan Control ($fanCtrlCnt)" : ""
     str += (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
@@ -4213,24 +4247,6 @@ mappings {
         //Renders Json Data
         path("/renderInstallId")    {action: [GET: "renderInstallId"]}
         path("/renderInstallData")  {action: [GET: "renderInstallData"]}
-
-        //Web Dashboard EndPoints
-        path("/dashboard")      {action: [GET: "api_dashboard"]}
-        path("/childAppData")                       {action: [GET: "api_childAppData"]}
-        path("/childAppData/:autoType")             {action: [GET: "api_childAppData"]}
-        path("/childAppData/:autoType/:dataType")             {action: [GET: "api_childAppData"]}
-        path("/childAppData/:autoType/:dataType/:variable")   {action: [GET: "api_childAppData"]}
-        path("/managerData")                        {action: [GET: "api_managerData"]}
-        path("/managerData/:dataType")              {action: [GET: "api_managerData"]}
-        path("/managerData/:dataType/:variable")    {action: [GET: "api_managerData"]}
-        path("/deviceData")                 {action: [GET: "api_deviceData"]}
-        path("/deviceData/:deviceType")     {action: [GET: "api_deviceData"]}
-        path("/singleDeviceData/:deviceId")                    {action: [GET: "api_singleDeviceData"]}
-        path("/singleDeviceData/:deviceId/:dataType")          {action: [GET: "api_singleDeviceData"]}
-        path("/singleDeviceData/:deviceId/:dataType/:variable"){action: [GET: "api_singleDeviceData"]}
-        path("/updateSetting/:setting/:setVal")     {action: [GET: "api_setSettingValue", POST: "api_setSettingValue"]}
-        path("/executeCmd")                         {action: [POST: "api_executeCmd"]}
-        path("/executeCmd/:cmd")                    {action: [GET: "api_executeCmd", POST: "api_executeCmd"]}
         //path("/receiveEventData") {action: [POST: "receiveEventData"]}
     }
 }
@@ -4273,7 +4289,7 @@ def apiDevNoShow() {
     ]
 }
 
-def api_deviceData() {
+def api_deviceData(params) {
     log.trace "api_deviceData..."
     try {
         def noShow = apiDevNoShow()
@@ -4316,7 +4332,7 @@ def api_deviceData() {
     }
 }
 
-def api_singleDeviceData() {
+def api_singleDeviceData(params) {
     try {
         def noShow = apiDevNoShow()
         def dTypes = ["attrs", "cmds", "state", "capabilities", "label", "devVer"]
@@ -4365,7 +4381,7 @@ def api_singleDeviceData() {
     }
 }
 
-def api_managerData() {
+def api_managerData(params) {
     try {
         def noShow = ["accessToken", "authToken", "cmdQlist", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
         def settingData
@@ -4400,7 +4416,7 @@ def api_managerData() {
     }
 }
 
-def api_childAppData() {
+def api_childAppData(params) {
     try {
         def noShow = ["accessToken", "authToken", "cmdQlist", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
         def settingData
@@ -4928,6 +4944,9 @@ def initAutoApp() {
     if(settings["watchDogFlag"]) {
         atomicState?.automationType = "watchDog"
     }
+    if(settings["webDashFlag"]) {
+        atomicState?.automationType = "webDash"
+    }
     unschedule()
     unsubscribe()
     automationsInst()
@@ -4935,6 +4954,7 @@ def initAutoApp() {
     scheduler()
     app.updateLabel(getAutoTypeLabel())
     watchDogAutomation()
+    webDashAutomation()
 }
 
 def uninstAutomationApp() {
@@ -4966,6 +4986,7 @@ def getAutoTypeLabel() {
     else if (type == "tMode")       { typeLabel = "${newName} (TstatMode)" }
     else if (type == "leakWat")     { typeLabel = "${newName} (LeakSensor)" }
     else if (type == "watchDog")    { typeLabel = "Nest Location ${location.name} Watchdog"}
+    else if (type == "webDash")     { typeLabel = "Nest Web Dashboard"}
 
     //if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
     if(appLbl != "Nest Manager") {
@@ -5010,6 +5031,7 @@ def automationsInst() {
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
     atomicState.isWatchdogConfigured = isWatchdogConfigured() ? true : false
+    atomicState.isWebDashConfigured = isWebDashConfigured() ? true : false
     atomicState?.isInstalled = true
 }
 
@@ -9407,134 +9429,4 @@ private def textLicense() {
         "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
         "See the License for the specific language governing permissions and "+
         "limitations under the License."
-}
-
-
-private pageInitDashboard() {
-	def success = initNestManagerEndpoint()
-	dynamicPage(name: "pageInitDashboard", title: "") {
-		section() {
-			if (success) {
-				paragraph "Success! Your Nest dashboard is now enabled. Tap Done to continue", required: false
-			}
-		}
-	}
-}
-
-private initNestManagerEndpoint() {
-    if (!atomicState?.endpoint) {
-		try {
-			def accessToken = atomicState?.accessToken
-			if (accessToken) {
-				atomicState?.endpoint = apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
-			}
-		} catch(e) {
-			atomicState?.endpoint = null
-		}
-	}
-	return atomicState?.endpoint
-}
-
-def api_dashboard() {
-    def urlRoot = "https://st-nest-manager.firebaseapp.com"
-    def htmlData = """
-        <!DOCTYPE html>
-            <head>
-                <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <link rel="icon" href="${urlRoot}/resources/nest_manager.icon" type="image/x-icon" />
-                <link rel="stylesheet prefetch" href="https://dl.dropboxusercontent.com/s/j3l3rmizag9skxx/dashboard_css.css"/>
-                <script type="text/javascript" src="https://dl.dropboxusercontent.com/s/4xttynn712v9rlj/dashboard_js.js"></script>
-    		    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    		    <title>Nest Manager Dashboard</title>
-
-                <link href="${urlRoot}/css/bootstrap.min.css" rel="stylesheet">
-                <link href="${urlRoot}/css/font-awesome.min.css" rel="stylesheet">
-                <script src="${urlRoot}/js/jquery.js"></script>
-                <script src="${urlRoot}/js/bootstrap.min.js"></script>
-    	    </head>
-          	  <body>
-                <!-- Navigation -->
-                <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-                    <div class="container">
-                        <!-- Brand and toggle get grouped for better mobile display -->
-                        <div class="navbar-header">
-                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-                                <span class="sr-only">Toggle navigation</span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                                <span class="icon-bar"></span>
-                            </button>
-                            <a class="navbar-brand" href="#">
-                                <img src="${urlRoot}/resources/nest_manager.png" style="width: 50px; height: 50px;" alt="">
-                            </a>
-                        </div>
-                        <!-- Collect the nav links, forms, and other content for toggling -->
-                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                            <ul class="nav navbar-nav">
-                                <li>
-                                    <a href="#">About</a>
-                                </li>
-                                <li>
-                                    <a href="#">Services</a>
-                                </li>
-                                <li>
-                                    <a href="#">Contact</a>
-                                </li>
-                            </ul>
-                            <ul class="nav navbar-nav navbar-right">
-                              <li><a href="">SmartApp: v3.1.0</a></li>
-                            </ul>
-                        </div>
-                        <!-- /.navbar-collapse -->
-                    </div>
-                    <!-- /.container -->
-                </nav>
-                <nav class="navbar navbar-inverse sidebar" role="navigation">
-                    <div class="container-fluid">
-                		<!-- Brand and toggle get grouped for better mobile display -->
-                		<div class="navbar-header">
-                			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-sidebar-navbar-collapse-1">
-                				<span class="sr-only">Toggle navigation</span>
-                				<span class="icon-bar"></span>
-                				<span class="icon-bar"></span>
-                				<span class="icon-bar"></span>
-                			</button>
-                		</div>
-                		<!-- Collect the nav links, forms, and other content for toggling -->
-                		<div class="collapse navbar-collapse" id="bs-sidebar-navbar-collapse-1">
-                			<ul class="nav navbar-nav">
-                				<li class="active"><a href="#">Home<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-home"></span></a></li>
-                				<li ><a href="#">Profile<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-user"></span></a></li>
-                				<li ><a href="#">Messages<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-envelope"></span></a></li>
-                				<li class="dropdown">
-                					<a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <span class="caret"></span><span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-cog"></span></a>
-                					<ul class="dropdown-menu forAnimate" role="menu">
-                						<li><a href="#">Action</a></li>
-                						<li><a href="#">Another action</a></li>
-                						<li><a href="#">Something else here</a></li>
-                						<li class="divider"></li>
-                						<li><a href="#">Separated link</a></li>
-                						<li class="divider"></li>
-                						<li><a href="#">One more separated link</a></li>
-                					</ul>
-                				</li>
-                			</ul>
-                		</div>
-                	</div>
-                </nav>
-
-                <!-- Page Content -->
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <h1>Nest Manager Dashboard</h1>
-                            <p>Note: Things need to go below this point :)</p>
-                        </div>
-                    </div>
-                </div>
-          	</body>
-        </html>
-    """
-	render contentType: "text/html", data: htmlData
 }
