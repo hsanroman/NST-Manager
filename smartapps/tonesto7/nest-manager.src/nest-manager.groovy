@@ -204,15 +204,15 @@ def mainPage() {
     return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
-			input name:"enableDashboard", type:"bool" title: "Nest Manager Dashboard", defaultValue: false, description: "Enable Web Dashboard", image: getAppImg("dashboard_icon.png"), required: false
-			if(settings?.enableDashboard) {
+			input name:"enableDashboard", type:"bool", title: "Nest Manager Dashboard", defaultValue: false, description: "Enable Web Dashboard", image: getAppImg("dashboard_icon.png"), required: false
+			/*if(settings?.enableDashboard) {
                 if(atomicState?.dashboardActive && atomicState?.endpoint) {
                     def url = "${atomicState?.endpoint}dashboard"
                     href "", title: "Nest Manager Dashboard", style: "external", url: url, image: getAppImg("dashboard_icon.png"), required: false
                 } else {
-                    initDashboardApp()
+                    //initDashboardApp()
                 }
-            }
+            }*/
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!!!",
                         description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
