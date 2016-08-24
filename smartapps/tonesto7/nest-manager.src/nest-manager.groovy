@@ -4272,9 +4272,9 @@ def diagPage () {
                     image: getAppImg("progress_bar.png")
         }
         section("View Apps & Devices Data") {
-            href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            //href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "childAppDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            //href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "appParamsDataPage", title:"View AppParams Data", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
@@ -4330,22 +4330,90 @@ mappings {
         path("/managerData")    {action: [GET: "api_managerData"]}
         path("/managerData/:dataType")              {action: [GET: "api_managerData"]}
         path("/managerData/:dataType/:variable")    {action: [GET: "api_managerData"]}
-        path("/deviceData")                              {action: [GET: "api_deviceData"]}
-        path("/deviceData/:deviceId/:dataType")                       {action: [GET: "api_deviceData"]}
-        path("/deviceData/:deviceId/:dataType/:variable")                {action: [GET: "api_deviceData"]}
-        path("/updateSetting/:setting")             {action: [POST: "api_setSettingValue"]}
+        path("/deviceData")                 {action: [GET: "api_deviceData"]}
+        path("/deviceData/:deviceType")     {action: [GET: "api_deviceData"]}
+        path("/singleDeviceData/:deviceId")                    {action: [GET: "api_singleDeviceData"]}
+        path("/singleDeviceData/:deviceId/:dataType")          {action: [GET: "api_singleDeviceData"]}
+        path("/singleDeviceData/:deviceId/:dataType/:variable"){action: [GET: "api_singleDeviceData"]}
+        path("/updateSetting/:setting/:setVal")     {action: [GET: "api_setSettingValue", POST: "api_setSettingValue"]}
         path("/executeCmd")                         {action: [POST: "api_executeCmd"]}
+        path("/executeCmd/:cmd")                    {action: [GET: "api_executeCmd", POST: "api_executeCmd"]}
         //path("/receiveEventData") {action: [POST: "receiveEventData"]}
     }
 }
 
-def api_deviceData() {
-    log.debug "api_deviceData: ${request.JSON}"
+def getDevIdsByType(type) {
     def results = []
+    def devs
+    if(type) {
+        switch (type) {
+            case "camera":
+                devs = state?.cameras
+                break
+            case "thermostat":
+                devs = state?.thermostats
+                break
+            case "protect":
+                devs = state?.protects
+                break
+            case "presence":
+                devs = getNestPresId()
+                break
+            case "weather":
+                devs = getNestWeatherId()
+                break
+        }
+        devs.each {
+            def r = it?.key ?: it
+            results.push(r)
+        }
+    }
+    return results
+}
+
+def apiDevNoShow() {
+    return [
+        "cssData", "coolSetpointTable", "heatSetpointTable", "heatSetpointTableYesterday", "coolSetpointTableYesterday", "humidityTable", "humidityTableYesterday",
+        "curForecast", "curWeather", "operatingStateTable", "operatingStateTableYesterday", "temperatureTable", "temperatureTableYesterday", "dewpointTable",
+        "dewpointTableYesterday", "lastWeatherAlertNotif", "walertMessage"
+    ]
+}
+
+def api_deviceData() {
     try {
-        results = ["dummy":"stuff"]
-        //def resultJson = new groovy.json.JsonOutput().toJson(results)
-        return results
+        def noShow = apiDevNoShow()
+        def devices = []
+        def data = [:]
+        if(params?.deviceType) {
+            if(params?.deviceType in ["camera", "thermostat", "protect", "presence", "weather"]) {
+                getDevIdsByType(params?.deviceType).each { devices.push(getChildDevice(it)) }
+            }
+        } else { devices = getAllChildDevices()}
+        if(devices.size() > 0) {
+            devices?.each { dev ->
+                def devId = dev.deviceNetworkId
+                data."${devId}" = [:]
+                data."${devId}".label = dev?.displayName
+                data."${devId}".devVersion = dev?.devVer()
+                data."${devId}".state = [:]
+                data."${devId}".state = dev?.getDeviceStateData()?.sort().findAll { !(it.key in noShow) }
+                data."${devId}".attr = []
+                def attr = dev?.supportedAttributes.collect { it as String }
+                attr?.sort().each { data."${devId}".attr.push("${it as String}":dev.currentValue(it)) }
+                data."${devId}".cmds = []
+                def cmds = dev?.supportedCommands?.findAll { }
+                cmds?.sort().each { cmd ->
+                    data."${devId}".cmds.push ("${cmd.name}":"${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")}")
+                }
+                data."${devId}".capabilities = []
+                def caps = dev?.capabilities?.sort().findAll { }
+                caps?.each() { cap ->
+                    data."${devId}".capabilities.push(cap.toString())
+                }
+            }
+        }
+        def result = ["devData":data.toString()]
+        return result
     } catch (ex) {
         log.error "api_deviceData: Exception:", ex
         sendExceptionData(ex.message, "api_deviceData")
@@ -4353,89 +4421,89 @@ def api_deviceData() {
     }
 }
 
-def api_managerData() {
-    //log.debug "api_managerData: ${request.JSON}"
-    def results = []
+def api_singleDeviceData() {
     try {
-        def noShow = ["accessToken", "authToken", "cmdQlist", /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
-        def setData
-        def stateData
-
-        if(!params.state || !params?.settings) {
-            setData = settings?.findAll { !(it.key in noShow) }
-            stateData = state?.findAll { !(it.key in noShow) }
-            if(setData && stateData) {
-                results = ["settings":setData, "state":stateData]
-            }
-            else if (params.state) {
-                if(params.dataType == "state") {
-                    if(!params.variable) {
-                        stateData = state?.findAll { !(it.key in noShow) }
-                        results = ["state":stateData]
+        def noShow = apiDevNoShow()
+        def dTypes = ["attrs", "cmds", "state", "capabilities", "label", "devVer"]
+        def dev = []
+        def data = [:]
+        if(params?.deviceId) {
+            dev = getChildDevice(params.deviceId)
+            if(dev) {
+                def devId = params?.deviceId
+                data."${devId}" = [:]
+                data."${devId}".label = dev?.displayName
+                data."${devId}".devVersion = dev?.devVersion()
+                if(!params?.dataType || params?.dataType == "state") {
+                    data."${devId}".state = [:]
+                    if(!params?.variable) {
+                        data."${devId}".state = dev?.getDeviceStateData()?.sort().findAll { !(it.key in noShow) }
                     } else {
-                        results = ["${params?.variable}":state["${params?.variable}"]]
+                        data."${devId}".state = dev?.getDeviceStateData()?.sort().find { (it.key == params?.variable) }
                     }
                 }
-                else if(params.dataType == "settings") {
-                    if(!params.variable) {
-                        setData = settings?.findAll { !(it.key in noShow) }
-                        results = ["settings":setData]
-                    } else {
-                        results = ["${params?.variable}":settings["${params?.variable}"]]
-                    }
+                if(!params?.dataType || params?.dataType == "attrs") {
+                    data."${devId}".attrs = []
+                    def attrs = dev?.supportedAttributes.collect { it as String }
+                    attr?.sort().each { data."${devId}".attrs.push("${it as String}":dev.currentValue(it)) }
+                }
+                if(!params?.dataType || params?.dataType == "cmds") {
+                    data."${devId}".cmds = []
+                    def cmds = dev?.supportedCommands?.findAll { }
+                    cmds?.sort().each { data."${devId}".cmds.push ("${it.name}":"${!it?.arguments ? "" : it?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")}") }
+                }
+                if(!params?.dataType || params?.dataType == "capabilities") {
+                    data."${devId}".capabilities = []
+                    def caps = dev?.capabilities?.sort().findAll { }
+                    data."${devId}".capabilities = caps
                 }
             }
-            log.debug "setData: ${setData.size()} | stateData: ${stateData?.size()}"
-            log.debug "params: $params"
+        } else {
+            data = ["Error":"No Device ID Received..."]
         }
-        def resultJson = new groovy.json.JsonOutput().toJson(results)
-        return resultJson
+        def result = ["devData":data.toString()]
+        return result
     } catch (ex) {
-        log.error "api_managerData: Exception:", ex
-        sendExceptionData(ex.message, "api_managerData")
+        log.error "api_singleDeviceData: Exception:", ex
+        sendExceptionData(ex.message, "api_singleDeviceData")
         return null
     }
 }
 
-
-
-def managAppDataPage() {
-    dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
-        def noShow = ["accessToken", "authToken" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
-        section("SETTINGS DATA:") {
-            def str = ""
-            def cnt = 0
-            def data = settings?.findAll { !(it.key in noShow) }
-               data?.sort().each { item ->
-                cnt = cnt+1
-                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+def api_managerData() {
+    try {
+        def noShow = ["accessToken", "authToken", "cmdQlist", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
+        def settingData
+        def stateData
+        def data = [:]
+        data.managerVer = appVersion()
+        //log.debug "data: $data"
+        if(!params.dataType || params.dataType == "state") {
+            data.states = [:]
+            def staData = [:]
+            if(!params.variable || (!params.dataType && !params.variable)) {
+                stateData = state?.findAll { !(it.key in noShow) }
+                data.states = stateData
+            } else {
+                data.states = ["${params?.variable}":state["${params?.variable}"]]
             }
-            paragraph "${str}"
         }
-        section("STATE DATA:") {
-            def str = ""
-            def cnt = 0
-            def data = state?.findAll { !(it.key in noShow) }
-            data?.sort().each { item ->
-                cnt = cnt+1
-                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+        if(!params.dataType || params.dataType == "settings") {
+            data.settings = [:]
+            def setData = [:]
+            if(!params.variable || (!params.dataType && !params.variable)) {
+                settingData = settings?.findAll { !(it.key in noShow) }
+                data.settings = settingData
+            } else {
+                data.settings = ["${params?.variable}":settings["${params?.variable}"]]
             }
-            paragraph "${str}"
         }
-        section("APP METADATA:") {
-            def str = ""
-            def cnt = 0
-            getMetadata()?.sort().each { item ->
-                cnt = cnt+1
-                str += "${(cnt <= 1) ? "" : "\n\n\n"}${item?.key.toString().toUpperCase()}:\n\n"
-                def cnt2 = 0
-                item?.value.sort().each { vals ->
-                    cnt2 = cnt2+1
-                    str += "${(cnt2 <= 1) ? "" : "\n\n"}• ${vals?.key.toString()}: (${vals?.value})"
-                }
-            }
-            paragraph "${str}"
-        }
+        def result = ["manData":data.toString()]
+        return result
+    } catch (ex) {
+        log.error "api_managerData: Exception:", ex
+        sendExceptionData(ex.message, "api_managerData")
+        return null
     }
 }
 
@@ -4464,37 +4532,6 @@ def childAppDataPage() {
         }
     }
 }
-
-def childDevDataPage() {
-    dynamicPage(name: "childDevDataPage", refreshInterval:180, install: false) {
-        getAllChildDevices().each { dev ->
-            def str = ""
-            section("${dev?.displayName.toString().capitalize()}:") {
-                str += "  ───────STATE DATA──────"
-                dev?.getDeviceStateData()?.sort().each { par ->
-                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
-                }
-                str += "\n\n\n  ────SUPPORTED ATTRIBUTES────"
-                def devData = dev?.supportedAttributes.collect { it as String }
-                devData?.sort().each {
-                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
-                }
-                   str += "\n\n\n  ────SUPPORTED COMMANDS────"
-                dev?.supportedCommands?.sort().each { cmd ->
-                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-                }
-
-                str += "\n\n\n  ─────DEVICE CAPABILITIES─────"
-                dev?.capabilities?.sort().each { cap ->
-                    str += "\n\n• ${cap}"
-                }
-                paragraph "${str}"
-            }
-        }
-    }
-}
-
 
 /******************************************************************************
 *                			Firebase Analytics Functions                  	  *
@@ -9523,21 +9560,6 @@ def api_dashboard() {
                 		<div class="collapse navbar-collapse" id="bs-sidebar-navbar-collapse-1">
                 			<ul class="nav navbar-nav">
                 				<li class="active"><a href="#">Home<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-home"></span></a></li>
-                				<li ><a href="#">Profile<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-user"></span></a></li>
-                				<li ><a href="#">Messages<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-envelope"></span></a></li>
-                				<li class="dropdown">
-                					<a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <span class="caret"></span><span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-cog"></span></a>
-                					<ul class="dropdown-menu forAnimate" role="menu">
-                						<li><a href="#">Action</a></li>
-                						<li><a href="#">Another action</a></li>
-                						<li><a href="#">Something else here</a></li>
-                						<li class="divider"></li>
-                						<li><a href="#">Separated link</a></li>
-                						<li class="divider"></li>
-                						<li><a href="#">One more separated link</a></li>
-                					</ul>
-                				</li>
-                				<li><a href="#">Home<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-home"></span></a></li>
                 				<li ><a href="#">Profile<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-user"></span></a></li>
                 				<li ><a href="#">Messages<span style="font-size:16px;" class="pull-right hidden-xs showopacity glyphicon glyphicon-envelope"></span></a></li>
                 				<li class="dropdown">
