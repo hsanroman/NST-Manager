@@ -4367,20 +4367,22 @@ def api_managerData() {
             if(setData && stateData) {
                 results = ["settings":setData, "state":stateData]
             }
-            else if (params.state && !params.settings) {
-                if(!params.variable) {
-                    stateData = state?.findAll { !(it.key in noShow) }
-                    results = ["state":stateData]
-                } else {
-                    results = ["${params?.variable}":state["${params?.variable}"]]
+            else if (params.state) {
+                if(params.dataType == "state") {
+                    if(!params.variable) {
+                        stateData = state?.findAll { !(it.key in noShow) }
+                        results = ["state":stateData]
+                    } else {
+                        results = ["${params?.variable}":state["${params?.variable}"]]
+                    }
                 }
-            }
-            else if (!params.state && params.settings) {
-                if(!params.variable) {
-                    setData = settings?.findAll { !(it.key in noShow) }
-                    results = ["settings":setData]
-                } else {
-                    results = ["${params?.variable}":settings["${params?.variable}"]]
+                else if(params.dataType == "settings") {
+                    if(!params.variable) {
+                        setData = settings?.findAll { !(it.key in noShow) }
+                        results = ["settings":setData]
+                    } else {
+                        results = ["${params?.variable}":settings["${params?.variable}"]]
+                    }
                 }
             }
             log.debug "setData: ${setData.size()} | stateData: ${stateData?.size()}"
