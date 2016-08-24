@@ -4035,19 +4035,19 @@ def nestInfoPage () {
 
         section("Nest API Data") {
             if(atomicState?.structures) {
-                href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
+                //href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
             }
             if (atomicState?.thermostats) {
-                href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
+                //href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
             }
             if (atomicState?.protects) {
-                href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
+                //href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
             }
             if (atomicState?.cameras) {
-                href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
+                //href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
             }
 
-            if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
+            if(!(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras)) {
                 paragraph "There is nothing to show here...", image: getAppImg("instruct_icon.png")
             }
         }
@@ -4149,113 +4149,6 @@ def simulateTestEventPage(params) {
                     } else {
                         paragraph "Skipping... A Test is already Running...", required: true, state: null
                     }
-                }
-            }
-        }
-    }
-}
-
-def structInfoPage () {
-    dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
-        def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
-        section("") {
-            paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
-        }
-        atomicState?.structData?.each { struc ->
-            if (struc?.key == atomicState?.structures) {
-                def str = ""
-                def cnt = 0
-                section("Location Name: ${struc?.value?.name}") {
-                    def data = struc?.value.findAll { !(it.key in noShow) }
-                    data?.sort().each { item ->
-                        cnt = cnt+1
-                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-                    }
-                    paragraph "${str}"
-                }
-            }
-        }
-    }
-}
-
-def tstatInfoPage () {
-    dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
-        def noShow = [ "where_id", "device_id", "structure_id" ]
-        section("") {
-            paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
-        }
-        atomicState?.thermostats?.sort().each { tstat ->
-            def str = ""
-            def cnt = 0
-            section("Thermostat Name: ${tstat?.value}") {
-                def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
-                data?.sort().each { item ->
-                    cnt = cnt+1
-                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-                }
-                paragraph "${str}"
-            }
-        }
-    }
-}
-
-def protInfoPage () {
-    dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
-        def noShow = [ "where_id", "device_id", "structure_id" ]
-        section("") {
-            paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
-        }
-        atomicState?.protects.sort().each { prot ->
-            def str = ""
-            def cnt = 0
-            section("Protect Name: ${prot?.value}") {
-                def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
-                data?.sort().each { item ->
-                    cnt = cnt+1
-                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-                }
-                paragraph "${str}"
-            }
-        }
-    }
-}
-
-def camInfoPage () {
-    dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
-        def noShow = [ "where_id", "device_id", "structure_id" ]
-        section("") {
-            paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
-        }
-        atomicState?.cameras.sort().each { cam ->
-            def str = ""
-            def evtStr = ""
-            def cnt = 0
-            def cnt2 = 0
-            section("Camera Name: ${cam?.value}") {
-                def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
-                data?.sort().each { item ->
-                    if (item?.key != "last_event") {
-                        if (item?.key in ["app_url", "web_url"]) {
-                            href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to View in Mobile Browser...", state: "complete"
-                        } else {
-                            cnt = cnt+1
-                            str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-                        }
-                    } else {
-                        item?.value?.sort().each { item2 ->
-                            if (item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
-                                href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to View in Mobile Browser...", state: "complete"
-                            }
-                            else {
-                                cnt2 = cnt2+1
-                                evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
-                            }
-                        }
-                    }
-                }
-                paragraph "${str}"
-                if(evtStr != "") {
-                    paragraph "Last Event Data:\n\n${evtStr}"
                 }
             }
         }
@@ -4380,6 +4273,7 @@ def apiDevNoShow() {
 }
 
 def api_deviceData() {
+    log.trace "api_deviceData..."
     try {
         def noShow = apiDevNoShow()
         def devices = []
@@ -9539,6 +9433,9 @@ def api_dashboard() {
                                 <li>
                                     <a href="#">Contact</a>
                                 </li>
+                            </ul>
+                            <ul class="nav navbar-nav navbar-right">
+                              <li><a href="">SmartApp: v3.1.0</a></li>
                             </ul>
                         </div>
                         <!-- /.navbar-collapse -->
