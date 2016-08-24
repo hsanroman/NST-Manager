@@ -127,19 +127,6 @@ preferences {
     page(name: "setNotificationTimePage")
 }
 
-mappings {
-    if(!parent) {
-        //used during Oauth Authentication
-        path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
-        path("/oauth/callback") 	{action: [GET: "callback"]}
-        //Renders Json Data
-        path("/renderInstallId")    {action: [GET: "renderInstallId"]}
-        path("/renderInstallData")  {action: [GET: "renderInstallData"]}
-        path("/dashboard")          {action: [GET: "api_dashboard"]}
-        //path("/receiveEventData") {action: [POST: "receiveEventData"]}
-    }
-}
-
 //This Page is used to load either parent or child app interface code
 def startPage() {
     if (parent) {
@@ -4328,6 +4315,87 @@ def appParamsDataPage() {
         }
     }
 }
+
+mappings {
+    if(!parent) {
+        //used during Oauth Authentication
+        path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
+        path("/oauth/callback") 	{action: [GET: "callback"]}
+        //Renders Json Data
+        path("/renderInstallId")    {action: [GET: "renderInstallId"]}
+        path("/renderInstallData")  {action: [GET: "renderInstallData"]}
+
+        //Web Dashboard EndPoints
+        path("/dashboard")      {action: [GET: "api_dashboard"]}
+        path("/managerData")    {action: [GET: "api_managerData"]}
+        path("/managerData/:dataType")              {action: [GET: "api_managerData"]}
+        path("/managerData/:dataType/:variable")    {action: [GET: "api_managerData"]}
+        path("/deviceData")                              {action: [GET: "api_deviceData"]}
+        path("/deviceData/:deviceId/:dataType")                       {action: [GET: "api_deviceData"]}
+        path("/deviceData/:deviceId/:dataType/:variable")                {action: [GET: "api_deviceData"]}
+        path("/updateSetting/:setting")             {action: [POST: "api_setSettingValue"]}
+        path("/executeCmd")                         {action: [POST: "api_executeCmd"]}
+        //path("/receiveEventData") {action: [POST: "receiveEventData"]}
+    }
+}
+
+def api_deviceData() {
+    log.debug "api_deviceData: ${request.JSON}"
+    def results = []
+    try {
+        results = ["dummy":"stuff"]
+        //def resultJson = new groovy.json.JsonOutput().toJson(results)
+        return results
+    } catch (ex) {
+        log.error "api_deviceData: Exception:", ex
+        sendExceptionData(ex.message, "api_deviceData")
+        return null
+    }
+}
+
+def api_managerData() {
+    //log.debug "api_managerData: ${request.JSON}"
+    def results = []
+    try {
+        def noShow = ["accessToken", "authToken", "cmdQlist", /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
+        def setData
+        def stateData
+
+        if(!params.state || !params?.settings) {
+            setData = settings?.findAll { !(it.key in noShow) }
+            stateData = state?.findAll { !(it.key in noShow) }
+            if(setData && stateData) {
+                results = ["settings":setData, "state":stateData]
+            }
+            else if (params.state && !params.settings) {
+                if(!params.variable) {
+                    stateData = state?.findAll { !(it.key in noShow) }
+                    results = ["state":stateData]
+                } else {
+                    results = ["${params?.variable}":state["${params?.variable}"]]
+                }
+            }
+            else if (!params.state && params.settings) {
+                if(!params.variable) {
+                    setData = settings?.findAll { !(it.key in noShow) }
+                    results = ["settings":setData]
+                } else {
+                    results = ["${params?.variable}":settings["${params?.variable}"]]
+                }
+            }
+            log.debug "setData: ${setData.size()} | stateData: ${stateData?.size()}"
+            log.debug "params: $params"
+        }
+        def resultJson = new groovy.json.JsonOutput().toJson(results)
+        return resultJson
+    } catch (ex) {
+        log.error "api_managerData: Exception:", ex
+        sendExceptionData(ex.message, "api_managerData")
+        return null
+    }
+}
+
+
 
 def managAppDataPage() {
     dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
