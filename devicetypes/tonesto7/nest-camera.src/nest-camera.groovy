@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "1.1.0" }
+def devVer() { return "1.1.1" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -938,7 +938,7 @@ def showCamHtml() {
     def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
     def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
-    def animationUrl = state?.animationUrl ? getImgBase64(state?.animation_url, 'gif') : null
+    def animationUrl = state?.animation_url ? getImgBase64(state?.animation_url, 'gif') : null
     def pubSnapUrl = state?.snapshot_url ? getImgBase64(state?.snapshot_url,'jpeg') : null
 
     def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
