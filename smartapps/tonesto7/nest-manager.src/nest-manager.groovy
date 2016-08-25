@@ -2280,7 +2280,7 @@ def helpHandler() {
 }
 
 def getHtmlInfo() {
-    if(atomicState?.appData?.css?.cssUrl && atomicState?.appData?.css?.cssVer && atomicState?.appData?.html?.chartJsUrl && atomicState?.appData?.html?.chartJsVer ) {
+    if(atomicState?.appData?.html?.cssUrl && atomicState?.appData?.html?.cssVer && atomicState?.appData?.html?.chartJsUrl && atomicState?.appData?.html?.chartJsVer ) {
         return ["cssUrl":atomicState?.appData?.html?.cssUrl, "cssVer":atomicState?.appData?.html?.cssVer, "chartJsUrl":atomicState?.appData?.html?.chartJsUrl, "chartJsVer":atomicState?.appData?.html?.chartJsVer]
     } else {
         if(getWebFileData()) {
@@ -2290,11 +2290,11 @@ def getHtmlInfo() {
 }
 
 def allowDbException() {
-    if(atomicState?.appData?.database?.allowDbException) {
-        return atomicState?.appData?.database?.allowDbException == false ? false : true
+    if(atomicState?.appData?.database?.disableExceptions) {
+        return atomicState?.appData?.database?.disableExceptions == true ? true : false
     } else {
         if(getWebFileData()) {
-            return atomicState?.appData?.database?.allowDbException == false ? false : true
+            return atomicState?.appData?.database?.disableExceptions == true ? true : false
         }
     }
 }
