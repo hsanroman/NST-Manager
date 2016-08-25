@@ -37,14 +37,14 @@ definition(
 }
 
 def appVersion() { "3.1.0" }
-def appVerDate() { "8-23-2016" }
+def appVerDate() { "8-25-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V3.1.0 (August 23rd, 2016):"
+    str += "V3.1.0 (August 25th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • ADDED: Remote sensor automation virtual thermostat"
-    str += "\n • ADDED: Initial Commit of Web Dashboard"
+    str += "\n • ADDED: Lot and Lot's of bugfixes"
 
     str += "\n\nV3.0.2 (August 17th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
