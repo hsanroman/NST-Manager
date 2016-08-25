@@ -786,7 +786,9 @@ def initWatchdogApp() {
         LogAction("Installing Nest Watchdog App...", "info", true)
         addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
     } else {
-        watDogApp?.update()
+        watDogApp?.each { chld ->
+            chld.update()
+        }
     }
 }
 
