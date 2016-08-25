@@ -9555,7 +9555,7 @@ void sendTTS(txt) {
 def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
 def appAuthor() 	{ return "Anthony S." }
 def appNamespace() 	{ return "tonesto7" }
-def gitBranch()     { return "develop" }
+def gitBranch()     { return "master" }
 def betaMarker()    { return false }
 def appDevType()    { return false }
 def appDevName()    { return appDevType() ? " (Dev)" : "" }
