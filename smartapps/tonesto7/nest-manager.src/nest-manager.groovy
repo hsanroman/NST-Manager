@@ -127,6 +127,19 @@ preferences {
     page(name: "setNotificationTimePage")
 }
 
+
+mappings {
+    if(!parent) {
+        //used during Oauth Authentication
+        path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
+        path("/oauth/callback") 	{action: [GET: "callback"]}
+        //Renders Json Data
+        path("/renderInstallId")    {action: [GET: "renderInstallId"]}
+        path("/renderInstallData")  {action: [GET: "renderInstallData"]}
+        //path("/receiveEventData") {action: [POST: "receiveEventData"]}
+    }
+}
+
 //This Page is used to load either parent or child app interface code
 def startPage() {
     if (parent) {
@@ -201,18 +214,13 @@ def authPage() {
 def mainPage() {
     //log.trace "mainPage"
     def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
-    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
+    def rfrshDash = atomicState?.dashSetup == true ? 5 : null
+    return dynamicPage(name: "mainPage", title: "Main Page", nextPage: (!setupComplete ? "reviewSetupPage" : null), refreshInterval: rfrshDash, install: setupComplete, uninstall: false) {
         section("") {
             href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
-			input name:"enableDashboard", type:"bool", title: "Nest Manager Dashboard", defaultValue: false, description: "Enable Web Dashboard", image: getAppImg("dashboard_icon.png"), required: false
-			/*if(settings?.enableDashboard) {
-                if(atomicState?.dashboardActive && atomicState?.endpoint) {
-                    def url = "${atomicState?.endpoint}dashboard"
-                    href "", title: "Nest Manager Dashboard", style: "external", url: url, image: getAppImg("dashboard_icon.png"), required: false
-                } else {
-                    //initDashboardApp()
-                }
-            }*/
+			if(settings?.enableDashboard && atomicState?.dashboardInstalled && atomicState?.dashboardUrl) {
+                href "", title: "Nest Manager Dashboard", style: "external", url: "${atomicState?.dashboardUrl}dashboard", image: getAppImg("dashboard_icon.png"), required: false
+            }
             if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
                 href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!!!",
                         description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in your Mobile Browser...", state: "complete", image: getAppImg("update_icon.png")
@@ -252,6 +260,21 @@ def mainPage() {
             if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
                 section("Diagnostics/Info:") {
                     href "nestInfoPage", title: "API | Diagnostics | Testing...", description: "Tap to view info...", image: getAppImg("api_diag_icon.png")
+                }
+            }
+            section("Web Dashboard:") {
+                def dashAct = (settings?.enableDashboard && atomicState?.dashboardInstalled && atomicState?.dashboardUrl) ? true : false
+                def dashDesc = dashAct ? "Dashboard is (Active)\nTurn off to Remove" : "Toggle to Install.."
+                input "enableDashboard", "bool", title: "Enable Web Dashboard", submitOnChange: true, defaultValue: false, required: false, description: dashDesc, state: dashAct ? "complete" : null,
+                        image: getAppImg("dashboard_icon.png")
+                if(settings.enableDashboard) {
+                    if(!dashAct) {
+                        atomicState?.dashSetup = true
+                        initDashboardApp()
+                    }
+                } else {
+                    removeDashboardApp()
+                    atomicState?.dashSetup = false
                 }
             }
             section("  ") {
@@ -596,21 +619,16 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
     def odevId = tstatdni
     LogAction("addRemoveVthermostat() tstat: ${tstatdni}   devid: ${odevId}   tval: ${tval}   myID: ${myID} atomicState.vThermostats: ${atomicState?.vThermostats} ", "trace", true)
 
-    if (parent) { return false }
-    if(!myID) { return false }
-    if (tval == null) { return false }
+    if (parent || !myID || !tval) { return false }
     def tstat = tstatdni
 
     def d1 = getChildDevice(odevId.toString())
     if(!d1) {
-        log.error "addRemoveVthermostat: cannot find thermostat device"
+        log.error "addRemoveVthermostat Error: Cannot find virtual thermostat device"
         if (tval == null || tval == true) { return false }  // if deleting, let it try to proceed
     } else {
         tstat = d1
     }
-
-  // Initialize things
-    //if(atomicState?.vThermostats == null) { atomicState.vThermostats = [] }
 
     def devId = "v${odevId}"
 
@@ -693,13 +711,29 @@ def uninstalled() {
 
 def initialize() {
     //log.debug "initialize..."
-    if(parent) {
+    if(parent && atomicState?.automationType != "webDash") {
         initAutoApp()
     }
     else {
         initWatchdogApp()
         initManagerApp()
     }
+}
+
+def isDashAppInstalled() {
+    def dashApp = getChildApps().findAll { it?.getSettingVal("webDashFlag") }
+    return (dashApp.size() > 0) ? true : false
+}
+
+def dashboardInstalled(val) {
+    log.trace "dashboardInstalled($val)"
+    atomicState.dashboardInstalled = (val == true) ? true : false
+}
+
+def setDashboardUrl(val) {
+    log.trace "setDashboardUrl($val)"
+    atomicState?.dashboardUrl = val
+    atomicState?.dashSetup = false
 }
 
 def initManagerApp() {
@@ -747,15 +781,9 @@ def uninstManagerApp() {
 
 def initWatchdogApp() {
     //log.trace "initWatchdogApp"
-    def watDogCnt = 0
-    def watDogApp
-    childApps?.each { cApp ->
-        if(cApp?.getAutomationType() == "watchDog") {
-            watDogCnt = watDogCnt+1
-            watDogApp = cApp
-        }
-    }
-    if(watDogCnt <= 0) {
+    def watDogApp = getChildApps().findAll { it?.getAutomationType() == "watchDog" }
+    if(!watDogApp) {
+        LogAction("Installing Nest Watchdog App...", "info", true)
         addChildApp(textNamespace(), appName(), getWatchdogAppChildName(), [settings:[watchDogFlag: true]])
     } else {
         watDogApp?.update()
@@ -764,33 +792,20 @@ def initWatchdogApp() {
 
 def initDashboardApp() {
     //log.trace "initDashboardApp"
-    def dashCnt = 0
-    def dashApp
-    childApps?.each { cApp ->
-        if(cApp?.getAutomationType() == "webDash") {
-            dashCnt = dashCnt+1
-            dashApp = cApp
-            atomicState.endpoint = cApp?.getEndpointUrl()
-        }
-    }
-    if(dashCnt <= 0) {
-        addChildApp(textNamespace(), appName(), "Nest Web Dashboard", [settings:[webDashFlag: true]])
-        atomicState.endpoint = null
-        atomicState.dashboardActive = true
-    } else {
-        dashApp?.update()
+    def dashApp = getChildApps().findAll { it?.getSettingVal("webDashFlag") }
+    if(!dashApp) {
+        LogAction("Installing Web Dashboard App...", "info", true)
+        addChildApp("tonesto7", getWebDashAppChildName(), getWebDashAppChildName(), [settings:[webDashFlag: true]])
     }
 }
 
 def removeDashboardApp() {
-    def dashApp
-    childApps?.each { cApp ->
-        if(cApp?.getAutomationType() == "webDash") {
-            dashApp = cApp
-        }
-    }
+    def dashApp = getChildApps().findAll { it?.getSettingVal("webDashFlag") }
     if(dashApp) {
-        dashApp.uninstall()
+        LogAction("Removing Web Dashboard App...", "warn", true)
+        deleteChildApp(dashApp)
+        atomicState?.dashboardUrl = null
+        atomicState?.dashSetup = false
     }
 }
 
@@ -823,7 +838,6 @@ def getInstAutoTypesDesc() {
     def nModeCnt = 0
     def tModeCnt = 0
     def watchDogCnt = 0
-    def dashCnt = 0
     def disCnt = 0
     childApps?.each { a ->
         def type = a?.getAutomationType()
@@ -855,9 +869,6 @@ def getInstAutoTypesDesc() {
                 case "watchDog":
                     watchDogCnt = watchDogCnt+1
                     break
-                case "webDash":
-                    dashCnt = dashCnt+1
-                    break
             }
         }
     }
@@ -866,7 +877,6 @@ def getInstAutoTypesDesc() {
     def str = ""
     str += "Installed Automations:"
     str += (watchDogCnt > 0) ? "\n• Nest Watchdog: (Active)" : ""
-    str += (dashCnt > 0) ? "\n• Web Dashboard: (Active)" : ""
     str += (remSenCnt > 0) ? "\n• Remote Sensor ($remSenCnt)" : ""
     str += (fanCtrlCnt > 0) ? "\n• Fan Control ($fanCtrlCnt)" : ""
     str += (conWatCnt > 0) ? "\n• Contact Sensor ($conWatCnt)" : ""
@@ -2323,47 +2333,43 @@ def isCodeUpdateAvailable(newVer, curVer, type) {
 }
 
 def isAppUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.app?.ver, appVersion(), "manager")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.app?.ver, appVersion(), "manager")) { return true }
+    return false
+}
+
+def isDashUpdateAvail() {
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.webDash?.ver, atomicState?.webDashVer, "webDash")) { return true }
+    return false
 }
 
 def isPresUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.presence?.ver, atomicState?.presDevVer, "presence")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.presence?.ver, atomicState?.presDevVer, "presence")) { return true }
+    return false
 }
 
 def isProtUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.protect?.ver, atomicState?.pDevVer, "protect")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.protect?.ver, atomicState?.pDevVer, "protect")) { return true }
+    return false
 }
 
 def isCamUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.camera?.ver, atomicState?.camDevVer, "camera")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.camera?.ver, atomicState?.camDevVer, "camera")) { return true }
+    return false
 }
 
 def isTstatUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) { return true }
+    return false
 }
 
-//ERS  FIX once app file is updated with variables
 def isvTstatUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.vthermostat?.ver, atomicState?.vtDevVer, "vthermostat")) {
-    //if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.vtDevVer, "vthermostat")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.vthermostat?.ver, atomicState?.vtDevVer, "vthermostat")) { return true }
+    return false
 }
 
 def isWeatherUpdateAvail() {
-    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) {
-        return true
-    } else { return false }
+    if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) { return true }
+    return false
 }
 
 /************************************************************************************************
@@ -3290,14 +3296,6 @@ def connectionStatus(message, redirectUrl = null) {
     render contentType: 'text/html', data: html
 }
 
-def getChildTstatsIdString() {
-    return settings?.thermostats.collect { it.split(/\./).last() }.join(',')
-}
-
-def getChildProtectsIdString() {
-    return settings?.protects.collect { it.split(/\./).last() }.join(',')
-}
-
 def toJson(Map m) {
     return new org.json.JSONObject(m).toString()
 }
@@ -3485,7 +3483,8 @@ def getCameraChildName()     { return getChildName("Nest Camera") }
 def getvThermostatChildName() { return getChildName("Nest Virtual Thermostat") }
 
 def getAutoAppChildName()    { return getChildName("Nest Automations") }
-def getWatchdogAppChildName()    { return getChildName("Nest Location ${location.name} Watchdog") }
+def getWatchdogAppChildName(){ return getChildName("Nest Location ${location.name} Watchdog") }
+def getWebDashAppChildName() { return getChildName("Nest Web Dashboard") }
 
 def getChildName(str)     { return "${str}${appDevName()}" }
 
@@ -3508,6 +3507,7 @@ def latestPresVer()     { return atomicState?.appData?.updater?.versions?.presen
 def latestWeathVer()    { return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
 def latestCamVer()      { return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
 def latestvStatVer()    { return atomicState?.appData?.updater?.versions?.vthermostat ?: "unknown" }
+def latestWebDashVer()  { return atomicState?.appData?.updater?.versions?.webDashApp ?: "unknown" }
 def getUse24Time()      { return useMilitaryTime ? true : false }
 
 //Returns app State Info
@@ -4065,16 +4065,16 @@ def nestInfoPage () {
 
         section("Nest API Data") {
             if(atomicState?.structures) {
-                //href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
+                href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
             }
             if (atomicState?.thermostats) {
-                //href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
+                href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
             }
             if (atomicState?.protects) {
-                //href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
+                href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
             }
             if (atomicState?.cameras) {
-                //href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
+                href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
             }
 
             if(!(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras)) {
@@ -4092,6 +4092,113 @@ def nestInfoPage () {
         }
         section("Diagnostics") {
             href "diagPage", title: "View Diagnostic Info...", description: null, image: getAppImg("diag_icon.png")
+        }
+    }
+}
+
+def structInfoPage () {
+    dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
+        section("") {
+            paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
+        }
+        atomicState?.structData?.each { struc ->
+            if (struc?.key == atomicState?.structures) {
+                def str = ""
+                def cnt = 0
+                section("Location Name: ${struc?.value?.name}") {
+                    def data = struc?.value.findAll { !(it.key in noShow) }
+                    data?.sort().each { item ->
+                        cnt = cnt+1
+                        str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+                    }
+                    paragraph "${str}"
+                }
+            }
+        }
+    }
+}
+
+def tstatInfoPage () {
+    dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
+        section("") {
+            paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
+        }
+        atomicState?.thermostats?.sort().each { tstat ->
+            def str = ""
+            def cnt = 0
+            section("Thermostat Name: ${tstat?.value}") {
+                def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+                }
+                paragraph "${str}"
+            }
+        }
+    }
+}
+
+def protInfoPage () {
+    dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
+        section("") {
+            paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
+        }
+        atomicState?.protects.sort().each { prot ->
+            def str = ""
+            def cnt = 0
+            section("Protect Name: ${prot?.value}") {
+                def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    cnt = cnt+1
+                    str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+                }
+                paragraph "${str}"
+            }
+        }
+    }
+}
+
+def camInfoPage () {
+    dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
+        def noShow = [ "where_id", "device_id", "structure_id" ]
+        section("") {
+            paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
+        }
+        atomicState?.cameras.sort().each { cam ->
+            def str = ""
+            def evtStr = ""
+            def cnt = 0
+            def cnt2 = 0
+            section("Camera Name: ${cam?.value}") {
+                def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
+                data?.sort().each { item ->
+                    if (item?.key != "last_event") {
+                        if (item?.key in ["app_url", "web_url"]) {
+                            href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to View in Mobile Browser...", state: "complete"
+                        } else {
+                            cnt = cnt+1
+                            str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+                        }
+                    } else {
+                        item?.value?.sort().each { item2 ->
+                            if (item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
+                                href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to View in Mobile Browser...", state: "complete"
+                            }
+                            else {
+                                cnt2 = cnt2+1
+                                evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
+                            }
+                        }
+                    }
+                }
+                paragraph "${str}"
+                if(evtStr != "") {
+                    paragraph "Last Event Data:\n\n${evtStr}"
+                }
+            }
         }
     }
 }
@@ -4195,9 +4302,9 @@ def diagPage () {
                     image: getAppImg("progress_bar.png")
         }
         section("View Apps & Devices Data") {
-            //href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "childAppDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-            //href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+            href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
             href "appParamsDataPage", title:"View AppParams Data", description:"Tap to view...", image: getAppImg("view_icon.png")
         }
         if(optInAppAnalytics || optInSendExceptions) {
@@ -4239,15 +4346,99 @@ def appParamsDataPage() {
     }
 }
 
-mappings {
-    if(!parent) {
-        //used during Oauth Authentication
-        path("/oauth/initialize") 	{action: [GET: "oauthInitUrl"]}
-        path("/oauth/callback") 	{action: [GET: "callback"]}
-        //Renders Json Data
-        path("/renderInstallId")    {action: [GET: "renderInstallId"]}
-        path("/renderInstallData")  {action: [GET: "renderInstallData"]}
-        //path("/receiveEventData") {action: [POST: "receiveEventData"]}
+def managAppDataPage() {
+    dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
+        def noShow = ["accessToken", "authToken" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
+        section("SETTINGS DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = settings?.findAll { !(it.key in noShow) }
+               data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+            }
+            paragraph "${str}"
+        }
+        section("STATE DATA:") {
+            def str = ""
+            def cnt = 0
+            def data = state?.findAll { !(it.key in noShow) }
+            data?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+            }
+            paragraph "${str}"
+        }
+        section("APP METADATA:") {
+            def str = ""
+            def cnt = 0
+            getMetadata()?.sort().each { item ->
+                cnt = cnt+1
+                str += "${(cnt <= 1) ? "" : "\n\n\n"}${item?.key.toString().toUpperCase()}:\n\n"
+                def cnt2 = 0
+                item?.value.sort().each { vals ->
+                    cnt2 = cnt2+1
+                    str += "${(cnt2 <= 1) ? "" : "\n\n"}• ${vals?.key.toString()}: (${vals?.value})"
+                }
+            }
+            paragraph "${str}"
+        }
+    }
+}
+
+def childAppDataPage() {
+    dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
+        def apps = getChildApps()
+        if(apps) {
+            apps?.each { ca ->
+                def str = ""
+                section("${ca?.label.toString().capitalize()}:") {
+                    str += "   ─────SETTINGS DATA─────"
+                    def setData = ca?.getSettingsData()
+                    setData?.sort().each { sd ->
+                        str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
+                    }
+                    def appData = ca?.getAppStateData()
+                    str += "\n\n\n  ───────STATE DATA──────"
+                    appData?.sort().each { par ->
+                        str += "\n\n• ${par?.key.toString()}: (${par?.value})"
+                    }
+                    paragraph "${str}"
+                }
+            }
+        } else {
+            section("") { paragraph "No Child Apps Installed..." }
+        }
+    }
+}
+
+def childDevDataPage() {
+    dynamicPage(name: "childDevDataPage", refreshInterval:180, install: false) {
+        getAllChildDevices().each { dev ->
+            def str = ""
+            section("${dev?.displayName.toString().capitalize()}:") {
+                str += "  ───────STATE DATA──────"
+                dev?.getDeviceStateData()?.sort().each { par ->
+                    str += "\n\n• ${par?.key.toString()}: (${par?.value})"
+                }
+                str += "\n\n\n  ────SUPPORTED ATTRIBUTES────"
+                def devData = dev?.supportedAttributes.collect { it as String }
+                devData?.sort().each {
+                    str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
+                }
+                   str += "\n\n\n  ────SUPPORTED COMMANDS────"
+                dev?.supportedCommands?.sort().each { cmd ->
+                    //paragraph "${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                    str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+                }
+
+                str += "\n\n\n  ─────DEVICE CAPABILITIES─────"
+                dev?.capabilities?.sort().each { cap ->
+                    str += "\n\n• ${cap}"
+                }
+                paragraph "${str}"
+            }
+        }
     }
 }
 
@@ -4458,32 +4649,6 @@ def api_childAppData(params) {
         log.error "api_childAppData: Exception:", ex
         sendExceptionData(ex.message, "api_childAppData")
         return null
-    }
-}
-
-def childAppDataPage() {
-    dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
-        def apps = getChildApps()
-        if(apps) {
-            apps?.each { ca ->
-                def str = ""
-                section("${ca?.label.toString().capitalize()}:") {
-                    str += "   ─────SETTINGS DATA─────"
-                    def setData = ca?.getSettingsData()
-                    setData?.sort().each { sd ->
-                        str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
-                    }
-                    def appData = ca?.getAppStateData()
-                    str += "\n\n\n  ───────STATE DATA──────"
-                    appData?.sort().each { par ->
-                        str += "\n\n• ${par?.key.toString()}: (${par?.value})"
-                    }
-                    paragraph "${str}"
-                }
-            }
-        } else {
-            section("") { paragraph "No Child Apps Installed..." }
-        }
     }
 }
 
@@ -4941,20 +5106,18 @@ def nameAutoPage() {
 }
 
 def initAutoApp() {
-    if(settings["watchDogFlag"]) {
-        atomicState?.automationType = "watchDog"
+    if(automationType != "webDash") {
+        if(settings["watchDogFlag"]) {
+            atomicState?.automationType = "watchDog"
+        }
+        unschedule()
+        unsubscribe()
+        automationsInst()
+        subscribeToEvents()
+        scheduler()
+        app.updateLabel(getAutoTypeLabel())
+        watchDogAutomation()
     }
-    if(settings["webDashFlag"]) {
-        atomicState?.automationType = "webDash"
-    }
-    unschedule()
-    unsubscribe()
-    automationsInst()
-    subscribeToEvents()
-    scheduler()
-    app.updateLabel(getAutoTypeLabel())
-    watchDogAutomation()
-    webDashAutomation()
 }
 
 def uninstAutomationApp() {
@@ -4986,7 +5149,6 @@ def getAutoTypeLabel() {
     else if (type == "tMode")       { typeLabel = "${newName} (TstatMode)" }
     else if (type == "leakWat")     { typeLabel = "${newName} (LeakSensor)" }
     else if (type == "watchDog")    { typeLabel = "Nest Location ${location.name} Watchdog"}
-    else if (type == "webDash")     { typeLabel = "Nest Web Dashboard"}
 
     //if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
     if(appLbl != "Nest Manager") {
@@ -5031,7 +5193,6 @@ def automationsInst() {
     atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
     atomicState.isTstatModesConfigured = isTstatModesConfigured() ? true : false
     atomicState.isWatchdogConfigured = isWatchdogConfigured() ? true : false
-    atomicState.isWebDashConfigured = isWebDashConfigured() ? true : false
     atomicState?.isInstalled = true
 }
 
@@ -9390,14 +9551,14 @@ void sendTTS(txt) {
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-private def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
-private def appAuthor() 	{ return "Anthony S." }
-private def appNamespace() 	{ return "tonesto7" }
-private def gitBranch()     { return "develop" }
-private def betaMarker()    { return false }
-private def appDevType()    { return false }
-private def appDevName()    { return appDevType() ? " (Dev)" : "" }
-private def appInfoDesc() 	{
+def appName() 		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
+def appAuthor() 	{ return "Anthony S." }
+def appNamespace() 	{ return "tonesto7" }
+def gitBranch()     { return "develop" }
+def betaMarker()    { return false }
+def appDevType()    { return false }
+def appDevName()    { return appDevType() ? " (Dev)" : "" }
+def appInfoDesc() 	{
     def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
     def beta = betaMarker() ? "" : ""
     def str = ""
@@ -9406,18 +9567,18 @@ private def appInfoDesc() 	{
     str += "\n• ${textModified()}"
     return str
 }
-private def textAppName()   { return "${appName()}" }
-private def textVersion()   { return "Version: ${appVersion()}" }
-private def textModified()  { return "Updated: ${appVerDate()}" }
-private def textAuthor()    { return "${appAuthor()}" }
-private def textNamespace() { return "${appNamespace()}" }
-private def textVerInfo()   { return "${appVerInfo()}" }
-private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
-private def stIdeLink()     { return "https://graph.api.smartthings.com" }
-private def textCopyright() { return "Copyright© 2016 - Anthony S." }
-private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
-private def textHelp()      { return "" }
-private def textLicense() {
+def textAppName()   { return "${appName()}" }
+def textVersion()   { return "Version: ${appVersion()}" }
+def textModified()  { return "Updated: ${appVerDate()}" }
+def textAuthor()    { return "${appAuthor()}" }
+def textNamespace() { return "${appNamespace()}" }
+def textVerInfo()   { return "${appVerInfo()}" }
+def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
+def stIdeLink()     { return "https://graph.api.smartthings.com" }
+def textCopyright() { return "Copyright© 2016 - Anthony S." }
+def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
+def textHelp()      { return "" }
+def textLicense() {
     return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
         "you may not use this file except in compliance with the License. "+
         "You may obtain a copy of the License at"+

@@ -21,22 +21,23 @@ import java.security.MessageDigest
 
 definition(
     name: "${textAppName()}",
-    namespace: "${textNamespace()}",
+    namespace: "tonesto7",
     author: "${textAuthor()}",
     description: "${textDesc()}",
     category: "Convenience",
-    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
-    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
-    iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
+    parent: "${textParent()}",
+    iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/dashboard_icon.png",
+    iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/dashboard_icon.png",
+    iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/dashboard_icon.png",
     singleInstance: true,
     oauth: true )
 
-def appVersion() { "3.1.0" }
+def appVersion() { "1.0.0" }
 def appVerDate() { "8-24-2016" }
 def appVerInfo() {
     def str = ""
 
-    str += "V3.1.0 (August 24th, 2016):"
+    str += "V1.0.0 (August 24th, 2016):"
     str += "\n▔▔▔▔▔▔▔▔▔▔▔"
     str += "\n • ADDED: Initial Commit of Web Dashboard Child"
 
@@ -50,19 +51,12 @@ preferences {
     //Manager Pages
     page(name: "mainPage")
     page(name: "webDashPage")
-    page(name: "pageInitDashboard")
 }
 
 def webDashPrefix() { return "webDash" }
 
 def startPage() {
-    if (parent) {
-        atomicState?.isParent = false
-        selectAutoPage()
-    } else {
-        atomicState?.isParent = true
-        authPage()
-    }
+    mainPage()
 }
 
 //Web Dashboard EndPoints
@@ -85,62 +79,51 @@ mappings {
     path("/executeCmd/:cmd")                    {action: [GET: "api_executeCmd", POST: "api_executeCmd"]}
 }
 
-def mainAutoPage(params) {
-    //log.trace "mainAutoPage()"
+def installed() {
+    log.debug "Installed with settings: ${settings}"
+    initialize()
+    sendNotificationEvent("${textAppName()} has been installed...")
+}
+
+def updated() {
+    log.debug "Updated with settings: ${settings}"
+    initialize()
+    sendNotificationEvent("${textAppName()} has updated settings...")
+    atomicState?.lastUpdatedDt = getDtNow()
+}
+
+def uninstalled() {
+    log.debug "uninstalled..."
+    sendNotificationEvent("${textAppName()} is uninstalled...")
+    parent?.dashboardInstalled(false)
+    parent?.setDashboardUrl(null)
+}
+
+def initialize() {
+    log.trace "initialize nest web dashboard..."
+    if(!atomicState?.endpoint) { atomicState?.endpoint = null }
+    if(settings["webDashFlag"]) {
+        initializeEndpoint()
+        atomicState?.automationType = "webDash"
+        atomicState?.webDashFlag = true
+        parent?.dashboardInstalled(true)
+        if(atomicState?.endpoint) {
+            parent?.setDashboardUrl(atomicState?.endpoint)
+        }
+    }
+}
+
+def mainPage() {
+    //log.trace "mainPage()"
     if (!atomicState?.tempUnit) { atomicState?.tempUnit = getTemperatureScale()?.toString() }
-    if (!atomicState?.disableAutomation) { atomicState.disableAutomation = false }
     atomicState?.showHelp = (parent?.getShowHelp() != null) ? parent?.getShowHelp() : true
-    def autoType = null
-    //If params.autoType is not null then save to atomicState.
-    if (!params?.autoType) { autoType = atomicState?.automationType }
-    else { atomicState.automationType = params?.autoType; autoType = params?.autoType }
 
-    // If the selected automation has not been configured take directly to the config page.  Else show main page
-    if (autoType == "remSen" && !isRemSenConfigured())          { return remSensorPage() }
-    else if (autoType == "fanCtrl" && !isFanCtrlConfigured())   { return fanControlPage() }
-    else if (autoType == "extTmp" && !isExtTmpConfigured())     { return extTempPage() }
-    else if (autoType == "conWat" && !isConWatConfigured())     { return contactWatchPage() }
-    else if (autoType == "nMode" && !isNestModesConfigured())   { return nestModePresPage() }
-    else if (autoType == "tMode" && !isTstatModesConfigured())  { return tstatModePage() }
-    else if (autoType == "leakWat" && !isLeakWatConfigured())   { return leakWatchPage() }
-    else if (autoType == "watchDog" && !isWatchdogConfigured()) { return watchDogPage() }
-
-    else {
-        // Main Page Entries
-        def nxtPage = (atomicState?.automationType) ? "nameAutoPage" : ""
-        return dynamicPage(name: "mainAutoPage", title: "Automation Config Page...", uninstall: false, install: false, nextPage: "nameAutoPage" ) {
-            if(disableAutomationreq) {
-                section() {
-                    paragraph "This Automation is currently disabled!!!\nTurn it back on to to make changes or resume operation...", required: true, state: null, image: getAppImg("instruct_icon.png")
-                }
-            }
-            if(autoType == "webDash" && !atomicState?.disableAutomation) {
-                section("Web Dashboard:") {
-                    def webDashDesc = ""
-                    webDashDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
-                            "\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
-                    def webDesc = isWebDashConfigured() ? "${webDashDesc}" : null
-                    href "webDashPage", title: "Nest Web Dashboard...", description: webDesc ?: "Tap to Configure...", state: (webDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
-                }
-            }
-
-            if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured() || isWatchdogConfigured())) {
-                section("Enable/Disable this Automation") {
-                    input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: disableAutomation, submitOnChange: true, image: getAppImg("switch_off_icon.png")
-                    if(!atomicState?.disableAutomation && disableAutomationreq) {
-                        LogAction("This Automation was Disabled at (${getDtNow()})", "info", true)
-                        atomicState?.disableAutomationDt = getDtNow()
-                    } else if (atomicState?.disableAutomation && !disableAutomationreq) {
-                        LogAction("This Automation was Restored at (${getDtNow()})", "info", true)
-                        atomicState?.disableAutomationDt = null
-                    }
-                    atomicState.disableAutomation = disableAutomationreq
-                }
-                section("Debug Options") {
-                    input (name: "showDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
-                    atomicState?.showDebug = showDebug
-                }
-            }
+    return dynamicPage(name: "mainPage", title: "Automation Config Page...", uninstall: false, install: false, nextPage: "nameAutoPage" ) {
+        section("Web Dashboard:") {
+            def webDashDesc = ""
+            webDashDesc += atomicState?.endpoint ? "Dashboard is Enabled and Active" : ""
+            def webDesc = isWebDashConfigured() ? "${webDashDesc}" : null
+            href "webDashPage", title: "Nest Web Dashboard...", description: webDesc ?: "Tap to Configure...", state: (webDesc ? "complete" : null), image: getAppImg("dashboard_icon.png")
         }
     }
 }
@@ -149,80 +132,9 @@ def webDashPage() {
     def pName = webDashPrefix()
     dynamicPage(name: "webDashPage", title: "Nest Web Dashboard", uninstall: true, install: true) {
         section("Notifications:") {
-            href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true],
-                    state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
+            paragraph "Nothing to Configure Yet"
         }
     }
-}
-
-def nameAutoPage() {
-    dynamicPage(name: "nameAutoPage", install: true, uninstall: false) {
-        section("Automation name") {
-            if(getAutoType() == "watchDog") {
-                paragraph "${app?.label}"
-            } else {
-                label title: "Name this Automation:", defaultValue: "${getAutoTypeLabel()}", submitOnChange: true, required: true
-                paragraph "New Name:\n${getAutoTypeLabel()}", required: true, state: null
-                paragraph "FYI:\nMake sure to name it something that will help you easily identify the app later."
-            }
-        }
-    }
-}
-def initAutoApp() {
-    if(settings["webDashFlag"]) {
-        atomicState?.automationType = "webDash"
-        initNestManagerEndpoint()
-    }
-    unschedule()
-    unsubscribe()
-    automationsInst()
-    subscribeToEvents()
-    scheduler()
-    app.updateLabel(getAutoTypeLabel())
-    webDashAutomation()
-}
-
-def getAutoTypeLabel() {
-    //LogAction("getAutoTypeLabel:","trace", true)
-    def type = atomicState?.automationType
-    def appLbl = app?.label?.toString()
-    def newName = "${appName()}"
-    def typeLabel = ""
-    def newLbl
-    def dis = atomicState?.disableAutomation ? "\n(Disabled)" : ""
-    if (type == "webDash")     { typeLabel = "Nest Web Dashboard"}
-
-    //if(appLbl != typeLabel && appLbl != "Nest Manager" && !appLbl?.contains("(Disabled)")) {
-    if(appLbl != "Nest Manager") {
-        if(appLbl.contains("\n(Disabled)")) {
-            newLbl = appLbl.replaceAll('\\\n\\(Disabled\\)', '')
-        } else {
-            newLbl = appLbl
-        }
-    } else {
-        newLbl = typeLabel
-    }
-    return "${newLbl}${dis}"
-}
-
-def subscribeToEvents() {
-    //Remote Sensor Subscriptions
-    def autoType = getAutoType()
-    //webDash Subscriptions
-    if (autoType == "webDash") {
-
-    }
-}
-
-private pageInitDashboard() {
-	def success = initNestManagerEndpoint()
-	dynamicPage(name: "pageInitDashboard", title: "") {
-		section() {
-			if (success) {
-				paragraph "Success! Your Nest dashboard is now enabled. Tap Done to continue", required: false
-			}
-		}
-	}
 }
 
 def getWebEndpointUrl() {
@@ -238,26 +150,13 @@ def automationsInst() {
     atomicState?.isInstalled = true
 }
 
-def getSettingVal(var) {
-    return settings[var] ?: null
+def getSettingVal(var) { return settings[var] ?: null }
 
-}
+def getStateVal(var) { return state[var] ?: null }
 
-def getStateVal(var) {
-    return state[var] ?: null
-}
+def getAutomationType() { return atomicState?.automationType ?: null }
 
-def getAutomationType() {
-    return atomicState?.automationType ?: null
-}
-
-def getIsAutomationDisabled() {
-    return atomicState?.disableAutomation ? true : false
-}
-
-def webDashAutomation() {
-
-}
+def getIsAutomationDisabled() { return atomicState?.disableAutomation ? true : false}
 
 def scheduler() {
     def random = new Random()
@@ -283,16 +182,64 @@ def storeLastAction(actionDesc, actionDt) {
     }
 }
 
+def storeLastEventData(evt) {
+    if(evt) {
+        atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date, "unit":evt.unit]
+        //log.debug "LastEvent: ${atomicState?.lastEventData}"
+    }
+}
+
+def storeExecutionHistory(val, method = null) {
+    //log.debug "storeExecutionHistory($val, $method)"
+    try {
+        if(method) {
+            log.debug "${method} Execution Time: (${val} milliseconds)"
+        }
+        atomicState?.lastExecutionTime = val ?: null
+        def list = atomicState?.evalExecutionHistory ?: []
+        def listSize = 10
+        if(list?.size() < listSize) {
+            list.push(val)
+        }
+        else if (list?.size() > listSize) {
+            def nSz = (list?.size()-listSize) + 1
+            def nList = list?.drop(nSz)
+            nList?.push(val)
+            list = nList
+        }
+        else if (list?.size() == listSize) {
+            def nList = list?.drop(1)
+            nList?.push(val)
+            list = nList
+        }
+        if(list) { atomicState?.evalExecutionHistory = list }
+    } catch (ex) {
+        log.error "storeExecutionHistory Exception:", ex
+        parent?.sendExceptionData(ex.message, "storeExecutionHistory", true, getAutoType())
+    }
+}
+
+def getAverageValue(items) {
+    def tmpAvg = []
+    def val = 0
+    if(!items) { return val }
+    else if(items?.size() > 1) {
+        tmpAvg = items
+        if(tmpAvg && tmpAvg?.size() > 1) { val = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(0) }
+    } else { val = item }
+    return val.toInteger()
+}
+
 def getAutoActionData() {
     if(atomicState?.lastAutoActionData) {
         return atomicState?.lastAutoActionData
     }
 }
 
-private initNestManagerEndpoint() {
+def initializeEndpoint() {
     if (!atomicState?.endpoint) {
 		try {
-			def accessToken = atomicState?.accessToken
+			def accessToken = createAccessToken()
 			if (accessToken) {
 				atomicState?.endpoint = apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
 			}
@@ -304,31 +251,35 @@ private initNestManagerEndpoint() {
 }
 
 def api_deviceData() {
-    if(parent) {
-      return parent.api_deviceData(params)
-    }
+    def execTime = now()
+    def data = parent.api_deviceData(params)
+    storeExecutionHistory((now() - execTime), "api_deviceData")
+    return data
 }
 
 def api_singleDeviceData() {
-    if(parent) {
-      return parent.api_singleDeviceData(params)
-    }
+    def execTime = now()
+    def data = parent.api_singleDeviceData(params)
+    storeExecutionHistory((now() - execTime), "api_singleDeviceData")
+    return data
 }
 
 def api_managerData() {
-    if(parent) {
-      return parent.api_managerData(params)
-    }
+    def execTime = now()
+    def data = parent.api_managerData(params)
+    storeExecutionHistory((now() - execTime), "api_managerData")
+    return data
 }
 
 def api_childAppData() {
-    if(parent) {
-      return parent.api_childAppData(params)
-    }
+    def execTime = now()
+    def data = parent.api_childAppData(params)
+    storeExecutionHistory((now() - execTime), "api_childAppData")
+    return data
 }
 
-
 def api_dashboard() {
+    def execTime = now()
     def urlRoot = "https://st-nest-manager.firebaseapp.com"
     def htmlData = """
         <!DOCTYPE html>
@@ -429,7 +380,8 @@ def api_dashboard() {
           	</body>
         </html>
     """
-	render contentType: "text/html", data: htmlData
+    storeExecutionHistory((now() - execTime), "api_dashboard")
+    render contentType: "text/html", data: htmlData
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -437,15 +389,15 @@ def api_dashboard() {
 *                Application Help and License Info Variables                  *
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-private def appName() 		{ return "Nest Web Dashboard${appDevName()}" }
-private def appAuthor() 	{ return "Anthony S." }
-private def appNamespace() 	{ return "tonesto7" }
-private def gitBranch()     { return "develop" }
-private def betaMarker()    { return false }
-private def appDevType()    { return false }
-private def appDevName()    { return appDevType() ? " (Dev)" : "" }
-private def appInfoDesc() 	{
-    def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
+def appName() 		{ return "Nest Web Dashboard${appDevName()}" }
+def appAuthor() 	{ return "Anthony S." }
+def appNamespace() 	{ return "tonesto7" }
+def gitBranch()     { return "develop" }
+def betaMarker()    { return false }
+def appDevType()    { return false }
+def appDevName()    { return appDevType() ? " (Dev)" : "" }
+def appInfoDesc() 	{
+    def cur = parent?.isDashUpdateAvail()
     def beta = betaMarker() ? "" : ""
     def str = ""
     str += "${textAppName()}"
@@ -453,18 +405,31 @@ private def appInfoDesc() 	{
     str += "\n• ${textModified()}"
     return str
 }
-private def textAppName()   { return "${appName()}" }
-private def textVersion()   { return "Version: ${appVersion()}" }
-private def textModified()  { return "Updated: ${appVerDate()}" }
-private def textAuthor()    { return "${appAuthor()}" }
-private def textNamespace() { return "${appNamespace()}" }
-private def textVerInfo()   { return "${appVerInfo()}" }
-private def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
-private def stIdeLink()     { return "https://graph.api.smartthings.com" }
-private def textCopyright() { return "Copyright© 2016 - Anthony S." }
-private def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
-private def textHelp()      { return "" }
-private def textLicense() {
+def getServerUrl()          { return "https://graph.api.smartthings.com" }
+def getShardUrl()           { return getApiServerUrl() }
+def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback" }
+def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
+def getNestApiUrl()			{ return "https://developer-api.nest.com" }
+def getAppEndpointUrl(subPath) { return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
+def getHelpPageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html" }
+def getReadmePageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html" }
+def getAutoHelpPageUrl()        { return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help/nest-automations.html" }
+def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
+def getAppImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
+def getDevImg(imgName, on = null) 	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
+def textAppName()   { return "${appName()}" }
+def textVersion()   { return "Version: ${appVersion()}" }
+def textModified()  { return "Updated: ${appVerDate()}" }
+def textParent()    { return "${textNamespace()}:Nest Manager${appDevName()}"}
+def textAuthor()    { return "${appAuthor()}" }
+def textNamespace() { return "${appNamespace()}" }
+def textVerInfo()   { return "${appVerInfo()}" }
+def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
+def stIdeLink()     { return "https://graph.api.smartthings.com" }
+def textCopyright() { return "Copyright© 2016 - Anthony S." }
+def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings as well as allow you to create child automations triggered by user selected actions..." }
+def textHelp()      { return "" }
+def textLicense() {
     return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
         "you may not use this file except in compliance with the License. "+
         "You may obtain a copy of the License at"+
