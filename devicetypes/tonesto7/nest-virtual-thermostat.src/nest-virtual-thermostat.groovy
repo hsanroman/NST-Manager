@@ -1,5 +1,5 @@
 /**
- *  Nest Thermostat
+ *  Nest Virtual Thermostat
  *	Author: Anthony S. (@tonesto7)
  *	Contributor: Ben W. (@desertBlade) & Eric S. (@E_Sch)
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
@@ -2347,5 +2347,5 @@ def hideChartHtml() {
 private def textDevName()  { return "Nest ${virtDevName()}Thermostat${appDevName()}" }
 private def appDevType()   { return false }
 private def appDevName()   { return appDevType() ? " (Dev)" : "" }
-private def virtType()     { return false }
+private def virtType()     { return true }
 private def virtDevName()   { return virtType() ? "Virtual " : "" }

@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "1.0.2" }
+def devVer() { return "1.1.0" }
 
 metadata {
     definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -225,7 +225,7 @@ def processEvent() {
         return null
     }
     catch (ex) {
-        log.error "generateEvent Exception: ${ex}", ex
+        log.error "generateEvent Exception:", ex
         exceptionDataHandler(ex.message, "generateEvent")
     }
 }
@@ -478,7 +478,7 @@ def getPublicVideoId() {
             return vidId[3].toString()
         }
     } catch (ex) {
-        log.error "getPublicVideoId Exception..", ex
+        log.error "getPublicVideoId Exception:", ex
     }
 }
 
@@ -492,15 +492,20 @@ def streamingOn() {
         parent?.setCamStreaming(this, "true")
         sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
     } catch (ex) {
-        log.error "streamingOn Exception: ${ex}", ex
+        log.error "streamingOn Exception:", ex
         exceptionDataHandler(ex.message, "streamingOn")
     }
 }
 
 def streamingOff() {
-    log.trace "streamingOff..."
-    parent?.setCamStreaming(this, "false")
-    sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+    try {
+        log.trace "streamingOff..."
+        parent?.setCamStreaming(this, "false")
+        sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+    } catch (ex) {
+        log.error "streamingOff Exception:", ex
+        exceptionDataHandler(ex.message, "streamingOff")
+    }
 }
 
 def on() {
@@ -539,7 +544,7 @@ def take() {
         if(list) { state?.last5ImageData = list }
     }
     catch (ex) {
-        log.error "take Exception: ${ex}", ex
+        log.error "take Exception:", ex
         exceptionDataHandler(ex.message, "take")
     }
 }
@@ -749,7 +754,7 @@ def getCamUUID(pubVidId) {
             }
         } else { LogAction("getCamUUID PublicVideoId is missing....", "warn", true) }
     } catch (ex) {
-        log.error "getCamUUID Exception: ${ex}", ex
+        log.error "getCamUUID Exception:", ex
         exceptionDataHandler(ex.message, "getCamUUID")
     }
 }
@@ -767,7 +772,7 @@ def getLiveStreamHost(camUUID) {
         } else { LogAction("getLiveStreamHost camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getLiveStreamHost Exception: ${ex}", ex
+        log.error "getLiveStreamHost Exception:", ex
         exceptionDataHandler(ex.message, "getLiveStreamHost")
     }
 }
@@ -786,7 +791,7 @@ def getCamApiServer(camUUID) {
         } else { LogAction("getCamApiServer camUUID is missing....", "warn", true) }
     }
     catch (ex) {
-        log.error "getCamApiServer Exception: ${ex}", ex
+        log.error "getCamApiServer Exception:", ex
         exceptionDataHandler(ex.message, "getCamApiServer")
     }
 }
@@ -919,7 +924,7 @@ def getCamHtml() {
         render contentType: "text/html", data: mainHtml, status: 200
     }
     catch (ex) {
-        log.error "getCamHtml Exception: ${ex}", ex
+        log.error "getCamHtml Exception:", ex
         exceptionDataHandler(ex.message, "getCamHtml")
     }
 }
