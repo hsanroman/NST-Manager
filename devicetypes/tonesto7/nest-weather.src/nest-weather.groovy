@@ -1445,6 +1445,18 @@ def getWeatherHTML() {
     }
 }
 
+def hideChartHtml() {
+    def data = """
+        <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+        <br></br>
+        <div class="centerText">
+          <p>Waiting for more data to be collected</p>
+          <p>This may take at least 24 hours</p>
+        </div>
+    """
+    return data
+}
+
 private def textDevName()  { return "Nest Weather${appDevName()}" }
 private def appDevType()   { return false }
 private def appDevName()   { return appDevType() ? " (Dev)" : "" }
