@@ -711,7 +711,8 @@ def uninstalled() {
 def initialize() {
 	//log.debug "initialize..."
 	if(parent && atomicState?.automationType != "webDash") {
-		initAutoApp()
+		runIn(4, "initAutoApp", [overwrite: true])
+		//initAutoApp()
 	}
 	else {
 		initWatchdogApp()
@@ -742,6 +743,7 @@ def initManagerApp() {
 	atomicState.pollingOn = false
 	atomicState.lastChildUpdDt = null // force child update on next poll
 	atomicState.lastForcePoll = null
+	atomicState.swVersion = appVersion()
 	if (addRemoveDevices()) { // if we changed devices, reset queues and polling
 		atomicState.cmdQlist = []
 	}
@@ -962,9 +964,22 @@ def pollWatcher(evt) {
 	if (isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
+def checkIfSwupdated() {
+	if (atomicState?.swVersion != appVersion()) {
+		def cApps = getChildApps()
+		if(cApps) {
+			cApps?.sort()?.each { chld ->
+				chld?.update()
+			}
+		}
+		updated()
+	}
+}
+
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
+		checkIfSwupdated()
 		def dev = false
 		def str = false
 		if (force == true) { forcedPoll(type) }
@@ -4664,7 +4679,9 @@ def createInstallDataJson() {
 		def cdVer = atomicState?.camDevVer ?: "Not Installed"
 		def pdVer = atomicState?.presDevVer ?: "Not Installed"
 		def wdVer = atomicState?.weatDevVer ?: "Not Installed"
-		def versions = ["apps":["manager":appVersion()?.toString()], "devices":["thermostat":tsVer, "protect":ptVer, "camera":cdVer, "presence":pdVer, "weather":wdVer]]
+		def vTsVer = atomicState?.vtDevVer ?: "Not Installed"
+		def dashAppVer = atomicState?.dashAppVer ?: "Not Installed"
+		def versions = ["apps":["manager":appVersion()?.toString(), "dashApp":dashAppVer], "devices":["thermostat":tsVer, "vThermostat":vTsVer, "protect":ptVer, "camera":cdVer, "presence":pdVer, "weather":wdVer]]
 
 		def tstatCnt = atomicState?.thermostats?.size() ?: 0
 		def protCnt = atomicState?.protects?.size() ?: 0
@@ -4677,7 +4694,7 @@ def createInstallDataJson() {
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def data = [
-			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vStatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "vThermostats":vStatCnt, "protects":protCnt, "vthermostats":vStatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
 		]
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
