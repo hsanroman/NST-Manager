@@ -4694,7 +4694,7 @@ def createInstallDataJson() {
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def data = [
-			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "vThermostats":vStatCnt, "protects":protCnt, "vthermostats":vStatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vStatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
 		]
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
