@@ -842,6 +842,7 @@ def getInstAutoTypesDesc() {
 	def nModeCnt = 0
 	def tModeCnt = 0
 	def watchDogCnt = 0
+	def webDashCnt = 0
 	def disCnt = 0
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
@@ -872,6 +873,9 @@ def getInstAutoTypesDesc() {
 					break
 				case "watchDog":
 					watchDogCnt = watchDogCnt+1
+					break
+				case "webDash":
+					webDashCnt = webDashCnt+1
 					break
 			}
 		}
