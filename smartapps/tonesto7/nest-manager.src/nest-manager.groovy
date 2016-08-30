@@ -1268,20 +1268,20 @@ def updateChildData(force = false) {
 					   def ctempF = 0
 					   if (getTemperatureScale() == "C") {
 						   ctempC = automationChildApp.getRemSenCoolSetTemp()
-						   ctempF = (ctempC * 9/5 + 32) as Integer
+						   ctempF = (ctempC * 9/5 + 32.0) as Integer
 					   } else {
 						   ctempF = automationChildApp.getRemSenCoolSetTemp()
-						   ctempC = (ctempF - 32) * 5/9 as Double
+						   ctempC = (ctempF - 32.0) * 5/9 as Double
 					   }
 
 					   def htempC = 0.0
 					   def htempF = 0
 					   if (getTemperatureScale() == "C") {
 						   htempC = automationChildApp.getRemSenHeatSetTemp()
-						   htempF = (htempC * 9/5 + 32) as Integer
+						   htempF = (htempC * 9/5 + 32.0) as Integer
 					   } else {
 						   htempF = automationChildApp.getRemSenHeatSetTemp()
-						   htempC = (htempF - 32) * 5/9 as Double
+						   htempC = (htempF - 32.0) * 5/9 as Double
 					   }
 
 					   if(data?.hvac_mode.toString() == "heat-cool") {
@@ -1715,7 +1715,6 @@ def setTargetTempHigh(child, unit, temp, virtual=false) {
 
 def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 	def childDev = getChildDevice(childId)
-	def cmdDelay = getChildWaitVal()
 	if(childDebug && childDev) { childDev?.log("sendNestApiCmd... $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId") }
 	try {
 		if(cmdTypeId) {
@@ -1728,7 +1727,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 
 			if (cmdQueue?.contains(cmdData)) {
 				LogAction("Command Exists in queue... Skipping...", "warn", true)
-				if(childDebug && childDev) { childDev?.log("Command Exists in queue ${qnum}... Skipping...", "warn") }
+				if(childDev) { childDev?.log("Command Exists in queue ${qnum}... Skipping...", "warn") }
 				schedNextWorkQ(childId)
 			} else {
 				LogAction("Adding Command to Queue ${qnum}: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
@@ -1770,7 +1769,7 @@ private getQueueNumber(cmdTypeId, childId) {
 		setRecentSendCmd(qnum, null)
 	}
 	qnum = cmdQueueList.indexOf(cmdTypeId)
-	if (qnum == -1 ) { if(childDebug && childDev) { childDev?.log("getQueueNumber: NOT FOUND" ) } }
+	if (qnum == -1 ) { if(childDev) { childDev?.log("getQueueNumber: NOT FOUND" ) } }
 	if(childDebug && childDev) { childDev?.log("getQueueNumber: cmdTypeId ${cmdTypeId} is queue ${qnum}" ) }
 	return qnum
 }
@@ -1794,7 +1793,7 @@ void schedNextWorkQ(childId) {
 		if (done || !atomicState?."cmdQ${idx}" ) { return }
 		else {
 			if ( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
-				runIn(cmdDelay, "workQueue", [overwrite: true])
+				runIn(cmdDelay*2, "workQueue", [overwrite: true])
 				qnum = idx
 				done = true
 				return
@@ -1809,7 +1808,8 @@ void schedNextWorkQ(childId) {
 	if (!done) {
 		 runIn(nearestQ, "workQueue", [overwrite: true])
 	}
-	if(childDebug && childDev) { childDev?.log("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
+	//if(childDebug && childDev) { childDev?.log("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
+	if(childDev) { childDev?.log("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
 }
 
 private getRecentSendCmd(qnum) {
@@ -1853,7 +1853,7 @@ void workQueue() {
 		}
 	}
 
-	//log.trace("workQueue Run queue: ${qnum}" )
+	log.trace("workQueue Run queue: ${qnum}" )
 	if (!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
 	def cmdQueue = atomicState?."cmdQ${qnum}"
 	try {
@@ -1876,7 +1876,7 @@ void workQueue() {
 				if ( !cmdres ) {
 					atomicState.needChildUpd = true
 					atomicState.pollBlocked = false
-					runIn((cmdDelay * 2), "postCmd", [overwrite: true])
+					runIn((cmdDelay * 3), "postCmd", [overwrite: true])
 				}
 				cmdProcState(false)
 			}
@@ -1910,7 +1910,7 @@ void workQueue() {
 			if(cmdQueue?.size() == 0) {
 				atomicState.pollBlocked = false
 				atomicState.needChildUpd = true
-				runIn(cmdDelay + 2, "postCmd", [overwrite: true])
+				runIn(cmdDelay * 3, "postCmd", [overwrite: true])
 			}
 			else { schedNextWorkQ(null) }
 
@@ -5139,6 +5139,9 @@ def uninstAutomationApp() {
 			if (parent?.addRemoveVthermostat(remSenTstat.deviceNetworkId, false, myID)) {
 				LogAction("removed virtual thermostat", "debug", true)
 			}
+			if( parent?.remSenUnlock(atomicState?.remSenTstat, myID) ) { // attempt unlock old ID
+				LogAction("Released remote sensor lock", "debug", true)
+			}
 		}
 	}
 }
@@ -6074,6 +6077,68 @@ def remSenTstatFanSwitchCheck() {
 	}
 }
 
+def remSendoSetCool(chgval, onTemp, offTemp) {
+	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
+	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
+	def maxTempChangeVal = tempChangeVal * 3
+
+	chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
+	chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
+	if (chgval != curCoolSetpoint) {
+		runIn(60, "remSenCheck", [overwrite: true])
+		def cHeat = null
+		if (hvacMode in ["auto"]) {
+			if (curHeatSetpoint > (chgval-5.0)) {
+				cHeat = chgval - 5.0
+				LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
+				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
+			}
+		}
+		if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
+			LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+			storeLastAction("Adjusted Cool Setpoint to (${chgval}°${atomicState?.tempUnit}) Heat Setpoint to (${cHeat}°${atomicState?.tempUnit})", getDtNow())
+			if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
+		}
+		return  true // let all this take effect
+	} else {
+		LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+	}
+	return  false
+}
+
+def remSendoSetHeat(chgval, onTemp, offTemp) {
+	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
+	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
+	def maxTempChangeVal = tempChangeVal * 3
+
+	chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
+	chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
+	if (chgval != curHeatSetpoint) {
+		runIn(60, "remSenCheck", [overwrite: true])
+		def cCool = null
+		if (hvacMode in ["auto"]) {
+			if (curCoolSetpoint < (chgval+5)) {
+				cCool = chgval + 5.0
+				LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
+				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
+			}
+		}
+		if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
+			LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
+			storeLastAction("Adjusted Heat Setpoint to (${chgval}°${atomicState?.tempUnit}) Cool Setpoint to (${cCool}°${atomicState?.tempUnit})", getDtNow())
+			if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
+		}
+		return  true // let all this take effect
+	} else {
+		LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
+	}
+	return  false
+}
+
 private remSenCheck() {
 	//LogAction("remSenCheck.....", "trace", false)
 	if(atomicState?.disableAutomation) { return }
@@ -6116,6 +6181,7 @@ private remSenEvtEval() {
 				LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
 				atomicState?.CoolOverride = null
 				atomicState?.HeatOverride = null
+				storeExecutionHistory((now() - execTime), "remSenEvtEval")
 				return
 			}
 			def reqSenHeatSetPoint = getRemSenHeatSetTemp()
@@ -6159,8 +6225,52 @@ private remSenEvtEval() {
 				noGoDesc = ""
 				noGoDesc += (!modeOk && getRemSenModeOk()) ? "Mode Filters were set and the current mode was not selected for Evaluation" : ""
 				noGoDesc += (!getRemSenModeOk() && modeOk) ? "This mode is not one of those selected for evaluation..." : ""
+
+// if we have heat on, ac on, or fan on, turn them off once
+
+				if(atomicState?.haveRun) {
+					if (remSenRuleType in ["Cool", "Heat_Cool", "Heat_Cool_Circ"]
+					    && atomicState?.remSenCoolOn != null && !atomicState.remSenCoolOn
+					    && (hvacMode in ["cool","auto"])
+					    && acRunning) {
+						def onTemp = reqSenCoolSetPoint + threshold
+						def offTemp = reqSenCoolSetPoint
+						chgval = curTstatTemp + tempChangeVal
+						if(remSendoSetCool(chgval, onTemp, offTemp)) {
+							noGoDesc +=  "   Turning off COOL due to mode change"
+						}
+						atomicState?.remSenCoolOn = false
+					}
+
+					if (remSenRuleType in ["Heat", "Heat_Cool", "Heat_Cool_Circ"]
+					    && atomicState?.remSenHeatOn != null && !atomicState.remSenHeatOn
+					    && (hvacMode in ["heat", "emergency heat", "auto"])
+					    && heatRunning) {
+						def onTemp = reqSenHeatSetPoint - threshold
+						def offTemp = reqSenHeatSetPoint
+						chgval = curTstatTemp - tempChangeVal
+						if(remSendoSetHeat(chgval, onTemp, offTemp)) {
+							noGoDesc +=  "   Turning off HEAT due to mode change"
+						}
+						atomicState?.remSenHeatOn = false
+					}
+
+					if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
+						if (fanOn) {
+							LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan as modes do not match evaluation", "info", true)
+							storeLastAction("Turned ${remSenTstat} Fan to (Auto)", getDtNow())
+							remSenTstat?.fanAuto()
+							if(remSenTstatMir) { remSenTstatMir*.fanAuto() }
+						}
+					}
+					atomicState.haveRun = false
+				}
 				LogAction("Remote Sensor: Skipping Evaluation...Remote Sensor Evaluation Status: ${noGoDesc}", "info", true)
+				storeExecutionHistory((now() - execTime), "remSenEvtEval")
+				return
 			}
+
+			atomicState.haveRun = true
 
 			def chg = false
 			def chgval = 0
@@ -6179,27 +6289,26 @@ private remSenEvtEval() {
 						turnOn = true
 					}
 
-					if(!modeOk || !getRemSenModeOk()) {
-						turnOff = true   // system should be off
-						turnOn = false
-					}
-
 					if (turnOff && acRunning) {
 						chgval = curTstatTemp + tempChangeVal
 						chg = true
 						LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn Off Thermostat", "info", true)
 						acRunning = false
+						atomicState?.remSenCoolOn = false
 					} else if (turnOn && !acRunning) {
 						chgval = curTstatTemp - tempChangeVal
 						chg = true
 						acRunning = true
+						atomicState.remSenCoolOn = true
 						LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to Turn On Thermostat", "info", true)
 					} else {
 						// logic to decide if we need to nudge thermostat to keep it on or off
 						if (acRunning) {
 							chgval = curTstatTemp - tempChangeVal
+							atomicState.remSenCoolOn = true
 						} else {
 							chgval = curTstatTemp + tempChangeVal
+							atomicState?.remSenCoolOn = false
 						}
 						def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
 						LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
@@ -6209,33 +6318,11 @@ private remSenEvtEval() {
 						}
 					}
 					if (chg) {
-						chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
-						chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
-						if (chgval != curCoolSetpoint) {
-							runIn(60, "remSenCheck", [overwrite: true])
-							def cHeat = null
-							if (hvacMode in ["auto"]) {
-								if (curHeatSetpoint > (chgval-5.0)) {
-									cHeat = chgval - 5.0
-									LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${atomicState?.tempUnit}) to allow COOL setting", "info", true)
-									storeLastAction("Adjusted Heat Setpoint to (${cHeat}°${atomicState?.tempUnit})", getDtNow())
-									curHeatSetpoint =  cHeat
-									if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
-								}
-							}
-
-							if (setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
-								LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${atomicState?.tempUnit}) ", "info", true)
-								storeLastAction("Adjusted Cool Setpoint to (${chgval}°${atomicState?.tempUnit})", getDtNow())
-								curCoolSetpoint = chgval
-								if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
-							}
+						if(remSendoSetCool(chgval, onTemp, offTemp)) {
 							storeExecutionHistory((now() - execTime), "remSenEvtEval")
-							return  // let all this take effect
-
-						} else {
-							LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${atomicState?.tempUnit}) ", "info", true)
+							return // let all this take effect
 						}
+
 					} else {
 						LogAction("Remote Sensor: NO CHANGE TO COOL - CoolSetpoint is (${curCoolSetpoint}°${atomicState?.tempUnit}) ", "info", true)
 					}
@@ -6262,27 +6349,26 @@ private remSenEvtEval() {
 						turnOff = true
 					}
 
-					if(!modeOk || !getRemSenModeOk()) {
-						turnOff = true   // system should be off
-						turnOn = false
-					}
-
 					if (turnOff && heatRunning) {
 						chgval = curTstatTemp - tempChangeVal
 						chg = true
 						LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn Off Thermostat", "info", true)
 						heatRunning = false
+						atomicState.remSenHeatOn = false
 					} else if (turnOn && !heatRunning) {
 						chgval = curTstatTemp + tempChangeVal
 						chg = true
 						LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to Turn On Thermostat", "info", true)
+						atomicState.remSenHeatOn = true
 						heatRunning = true
 					} else {
 						// logic to decide if we need to nudge thermostat to keep it on or off
 						if (heatRunning) {
 							chgval = curTstatTemp + tempChangeVal
+							atomicState.remSenHeatOn = true
 						} else {
 							chgval = curTstatTemp - tempChangeVal
+							atomicState.remSenHeatOn = false
 						}
 						def heatDiff1 = Math.abs(curTstatTemp - curHeatSetpoint)
 						LogAction("Remote Sensor: HEAT - heatDiff1: ${heatDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
@@ -6292,32 +6378,9 @@ private remSenEvtEval() {
 						}
 					}
 					if (chg) {
-						chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
-						chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
-						if (chgval != curHeatSetpoint) {
-							runIn(60, "remSenCheck", [overwrite: true])
-							def cCool = null
-							if (hvacMode in ["auto"]) {
-								if (curCoolSetpoint < (chgval+5)) {
-									cCool = chgval + 5.0
-									LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${atomicState?.tempUnit}) to allow HEAT setting", "info", true)
-									storeLastAction("Adjusted Cool Setpoint to (${cCool}°${atomicState?.tempUnit})", getDtNow())
-									curCoolSetpoint = cCool
-									if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
-								}
-							}
-
-							if (setTstatAutoTemps(remSenTstat, cCool, chgval)) {
-								LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${atomicState?.tempUnit})", "info", true)
-								storeLastAction("Adjusted Heat Setpoint to (${cCool}°${atomicState?.tempUnit})", getDtNow())
-								curHeatSetpoint = chgval
-								if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
-							}
+						if(remSendoSetHeat(chgval, onTemp, offTemp)) {
 							storeExecutionHistory((now() - execTime), "remSenEvtEval")
-							return  // let all this take effect
-
-						} else {
-							LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${atomicState?.tempUnit})", "info", true)
+							return // let all this take effect
 						}
 					} else {
 						LogAction("Remote Sensor: NO CHANGE TO HEAT - HeatSetpoint is already (${curHeatSetpoint}°${atomicState?.tempUnit})", "info", true)
@@ -6327,22 +6390,9 @@ private remSenEvtEval() {
 
 			// Determines Heat/Cool Fan Temps
 			if(remSenRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
-				if(!modeOk || !getRemSenModeOk()) {
-					if (fanOn) {
-						LogAction("Remote Sensor: Turning OFF '${remSenTstat?.displayName}' Fan as modes do not match evaluation", "info", true)
-						storeLastAction("Turned ${remSenTstat} Fan to (Auto)", getDtNow())
-						remSenTstat?.fanAuto()
-						if(remSenTstatMir) { remSenTstatMir*.fanAuto() }
-
-						// with Nest, it automatically turns off fan after a defined time;  ensure we don't turn it on again
-						storeExecutionHistory((now() - execTime), "remSenEvtEval")
-						return
-					}
-				}  else {
-					if (hvacMode in ["heat", "auto", "cool"]) {
-						def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curSenTemp)
-						remSenFanControl(remSenTstat, remSenTstatMir, hvacMode, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), threshold, fanOn)
-					}
+				if (hvacMode in ["heat", "auto", "cool"]) {
+					def sTemp = getFanAutoModeTemp(hvacMode, curTstatOperState, reqSenHeatSetPoint, reqSenCoolSetPoint, curSenTemp)
+					remSenFanControl(remSenTstat, remSenTstatMir, hvacMode, curTstatOperState, curTstatFanMode, sTemp?.type?.toString(), curSenTemp, sTemp?.req?.toDouble(), threshold, fanOn)
 				}
 			}
 		}
