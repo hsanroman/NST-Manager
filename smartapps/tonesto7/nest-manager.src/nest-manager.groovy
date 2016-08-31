@@ -7259,7 +7259,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							}
 							if(allowNotif) {
 								sendEventPushNotifications("${extTmpTstat?.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!", "Info")
-								if (speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
+								if (allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
 							}
 						} else { LogAction("extTmpTempCheck(): Error turning themostat Off", "warn", true) }
 					} else { scheduleAutomationEval(30) }
@@ -7562,7 +7562,7 @@ def conWatCheck(cTimeOut = false) {
 
 							if(allowNotif) {
 								sendEventPushNotifications("'${conWatTstat.label}' has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})...", "Info")
-								sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg"))
+								if (allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OffVoiceMsg")) }
 							}
 						} else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
 					} else {
@@ -7808,7 +7808,7 @@ def leakWatCheck() {
 						LogAction("leakWatCheck: '${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "warn", true)
 						if(allowNotif) {
 							sendEventPushNotifications("'${leakWatTstat.label}' has been turned 'OFF' because${wetCtDesc}has reported it's WET...", "Info")
-							sendEventVoiceNotifications(voiceNotifString("${leakWatTstat} has been turned OFF because${wetCtDesc}has reported it's WET..."))
+							if (allowSpeech) { sendEventVoiceNotifications(voiceNotifString("${leakWatTstat} has been turned OFF because${wetCtDesc}has reported it's WET...")) }
 						}
 					} else { LogAction("leakWatCheck(): Error turning themostat Off", "warn", true) }
 				} else {
@@ -8700,17 +8700,17 @@ def setNotificationPage(params) {
 def voiceNotifString(phrase) {
 	//log.trace "conWatVoiceNotifString..."
 	try {
-		if (phrase.toLowerCase().contains("%tstatname%")) { phrase = phrase.toLowerCase().replace('%tstatname%', (settings?."${getAutoType()}Tstat"?.displayName.toString() ?: "unknown")) }
-		if (phrase.toLowerCase().contains("%lastmode%")) { phrase = phrase.toLowerCase().replace('%lastmode%', (atomicState?."${getAutoType()}RestoreMode".toString() ?: "unknown")) }
-		if (getAutoType() == "conWat" && phrase.toLowerCase().contains("%opencontact%")) {
-			phrase = phrase.toLowerCase().replace('%opencontact%', (getOpenContacts(conWatContacts) ? getOpenContacts(conWatContacts)?.join(", ").toString() : "a selected contact")) }
-		if (getAutoType() == "extTmp" && phrase.toLowerCase().contains("%tempthreshold%")) {
-			phrase = phrase.toLowerCase().replace('%tempthreshold%', "${extTmpDiffVal.toString()}(°${atomicState?.tempUnit})") }
-		if (phrase.toLowerCase().contains("%offdelay%")) { phrase = phrase.toLowerCase().replace('%offdelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffDelay").toString()) }
-		if (phrase.toLowerCase().contains("%ondelay%")) { phrase = phrase.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OnDelay").toString()) }
+		if (phrase?.toLowerCase().contains("%tstatname%")) { phrase = phrase?.toLowerCase().replace('%tstatname%', (settings?."${getAutoType()}Tstat"?.displayName.toString() ?: "unknown")) }
+		if (phrase?.toLowerCase().contains("%lastmode%")) { phrase = phrase?.toLowerCase().replace('%lastmode%', (atomicState?."${getAutoType()}RestoreMode".toString() ?: "unknown")) }
+		if (getAutoType() == "conWat" && phrase?.toLowerCase().contains("%opencontact%")) {
+			phrase = phrase?.toLowerCase().replace('%opencontact%', (getOpenContacts(conWatContacts) ? getOpenContacts(conWatContacts)?.join(", ").toString() : "a selected contact")) }
+		if (getAutoType() == "extTmp" && phrase?.toLowerCase().contains("%tempthreshold%")) {
+			phrase = phrase?.toLowerCase().replace('%tempthreshold%', "${extTmpDiffVal.toString()}(°${atomicState?.tempUnit})") }
+		if (phrase?.toLowerCase().contains("%offdelay%")) { phrase = phrase?.toLowerCase().replace('%offdelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffDelay").toString()) }
+		if (phrase?.toLowerCase().contains("%ondelay%")) { phrase = phrase?.toLowerCase().replace('%ondelay%', getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OnDelay").toString()) }
 	} catch (ex) {
 		log.error "voiceNotifString Exception:", ex
-		parent?.sendExceptionData(ex.message, "voiceNotifString", true, getAutoType())
+		parent?.sendExceptionData(ex, "voiceNotifString", true, getAutoType())
 	}
 	return phrase
 }
