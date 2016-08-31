@@ -1128,8 +1128,8 @@ def updateChildData(force = false) {
 	//runIn(40, "postCmd", [overwrite: true])
 	try {
 		atomicState?.lastChildUpdDt = getDtNow()
-		def useMt = !useMilitaryTime ? false : true
-		def dbg = !childDebug ? false : true
+		def useMt = !settings?.useMilitaryTime ? false : true
+		def dbg = !settings?.childDebug ? false : true
 		def nestTz = getNestTimeZone()?.toString()
 		def api = !apiIssues() ? false : true
 		def htmlInfo = getHtmlInfo()
@@ -1434,60 +1434,6 @@ def apiVar() {
 		hvacModes: 	[ heat:"heat", cool:"cool", heatCool:"heat-cool", off:"off" ]
 	]
 	return api
-}
-
-def sendEvtUpdateToDevice(typeId, type, obj, objVal) {
-	log.trace "sendEvtUpdateToDevice($typeId, $type, $obj, $objVal)..."
-	try {
-		def devId
-		if(type == apiVar().rootTypes.tstat) {
-			def tDev = getChildDevice(typeId)
-			if(tDev) {
-				switch(obj) {
-					case [apiVar()?.cmdObjs.targetF, apiVar()?.cmdObjs.targetC]:
-						sendEvent(device: tDev, name:'targetTemperature', value: objVal, unit: state?.tempUnit, descriptionText: "Target Temperature is ${objVal}", displayed: false, isStateChange: true)
-					break
-					case [apiVar()?.cmdObjs.targetLowF, apiVar()?.cmdObjs.targetLowC]:
-						sendEvent(device: tDev, name:'heatingSetpoint', value: objVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${objVal}" , displayed: disp, isStateChange: true, state: "heat")
-					break
-					case [apiVar()?.cmdObjs.targetHighF, apiVar()?.cmdObjs.targetHighC]:
-						sendEvent(device: tDev, name:'coolingSetpoint', value: objVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${objVal}" , displayed: disp, isStateChange: true, state: "cool")
-					break
-					case [apiVar()?.cmdObjs.fanActive]:
-						sendEvent(device: tDev, name: "thermostatFanMode", value: objVal, descriptionText: "Fan Mode is: ${objVal}", displayed: true, isStateChange: true, state: objVal)
-					break
-					case [apiVar()?.cmdObjs.hvacMode]:
-						sendEvent(device: tDev, name: "thermostatMode", value: objVal, descriptionText: "HVAC mode is ${objVal} mode", displayed: true, isStateChange: true)
-					break
-				}
-			}
-		}
-		if(obj == apiVar()?.cmdObjs.away) {
-			def pres = (objVal?.toString() == "home") ? "present" : "not present"
-			def nestPres = (objVal?.toString() == "home") ? "home" : ((objVal?.toString() == "auto-away") ? "auto-away" : "away")
-			def devIds = []
-			if(settings?.presDevice) { devIds?.push(getNestPresId()) }
-			if(atomicState?.thermostats) {
-				atomicState?.thermostats.each { tstat ->
-					//log.debug "tstat: ${tstat.key}"
-					devIds?.push(tstat?.key.toString())
-				}
-			}
-			//log.debug "devIds: $devIds"
-			if(devIds) {
-				devIds?.each { dev ->
-					//log.debug "dev: $dev"
-					def cDev = getChildDevice(dev?.toString())
-					log.debug "child: $cDev"
-					sendEvent(device: cDev, name: 'nestPresence', value: nestPres, descriptionText: "Nest Presence is: ${nestPres}", displayed: true, isStateChange: true )
-					sendEvent(device: cDev, name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: false, isStateChange: true)
-				}
-			}
-		}
-	} catch (ex) {
-		log.error "sendEvtUpdateToDevice Exception:", ex
-		sendExceptionData(ex.message, "sendEvtUpdateToDevice")
-	}
 }
 
 def setCamStreaming(child, streamOn) {
