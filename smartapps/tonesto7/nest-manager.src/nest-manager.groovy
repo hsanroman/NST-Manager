@@ -37,14 +37,16 @@ definition(
 }
 
 def appVersion() { "3.1.1" }
-def appVerDate() { "8-31-2016" }
+def appVerDate() { "9-1-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V3.1.1 (August 31st, 2016):"
+	str += "V3.1.1 (September 1st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • FIXED: Removed old unnecessary code."
-	str += "\n • FIXED: Minor Automation bugfixes."
+	str += "\n • FIXED: Removed old unnecessary code and tweaked the UI a bit."
+	str += "\n • FIXED: Added in Visual element to manager app to show user when there ST account is missing required location info."
+	str += "\n • FIXED: Lot of tiny Automation bugfixes."
+	str += "\n • FIXED: Broken Automation Notifications."
 	str += "\n • FIXED: Error when trying to open Automation Statistics."
 
 	str += "\n\nV3.1.0 (August 26th, 2016):"
@@ -1103,8 +1105,8 @@ def getApiData(type = null) {
 			log.error "getApiData (type: $type) Exception:", ex
 			if(type == "str") { atomicState.needStrPoll = true }
 			else if(type == "dev") { atomicState?.needDevPoll = true }
+			sendExceptionData(ex.message, "getApiData")
 		}
-		sendExceptionData(ex.message, "getApiData")
 	}
 	return result
 }
@@ -1117,6 +1119,18 @@ def generateMD5_A(String s) {
 	MessageDigest digest = MessageDigest.getInstance("MD5")
 	digest.update(s.bytes)
 	return digest.digest().toString()
+}
+
+def minDevVer2Str(val) {
+	def str = ""
+	def pCnt = 0
+	def list = []
+	str += "v"
+	val?.each {
+		list.add(it)
+		//str += "${it}"
+	}
+	log.debug "list: $list"
 }
 
 def updateChildData(force = false) {
@@ -1143,7 +1157,7 @@ def updateChildData(force = false) {
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def comfortDewpoint = settings?.comfortDewpointMax ?: 0.0
 				atomicState?.tDevVer = it?.devVer() ?: ""
-				if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat)) {
+				if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 					def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 								"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 								"latestVer":latestTstatVer()?.ver?.toString()]
@@ -1158,13 +1172,13 @@ def updateChildData(force = false) {
 					}
 					return true
 				} else {
-					LogAction("The Manager App will not send data to the Thermostat device because the device version (${versionStr2Int(atomicState?.tDevVer)}) is lower than the Minimum (v${minDevVersions()?.thermostat})... Please Update Thermostat Device Handler Code to latest version to resolve this issue...", "error", true)
+					LogAction("VERSION RESTRICTION: Your Thermostat Device Version (v${atomicState?.tDevVer}) is lower than the Minimum (v${minDevVersions()?.thermostat?.desc}) Required... Please Update the Device Code to latest version to resume operation!!!", "error", true)
 					return false
 				}
 			}
 			else if(!atomicState?.pDevVer || (atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId])) {
 				atomicState?.pDevVer = it?.devVer() ?: ""
-				if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect)) {
+				if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect?.val)) {
 					def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
 								"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString()]
 					def oldProtData = atomicState?."oldProtData${devId}"
@@ -1178,13 +1192,13 @@ def updateChildData(force = false) {
 					}
 					return true
 				} else {
-					LogAction("The Manager App will not send data to the Protect device because the device version (${versionStr2Int(atomicState?.pDevVer)}) is lower than the Minimum (v${minDevVersions()?.protect})... Please Update Protect Device Handler Code to latest version to resolve this issue...", "error", true)
+					LogAction("VERSION RESTRICTION: Your Protect Device Version (v${atomicState?.pDevVer}) is lower than the Minimum of (v${minDevVersions()?.protect?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 					return false
 				}
 			}
 			else if(atomicState?.cameras && atomicState?.deviceData?.cameras[devId]) {
 				atomicState?.camDevVer = it?.devVer() ?: ""
-				if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera)) {
+				if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera?.val)) {
 					def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
 								"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString()]
 					def oldCamData = atomicState?."oldCamData${devId}"
@@ -1196,13 +1210,13 @@ def updateChildData(force = false) {
 					}
 					return true
 				} else {
-					LogAction("The Manager App will not send data to the Camera device because the device version (${versionStr2Int(atomicState?.camDevVer)}) is lower than the Minimum (v${minDevVersions()?.camera})... Please Update Camera Device Handler Code to latest version to resolve this issue...", "error", true)
+					LogAction("VERSION RESTRICTION: Your Camera Device Version (v${atomicState?.camDevVer}) is lower than the Minimum of (v${minDevVersions()?.camera?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 					return false
 				}
 			}
 			else if(atomicState?.presDevice && devId == getNestPresId()) {
 				atomicState?.presDevVer = it?.devVer() ?: ""
-				if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence)) {
+				if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence?.val)) {
 					def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestPresVer()?.ver?.toString()]
 					def oldPresData = atomicState?."oldPresData${devId}"
 					def pDataChecksum = generateMD5_A(pData.toString())
@@ -1215,13 +1229,13 @@ def updateChildData(force = false) {
 					}
 					return true
 				} else {
-					LogAction("The Manager App will not send data to the Presence device because the device version (${versionStr2Int(atomicState?.presDevVer)}) is lower than the Minimum (v${minDevVersions()?.presence})... Please Update Presence Device Handler Code to latest version to resolve this issue...", "error", true)
+					LogAction("VERSION RESTRICTION: Your Presence Device Version (v${atomicState?.presDevVer}) is lower than the Minimum of (v${minDevVersions()?.presence?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 					return false
 				}
 			}
 			else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
 				atomicState?.weatDevVer = it?.devVer() ?: ""
-				if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather)) {
+				if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather?.val)) {
 					def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
 					def oldWeatherData = atomicState?."oldWeatherData${devId}"
 					def wDataChecksum = generateMD5_A(wData.toString())
@@ -1234,7 +1248,7 @@ def updateChildData(force = false) {
 					}
 					return true
 				} else {
-					LogAction("The Manager App will not send data to the Weather device because the device version (${versionStr2Int(atomicState?.weatDevVer)}) is lower than the Minimum (v${minDevVersions()?.weather})... Please Update Weather Device Handler Code to latest version to resolve this issue...", "error", true)
+					LogAction("VERSION RESTRICTION: Your Weather Device Version (v${atomicState?.weatDevVer}) is lower than the Required Minimum (v${minDevVersions()?.weather?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 					return false
 				}
 			}
@@ -1299,7 +1313,7 @@ def updateChildData(force = false) {
 					   }
 				   }
 
-					if(!atomicState?.vtDevVer || (versionStr2Int(atomicState?.vtDevVer) >= minDevVersions()?.vthermostat)) {
+					if(!atomicState?.vtDevVer || (versionStr2Int(atomicState?.vtDevVer) >= minDevVersions()?.vthermostat?.val)) {
 						def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 								"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 								"latestVer":latestvStatVer()?.ver?.toString()]
@@ -1314,7 +1328,7 @@ def updateChildData(force = false) {
 						}
 						return true
 					} else {
-						LogAction("The Manager App will not send data to the Virtual Thermostat device because the device version (${versionStr2Int(atomicState?.vtDevVer)}) is lower than the Minimum (v${minDevVersions()?.vthermostat})... Please Update Virtual Thermostat Device Handler Code to latest version to resolve this issue...", "error", true)
+						LogAction("VERSION RESTRICTION: Your vThermostat Device Version (v${atomicState?.vtDevVer}) is lower than the Minimum of (v${minDevVersions()?.vthermostat?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 						return false
 					}
 				}
@@ -3651,7 +3665,14 @@ def isInMode(modeList) {
 }
 
 def minDevVersions() {
-	return ["thermostat":310, "protect":310, "presence":310, "weather":310, "camera":110, "vthermostat":310]
+	return [
+		"thermostat":["val":310, "desc":"3.1.0"],
+		"protect":["val":310, "desc":"3.1.0"],
+		"presence":["val":310, "desc":"3.1.0"],
+		"weather":["val":310, "desc":"3.1.0"],
+		"camera":["val":111 , "desc":"1.1.1"],
+		"vthermostat":["val":310, "desc":"3.1.0"]
+	]
 }
 
 def notifValEnum(allowCust = true) {
