@@ -459,7 +459,7 @@ def automationsPage() {
 		}
 		if(isAutoAppInst()) {
 			section("Automation Statistics:") {
-				href "automationStatisticsPage", title: "View Automation Statistics", description: "Tap to view...", image: getAppImg("app_analytics_icon.png")
+				href "automationStatisticsPage", title: "View Automation Statistics", description: "", image: getAppImg("app_analytics_icon.png")
 			}
 		}
 		section("Global Automation Preferences:") {
@@ -485,40 +485,32 @@ def automationStatisticsPage() {
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
 				def autoType = chld?.getAutomationType()
-//				if(autoType != "watchDog") {
-					section("${chld?.label} Stats:") {
-						def data = chld?.getAutomationStats()
-						def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
-							tf.setTimeZone(getTimeZone())
-						def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
-						def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
-						def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
-						def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
-						def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
-						def lastExecVal = data?.lastExecVal ?: null
-						def execAvgVal = data?.execAvgVal ?: null
+				section(" ") {
+					paragraph "${chld?.label}", state: "complete", image: getAutoIcon(autoType)
+					def data = chld?.getAutomationStats()
+					def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
+						tf.setTimeZone(getTimeZone())
+					def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
+					def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
+					def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
+					def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
+					def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
+					def lastExecVal = data?.lastExecVal ?: null
+					def execAvgVal = data?.execAvgVal ?: null
 
-						def str = ""
-						str += lastModDt ? " • Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
-						str += lastEvtDt ? "\n\n • Last Event:" : ""
-						str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 10) ? "\n  │ Dev:\n  │└ " : "\n  ├ Dev: "}${data?.lastEvent?.displayName}" : ""
-						str += lastEvtDt ? "\n  ├ Type: (${data?.lastEvent?.name.toString().capitalize()})" : ""
-						str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
-						str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
-						str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
-						str += lastSchedDt ? "\n\n • Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
-						str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-						str += lastExecVal ? "\n\n • Execution History:\n  ${execAvgVal ? "├" : "└"} Last: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg: (${execAvgVal} ms)" : ""}" : "\n\n • Execution History: (Not Available)"
-						paragraph "${str}", state: "complete", image: getAutoIcon(autoType)
-					}
-/*
+					def str = ""
+					str += lastModDt ? " • Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
+					str += lastEvtDt ? "\n\n • Last Event:" : ""
+					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  │ Device:\n  │└ " : "\n  ├ Device: "}${data?.lastEvent?.displayName}" : ""
+					str += lastEvtDt ? "\n  ├ Type: (${data?.lastEvent?.name.toString().capitalize()})" : ""
+					str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
+					str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
+					str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
+					str += lastSchedDt ? "\n\n • Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
+					str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
+					str += lastExecVal ? "\n\n • Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
+					paragraph "${str}", state: "complete"
 				}
-				else if (autoType == "watchDog") {
-					section("") {
-						paragraph "No Valid Automations Installed..."
-					}
-				}
-*/
 			}
 		}
 	}
@@ -2029,6 +2021,7 @@ def updateHandler() {
 }
 
 def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null) {
+	//log.trace "sendMsg..."
 	try {
 		if(!getOk2Notify()) {
 			LogAction("No Notifications will be sent during Quiet Time...", "info", true)
@@ -3521,6 +3514,12 @@ def getAutoIcon(type) {
 			case "tMode":
 				return getAppImg("mode_setpoints_icon.png")
 				break
+			case "webDash":
+				return getAppImg("dashboard_icon.png")
+				break
+			case "watchDog":
+				return getAppImg("watchdog_icon.png")
+				break
 		}
 	}
 }
@@ -4962,7 +4961,7 @@ def mainAutoPage(params) {
 					conDesc += (conWatContacts && conWatTstat) ? "\n\nTrigger Status:" : ""
 					conDesc += conWatOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})" : ""
 					conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
-					conDesc += conWatRestoreDelayBetween ? "\n • Delay between Restores: (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})" : ""
+					conDesc += conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n   └(${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})" : ""
 					conDesc += conWatTstat ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
 					conDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
@@ -7395,7 +7394,7 @@ def contactWatchPage() {
 
 				input name: "conWatOnDelay", type: "enum", title: "Delay Restore On When Closed\n(in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 						image: getAppImg("delay_time_icon.png")
-				input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between Off / On Cycles\n(Optional)", defaultValue: 600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+				input name: "conWatRestoreDelayBetween", type: "enum", title: "Delay Between On/Off Cycles\n(Optional)", defaultValue: 600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 						image: getAppImg("delay_time_icon.png")
 			}
 
@@ -8483,6 +8482,7 @@ def getAverageValue(items) {
 |					      SEND NOTIFICATIONS VIA PARENT APP								|
 *************************************************************************************************/
 def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
+	//log.trace "sendNofificationMsg...($msg, $msgType, $recips, $sms, $push)"
 	if(recips || sms || push) {
 		parent?.sendMsg(msgType, msg, recips, sms, push)
 		//LogAction("Send Push Notification to $recips...", "info", true)
@@ -8953,16 +8953,15 @@ def autoScheduleOk(autoType) {
 *************************************************************************************************/
 
 def sendEventPushNotifications(message, type) {
-	if(allowNotif) {
-		if(settings["${getAutoType()}_Alert_1_Send_Push"] || settings["${getAutoType()}_Alert_2_Send_Push"]) {
-			if(settings["${getAutoType()}_Alert_1_CustomPushMessage"]) {
-				sendNofificationMsg(settings["${getAutoType()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
-			} else {
-				sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
-			}
+	//log.trace "sendEventPushNotifications...($message, $type)"
+	if(settings["${getAutoType()}_Alert_1_Send_Push"] || settings["${getAutoType()}_Alert_2_Send_Push"]) {
+		if(settings["${getAutoType()}_Alert_1_CustomPushMessage"]) {
+			sendNofificationMsg(settings["${getAutoType()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
 		} else {
 			sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
 		}
+	} else {
+		sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
 	}
 }
 
