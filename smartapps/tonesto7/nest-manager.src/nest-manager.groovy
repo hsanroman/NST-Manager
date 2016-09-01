@@ -43,8 +43,9 @@ def appVerInfo() {
 
 	str += "V3.1.1 (August 31st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • FIXED: Removed old unnecessary code." 
+	str += "\n • FIXED: Removed old unnecessary code."
 	str += "\n • FIXED: Minor Automation bugfixes."
+	str += "\n • FIXED: Error when trying to open Automation Statistics."
 
 	str += "\n\nV3.1.0 (August 26th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -490,7 +491,7 @@ def automationStatisticsPage() {
 						def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
 							tf.setTimeZone(getTimeZone())
 						def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
-						def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss'Z'", data?.lastEvent?.date.toString())) : null
+						def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
 						def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
 						def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
 						def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
@@ -5104,7 +5105,7 @@ def getAutoTypeLabel() {
 	def newName = appName() == "Nest Manager" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
-	def dis = settings?.disableAutomationreq ? "\n(Disabled)" : ""
+	def dis = (settings?.disableAutomationreq == true) ? "\n(Disabled)" : ""
 	if (type == "remSen")		{ typeLabel = "${newName} (RemoteSensor)" }
 	else if (type == "fanCtrl")	{ typeLabel = "${newName} (FanControl)" }
 	else if (type == "extTmp")	{ typeLabel = "${newName} (ExternalTemp)" }
@@ -8429,7 +8430,7 @@ def setRunSchedule(seconds, funct) {
 
 def storeLastEventData(evt) {
 	if(evt) {
-		atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":evt.date, "unit":evt.unit]
+		atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":formatDt(evt.date), "unit":evt.unit]
 		//log.debug "LastEvent: ${atomicState?.lastEventData}"
 	}
 }
