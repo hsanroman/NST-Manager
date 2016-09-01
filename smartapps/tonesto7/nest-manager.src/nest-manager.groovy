@@ -1072,6 +1072,7 @@ def getApiData(type = null) {
 					if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) {
 						LogAction("API Structure Data HAS Changed... Updating State data...", "debug", true)
 						atomicState?.structData = resp?.data
+						atomicState.needChildUpd = true
 						result = true
 					}
 				} else {
@@ -1836,6 +1837,7 @@ void workQueue() {
 			atomicState.needDevPoll = true
 			if(cmd[1] == apiVar().rootTypes.struct.toString()) {
 				atomicState.needStrPoll = true
+				atomicState.needChildUpd = true
 			}
 
 			qnum = 0
