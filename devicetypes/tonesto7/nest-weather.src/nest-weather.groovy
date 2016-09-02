@@ -1386,7 +1386,7 @@ def getWeatherHTML() {
                   <div class="container">
                   <h4>Current Weather Conditions</h4>
                   <h3><a href="#openModal">${state?.walert}</a></h3>
-                  <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location.full} </h1>
+                  <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
                       <div class="row">
                           <div class="six columns">
                               <b>Feels Like:</b> ${getFeelslike()} <br>
