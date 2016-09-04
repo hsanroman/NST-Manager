@@ -1059,10 +1059,10 @@ def getApiData(type = null) {
 			headers: ["Content-Type": "text/json", "Authorization": "Bearer ${atomicState?.authToken}"]
 		]
 		if(type == "str") {
-			atomicState?.lastStrucDataUpd = getDtNow()
-			atomicState.needStrPoll = false
 			httpGet(params) { resp ->
 				if(resp?.status == 200) {
+					atomicState?.lastStrucDataUpd = getDtNow()
+					atomicState.needStrPoll = false
 					LogTrace("API Structure Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) {
@@ -1077,10 +1077,10 @@ def getApiData(type = null) {
 			}
 		}
 		else if(type == "dev") {
-			atomicState?.lastDevDataUpd = getDtNow()
-			atomicState?.needDevPoll = false
 			httpGet(params) { resp ->
 				if(resp?.status == 200) {
+					atomicState?.lastDevDataUpd = getDtNow()
+					atomicState?.needDevPoll = false
 					LogTrace("API Device Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) {
@@ -1427,7 +1427,7 @@ def ok2PollStruct() {
 
 
 def isPollAllowed() { return (atomicState?.pollingOn && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice || atomicState?.cameras)) ? true : false }
-def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
+def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 840 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd).toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd).toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll).toInteger() }
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt).toInteger() }
@@ -1992,7 +1992,7 @@ def notificationCheck() {
 def missedPollNotify() {
 	if(isMissedPoll()) {
 		if(getOk2Notify() && (getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger())) {
-			sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually.")
+			sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually or refresh Nest Authentication settings.")
 			atomicState?.lastMisPollMsgDt = getDtNow()
 		}
 	}
