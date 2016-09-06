@@ -7,7 +7,7 @@
     },
     "versions": {
         "app": {
-            "ver": "3.1.0"
+            "ver": "3.1.2"
         },
         "thermostat": {
             "ver": "3.1.0"
@@ -41,7 +41,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "3.1.1"
+                "ver": "3.1.2"
             },
             "thermostat": {
                 "ver": "3.1.0"
@@ -78,5 +78,8 @@
     },
     "database": {
         "disableExceptions": false
+    },
+    "aaSupport": {
+        "enabled": false
     }
 }
