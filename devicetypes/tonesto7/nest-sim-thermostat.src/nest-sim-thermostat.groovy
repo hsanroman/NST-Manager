@@ -33,6 +33,7 @@ metadata {
         command "safetyHumidityMaxDown"
         command "comfortDewpointMaxUp"
         command "comfortDewpointMaxDown"
+        command "changeMode"
 
         command "safetyTempMinUp"
         command "safetyTempMinDown"
@@ -55,6 +56,8 @@ metadata {
         attribute "tempLockOn", "string"
         attribute "lockedTempMin", "string"
         attribute "lockedTempMax", "string"
+        attribute "nestType", "string"
+        attribute "pauseUpdates", "string"
     }
 
     tiles(scale: 2) {
@@ -274,6 +277,7 @@ def installed() {
     sendEvent(name: "tempLockOn", value: false, descriptionText: "Nest Temp Lock is: (Off)", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMin", value: 60, unit: getTemperatureScale(), descriptionText: "Locked Temp Min is: (60°${getTemperatureScale()})", displayed: false, isStateChange: true)
     sendEvent(name: "lockedTempMax", value: 80, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (80°${getTemperatureScale()})", displayed: false, isStateChange: true)
+    sendEvent(name: 'nestType', value: "physical", displayed: true)
 }
 
 def parse(String description) {
@@ -281,6 +285,7 @@ def parse(String description) {
 
 def evaluate(temp, heatingSetpoint, coolingSetpoint) {
     //log.debug "${device?.displayName} evaluate(Temp: $temp°${getTemperatureScale()}, HeatSetpoint: $heatingSetpoint°${getTemperatureScale()}, CoolSetpoint: $coolingSetpoint°${getTemperatureScale()})"
+    sendEvent(name: 'nestType', value: "physical", displayed: true)
     def threshold = 1.0
     def current = device.currentValue("thermostatOperatingState")
     def mode = device.currentValue("thermostatMode")
@@ -563,3 +568,5 @@ def lockedTempMaxDown() {
     log.debug "Locked Temp Max is now: (${value}°${getTemperatureScale()})"
     sendEvent(name: 'lockedTempMax', value: value, unit: getTemperatureScale(), descriptionText: "Locked Temp Max is: (${value}°${getTemperatureScale()})", displayed: false, isStateChange: true)
 }
+
+private def virtType()     { return false }
