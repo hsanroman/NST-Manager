@@ -43,7 +43,7 @@ def appVerInfo() {
 
 	str += "V3.1.2 (September 6th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • ADDED: Ask Alexa (@MichaelS) Support. Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
+	str += "\n • ADDED: Ask Alexa (@MichaelS) Support (Not Enabled Yet). Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
 	str += "\n • FIXED: nMODE and tMODE automations only run once per ST MODE change."
 
 	str += "\n\nV3.1.1 (September 1st, 2016):"
