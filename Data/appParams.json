@@ -78,5 +78,8 @@
     },
     "database": {
         "disableExceptions": false
+    },
+    "aaSupport": {
+        "enabled": false
     }
 }
