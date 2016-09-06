@@ -36,12 +36,16 @@ definition(
 	appSetting "clientSecret"
 }
 
-def appVersion() { "3.1.1" }
-def appVerDate() { "9-1-2016" }
+def appVersion() { "3.1.2" }
+def appVerDate() { "9-6-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V3.1.1 (September 1st, 2016):"
+	str += "V3.1.2 (September 6th, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • ADDED: Ask Alexa (@MichaelS) Support. Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
+
+	str += "\n\nV3.1.1 (September 1st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • FIXED: Removed old unnecessary code and tweaked the UI a bit."
 	str += "\n • FIXED: Added in Visual element to manager app to show user when there ST account is missing required location info."
@@ -2284,6 +2288,10 @@ def ver2IntArray(val) {
 def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
+
+def getAskAlexaQueueEnabled() {
+	if(!parent) { return (atomicState?.appData?.aaSupport?.enabled == true) ? true : false }
+}
 
 def isCodeUpdateAvailable(newVer, curVer, type) {
 	def result = false
@@ -5057,7 +5065,7 @@ def mainAutoPage(params) {
 				}
 			}
 
-			if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured() || isWatchdogConfigured())) {
+			if (atomicState?.isInstalled && (isRemSenConfigured() || isExtTmpConfigured() || isConWatConfigured() || isNestModesConfigured() || isTstatModesConfigured() || isWatchdogConfigured() || isFanCtrlConfigured())) {
 				section("Enable/Disable this Automation") {
 					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: disableAutomation, submitOnChange: true, image: getAppImg("switch_off_icon.png")
 					if(!atomicState?.disableAutomation && disableAutomationreq) {
@@ -8570,13 +8578,15 @@ def setNotificationPage(params) {
 						if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
 						if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
 					}
+					input "${pName}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
+						image: "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png"
 					input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
 					input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
 					if(settings["${pName}SpeechMediaPlayer"]) {
 						input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
 						input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
 					}
-					if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"]) && getAutoType() in ["conWat", "extTmp","leakWat"]) {
+					if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"] || settings["${pName}SendToAskAlexaQueue"]) && getAutoType() in ["conWat", "extTmp","leakWat"]) {
 						def desc = ""
 						switch(getAutoType()) {
 							case "conWat":
@@ -8769,6 +8779,7 @@ def getVoiceNotifConfigDesc() {
 	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
 		def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
 		def medias = getInputToStringDesc(settings?."${pName}SpeechMediaPlayer", true)
+		str += settings["${pName}SendToAskAlexaQueue"] ? "\n • Send to Ask Alexa: (True)" : ""
 		str += speaks ? "\n • Speech Devices:${speaks.size() > 1 ? "\n" : ""}${speaks}" : ""
 		str += medias ? "\n • Media Players:${medias.size() > 1 ? "\n" : ""}${medias}" : ""
 		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n      Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
@@ -8996,7 +9007,19 @@ def sendEventVoiceNotifications(vMsg) {
 	def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
 	def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
 	if(allowNotif && allowSpeech) {
-		sendTTS(vMsg)
+		if(settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"]) {
+			sendTTS(vMsg)
+		}
+		if (settings["${pName}SendToAskAlexaQueue"]) {
+			sendEventToAskAlexaQueue(vMsg)
+		}
+	}
+}
+
+def sendEventToAskAlexaQueue(vMsg) {
+	if(parent?.getAskAlexaQueueEnabled() == true) {
+		LogAction("sendEventToAskAlexaQueue: Sending Message this Message to the Ask Alexa Queue ($vMsg)", "info", true)
+		sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}")
 	}
 }
 
