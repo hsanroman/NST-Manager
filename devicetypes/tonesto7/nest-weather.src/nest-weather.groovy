@@ -1287,6 +1287,10 @@ def getWeatherHTML() {
 					  var options = {
 						  width: '100%',
 						  height: '100%',
+						  animation: {
+							duration: 1500,
+							startup: true
+						  },
 						  hAxis: {
 							  format: 'H:mm',
 							  minValue: [${getStartTime()},0,0],

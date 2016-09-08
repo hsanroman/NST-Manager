@@ -2259,9 +2259,13 @@ def showChartHtml() {
 				${coolstr2}
 				${heatstr2}
 			]);
-			var options = {
-			width: '100%',
-			height: '100%',
+			var options = {fontName: 'San Francisco, Roboto, Arial',
+				width: '100%',
+				height: '100%',
+				animation: {
+					duration: 1500,
+					startup: true
+				},
 				hAxis: {
 					format: 'H:mm',
 					minValue: [${getStartTime()},0,0],
