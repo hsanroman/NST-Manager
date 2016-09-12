@@ -80,6 +80,6 @@
         "disableExceptions": false
     },
     "aaSupport": {
-        "enabled": true
+        "enabled": false
     }
 }
