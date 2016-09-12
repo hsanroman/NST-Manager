@@ -9052,7 +9052,7 @@ def sendEventVoiceNotifications(vMsg, msgId=null, rmAAMsg=false, rmMsgId) {
 				removeAskAlexaQueueMsg(rmMsgId)
 			}
 			else if (vMsg && msgId != null) {
-				addAskAlexaQueueMsg(vMsg, msgId
+				addAskAlexaQueueMsg(vMsg, msgId)
 			}
 		}
 	}
