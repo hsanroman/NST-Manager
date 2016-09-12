@@ -43,6 +43,11 @@ def appVerInfo() {
 
 	str += "V3.1.2 (September 6th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • ADDED: Ask Alexa (@MichaelS) Support. Automations now have the ability to Add/Remove notifications from Nest Manager to the Ask Alexa Message Queue..."
+	str += "\n • FIXED: Found quite a few minor bugs that I fixed, and cleaned up unnecessary code and consolodated so some others to save some space..."
+
+	str += "\n\nV3.1.2 (September 6th, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • ADDED: Ask Alexa (@MichaelS) Support (Not Enabled Yet). Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
 	str += "\n • FIXED: nMODE and tMODE automations only run once per ST MODE change."
 
@@ -3612,19 +3617,19 @@ def quietTimeOk() {
 
 def notificationTimeOk() {
 	try {
-		def pName = getAutoType()
+		def autoType = getAutoType()
 		def strtTime = null
 		def stopTime = null
 		def now = new Date()
 		def sun = getSunriseAndSunset() // current based on geofence, previously was: def sun = getSunriseAndSunset(zipCode: zipCode)
-		if(settings?."${pName}qStartTime" && settings?."${pName}qStopTime") {
-			if(settings?."${pName}qStartInput" == "sunset") { strtTime = sun.sunset }
-			else if(settings?."${pName}qStartInput" == "sunrise") { strtTime = sun.sunrise }
-			else if(settings?."${pName}qStartInput" == "A specific time" && settings?."${pName}qStartTime") { strtTime = settings?."${pName}qStartTime" }
+		if(settings?."${autoType}qStartTime" && settings?."${autoType}qStopTime") {
+			if(settings?."${autoType}qStartInput" == "sunset") { strtTime = sun.sunset }
+			else if(settings?."${autoType}qStartInput" == "sunrise") { strtTime = sun.sunrise }
+			else if(settings?."${autoType}qStartInput" == "A specific time" && settings?."${autoType}qStartTime") { strtTime = settings?."${autoType}qStartTime" }
 
-			if(settings?."${pName}qStopInput" == "sunset") { stopTime = sun.sunset }
-			else if(settings?."${pName}qStopInput" == "sunrise") { stopTime = sun.sunrise }
-			else if(settings?."${pName}qStopInput" == "A specific time" && settings?."${pName}qStopTime") { stopTime = settings?."${pName}qStopTime" }
+			if(settings?."${autoType}qStopInput" == "sunset") { stopTime = sun.sunset }
+			else if(settings?."${autoType}qStopInput" == "sunrise") { stopTime = sun.sunrise }
+			else if(settings?."${autoType}qStopInput" == "A specific time" && settings?."${autoType}qStopTime") { stopTime = settings?."${autoType}qStopTime" }
 		} else { return true }
 		if (strtTime && stopTime) {
 			return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
@@ -4247,7 +4252,7 @@ def alarmTestPage () {
 }
 
 def simulateTestEventPage(params) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def testType
 	if(params?.testType) {
 		atomicState.curProtTestType = params?.testType
@@ -4918,7 +4923,7 @@ def mainAutoPage(params) {
 					remSenDescStr += (remSensorDay && remSensorNight) ? "\n• Current Sensors: (${getUseNightSensor() ? "☽ Night" : "☀ Day"})" : ""
 					remSenDescStr += (remSenUseSunAsMode && remSensorDay && remSensorNight) ? "\n• Day: ${atomicState?.sunriseTm}\n• Night: ${atomicState?.sunsetTm}" : ""
 					def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
-							tf.setTimeZone(getTimeZone())
+						tf?.setTimeZone(getTimeZone())
 					def remSenNightStartDt = settings["${autoType}NightStartTime"] ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSz", settings["${autoType}NightStartTime"].toString())) : null
 					def remSenNightStopDt = settings["${autoType}NightStopTime"] ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSz", settings["${autoType}NightStopTime"].toString())) : null
 					remSenDescStr += (remSenUseTimeForMode && remSensorDay && remSensorNight && remSenNightStartDt && remSenNightStopDt) ?
@@ -4973,8 +4978,10 @@ def mainAutoPage(params) {
 					extDesc += extTmpOffDelay ? "\n • Off Delay: (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})" : ""
 					extDesc += extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})" : ""
 					extDesc += extTmpTstat ? "\n • Last Mode: (${atomicState?.extTmpRestoreMode ? atomicState?.extTmpRestoreMode.toString().capitalize() : "Not Set"})" : ""
-					extDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+					extDesc += (settings["${autoType}Modes"] || settings["${autoType}Days"] || (settings["${autoType}StartTime"] && settings["${autoType}StopTime"])) ?
+							"\n • Evaluation Allowed: (${autoScheduleOk(autoType) ? "ON" : "OFF"})" : ""
+					extDesc += (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SendToAskAlexaQueue"] || ["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
+							"\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
 					extDesc += ((extTmpTempSensor || extTmpUseWeather) && extTmpTstat) ? "\n\nTap to Modify..." : ""
 					def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
 					href "extTempPage", title: "External Temps Config...", description: extTmpDesc ?: "Tap to Configure...", state: (extTmpDesc ? "complete" : null), image: getAppImg("external_temp_icon.png")
@@ -4995,9 +5002,9 @@ def mainAutoPage(params) {
 					conDesc += conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})" : ""
 					conDesc += conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n   └(${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})" : ""
 					conDesc += conWatTstat ? "\n • Last Mode: (${atomicState?.conWatRestoreMode ? atomicState?.conWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-					conDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
-					conDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
+					conDesc += (settings["${autoType}Modes"] || settings["${autoType}Days"] || (settings["${autoType}StartTime"] && settings["${autoType}StopTime"])) ?
+							"\n • Evaluation Allowed: (${autoScheduleOk(autoType) ? "ON" : "OFF"})" : ""
+					conDesc += (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SendToAskAlexaQueue"] || ["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
 							"\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
 					conDesc += (conWatContacts && conWatTstat) ? "\n\nTap to Modify..." : ""
 					def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
@@ -5016,8 +5023,8 @@ def mainAutoPage(params) {
 					nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
 					nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
 					nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
-					nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+					nDesc += (settings?."${autoType}Modes" || settings["${autoType}Days"] || (settings["${autoType}StartTime"] && settings["${autoType}StopTime"])) ?
+							"\n • Evaluation Allowed: (${autoScheduleOk(autoType) ? "ON" : "OFF"})" : ""
 					nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify..." : ""
 					def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
 					href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to Configure...", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
@@ -5046,9 +5053,9 @@ def mainAutoPage(params) {
 					leakDesc += (leakWatSensors && leakWatTstat) ? "\n\nTrigger Status:" : ""
 					leakDesc += leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})" : ""
 					leakDesc += leakWatTstat ? "\n • Last Mode: (${atomicState?.leakWatRestoreMode ? atomicState?.leakWatRestoreMode.toString().capitalize() : "Not Set"})" : ""
-					leakDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
-					leakDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
+					leakDesc += (settings["${autoType}Modes"] || settings["${autoType}Days"] || (settings["${autoType}StartTime"] && settings["${autoType}StopTime"])) ?
+							"\n • Evaluation Allowed: (${autoScheduleOk(autoType) ? "ON" : "OFF"})" : ""
+					leakDesc += (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SendToAskAlexaQueue"] || settings["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
 							"\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
 					leakDesc += (leakWatContacts && leakWatTstat) ? "\n\nTap to Modify..." : ""
 					def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
@@ -5059,7 +5066,7 @@ def mainAutoPage(params) {
 			if(autoType == "watchDog" && !atomicState?.disableAutomation) {
 				section("Watch your Nest Location for Events:") {
 					def watDogDesc = ""
-					watDogDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
+					watDogDesc += (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SendToAskAlexaQueue"] || settings["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc()) ?
 							"\n\nVoice Notifications:${getVoiceNotifConfigDesc()}" : ""
 					def leakWatDesc = isWatchdogConfigured() ? "${watDogDesc}" : null
 					href "watchDogPage", title: "Nest Location Watchdog...", description: watDogDesc ?: "Tap to Configure...", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
@@ -5537,10 +5544,10 @@ def automationSunEvtHandler(evt) {
 def watchDogPrefix() { return "watchDog" }
 
 def watchDogPage() {
-	def pName = watchDogPrefix()
+	def autoType = watchDogPrefix()
 	dynamicPage(name: "watchDogPage", title: "Nest Location Watchdog", uninstall: true, install: true) {
 		section("Notifications:") {
-			href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true],
+			href "setNotificationPage", title: "Configure Push/Voice\nNotifications...", description: getNotifConfigDesc(), params: ["autoType":autoType, "allowSpeech":true, "showSchedule":true, "allowAlarm":true],
 					state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
 		}
 	}
@@ -5582,7 +5589,7 @@ def watchDogCheck() {
 	}
 }
 
-def watchDogAlarmActions(dev, dni, actType) {
+def watchDogAlarmActions(devName, dni, actType) {
 	def allowNotif = (settings["${getAutoType()}NotificationsOn"] && (settings["${getAutoType()}NofifRecips"] || settings["${getAutoType()}NotifPhones"] || settings["${getAutoType()}UsePush"]))  ? true : false
 	def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
 	def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
@@ -5590,8 +5597,8 @@ def watchDogAlarmActions(dev, dni, actType) {
 	def evtVoiceMsg = ""
 	switch(actType) {
 		case "temp":
-			evtNotifMsg = "Safety Temp has been exceeded on ${dev}."
-			evtVoiceMsg = "Safety Temp has been exceeded on ${dev}."
+			evtNotifMsg = "Safety Temp has been exceeded on ${devName}."
+			evtVoiceMsg = "Safety Temp has been exceeded on ${devName}."
 			break
 	}
 	if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
@@ -5657,7 +5664,7 @@ def remSenUnlock(val, myId) {
 }
 
 def remSensorPage() {
-	def pName = remSenPrefix()
+	def autoType = remSenPrefix()
 	dynamicPage(name: "remSensorPage", title: "Remote Sensor Automation", uninstall: false, nextPage: "mainAutoPage") {
 		def req = (remSensorDay || remSensorNight || remSenTstat || !remSenTstat) ? true : false
 		def dupTstat
@@ -5812,13 +5819,13 @@ def remSensorPage() {
 								input "remSenUseTimeForMode", "bool", title: "Set Start/End Time to use Night Sensors?", required: false, defaultValue: false, submitOnChange: true, state: inDesc ? "complete" : null,
 									image: getAppImg("sunrise_icon.png")
 								if(remSenUseTimeForMode) {
-									def nightTimeReq = (settings["${pName}NightStartTime"] || settings["${pName}NightStopTime"]) ? true : false
-									def timeChkErr = settings["${pName}NightStopTime"] > settings["${pName}NightStopTime"] ? true : false
+									def nightTimeReq = (settings["${autoType}NightStartTime"] || settings["${autoType}NightStopTime"]) ? true : false
+									def timeChkErr = settings["${autoType}NightStopTime"] > settings["${autoType}NightStopTime"] ? true : false
 									if(timeChkErr) {
 										paragraph "Stop Time is before Start Time!!!.  Please Correct...", state: null, required: true, image: getAppImg("error_icon.png")
 									}
-									input "${pName}NightStartTime", "time", title: "Night Start time", required: nightTimeReq, submitOnChange: true, image: getAppImg("start_time_icon.png")
-									input "${pName}NightStopTime", "time", title: "Night Stop time", required: nightTimeReq, submitOnChange: true, image: getAppImg("stop_time_icon.png")
+									input "${autoType}NightStartTime", "time", title: "Night Start time", required: nightTimeReq, submitOnChange: true, image: getAppImg("start_time_icon.png")
+									input "${autoType}NightStopTime", "time", title: "Night Stop time", required: nightTimeReq, submitOnChange: true, image: getAppImg("stop_time_icon.png")
 								}
 							}
 							if(!remSenUseSunAsMode && !remSenUseTimeForMode) {
@@ -5829,7 +5836,7 @@ def remSensorPage() {
 								input "remSensorDayModes", "mode", title: "Daytime Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
 								input "remSensorNightModes", "mode", title: "Evening Modes...", multiple: true, submitOnChange: true, required: modesReq, image: getAppImg("mode_icon.png")
 							}
-							if(remSenUseSunAsMode || (remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"]) || (remSensorDayModes && remSensorNightModes)) {
+							if(remSenUseSunAsMode || (remSenUseTimeForMode && settings["${autoType}NightStartTime"] && settings["${autoType}NightStopTime"]) || (remSensorDayModes && remSensorNightModes)) {
 								def str = ""
 								str += "Current Active Sensor:"
 								str += "\n └ ${getUseNightSensor() ? "Night" : "Day"} Sensor"
@@ -5974,9 +5981,9 @@ def getUseNightSensor() {
 }
 
 def getRemSenUseNightTimeOk() {
-	def pName = getAutoType()
-	if(remSensorDayModes && remSensorNightModes && remSenUseTimeForMode && settings["${pName}NightStartTime"] && settings["${pName}NightStopTime"] && !remSenUseSunAsMode) {
-		return timeOfDayIsBetween(settings?."${pName}NightStartTime", settings?."${pName}NightStopTime", new Date(), getTimeZone()) ?: false
+	def autoType = getAutoType()
+	if(remSensorDayModes && remSensorNightModes && remSenUseTimeForMode && settings["${autoType}NightStartTime"] && settings["${autoType}NightStopTime"] && !remSenUseSunAsMode) {
+		return timeOfDayIsBetween(settings?."${autoType}NightStartTime", settings?."${autoType}NightStopTime", new Date(), getTimeZone()) ?: false
 	}
 	return false
 }
@@ -6740,31 +6747,31 @@ def fanControlPage() {
 }
 
 def getFanSwitches() {
-	def pName = getAutoType()
-	if (pName == "remSen") { pName = "remSenTstat" }
+	def autoType = getAutoType()
+	if (autoType == "remSen") { autoType = "remSenTstat" }
 	section("Control Fans/Switches based on your Thermostat\n(3-Speed Fans Supported)") {
-		input "${pName}FanSwitches", "capability.switch", title: "Select the Switches?", required: false, submitOnChange: true, multiple: true,
+		input "${autoType}FanSwitches", "capability.switch", title: "Select the Switches?", required: false, submitOnChange: true, multiple: true,
 				image: getAppImg("fan_ventilation_icon.png")
-		if(settings?."${pName}FanSwitches") {
+		if(settings?."${autoType}FanSwitches") {
 			paragraph "${getFanSwitchDesc(false)}", state: getFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
 		}
 	}
-	if(settings?."${pName}FanSwitches") {
+	if(settings?."${autoType}FanSwitches") {
 		section("Fan Event Triggers") {
 			paragraph "Event based triggers occur when the Thermostat sends an event.  Depending on your configured Poll time it may take 1 minute or more",
 					image: getAppImg("instruct_icon.png")
-			input(name: "${pName}FanSwitchTriggerType", type: "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],
-				submitOnChange: true, image: getAppImg("${settings?."${pName}FanSwitchTriggerType" == 1 ? "thermostat" : "home_fan"}_icon.png"))
-			input(name: "${pName}FanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
+			input(name: "${autoType}FanSwitchTriggerType", type: "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],
+				submitOnChange: true, image: getAppImg("${settings?."${autoType}FanSwitchTriggerType" == 1 ? "thermostat" : "home_fan"}_icon.png"))
+			input(name: "${autoType}FanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
 					submitOnChange: true, image: getAppImg("mode_icon.png"))
 		}
 		if(getFanSwitchesSpdChk()) {
 			section("Fan Speed Options") {
-				input(name: "${pName}FanSwitchSpeedCtrl", type: "bool", title: "Enable Speed Control?", defaultValue: true, submitOnChange: true, image: getAppImg("speed_knob_icon.png"))
-				if(settings?."${pName}FanSwitchSpeedCtrl") {
-					input "${pName}FanSwitchLowSpeed", "decimal", title: "Low Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("fan_low_speed.png")
-					input "${pName}FanSwitchMedSpeed", "decimal", title: "Medium Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("fan_med_speed.png")
-					input "${pName}FanSwitchHighSpeed", "decimal", title: "High Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 4.0, submitOnChange: true, image: getAppImg("fan_high_speed.png")
+				input(name: "${autoType}FanSwitchSpeedCtrl", type: "bool", title: "Enable Speed Control?", defaultValue: true, submitOnChange: true, image: getAppImg("speed_knob_icon.png"))
+				if(settings?."${autoType}FanSwitchSpeedCtrl") {
+					input "${autoType}FanSwitchLowSpeed", "decimal", title: "Low Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 1.0, submitOnChange: true, image: getAppImg("fan_low_speed.png")
+					input "${autoType}FanSwitchMedSpeed", "decimal", title: "Medium Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 2.0, submitOnChange: true, image: getAppImg("fan_med_speed.png")
+					input "${autoType}FanSwitchHighSpeed", "decimal", title: "High Speed Threshold (°${atomicState?.tempUnit})", required: true, defaultValue: 4.0, submitOnChange: true, image: getAppImg("fan_high_speed.png")
 				}
 			}
 		}
@@ -6779,33 +6786,33 @@ def isFanCtrlConfigured() {
 def getFanSwitchDesc(showOpt = true) {
 	def swDesc = ""
 	def swCnt = 0
-	def pName = getAutoType()
-	if (pName == "remSen") { pName = "remSenTstat" }
+	def autoType = getAutoType()
+	if (autoType == "remSen") { autoType = "remSenTstat" }
 	if(showOpt) {
-		swDesc += (settings?."${pName}FanSwitches" && (settings?."${pName}FanSwitchSpeedCtrl" || settings?."${pName}FanSwitchTriggerType" || settings?."${pName}FanSwitchHvacModeFilter")) ? "Fan Switch Config:" : ""
+		swDesc += (settings?."${autoType}FanSwitches" && (settings?."${autoType}FanSwitchSpeedCtrl" || settings?."${autoType}FanSwitchTriggerType" || settings?."${autoType}FanSwitchHvacModeFilter")) ? "Fan Switch Config:" : ""
 	}
-	swDesc += settings?."${pName}FanSwitches" ? "${showOpt ? "\n" : ""}  • Fan Switches:" : ""
-	def rmSwCnt = settings?."${pName}FanSwitches"?.size() ?: 0
-	settings?."${pName}FanSwitches"?.each { sw ->
+	swDesc += settings?."${autoType}FanSwitches" ? "${showOpt ? "\n" : ""}  • Fan Switches:" : ""
+	def rmSwCnt = settings?."${autoType}FanSwitches"?.size() ?: 0
+	settings?."${autoType}FanSwitches"?.each { sw ->
 		swCnt = swCnt+1
 		swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n └" : "\n ├"}" : "\n └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})"
 		swDesc += "${checkFanSpeedSupport(sw) ? "\n   └ 3Spd (${sw?.currentValue("currentSpeed").toString()})" : ""}"
 	}
 	if(showOpt) {
-		swDesc += (settings?."${pName}FanSwitches" && (settings?."${pName}FanSwitchSpeedCtrl" || settings?."${pName}FanSwitchTriggerType" || settings?."${pName}FanSwitchHvacModeFilter")) ? "\n\nFan Triggers:" : ""
-		swDesc += (settings?."${pName}FanSwitches" && settings?."${pName}FanSwitchSpeedCtrl") ? "\n  • 3-Speed Fan Support: (Active)" : ""
-		swDesc += (settings?."${pName}FanSwitches" && settings?."${pName}FanSwitchTriggerType") ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), settings?."${pName}FanSwitchTriggerType")})" : ""
-		swDesc += (settings?."${pName}FanSwitches" && settings?."${pName}FanSwitchHvacModeFilter") ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?."${pName}FanSwitchHvacModeFilter")})" : ""
+		swDesc += (settings?."${autoType}FanSwitches" && (settings?."${autoType}FanSwitchSpeedCtrl" || settings?."${autoType}FanSwitchTriggerType" || settings?."${autoType}FanSwitchHvacModeFilter")) ? "\n\nFan Triggers:" : ""
+		swDesc += (settings?."${autoType}FanSwitches" && settings?."${autoType}FanSwitchSpeedCtrl") ? "\n  • 3-Speed Fan Support: (Active)" : ""
+		swDesc += (settings?."${autoType}FanSwitches" && settings?."${autoType}FanSwitchTriggerType") ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), settings?."${autoType}FanSwitchTriggerType")})" : ""
+		swDesc += (settings?."${autoType}FanSwitches" && settings?."${autoType}FanSwitchHvacModeFilter") ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?."${autoType}FanSwitchHvacModeFilter")})" : ""
 	}
 	return (swDesc == "") ? null : "${swDesc}"
 }
 
 def getFanSwitchesSpdChk() {
 	def devCnt = 0
-	def pName = getAutoType()
-	if (pName == "remSen") { pName = "remSenTstat" }
-	if(settings?."${pName}FanSwitches") {
-		settings?."${pName}FanSwitches"?.each { sw ->
+	def autoType = getAutoType()
+	if (autoType == "remSen") { autoType = "remSenTstat" }
+	if(settings?."${autoType}FanSwitches") {
+		settings?."${autoType}FanSwitches"?.each { sw ->
 			if(checkFanSpeedSupport(sw)) { devCnt = devCnt+1 }
 		}
 	}
@@ -6840,9 +6847,9 @@ def fanCtrlCheck() {
 }
 
 def getReqSetpointTemp(curTemp, reqHeatSetPoint, reqCoolSetPoint) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	LogAction("getReqSetpointTemp: Current Temp: ${curTemp} Req Heat: ${reqHeatSetPoint}  Req Cool: ${reqCoolSetPoint}", "info", false)
-	def tstat = settings?."${pName}Tstat"
+	def tstat = settings?."${autoType}Tstat"
 
 	def hvacMode = tstat ? tstat?.currentThermostatMode.toString() : null
 	def operState = tstat ? tstat?.currentThermostatOperatingState.toString() : null
@@ -6862,10 +6869,10 @@ def getReqSetpointTemp(curTemp, reqHeatSetPoint, reqCoolSetPoint) {
 }
 
 def doFanOperation(tempDiff) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	LogAction("doFanOperation: Temp Difference: (${tempDiff})", "info", false)
 	try {
-		def tstat = settings?."${pName}Tstat"
+		def tstat = settings?."${autoType}Tstat"
 		def curTstatTemp = getDeviceTemp(tstat).toDouble()
 		def curCoolSetpoint = getTstatSetpoint(tstat, "cool")
 		def curHeatSetpoint = getTstatSetpoint(tstat, "heat")
@@ -6877,20 +6884,20 @@ def doFanOperation(tempDiff) {
 		def hvacFanOn = false
 		 //1:"Heating/Cooling", 2:"With Fan Only"
 
-		if (pName == "remSen") { pName = "remSenTstat" }
+		if (autoType == "remSen") { autoType = "remSenTstat" }
 
-		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  1) {
+		if( settings?."${autoType}FanSwitchTriggerType".toInteger() ==  1) {
 			hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false
 		}
-		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  2) {
+		if( settings?."${autoType}FanSwitchTriggerType".toInteger() ==  2) {
 			hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
 		}
-		if(settings?."${pName}FanSwitchHvacModeFilter" != "any" && (settings?."${pName}FanSwitchHvacModeFilter" != hvacMode)) {
+		if(settings?."${autoType}FanSwitchHvacModeFilter" != "any" && (settings?."${autoType}FanSwitchHvacModeFilter" != hvacMode)) {
 			LogAction("doFanOperation: Evaluating turn fans off Because Thermostat Mode does not Match the required Mode to Run Fans", "info", true)
 			hvacFanOn = false  // force off of fans
 		}
 
-		settings?."${pName}FanSwitches".each { sw ->
+		settings?."${autoType}FanSwitches".each { sw ->
 			def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
 			if(hvacFanOn) {
 				if(!swOn) {
@@ -6900,25 +6907,25 @@ def doFanOperation(tempDiff) {
 				}
 				if(checkFanSpeedSupport(sw)) {
 					def speed = sw?.currentValue("currentSpeed") ?: null
-					if(settings?."${pName}FanSwitchSpeedCtrl" && settings?."${pName}FanSwitchHighSpeed" && settings?."${pName}FanSwitchMedSpeed" && settings?."${pName}FanSwitchLowSpeed") {
-						if(tempDiff < settings?."${pName}FanSwitchMedSpeed".toDouble()) {
+					if(settings?."${autoType}FanSwitchSpeedCtrl" && settings?."${autoType}FanSwitchHighSpeed" && settings?."${autoType}FanSwitchMedSpeed" && settings?."${autoType}FanSwitchLowSpeed") {
+						if(tempDiff < settings?."${autoType}FanSwitchMedSpeed".toDouble()) {
 							if (speed != "LOW") {
 								sw.lowSpeed()
-								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Medium Speed Threshold of (${settings?."${pName}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (LOW SPEED)", "info", true)
+								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is BELOW the Medium Speed Threshold of (${settings?."${autoType}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (LOW SPEED)", "info", true)
 								storeLastAction("Set Fan $sw to Low Speed", getDtNow())
 							}
 						}
-						else if(tempDiff >= settings?."${pName}FanSwitchMedSpeed".toDouble() && tempDiff < settings?."${pName}FanSwitchHighSpeed".toDouble()) {
+						else if(tempDiff >= settings?."${autoType}FanSwitchMedSpeed".toDouble() && tempDiff < settings?."${autoType}FanSwitchHighSpeed".toDouble()) {
 							if (speed != "MED") {
 								sw.medSpeed()
-								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of (${settings?."${pName}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (MEDIUM SPEED)", "info", true)
+								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the Medium Speed Threshold of (${settings?."${autoType}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (MEDIUM SPEED)", "info", true)
 								storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
 							}
 						}
-						else if(tempDiff >= settings?."${pName}FanSwitchHighSpeed".toDouble()) {
+						else if(tempDiff >= settings?."${autoType}FanSwitchHighSpeed".toDouble()) {
 							if (speed != "HIGH") {
 								sw.highSpeed()
-								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of (${settings?."${pName}FanSwitchHighSpeed"}) | Turning '${sw}' Fan Switch on (HIGH SPEED)", "info", true)
+								LogAction("doFanOperation: Temp Difference (${tempDiff}°${atomicState?.tempUnit}) is ABOVE the High Speed Threshold of (${settings?."${autoType}FanSwitchHighSpeed"}) | Turning '${sw}' Fan Switch on (HIGH SPEED)", "info", true)
 								storeLastAction("Set Fan $sw to High Speed", getDtNow())
 							}
 						}
@@ -7014,7 +7021,7 @@ def extTempPage() {
 			}
 		}
 		if((extTmpUseWeather || extTmpTempSensor) && extTmpTstat && tStatPhys) {
-// TODO need to check if safety temps are set and != to each other
+			// TODO need to check if safety temps are set and != to each other
 			section("Restoration Preferences (Optional):") {
 				input "${getAutoType()}UseSafetyTemps", "bool", title: "Restore When Safety Temps are Exceeded?", defaultValue: true, submitOnChange: true, image: getAppImg("switch_icon.png")
 				input "${getAutoType()}OffTimeout", "enum", title: "Auto Restore after Time\n(Optional)", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
@@ -7028,12 +7035,12 @@ def extTempPage() {
 						image: getAppImg("delay_time_icon.png")
 			}
 			section(getDmtSectionDesc(extTmpPrefix())) {
-				def pageDesc = getDayModeTimeDesc(pName)
-				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null),
+				def pageDesc = getDayModeTimeDesc(autoType)
+				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [autoType: "${autoType}"], state: (pageDesc ? "complete" : null),
 						image: getAppImg("cal_filter_icon.png")
 			}
 			section("Notifications:") {
-				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "showSchedule":true, "allowAlarm":true],
+				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["autoType":autoType, "allowSpeech":true, "showSchedule":true, "allowAlarm":true],
 						state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
 			}
 		}
@@ -7193,7 +7200,6 @@ def getExtTmpOnDelayVal() { return !extTmpOnDelay ? 300 : extTmpOnDelay.toIntege
 
 def extTmpTempCheck(cTimeOut = false) {
 	//log.trace "extTmpTempCheck..."
-
 	try {
 		if(atomicState?.disableAutomation) { return }
 		else {
@@ -7256,7 +7262,9 @@ def extTmpTempCheck(cTimeOut = false) {
 								if(allowNotif) {
 									if(!timeOut && safetyOk) {
 										sendEventPushNotifications("Restoring '${extTmpTstat?.label}' to '${lastMode.toUpperCase()}' Mode because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})...", "Info")
-										if(speakOnRestore) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OnVoiceMsg")) }
+										if(speakOnRestore) {
+											sendEventVoiceNotifications(voiceNotifString(atomicState?."${getAutoType()}OnVoiceMsg"), "nmExtTmpOn_${app?.id}", true, "nmExtTmpOff_${app?.id}")
+										}
 									}
 								}
 								return
@@ -7377,7 +7385,7 @@ def extTmpDpEvt(evt) {
 def conWatPrefix() { return "conWat" }
 
 def contactWatchPage() {
-	def pName = conWatPrefix()
+	def autoType = conWatPrefix()
 	def tStatPhys
 	dynamicPage(name: "contactWatchPage", title: "Thermostat/Contact Automation", uninstall: false, nextPage: "mainAutoPage") {
 		def dupTstat = checkThermostatDupe(conWatTstat, conWatTstatMir)
@@ -7437,12 +7445,12 @@ def contactWatchPage() {
 			}
 
 			section(getDmtSectionDesc(conWatPrefix())) {
-				def pageDesc = getDayModeTimeDesc(pName)
-				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null),
+				def pageDesc = getDayModeTimeDesc(autoType)
+				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [autoType: "${autoType}"], state: (pageDesc ? "complete" : null),
 						image: getAppImg("cal_filter_icon.png")
 			}
 			section("Notifications:") {
-				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
+				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["autoType":autoType, "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
 						state: (getNotifConfigDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
 			}
 		}
@@ -7507,10 +7515,10 @@ def conWatCheck(cTimeOut = false) {
 			def safetyOk = getSafetyTempsOk(conWatTstat)
 			def schedOk = conWatScheduleOk()
 			def okToRestore = (modeOff && atomicState?.conWatTstatOffRequested) ? true : false
-			def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
-			def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
-			def allowAlarm = allowNotif && settings?."${getAutoType()}AllowAlarmNotif" ? true : false
-			def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
+			def allowNotif = settings["${getAutoType()}NotificationsOn"] ? true : false
+			def allowSpeech = allowNotif && settings["${getAutoType()}AllowSpeechNotif"] ? true : false
+			def allowAlarm = allowNotif && settings["${getAutoType()}AllowAlarmNotif"] ? true : false
+			def speakOnRestore = allowSpeech && settings["${getAutoType()}SpeechOnRestore"] ? true : false
 
 			def home = false
 			def away = false
@@ -7563,7 +7571,7 @@ def conWatCheck(cTimeOut = false) {
 								}
 							} else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
 						} else {
-							if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
+							if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode $curMode", "info", true) }
 							if(!safetyOk) { LogAction("conWatCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
 						}
 					} else { if (safetyOk) { scheduleAutomationEval(60) } }
@@ -7613,7 +7621,7 @@ def conWatCheck(cTimeOut = false) {
 						} else { scheduleAutomationEval(60) }
 					}
 				} else {
-					LogAction("conWatCheck() | Skipping change because '${conWatTstat?.label}' mode is already 'OFF'", "info", false)
+					LogAction("conWatCheck() | Skipping changes because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
 				}
 			} else {
 				if (!schedOk) { LogAction("conWatCheck: Skipping because of Schedule Restrictions...", "info", true) }
@@ -7655,7 +7663,7 @@ def conWatContactEvt(evt) {
 				scheduleAutomationEval(timeVal?.valNum)
 			} else { scheduleAutomationEval()}
 		} else {
-			LogAction("conWatContactEvt: Skipping Event...", "info", true)
+			LogAction("conWatContactEvt: Skipping this event because no action is needed...", "info", true)
 		}
 	}
 }
@@ -7715,7 +7723,7 @@ def leakWatchPage() {
 						image: getAppImg("delay_time_icon.png")
 			}
 			section("Notifications:") {
-				href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
+				href "setNotificationPage", title: "Configure Notifications...", description: getNotifConfigDesc(), params: ["autoType":autoType, "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
 						state: (getNotificationOptionsConf() ? "complete" : null), image: getAppImg("notification_icon.png")
 			}
 		}
@@ -7908,7 +7916,7 @@ def leakWatSensorEvt(evt) {
 def nModePrefix() { return "nMode" }
 
 def nestModePresPage() {
-	def pName = nModePrefix()
+	def autoType = nModePrefix()
 	dynamicPage(name: "nestModePresPage", title: "Mode - Nest Home/Away Automation", uninstall: false, nextPage: "mainAutoPage") {
 		if(!nModePresSensor && !nModeSwitch) {
 			def modeReq = (!nModePresSensor && (nModeHomeModes || nModeAwayModes))
@@ -7925,7 +7933,7 @@ def nestModePresPage() {
 					def pLocationPresence = getNestLocPres()
 					str += location?.mode && plocationPresence ? "Location Status:" : ""
 					str += location?.mode ? "\n ├ SmartThings Mode: ${location?.mode}" : ""
-					str += plocationPresence ? "\n └ Nest Location: (${plocationPresence == "away" ? "Away" : "Home"})" : ""
+					str += plocationPresence  ? "\n └ Nest Location: (${plocationPresence == "away" ? "Away" : "Home"})" : ""
 					paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 				}
 			}
@@ -7971,12 +7979,12 @@ def nestModePresPage() {
 						image: getAppImg("recipient_icon.png")
 			}*/
 			section(getDmtSectionDesc(nModePrefix())) {
-				def pageDesc = getDayModeTimeDesc(pName)
-				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [pName: "${pName}"], state: (pageDesc ? "complete" : null),
+				def pageDesc = getDayModeTimeDesc(autoType)
+				href "setDayModeTimePage", title: "Configure Days, Times, or Modes", description: pageDesc, params: [autoType: "${autoType}"], state: (pageDesc ? "complete" : null),
 						image: getAppImg("cal_filter_icon.png")
 			}
 			section("Notifications:") {
-				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["pName":pName, "allowSpeech":true, "allowAlarm":false, "showSchedule":false],
+				href "setNotificationPage", title: "Configure Alerts...", description: getNotifConfigDesc(), params: ["autoType":autoType, "allowSpeech":true, "allowAlarm":false, "showSchedule":false],
 						state: (getNotifConfigDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
 			}
 		}
@@ -8211,7 +8219,7 @@ def getNestLocPres() {
 def tModePrefix() { return "tMode" }
 
 def tstatModePage() {
-	def pName = tModePrefix()
+	def autoType = tModePrefix()
 	dynamicPage(name: "tstatModePage", title: "Thermostat Setpoint Mode Automation", uninstall: false, nextPage: "mainAutoPage") {
 		section("Select the Thermostats you would like to adjust:") {
 			input name: "tModeTstats", type: "capability.thermostat", title: "Which Thermostats?", multiple: true, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
@@ -8513,11 +8521,11 @@ def storeExecutionHistory(val, method = null) {
 	//log.debug "storeExecutionHistory($val, $method)"
 	try {
 		if(method) {
-			log.debug "${method} Execution Time: (${val} milliseconds)"
+			log.debug "'${method}' Execution Time: (${val} ms)"
 		}
 		atomicState?.lastExecutionTime = val ?: null
 		def list = atomicState?.evalExecutionHistory ?: []
-		def listSize = 10
+		def listSize = 30
 		if(list?.size() < listSize) {
 			list.push(val)
 		}
@@ -8568,11 +8576,11 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 *************************************************************************************************/
 
 def setNotificationPage(params) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def allowSpeech = false
 	def allowAlarm = false
 	def showSched = false
-	if(params?.pName) {
+	if(params?.autoType) {
 		atomicState.curNotifPageData = params
 		allowSpeech = params?.allowSpeech?.toBoolean(); showSched = params?.showSchedule?.toBoolean(); allowAlarm = params?.allowAlarm?.toBoolean()
 	} else {
@@ -8580,53 +8588,61 @@ def setNotificationPage(params) {
 	}
 	dynamicPage(name: "setNotificationPage", title: "Configure Notification Options", uninstall: false) {
 		section("Notification Preferences:") {
-			if(!settings["${getAutoType()}NotificationsOn"]) {
+			if(!settings["${autoType}NotificationsOn"]) {
 				paragraph "Turn On to Allow:\nText, Voice, and Alarm Notifications...", required: true, image: getAppImg("instruct_icon.png"), state: null
 			}
-			input "${pName}NotificationsOn", "bool", title: "Enable Notifications?", required: false, defaultValue: false, submitOnChange: true,
+			input "${autoType}NotificationsOn", "bool", title: "Enable Notifications?", required: false, defaultValue: false, submitOnChange: true,
 						image: getAppImg("notification_icon.png")
 		}
-		if(settings["${pName}NotificationsOn"]) {
+		if(settings["${autoType}NotificationsOn"]) {
 			def notifDesc = !location.contactBookEnabled ? "Enable Push Messages Below..." : "(Manager App Recipients are Used by Default)\n\nYou can customize who receives notifications"
 			section("${notifDesc}") {
 				if(!location.contactBookEnabled) {
-					input "${pName}UsePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
+					input "${autoType}UsePush", "bool", title: "Send Push Notitifications\n(Optional)", required: false, submitOnChange: true, defaultValue: false, image: getAppImg("notification_icon.png")
 				} else {
-					input("${pName}NotifRecips", "contact", title: "Select Contacts...\n(Optional)", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-						input ("${pName}NotifPhones", "phone", title: "Phone Number to Send SMS to...\n(Optional)", submitOnChange: true, required: false)
+					input("${autoType}NotifRecips", "contact", title: "Select Contacts...\n(Optional)", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
+						input ("${autoType}NotifPhones", "phone", title: "Phone Number to Send SMS to...\n(Optional)", submitOnChange: true, required: false)
 					}
 				}
 			}
 		}
-		if(showSchedule && settings["${pName}NotificationsOn"]) {
+		if(showSchedule && settings["${autoType}NotificationsOn"]) {
 			section(title: "Time Restrictions") {
 				href "setNotificationTimePage", title: "Silence Notifications...", description: (getNotifSchedDesc() ?: "Tap to configure..."), state: (getNotifSchedDesc() ? "complete" : null), image: getAppImg("quiet_time_icon.png")
 			}
 		}
 
-		if(allowSpeech && settings?."${pName}NotificationsOn") {
+		if(allowSpeech && settings["${autoType}NotificationsOn"]) {
 			section("Voice Notification Preferences:") {
-				input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, image: getAppImg("speech_icon.png")
-				if(settings["${pName}AllowSpeechNotif"]) {
-					if(pName == "conWat") {
-						if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because %opencontact% has been Opened for (%offdelay%)" }
-						if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because ALL contacts have been Closed again for (%ondelay%)" }
+				input "${autoType}AllowSpeechNotif", "bool", title: "Enable Voice?", required: false, defaultValue: (settings?."${autoType}AllowSpeechNotif" ? true : false), submitOnChange: true, image: getAppImg("speech_icon.png")
+				if(settings["${autoType}AllowSpeechNotif"]) {
+					if (autoType == "conWat") {
+						if (!atomicState?."${autoType}OffVoiceMsg" || !settings["${autoType}UseCustomSpeechNotifMsg"]) {
+							atomicState?."${autoType}OffVoiceMsg" = "ATTENTION: %tstatname% has been turned OFF because %opencontact% has been Opened for (%offdelay%)"
+						}
+						if (!atomicState?."${autoType}OnVoiceMsg" || !settings["${autoType}UseCustomSpeechNotifMsg"]) {
+							atomicState?."${autoType}OnVoiceMsg" = "Restoring %tstatname% to %lastmode% Mode because ALL contacts have been Closed again for (%ondelay%)"
+						}
 					}
-					if(getAutoType() == "extTmp") {
-						if (!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
-						if (!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
+					if (autoType == "extTmp") {
+						if (!atomicState?."${autoType}OffVoiceMsg" || !settings["${autoType}UseCustomSpeechNotifMsg"]) {
+							atomicState?."${autoType}OffVoiceMsg" = "ATTENTION: %tstatname% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)"
+						}
+						if (!atomicState?."${autoType}OnVoiceMsg" || !settings["${autoType}UseCustomSpeechNotifMsg"]) {
+							atomicState?."${autoType}OnVoiceMsg" = "Restoring %tstatname% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)"
+						}
 					}
-					input "${pName}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
+					input "${autoType}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings["${autoType}AllowSpeechNotif"] ? false : true), submitOnChange: true,
 						image: "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png"
-					input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
-					input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
-					if(settings["${pName}SpeechMediaPlayer"]) {
-						input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
-						input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
+					input "${autoType}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
+					input "${autoType}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
+					if(settings["${autoType}SpeechMediaPlayer"]) {
+						input "${autoType}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
+						input "${autoType}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
 					}
-					if( (settings["${pName}SpeechMediaPlayer"] || settings["${pName}SpeechDevices"] || settings["${pName}SendToAskAlexaQueue"]) && getAutoType() in ["conWat", "extTmp","leakWat"]) {
+					if( (settings["${autoType}SpeechMediaPlayer"] || settings["${autoType}SpeechDevices"] || settings["${autoType}SendToAskAlexaQueue"]) && autoType in ["conWat", "extTmp","leakWat"]) {
 						def desc = ""
-						switch(getAutoType()) {
+						switch(autoType) {
 							case "conWat":
 								desc = "Contact Close"
 								break
@@ -8637,136 +8653,109 @@ def setNotificationPage(params) {
 								desc = "Water Dried"
 								break
 						}
-						input name: "${pName}SpeechOnRestore", type: "bool", title: "Speak on ${desc}?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+						input "${autoType}SpeechOnRestore", "bool", title: "Speak on ${desc}?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
 					}
-					input "${pName}UseCustomSpeechNotifMsg", "bool", title: "Customize Notitification Message?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
+					input "${autoType}UseCustomSpeechNotifMsg", "bool", title: "Customize Notitification Message?", required: false, defaultValue: (settings["${autoType}AllowSpeechNotif"] ? false : true), submitOnChange: true,
 						image: getAppImg("speech_icon.png")
-					if(settings["${pName}UseCustomSpeechNotifMsg"]) {
-						if(pName in ["conWat", "extTmp"]) {
-							def str = ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • DeviceName: %devicename%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
-							str += (pName == "conWat") ? "\n • Open Contact: %opencontact%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
-							str += (pName == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
-							paragraph "These Variables are accepted: ${str}"
+					if(settings["${autoType}UseCustomSpeechNotifMsg"]) {
+						paragraph "These Variables are accepted: ${getVoiceStringVarDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
+						input "${autoType}CustomOffSpeechMessage", "text", title: "Turn Off Message?", required: false, defaultValue: atomicState?."${autoType}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+						if(settings["${autoType}CustomOffSpeechMessage"] && autoType in ["conWat", "extTmp"]) {
+							atomicState?."${autoType}OffVoiceMsg" = settings["${autoType}CustomOffSpeechMessage"]
+							paragraph "Off Msg:\n" + voiceNotifString(atomicState?."${autoType}OffVoiceMsg")
 						}
-						input "${pName}CustomOffSpeechMessage", "text", title: "Turn Off Message?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
-						if(settings?."${pName}CustomOffSpeechMessage" && pName in ["conWat", "extTmp"]) {
-							atomicState?."${pName}OffVoiceMsg" = settings?."${pName}CustomOffSpeechMessage"
-							paragraph "Off Msg:\n" + voiceNotifString(atomicState?."${pName}OffVoiceMsg")
-						}
-						input "${pName}CustomOnSpeechMessage", "text", title: "Restore On Message?", required: false, defaultValue: atomicState?."${pName}OnVoiceMsg", submitOnChange: true, image: getAppImg("speech_icon.png")
-						if(settings?."${pName}CustomOnSpeechMessage" && getAutoType() in ["conWat", "extTmp"]) {
-							atomicState?."${pName}OnVoiceMsg" = settings?."${pName}CustomOnSpeechMessage"
-							paragraph "Restore On Msg:\n" + voiceNotifString(atomicState?."${pName}OnVoiceMsg")
+						input "${autoType}CustomOnSpeechMessage", "text", title: "Restore On Message?", required: false, defaultValue: atomicState?."${autoType}OnVoiceMsg", submitOnChange: true, image: getAppImg("speech_icon.png")
+						if(settings["${autoType}CustomOnSpeechMessage"] && autoType in ["conWat", "extTmp"]) {
+							atomicState?."${autoType}OnVoiceMsg" = settings["${autoType}CustomOnSpeechMessage"]
+							paragraph "Restore On Msg:\n" + voiceNotifString(atomicState?."${autoType}OnVoiceMsg")
 						}
 					}
 				}
 			}
 		}
-		if(allowAlarm && settings?."${pName}NotificationsOn") {
+		if(allowAlarm && settings["${autoType}NotificationsOn"]) {
 			section("Alarm/Siren Device Preferences:", hideWhenEmpty: true) {
-				input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true,
+				input "${autoType}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings["${autoType}AllowAlarmNotif"] ? true : false), submitOnChange: true,
 						image: getAppImg("alarm_icon.png")
-				if(settings["${pName}AllowAlarmNotif"]) {
-					input "${pName}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+				if(settings["${autoType}AllowAlarmNotif"]) {
+					input "${autoType}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
 				}
 			}
 		}
-		if(getAutoType() in ["conWat", "leakWat"] && settings["${pName}NotificationsOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
+		if(getAutoType() in ["conWat", "leakWat"] && settings["${autoType}NotificationsOn"] && (settings["${autoType}AllowSpeechNotif"] || settings["${autoType}AllowAlarmNotif"])) {
 			section("Notification Alert Options (1):") {
-				input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
+				input "${autoType}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: false, submitOnChange: true, metadata: [values:longTimeSecEnum()],
 						image: getAppImg("alert_icon2.png")
-				if(settings?."${pName}_Alert_1_Delay") {
-					if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
-						input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-						if(settings["${pName}_Alert_1_Send_Push"]) {
-							input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-							if(settings["${pName}_Alert_1_Send_Custom_Push"]) {
-								input "${pName}_Alert_1_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+				if(settings?."${autoType}_Alert_1_Delay") {
+					if(settings["${autoType}NotificationsOn"] && (settings["${autoType}UsePush"] || settings["${autoType}NotifRecips"] || settings["${autoType}NotifPhones"])) {
+						input "${autoType}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+						if(settings["${autoType}_Alert_1_Send_Push"]) {
+							input "${autoType}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+							if(settings["${autoType}_Alert_1_Send_Custom_Push"]) {
+								input "${autoType}_Alert_1_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${autoType}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
 							}
 						}
 					}
-					if(settings?."${pName}AllowSpeechNotif") {
-						input "${pName}_Alert_1_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-						if(settings["${pName}_Alert_1_Use_Speech"]) {
-							input "${pName}_Alert_1_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-							if(settings["${pName}_Alert_1_Send_Custom_Speech"]) {
-								input "${pName}_Alert_1_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+					if(settings["${autoType}AllowSpeechNotif"]) {
+						input "${autoType}_Alert_1_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+						if(settings["${autoType}_Alert_1_Use_Speech"]) {
+							input "${autoType}_Alert_1_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+							if(settings["${autoType}_Alert_1_Send_Custom_Speech"]) {
+								input "${autoType}_Alert_1_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${autoType}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
 							}
 						}
 					}
-					if(settings?."${pName}AllowAlarmNotif") {
-						input "${pName}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
-						if(settings?."${pName}_Alert_1_Use_Alarm" && settings?."${pName}AlarmDevices") {
-							input "${pName}_Alert_1_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
-							if(settings["${pName}_Alert_1_AlarmType"]) {
-								input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
+					if(settings["${autoType}AllowAlarmNotif"]) {
+						input "${autoType}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+						if(settings["${autoType}_Alert_1_Use_Alarm"] && settings["${autoType}AlarmDevices"]) {
+							input "${autoType}_Alert_1_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
+							if(settings["${autoType}_Alert_1_AlarmType"]) {
+								input "${autoType}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
 										image: getAppImg("delay_time_icon.png")
 							}
 						}
 					}
-					if(settings["${pName}_Alert_1_Send_Custom_Speech"] || settings["${pName}_Alert_1_Send_Custom_Push"]) {
-						if(pName in ["conWat", "extTmp"]) {
-							def str = ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • DeviceName: %devicename%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
-							str += (pName == "conWat") ? "\n • Open Contact: %opencontact%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
-							str += (pName == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
-							paragraph "These Variables are accepted: ${str}", state: "complete", image: getAppImg("instruct_icon.png")
-						}
+					if(settings["${autoType}_Alert_1_Send_Custom_Speech"] || settings["${autoType}_Alert_1_Send_Custom_Push"]) {
+						paragraph "These Variables are accepted: ${getVoiceStringVarDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
 					}
 				}
 			}
-			if(settings["${pName}_Alert_1_Delay"]) {
+			if(settings["${autoType}_Alert_1_Delay"]) {
 				section("Notification Alert Options (2):") {
-					input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", defaultValue: null, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
-					if(settings?."${pName}_Alert_2_Delay") {
-						if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
-							input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-							if(settings["${pName}_Alert_2_Send_Push"]) {
-								input "${pName}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-								if(settings["${pName}_Alert_2_Send_Custom_Push"]) {
-									input "${pName}_Alert_2_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+					input "${autoType}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", defaultValue: null, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
+					if(settings?."${autoType}_Alert_2_Delay") {
+						if(settings["${autoType}NotificationsOn"] && (settings["${autoType}UsePush"] || settings["${autoType}NotifRecips"] || settings["${autoType}NotifPhones"])) {
+							input "${autoType}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+							if(settings["${autoType}_Alert_2_Send_Push"]) {
+								input "${autoType}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
+								if(settings["${autoType}_Alert_2_Send_Custom_Push"]) {
+									input "${autoType}_Alert_2_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${autoType}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
 								}
 							}
 						}
-						if(settings?."${pName}AllowSpeechNotif") {
-							input "${pName}_Alert_2_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-							if(settings["${pName}_Alert_2_Use_Speech"]) {
-								input "${pName}_Alert_2_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-								if(settings["${pName}_Alert_2_Send_Custom_Speech"]) {
-									input "${pName}_Alert_2_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
+						if(settings?."${autoType}AllowSpeechNotif") {
+							input "${autoType}_Alert_2_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+							if(settings["${autoType}_Alert_2_Use_Speech"]) {
+								input "${autoType}_Alert_2_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
+								if(settings["${autoType}_Alert_2_Send_Custom_Speech"]) {
+									input "${autoType}_Alert_2_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${autoType}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
 								}
 							}
 						}
-						if(settings?."${pName}AllowAlarmNotif") {
-							input "${pName}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
-							if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevices") {
-								input "${pName}_Alert_2_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
-								iif(settings["${pName}_Alert_2_AlarmType"]) {
-									input "${pName}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
+						if(settings?."${autoType}AllowAlarmNotif") {
+							input "${autoType}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
+							if(settings?."${autoType}_Alert_2_Use_Alarm" && settings?."${autoType}AlarmDevices") {
+								input "${autoType}_Alert_2_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: "strobe", submitOnChange: true, required: false, image: getAppImg("alarm_icon.png")
+								iif(settings["${autoType}_Alert_2_AlarmType"]) {
+									input "${autoType}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 15, required: false, submitOnChange: true,
 											image: getAppImg("delay_time_icon.png")
 								}
 							}
 						}
 					}
 
-					if(settings["${pName}_Alert_2_Send_Custom_Speech"] || settings["${pName}_Alert_2_Send_Custom_Push"]) {
-						if(pName in ["conWat", "extTmp"]) {
-							def str = ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • DeviceName: %devicename%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
-							str += (pName == "conWat") ? "\n • Open Contact: %opencontact%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
-							str += (pName in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
-							str += (pName == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
-							paragraph "These Variables are accepted: ${str}", state: "complete", image: getAppImg("instruct_icon.png")
-						}
+					if(settings["${autoType}_Alert_2_Send_Custom_Speech"] || settings["${autoType}_Alert_2_Send_Custom_Push"]) {
+						paragraph "These Variables are accepted: ${getVoiceStringVarDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
 					}
 				}
 			}
@@ -8774,10 +8763,26 @@ def setNotificationPage(params) {
 	}
 }
 
+def getVoiceStringVarDesc() {
+	def autoType = getAutoType()
+	if(autoType in ["conWat", "extTmp"]) {
+		def str = ""
+		str += (autoType in ["conWat", "extTmp"]) ? "\n • Device Name: %devicename%" : ""
+		str += (autoType in ["conWat", "extTmp"]) ? "\n • Tstat Name: %tstatname%" : ""
+		str += (autoType in ["conWat", "extTmp"]) ? "\n • Last Mode: %lastmode%" : ""
+		str += (autoType == "conWat") ? "\n • Open Contact: %opencontact%" : ""
+		str += (autoType in ["conWat", "extTmp"]) ? "\n • Off Delay: %offdelay%" : ""
+		str += (autoType in ["conWat", "extTmp"]) ? "\n • On Delay: %ondelay%" : ""
+		str += (autoType == "extTmp") ? "\n • Temp Threshold: %tempthreshold%" : ""
+		return str
+	}
+}
+
 //process custom tokens to generate final voice message (Copied from BigTalker)
-def voiceNotifString(phrase) {
-	//log.trace "conWatVoiceNotifString..."
+def voiceNotifString(phrase, devName=null) {
+	//log.trace "voiceNotifString($phrase, $devName)..."
 	try {
+		if (phrase?.toLowerCase().contains("%devicename%")) { phrase = phrase?.toLowerCase().replace('%devicename%', (devName ?: "Unnamed Device")) }
 		if (phrase?.toLowerCase().contains("%tstatname%")) { phrase = phrase?.toLowerCase().replace('%tstatname%', (settings?."${getAutoType()}Tstat"?.displayName.toString() ?: "unknown")) }
 		if (phrase?.toLowerCase().contains("%lastmode%")) { phrase = phrase?.toLowerCase().replace('%lastmode%', (atomicState?."${getAutoType()}RestoreMode".toString() ?: "unknown")) }
 		if (getAutoType() == "conWat" && phrase?.toLowerCase().contains("%opencontact%")) {
@@ -8790,18 +8795,19 @@ def voiceNotifString(phrase) {
 		log.error "voiceNotifString Exception:", ex
 		parent?.sendExceptionData(ex.message, "voiceNotifString", true, getAutoType())
 	}
+	//LogAction("voiceNotifString: ($phrase)", "debug", true)
 	return phrase
 }
 
 def getNotifConfigDesc() {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def str = ""
-	if (settings?."${pName}NotificationsOn") {
-		str += ( getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer"))) ?
+	if (settings["${autoType}NotificationsOn"]) {
+		str += ( getRecipientDesc() || (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"]))) ?
 			"Push Status:" : ""
-		str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
-		str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
-		str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
+		str += (settings["${autoType}NotifRecips"]) ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${autoType}NotifRecips"?.size()})" : ""
+		str += (settings["${autoType}UsePush"]) ? "\n • Push Messages: Enabled" : ""
+		str += (settings["${autoType}NotifPhones"]) ? "\n • SMS: (${settings["${autoType}NotifPhones"]?.size()})" : ""
 		//str += (pushStatus() && phone) ? "\n • SMS: (${phone?.size()})" : ""
 		str += getNotifSchedDesc() ? ("${!getRecipientDesc() ? "" : "\n"}Schedule Options Selected...") : ""
 		str += getVoiceNotifConfigDesc() ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc()}") : ""
@@ -8812,47 +8818,47 @@ def getNotifConfigDesc() {
 }
 
 def getVoiceNotifConfigDesc() {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def str = ""
-	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
-		def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
-		def medias = getInputToStringDesc(settings?."${pName}SpeechMediaPlayer", true)
-		str += settings["${pName}SendToAskAlexaQueue"] ? "\n • Send to Ask Alexa: (True)" : ""
-		str += speaks ? "\n • Speech Devices:${speaks.size() > 1 ? "\n" : ""}${speaks}" : ""
-		str += medias ? "\n • Media Players:${medias.size() > 1 ? "\n" : ""}${medias}" : ""
-		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n      Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
-		str += (medias && settings?."${pName}SpeechAllowResume") ? "\n      Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
-		str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n • Custom Message: (${settings?."${pName}UseCustomSpeechNotifMsg".toString().capitalize()})" : ""
+	if(settings["${autoType}NotificationsOn"] && settings["${autoType}AllowSpeechNotif"]) {
+		def speaks = getInputToStringDesc(settings["${autoType}SpeechDevices"], true)
+		def medias = getInputToStringDesc(settings["${autoType}SpeechMediaPlayer"], true)
+		str += settings["${autoType}SendToAskAlexaQueue"] ? "\n • Send to Ask Alexa: (True)" : ""
+		str += speaks ? "\n • Speech Devices:${speaks?.size() > 1 ? "\n" : ""}${speaks}" : ""
+		str += medias ? "\n • Media Players:${medias?.size() > 1 ? "\n" : ""}${medias}" : ""
+		str += (medias && settings["${autoType}SpeechVolumeLevel"]) ? "\n      Volume: (${settings["${autoType}SpeechVolumeLevel"]})" : ""
+		str += (medias && settings["${autoType}SpeechAllowResume"]) ? "\n      Resume: (${settings["${autoType}SpeechAllowResume"].toString().capitalize()})" : ""
+		str += (settings["${autoType}UseCustomSpeechNotifMsg"] && (medias || speaks)) ? "\n • Custom Message: (${settings["${autoType}UseCustomSpeechNotifMsg"].toString().capitalize()})" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
 
 def getAlarmNotifConfigDesc() {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def str = ""
-	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowAlarmNotif"]) {
-		def alarms = getInputToStringDesc(settings["${pName}AlarmDevices"], true)
+	if(settings["${autoType}NotificationsOn"] && settings["${autoType}AllowAlarmNotif"]) {
+		def alarms = getInputToStringDesc(settings["${autoType}AlarmDevices"], true)
 		str += alarms ? "\n • Alarm Devices:${alarms.size() > 1 ? "\n" : ""}${alarms}" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
 
 def getAlertNotifConfigDesc() {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	def str = ""
-	if(settings?."${pName}NotificationsOn" && (settings["${pName}_Alert_1_Delay"] || settings["${pName}_Alert_2_Delay"]) && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
-		str += settings["${pName}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_1_Delay"])})" : ""
-		str += settings["${pName}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_1_Send_Push"]})" : ""
-		str += settings["${pName}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_1_Use_Speech"]})" : ""
-		str += settings["${pName}_Alert_1_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${pName}_Alert_1_Use_Alarm"]})" : ""
-		str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${pName}_Alert_1_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${pName}_Alert_1_AlarmType"])})" : ""
-		str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${pName}_Alert_1_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${pName}_Alert_1_Alarm_Runtime"])})" : ""
-		str += settings["${pName}_Alert_2_Delay"] ? "${settings["${pName}_Alert_1_Delay"] ? "\n" : ""}\nAlert (2) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${pName}_Alert_2_Delay"])})" : ""
-		str += settings["${pName}_Alert_2_Send_Push"] ? "\n  • Send Push: (${settings["${pName}_Alert_2_Send_Push"]})" : ""
-		str += settings["${pName}_Alert_2_Use_Speech"] ? "\n  • Use Speech: (${settings["${pName}_Alert_2_Use_Speech"]})" : ""
-		str += settings["${pName}_Alert_2_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${pName}_Alert_2_Use_Alarm"]})" : ""
-		str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${pName}_Alert_2_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${pName}_Alert_2_AlarmType"])})" : ""
-		str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${pName}_Alert_2_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${pName}_Alert_2_Alarm_Runtime"])})" : ""
+	if(settings["${autoType}NotificationsOn"] && (settings["${autoType}_Alert_1_Delay"] || settings["${autoType}_Alert_2_Delay"]) && (settings["${autoType}AllowSpeechNotif"] || settings["${autoType}AllowAlarmNotif"])) {
+		str += settings["${autoType}_Alert_1_Delay"] ? "\nAlert (1) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${autoType}_Alert_1_Delay"])})" : ""
+		str += settings["${autoType}_Alert_1_Send_Push"] ? "\n  • Send Push: (${settings["${autoType}_Alert_1_Send_Push"]})" : ""
+		str += settings["${autoType}_Alert_1_Use_Speech"] ? "\n  • Use Speech: (${settings["${autoType}_Alert_1_Use_Speech"]})" : ""
+		str += settings["${autoType}_Alert_1_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${autoType}_Alert_1_Use_Alarm"]})" : ""
+		str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${autoType}_Alert_1_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${autoType}_Alert_1_AlarmType"])})" : ""
+		str += (settings["${pNmae}_Alert_1_Use_Alarm"] && settings["${autoType}_Alert_1_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${autoType}_Alert_1_Alarm_Runtime"])})" : ""
+		str += settings["${autoType}_Alert_2_Delay"] ? "${settings["${autoType}_Alert_1_Delay"] ? "\n" : ""}\nAlert (2) Status:\n  • Delay: (${getEnumValue(longTimeSecEnum(), settings["${autoType}_Alert_2_Delay"])})" : ""
+		str += settings["${autoType}_Alert_2_Send_Push"] ? "\n  • Send Push: (${settings["${autoType}_Alert_2_Send_Push"]})" : ""
+		str += settings["${autoType}_Alert_2_Use_Speech"] ? "\n  • Use Speech: (${settings["${autoType}_Alert_2_Use_Speech"]})" : ""
+		str += settings["${autoType}_Alert_2_Use_Alarm"] ? "\n  • Use Alarm: (${settings["${autoType}_Alert_2_Use_Alarm"]})" : ""
+		str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${autoType}_Alert_2_AlarmType"]) ? "\n ├ Alarm Type: (${getEnumValue(alarmActionsEnum(), settings["${autoType}_Alert_2_AlarmType"])})" : ""
+		str += (settings["${pNmae}_Alert_2_Use_Alarm"] && settings["${autoType}_Alert_2_Alarm_Runtime"]) ? "\n └ Alarm Runtime: (${getEnumValue(shortTimeEnum(), settings["${autoType}_Alert_2_Alarm_Runtime"])})" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
@@ -8895,20 +8901,20 @@ def isPluralString(obj) {
 }
 
 def getNotificationOptionsConf() {
-	def pName = getAutoType()
-	return (getRecipientDesc() || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ) ? true : false
+	def autoType = getAutoType()
+	return (getRecipientDesc() || (settings["${autoType}AllowSpeechNotif"] && (settings["${autoType}SpeechDevices"] || settings["${autoType}SpeechMediaPlayer"])) ) ? true : false
 }
 
 def setRecipientsPage(params) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	dynamicPage(name: "setRecipientsPage", title: "Set Push Notifications Recipients", uninstall: false) {
 		def notifDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
 		section("${notifDesc}:") {
 			if(!location.contactBookEnabled) {
-				input "${pName}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
+				input "${autoType}UsePush", "bool", title: "Send Push Notitifications", required: false, defaultValue: false, image: getAppImg("notification_icon.png")
 			} else {
-				input("${pName}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
-					input ("${pName}NotifPhones", "phone", title: "Phone Number to send SMS to...", required: false)
+				input("${autoType}NotifRecips", "contact", title: "Send notifications to", required: false, image: getAppImg("notification_icon.png")) {
+					input ("${autoType}NotifPhones", "phone", title: "Phone Number to send SMS to...", required: false)
 				}
 			}
 		}
@@ -8928,60 +8934,60 @@ def getRecipientsNames(val) {
 }
 
 def getRecipientDesc() {
-	return ((settings?."${getAutoType()}NotifRecips") || (settings?."${getAutoType()}NotifPhones" || settings?."${getAutoType()}NotifUsePush")) ? "${getRecipientsNames(settings?."${getAutoType()}NotifRecips")}" : null
+	return ((settings["${getAutoType()}NotifRecips"]) || (settings["${getAutoType()}NotifPhones"] || settings["${getAutoType()}NotifUsePush"])) ? "${getRecipientsNames(settings["${getAutoType()}NotifRecips"])}" : null
 }
 
 def setNotificationTimePage() {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	dynamicPage(name: "setNotificationTimePage", title: "Prevent Notifications\nDuring these Days, Times or Modes", uninstall: false) {
-		def timeReq = (settings["${pName}qStartTime"] || settings["${pName}qStopTime"]) ? true : false
+		def timeReq = (settings["${autoType}qStartTime"] || settings["${autoType}qStopTime"]) ? true : false
 		section() {
-			input "${pName}qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("start_time_icon.png")
-			if(settings["${pName}qStartInput"] == "A specific time") {
-				input "${pName}qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
+			input "${autoType}qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("start_time_icon.png")
+			if(settings["${autoType}qStartInput"] == "A specific time") {
+				input "${autoType}qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
 			}
-			input "${pName}qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("stop_time_icon.png")
-			if(settings?."${pName}qStopInput" == "A specific time") {
-				input "${pName}qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
+			input "${autoType}qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("stop_time_icon.png")
+			if(settings["${autoType}qStopInput"] == "A specific time") {
+				input "${autoType}qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
 			}
-			input "${pName}quietDays", "enum", title: "Only on these days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"),
+			input "${autoType}quietDays", "enum", title: "Only on these days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"),
 					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-			input "${pName}quietModes", "mode", title: "When these Modes are Active", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
+			input "${autoType}quietModes", "mode", title: "When these Modes are Active", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
 		}
 	}
 }
 
 def setDayModeTimePage(params) {
-	def pName = getAutoType()
+	def autoType = getAutoType()
 	dynamicPage(name: "setDayModeTimePage", title: "Select Days, Times or Modes", uninstall: false) {
-		def secDesc = settings["${pName}DmtInvert"] ? "Not" : "Only"
-		def inverted = settings["${pName}DmtInvert"] ? true : false
+		def secDesc = settings["${autoType}DmtInvert"] ? "Not" : "Only"
+		def inverted = settings["${autoType}DmtInvert"] ? true : false
 		section("") {
-			input "${pName}DmtInvert", "bool", title: "When Not in Any of These?...", defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
+			input "${autoType}DmtInvert", "bool", title: "When Not in Any of These?...", defaultValue: false, submitOnChange: true, image: getAppImg("switch_icon.png")
 		}
 		section("${secDesc} During these Days, Times, or Modes:") {
-			def timeReq = (settings?."${pName}StartTime" || settings."${pName}StopTime") ? true : false
-			input "${pName}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
-			input "${pName}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
-			input "${pName}Days", "enum", title: "${inverted ? "Not": "Only"} on These Days of the week", multiple: true, required: false,
+			def timeReq = (settings["${autoType}StartTime"] || settings["${autoType}StopTime"]) ? true : false
+			input "${autoType}StartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
+			input "${autoType}StopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
+			input "${autoType}Days", "enum", title: "${inverted ? "Not": "Only"} on These Days of the week", multiple: true, required: false,
 					options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], image: getAppImg("day_calendar_icon.png")
-			input "${pName}Modes", "mode", title: "${inverted ? "Not": "Only"} in These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
+			input "${autoType}Modes", "mode", title: "${inverted ? "Not": "Only"} in These Modes...", multiple: true, required: false, image: getAppImg("mode_icon.png")
 		}
 	}
 }
 
-def getDayModeTimeDesc(pName) {
-	def startTime = settings?."${pName}StartTime"
-	def stopInput = settings?."${pName}StopInput"
-	def stopTime = settings?."${pName}StopTime"
-	def dayInput = settings?."${pName}Days"
-	def modeInput = settings?."${pName}Modes"
-	def inverted = settings?."${pName}DmtInvert" ?: null
+def getDayModeTimeDesc(autoType) {
+	def startTime = settings["${autoType}StartTime"]
+	def stopInput = settings["${autoType}StopInput"]
+	def stopTime = settings["${autoType}StopTime"]
+	def dayInput = settings["${autoType}Days"]
+	def modeInput = settings["${autoType}Modes"]
+	def inverted = settings["${autoType}DmtInvert"] ?: null
 	def str = ""
 	def days = getInputToStringDesc(dayInput)
 	def modes = getInputToStringDesc(modeInput)
 	str += ((startTime && stopTime) || modes || days) ? "${!inverted ? "When" : "When Not"}:" : ""
-	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}"  : ""
+	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings["${autoType}StartTime"])} - ${time2Str(settings["${autoType}StopTime"])}"  : ""
 	str += days ? "${(startTime || stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
 	str += modes ? "${(startTime || stopTime || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
 	str += (str != "") ? "\n\nTap to Modify..." : ""
@@ -8997,21 +9003,21 @@ def getDmtSectionDesc(autoType) {
 *************************************************************************************************/
 def autoScheduleOk(autoType) {
 	try {
-		def inverted = settings?."${autoType}DmtInvert" ? true : false
+		def inverted = settings["${autoType}DmtInvert"] ? true : false
 		def modeOk = true
-		modeOk = (!settings?."${autoType}Modes" || ((isInMode(settings?."${autoType}Modes") && !inverted) || (!isInMode(settings?."${autoType}Modes") && inverted))) ? true : false
+		modeOk = (!settings["${autoType}Modes"] || ((isInMode(settings["${autoType}Modes"]) && !inverted) || (!isInMode(settings["${autoType}Modes"]) && inverted))) ? true : false
 		//dayOk
 		def dayOk = true
 		def dayFmt = new SimpleDateFormat("EEEE")
 		dayFmt.setTimeZone(getTimeZone())
 		def today = dayFmt.format(new Date())
-		def inDay = (today in settings?."${autoType}Days") ? true : false
-		dayOk = (!settings?."${autoType}Days" || ((inDay && !inverted) || (!inDay && inverted))) ? true : false
+		def inDay = (today in settings["${autoType}Days"]) ? true : false
+		dayOk = (!settings["${autoType}Days"] || ((inDay && !inverted) || (!inDay && inverted))) ? true : false
 
 		//scheduleTimeOk
 		def timeOk = true
-		if (settings?."${autoType}StartTime" && settings?."${autoType}StopTime") {
-			def inTime = (timeOfDayIsBetween(settings?."${autoType}StartTime", settings?."${autoType}StopTime", new Date(), getTimeZone())) ? true : false
+		if (settings["${autoType}StartTime"] && settings["${autoType}StopTime"]) {
+			def inTime = (timeOfDayIsBetween(settings["${autoType}StartTime"], settings["${autoType}StopTime"], new Date(), getTimeZone())) ? true : false
 			timeOk = ((inTime && !inverted) || (!inTime && inverted)) ? true : false
 		}
 
@@ -9031,33 +9037,48 @@ def sendEventPushNotifications(message, type) {
 	//log.trace "sendEventPushNotifications...($message, $type)"
 	if(settings["${getAutoType()}_Alert_1_Send_Push"] || settings["${getAutoType()}_Alert_2_Send_Push"]) {
 		if(settings["${getAutoType()}_Alert_1_CustomPushMessage"]) {
-			sendNofificationMsg(settings["${getAutoType()}_Alert_1_CustomPushMessage"].toString(), type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
+			sendNofificationMsg(settings["${getAutoType()}_Alert_1_CustomPushMessage"].toString(), type, settings["${getAutoType()}NofifRecips"], settings["${getAutoType()}NotifPhones"], settings["${getAutoType()}UsePush"])
 		} else {
-			sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
+			sendNofificationMsg(message, type, settings["${getAutoType()}NofifRecips"], settings["${getAutoType()}NotifPhones"], settings["${getAutoType()}UsePush"])
 		}
 	} else {
-		sendNofificationMsg(message, type, settings?."${getAutoType()}NofifRecips", settings?."${getAutoType()}NotifPhones", settings?."${getAutoType()}UsePush")
+		sendNofificationMsg(message, type, settings["${getAutoType()}NofifRecips"], settings["${getAutoType()}NotifPhones"], settings["${getAutoType()}UsePush"])
 	}
 }
 
-def sendEventVoiceNotifications(vMsg) {
-	def allowNotif = settings?."${getAutoType()}NotificationsOn" ? true : false
-	def allowSpeech = allowNotif && settings?."${getAutoType()}AllowSpeechNotif" ? true : false
-	def speakOnRestore = allowSpeech && settings?."${getAutoType()}SpeechOnRestore" ? true : false
+def sendEventVoiceNotifications(vMsg, msgId=null, rmAAMsg=false, rmMsgId) {
+	def allowNotif = settings["${getAutoType()}NotificationsOn"] == true ? true : false
+	def allowSpeech = allowNotif && settings["${getAutoType()}AllowSpeechNotif"] == true ? true : false
 	if(allowNotif && allowSpeech) {
-		if(settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"]) {
+		if(settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) {
 			sendTTS(vMsg)
 		}
-		if (settings["${pName}SendToAskAlexaQueue"]) {
-			sendEventToAskAlexaQueue(vMsg)
+		if(settings["${getAutoType()}SendToAskAlexaQueue"]) {
+			if(rmMsgId != null && rmAAMsg == true) {
+				removeAskAlexaQueueMsg(rmMsgId)
+			}
+			if (vMsg && msgId != null) {
+				addAskAlexaQueueMsg(vMsg, msgId)
+			}
 		}
 	}
 }
 
-def sendEventToAskAlexaQueue(vMsg) {
-	if(parent?.getAskAlexaQueueEnabled() == true) {
-		LogAction("sendEventToAskAlexaQueue: Sending Message this Message to the Ask Alexa Queue ($vMsg)", "info", true)
-		sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}")
+def addAskAlexaQueueMsg(vMsg, msgId) {
+	if(parent?.getAskAlexaQueueEnabled() == true && (vMsg != null && msgId != null)) {
+		LogAction("addAskAlexaQueueMsg: Adding ($vMsg) Message to the Ask Alexa Queue | ${msgId}", "info", true)
+		sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}")
+	} else {
+		LogAction("addAskAlexaQueueMsg: Cannot add ($vMsg) with ID: ($msgId) because the Nest Manager because the developer has remotely disabled the Ask Alexa Queuing...", "info", true)
+	}
+}
+
+def removeAskAlexaQueueMsg(msgId) {
+	if(parent?.getAskAlexaQueueEnabled() == true && msgId != null) {
+		LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue", "info", true)
+		sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId)
+	} else {
+		LogAction("removeAskAlexaQueueMsg: Cannot remove message with ID: ($msgId) because the Nest Manager because the developer has remotely disabled the Ask Alexa Queuing...", "info", true)
 	}
 }
 
@@ -9170,10 +9191,11 @@ def getAlarmEvt1RuntimeDtSec() { return !atomicState?.alarmEvt1StartDt ? 100000 
 def getAlarmEvt2RuntimeDtSec() { return !atomicState?.alarmEvt2StartDt ? 100000 : GetTimeDiffSeconds(atomicState?.alarmEvt2StartDt).toInteger() }
 
 def scheduleTimeoutRestore() {
+	LogAction("scheduleTimeoutRestore...", "trace", false)
 	def timeOutVal = settings["${getAutoType()}OffTimeout"]?.toInteger()
-	if(timeOutVal && !atomicState?.timeOutScheduled) {
+	if(timeOutVal > 0 && atomicState?.timeOutScheduled == false) {
 		runIn(timeOutVal.toInteger(), "restoreAfterTimeOut", [overwrite: true])
-		LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings?."${getAutoType()}OffTimeout")})", "info", true)
+		LogAction("Mode Restoration Timeout Scheduled for (${getEnumValue(longTimeSecEnum(), settings["${getAutoType()}OffTimeout"])})", "info", true)
 		atomicState?.timeOutScheduled = true
 	}
 }
@@ -9188,8 +9210,8 @@ def unschedTimeoutRestore() {
 }
 
 def restoreAfterTimeOut() {
-	if(settings?."${getAutoType()}OffTimeout") {
-		switch(pName) {
+	if(settings["${getAutoType()}OffTimeout"]) {
+		switch(getAutoType()) {
 			case "conWat":
 				atomicState?.timeOutScheduled = false
 				conWatCheck(true)
@@ -9504,8 +9526,8 @@ def smallTempEnum() {
 }
 
 def switchRunEnum() {
-	def pName = getAutoType()
-	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
+	def autoType = getAutoType()
+	def hasFan = atomicState?."${autoType}TstatHasFan" ? true : false
 	def vals = [
 		1:"Heating/Cooling", 2:"With Fan Only"
 	]
@@ -9516,10 +9538,10 @@ def switchRunEnum() {
 }
 
 def fanModeTrigEnum() {
-	def pName = getAutoType()
-	def canCool = atomicState?."${pName}TstatCanCool" ? true : false
-	def canHeat = atomicState?."${pName}TstatCanHeat" ? true : false
-	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
+	def autoType = getAutoType()
+	def canCool = atomicState?."${autoType}TstatCanCool" ? true : false
+	def canHeat = atomicState?."${autoType}TstatCanHeat" ? true : false
+	def hasFan = atomicState?."${autoType}TstatHasFan" ? true : false
 	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any Mode"]
 	if(!canHeat) {
 		vals = ["cool":"Cool", "any":"Any Mode"]
@@ -9569,14 +9591,14 @@ def getSunTimeState() {
 void sendTTS(txt) {
 	log.trace "sendTTS(data: ${txt})"
 	try {
-		def pName = getAutoType()
+		def autoType = getAutoType()
 		def msg = txt.toString().replaceAll("\\[|\\]|\\(|\\)|\\'|\\_", "")
-		def spks = settings?."${pName}SpeechDevices"
-		def meds = settings?."${pName}SpeechMediaPlayer"
-		def res = settings?."${pName}SpeechAllowResume"
-		def vol = settings?."${pName}SpeechVolumeLevel"
+		def spks = settings["${autoType}SpeechDevices"]
+		def meds = settings["${autoType}SpeechMediaPlayer"]
+		def res = settings["${autoType}SpeechAllowResume"]
+		def vol = settings["${autoType}SpeechVolumeLevel"]
 		log.debug "msg: $msg | speaks: $spks | medias: $meds | resume: $res | volume: $vol"
-		if (settings?."${pName}AllowSpeechNotif") {
+		if (settings["${autoType}AllowSpeechNotif"]) {
 			if(spks) {
 				spks*.speak(msg)
 			}

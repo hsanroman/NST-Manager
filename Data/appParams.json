@@ -5,32 +5,12 @@
     "state": {
         "stateVarVer": 2
     },
-    "versions": {
-        "app": {
-            "ver": "3.1.2"
-        },
-        "thermostat": {
-            "ver": "3.1.1"
-        },
-        "protect": {
-            "ver": "3.1.0"
-        },
-        "camera": {
-            "ver": "1.1.1"
-        },
-        "presence": {
-            "ver": "3.1.0"
-        },
-        "weather": {
-            "ver": "3.1.1"
-        }
-    },
     "token": {
         "tokenNum": 1
     },
     "broadcast": {
         "msgId": "eavl9D2vry",
-        "message": "Nest Manager Broadcast: Version 3.0 is now available.  Please make sure to update the SmartApp and Devices...",
+        "message": "Nest Manager Broadcast: Version 3.1.3 is now available.  Please make sure to update the SmartApp and Devices...",
         "type": "info"
     },
     "updater": {
@@ -41,7 +21,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "3.1.2"
+                "ver": "3.1.3"
             },
             "thermostat": {
                 "ver": "3.1.1"
@@ -65,10 +45,6 @@
                 "ver": "1.0.0"
             }
         }
-    },
-    "css": {
-        "cssVer": 1,
-        "cssUrl": "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css"
     },
     "html": {
         "cssVer": 1,
