@@ -48,6 +48,11 @@ def appVerInfo() {
 
 	str += "\n\nV3.1.2 (September 6th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • ADDED: Ask Alexa (@MichaelS) Support. Automations now have the ability to Add/Remove notifications from Nest Manager to the Ask Alexa Message Queue..."
+	str += "\n • FIXED: Found quite a few minor bugs that I fixed, and cleaned up unnecessary code and consolodated so some others to save some space..."
+
+	str += "\n\nV3.1.2 (September 6th, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • ADDED: Ask Alexa (@MichaelS) Support (Not Enabled Yet). Automations now have the ability to send notifications to the Ask Alexa Message Queue..."
 	str += "\n • FIXED: nMODE and tMODE automations only run once per ST MODE change."
 

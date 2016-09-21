@@ -5,8 +5,28 @@
     "state": {
         "stateVarVer": 2
     },
+    "versions": {
+        "app": {
+            "ver": "3.1.3"
+        },
+        "thermostat": {
+            "ver": "3.1.1"
+        },
+        "protect": {
+            "ver": "3.1.0"
+        },
+        "camera": {
+            "ver": "1.1.1"
+        },
+        "presence": {
+            "ver": "3.1.0"
+        },
+        "weather": {
+            "ver": "3.1.1"
+        }
+    },
     "token": {
-        "tokenNum": 1
+        "tokenNum": 2
     },
     "broadcast": {
         "msgId": "eavl9D2vry",
@@ -53,7 +73,7 @@
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
     "database": {
-        "disableExceptions": false
+        "disableExceptions": true
     },
     "aaSupport": {
         "enabled": true
