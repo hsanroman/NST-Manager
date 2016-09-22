@@ -6765,10 +6765,10 @@ def getFanSwitches() {
 		section("Fan Event Triggers") {
 			paragraph "Event based triggers occur when the Thermostat sends an event.  Depending on your configured Poll time it may take 1 minute or more",
 					image: getAppImg("instruct_icon.png")
-			input(name: "${autoType}FanSwitchTriggerType", type: "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],
-				submitOnChange: true, image: getAppImg("${settings?."${autoType}FanSwitchTriggerType" == 1 ? "thermostat" : "home_fan"}_icon.png"))
-			input(name: "${autoType}FanSwitchHvacModeFilter", type: "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
-					submitOnChange: true, image: getAppImg("mode_icon.png"))
+			input "${autoType}FanSwitchTriggerType", type: "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],
+				submitOnChange: true, image: getAppImg("${settings?."${autoType}FanSwitchTriggerType" == 1 ? "thermostat" : "home_fan"}_icon.png")
+			input "${autoType}FanSwitchHvacModeFilter", "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
+					submitOnChange: true, image: getAppImg("mode_icon.png")
 		}
 		if(getFanSwitchesSpdChk()) {
 			section("Fan Speed Options") {
