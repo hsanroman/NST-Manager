@@ -73,7 +73,7 @@
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
     "database": {
-        "disableExceptions": true
+        "disableExceptions": false
     },
     "aaSupport": {
         "enabled": true
