@@ -77,5 +77,8 @@
     },
     "aaSupport": {
         "enabled": true
+    },
+    "dashPrefs": {
+        "enabled": true
     }
 }
