@@ -57,9 +57,11 @@
     },
     "aaPrefs": {
         "enAaMsgQueue": true,
-        "enAaVoiceZoneRprt": true,
-        "enAaVoiceUseRprt": true
     },
+    "reportPrefs": {
+        "disVoiceZoneRprt": false,
+        "disVoiceUsageRprt": false
+    }
     "dashPrefs": {
         "enabled": true
     },
