@@ -61,7 +61,7 @@
     "reportPrefs": {
         "disVoiceZoneRprt": false,
         "disVoiceUsageRprt": false
-    }
+    },
     "dashPrefs": {
         "enabled": true
     },
