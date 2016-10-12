@@ -63,7 +63,7 @@
         "disVoiceUsageRprt": false
     },
     "dashPrefs": {
-        "enabled": true
+        "enabled": false
     },
     "clientBL": {
         "clients": ["bad978ab-f37e-48c9-909c-1971e1970364"]
