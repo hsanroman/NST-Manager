@@ -56,7 +56,7 @@
         "disableExceptions": true
     },
     "aaPrefs": {
-        "enAaMsgQueue": true,
+        "enAaMsgQueue": true
     },
     "reportPrefs": {
         "disVoiceZoneRprt": false,
