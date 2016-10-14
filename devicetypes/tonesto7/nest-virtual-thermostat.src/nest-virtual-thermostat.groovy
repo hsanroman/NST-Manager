@@ -284,7 +284,7 @@ mappings {
 }
 
 def initialize() {
-	Logger("initialize...")
+	Logger("initialize")
 }
 
 def installed() {
@@ -428,7 +428,7 @@ def processEvent() {
 					break
 
 				default:
-					LogAction("no Temperature data $tempUnit")
+					Logger("no Temperature data $tempUnit")
 					break
 			}
 			getSomeData(true)
@@ -460,7 +460,7 @@ def getTimeZone() {
 	def tz = null
 	if (location?.timeZone) { tz = location?.timeZone }
 	else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
-	if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone is not found ...", "warn") }
+	if(!tz) { Logger("getTimeZone: Hub or Nest TimeZone is not found ...", "warn") }
 	return tz
 }
 
@@ -1444,7 +1444,7 @@ def setHvacMode(nextMode) {
 			state.lastTriedMode = nextMode
 			"$nextMode"()
 		} else {
-			LogAction("Invalid Mode '$nextMode'")
+			Logger("Invalid Mode '$nextMode'")
 		}
 	}
 	catch (ex) {
@@ -1542,7 +1542,7 @@ void setThermostatMode(modeStr) {
 			emergencyHeat()
 			break
 		default:
-			LogAction("setThermostatMode Received an Invalid Request: ${modeStr}", "warn")
+			Logger("setThermostatMode Received an Invalid Request: ${modeStr}", "warn")
 			break
 	}
 }
@@ -1604,7 +1604,7 @@ void setThermostatFanMode(fanModeStr) {
 			fanOff()
 			break
 		default:
-			LogAction("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
+			Logger("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
 			break
 	}
 }
@@ -1645,7 +1645,7 @@ void LogAction(msg, logType = "debug") {
 	}
 }
 
- //This will Print logs from the parent app when added to parent method that the child calls
+//This will Print logs from the parent app when added to parent method that the child calls
 def log(message, level = "trace") {
 	def smsg = "PARENT_Log>> " + message
 	LogAction(smsg, level)
@@ -1667,16 +1667,21 @@ void updateNestReportData() {
 	nestReportStatusEvent()
 }
 
+def cleanDevLabel() {
+	return device.label.toString().replaceAll("-", "")
+}
+
 def getNestMgrReport() {
 	//log.trace "getNestMgrReport()..."
 	def str = ""
 	if(state?.allowVoiceZoneRprt || state?.allowVoiceUsageRprt) {
+		str += "Here is todays up to date ${cleanDevLabel()} Report. "
+
 		if(state?.allowVoiceZoneRprt == false) {
 			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
 			str += " Zone status voice reports have been disabled by Nest manager app preferences"
 		}
 		else {
-			str += "This is the start of your (${device?.displayName}) zone status.  "
 			str += parent?.reqSchedInfoRprt(this).toString() + "  "
 		}
 		if(state?.allowVoiceUsageRprt == false) {
@@ -1684,11 +1689,12 @@ def getNestMgrReport() {
 			str += "Zone status voice reports have been disabled by Nest manager app preferences"
 		}
 		else {
-			str += " and now we will Move on to today's Usage.  "
+			str += " and Now we move on to today's Usage.  "
 			str += getUsageVoiceReport("runtimeToday")
 		}
 	} else {
 		str += "All voice reports have been disabled by Nest Manager app preferences"
+		return str
 	}
 	//log.debug str
 	return str
@@ -1706,7 +1712,7 @@ def getUsageVoiceReport(type) {
 			return generateUsageText("month" ,getMonthsUsage())
  			break
 		default:
-			return "I'm sorry but the report received was not valid"
+			return "I'm sorry but the report type received was not valid"
 			break
 	}
 }
@@ -1714,7 +1720,7 @@ def getUsageVoiceReport(type) {
 def generateUsageText(timeType, timeMap) {
 	def str = ""
 	if(timeType && timeMap) {
-		str += " Here is your ${device?.displayName} Usage report for${timeType in ["week", "month"] ? " this" : ""} ${timeType}.  Based on it's activity "
+		str += " Based on it's activity "
 		def hData = null
 		def cData = null
 		def iData = null
@@ -1746,15 +1752,15 @@ def generateUsageText(timeType, timeMap) {
 					def tm = getDayTimePerc(tSec,tData)
 					if (tm>=66 && tm<=100) {
 						str += " it looks like it was a light day because your device"
-						str +=  " was idle $tm percent of the day at "
+						str +=  " sat idle $tm percent of the day at "
 					}
 					else if (tm>=34 && tm<66) {
 						str += " it was a pretty moderate day because your device"
-						str +=  " was only idle $tm percent of the day at "
+						str +=  " sat only idle $tm percent of the day at "
 					}
 					else if (tm>0 && tm <34) {
 						str += " it was a very busy day becaue your device"
-						str +=  " was only idle $tm percent of the day at "
+						str +=  " sat only idle $tm percent of the day at "
 					}
 					str += tStr
 
@@ -1816,13 +1822,14 @@ def generateUsageText(timeType, timeMap) {
 				}
 				str += f0Data || f1Data ? " and" : ""
 			}
+			str += ". "
 			/*if(type in ["fanAuto", "fanOn"]) {
 				//not sure how to format the fan strings yet
 
 			}*/
 		}
 	}
-	str += "  That's all for your current thermostat report "
+	str += " That is all for todays nest report. Have a wonderful day..."
 	//log.debug "str: $str"
 	return str
 }
@@ -1843,15 +1850,15 @@ def getTimeMapString(data) {
 	def m = data?.m
 	if(h>0 || m>0 || d>0) {
 		if(d>0) {
-			str += "$d day"
+			str += "$d day${d>1 ? "s" : ""}"
 			str += d>0 || m>0 ? " and " : ""
 		}
 		if (h>0) {
-			str += h>0 ? "$h Hours " : ""
+			str += h>0 ? "$h Hour${h>1 ? "s" : ""} " : ""
 			str += m>0 ? "and " : ""
 		}
 		if (m>0) {
-			str += m>0 ? "$m minutes" : ""
+			str += m>0 ? "$m minute${m>1 ? "s" : ""}" : ""
 		}
 		return str
 	} else {
@@ -1949,7 +1956,6 @@ def getJS(url){
 
 def getCssData() {
 	def cssData = null
-	//def htmlInfo = state?.htmlInfo
 	def htmlInfo
 	state.cssData = null
 
@@ -1959,7 +1965,7 @@ def getCssData() {
 				//LogAction("getCssData: CSS Data is Current | Loading Data from State...")
 				cssData = state?.cssData
 			} else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
-				LogAction("getCssData: CSS Data is Outdated | Loading Data from Source...")
+				//LogAction("getCssData: CSS Data is Outdated | Loading Data from Source...")
 				cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
 				state.cssData = cssData
 				state?.cssVer = htmlInfo?.cssVer
