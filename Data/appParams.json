@@ -7,30 +7,30 @@
     },
     "versions": {
         "app": {
-            "ver": "3.1.4"
+            "ver": "4.0.0"
         },
         "thermostat": {
-            "ver": "3.1.1"
+            "ver": "4.0.0"
         },
         "protect": {
-            "ver": "3.1.0"
+            "ver": "4.0.0"
         },
         "camera": {
-            "ver": "1.1.1"
+            "ver": "2.0.0"
         },
         "presence": {
-            "ver": "3.1.0"
+            "ver": "4.0.0"
         },
         "weather": {
-            "ver": "3.1.1"
+            "ver": "4.0.0"
         }
     },
     "token": {
         "tokenNum": 2
     },
     "broadcast": {
-        "msgId": "eavl9D2vry",
-        "message": "Nest Manager Broadcast: Version 3.1.4 is now available.  Please make sure to update the SmartApp and Devices...",
+        "msgId": "",
+        "message": "",
         "type": "info"
     },
     "updater": {
@@ -41,28 +41,25 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "3.1.4"
+                "ver": "4.0.0"
             },
             "thermostat": {
-                "ver": "3.1.1"
+                "ver": "4.0.0"
             },
             "vthermostat": {
-                "ver": "3.1.1"
+                "ver": "4.0.0"
             },
             "protect": {
-                "ver": "3.1.0"
+                "ver": "4.0.0"
             },
             "camera": {
-                "ver": "1.1.1"
+                "ver": "2.0.0"
             },
             "presence": {
-                "ver": "3.1.0"
+                "ver": "4.0.0"
             },
             "weather": {
-                "ver": "3.1.1"
-            },
-            "webDash": {
-                "ver": "1.0.0"
+                "ver": "4.0.0"
             }
         }
     },
@@ -76,9 +73,6 @@
         "disableExceptions": true
     },
     "aaSupport": {
-        "enabled": true
-    },
-    "dashPrefs": {
         "enabled": true
     }
 }
