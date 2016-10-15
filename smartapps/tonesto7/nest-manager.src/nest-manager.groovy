@@ -10278,7 +10278,7 @@ def getRecipientsNames(val) {
 	def i = 0
 	if(val) {
 		//def valLabel =
-		log.debug "val: $val"
+		//log.debug "val: $val"
 		val?.each { r ->
 			i = i + 1
 			n += i == val?.size() ? "${r}" : "${r},"
