@@ -38,7 +38,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.0" }
+def appVersion() { "4.0.1" }
 def appVerDate() { "10-14-2016" }
 def appVerInfo() {
 	def str = ""
@@ -925,6 +925,14 @@ def subscriber() {
 	subscribe(app, onAppTouch)
 }
 
+private adj_temp(tempF) {
+	if(getTemperatureScale() == "C") {
+		return (tempF - 32) * 5/9 as Double
+	} else {
+		return tempF
+	}
+}
+
 def reqSchedInfoRprt(child) {
 	//log.trace "reqSchedInfoRprt: (${child.device.label})"
 	def result = null
@@ -955,16 +963,16 @@ def reqSchedInfoRprt(child) {
 			if(tempSrcStr && curZoneTemp) {
 				def zTmp = curZoneTemp.toDouble()
 				str += "The ${tempSrcStr} has an ambient temperature of "
-				if(zTmp > 78.0 && zTmp <= 85.0) { str += "a scorching " }
-				else if(zTmp > 76.0 && zTmp <= 80.0) { str += "a roasting " }
-				else if(zTmp > 74.0 && zTmp <= 76.0) { str += "a balmy " }
-				else if(zTmp >= 68.0 && zTmp <= 74.0) { str += "a comfortable " }
-				else if(zTmp >= 64.0 && zTmp <= 68.0) { str += "a breezy " }
-				else if(zTmp >= 60.0 && zTmp < 64.0) { str += "a chilly " }
-				else if(zTmp < 60.0) { str += "a freezing " }
+				if(zTmp > adj_temp(78.0) && zTmp <= adj_temp(85.0)) { str += "a scorching " }
+				else if(zTmp > adj_temp(76.0) && zTmp <= adj_temp(80.0)) { str += "a roasting " }
+				else if(zTmp > adj_temp(74.0) && zTmp <= adj_temp(76.0)) { str += "a balmy " }
+				else if(zTmp >= adj_temp(68.0) && zTmp <= adj_temp(74.0)) { str += "a comfortable " }
+				else if(zTmp >= adj_temp(64.0) && zTmp <= adj_temp(68.0)) { str += "a breezy " }
+				else if(zTmp >= adj_temp(60.0) && zTmp < adj_temp(64.0)) { str += "a chilly " }
+				else if(zTmp < adj_temp(60.0)) { str += "a freezing " }
 				str += "${curZoneTemp}${tempScaleStr}"
 				str += curHum ? " with a humidity of ${curHum}%. " : ". "
-				if(zTmp < 64.0) { str += " (Make sure to dress warmly.  " }
+				if(zTmp < adj_temp(60.0)) { str += " (Make sure to dress warmly.  " }
 			}
 
 			str += " The HVAC is currently "
@@ -2371,10 +2379,11 @@ def updateHandler() {
 			sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application!!! Please visit the IDE and make sure to update the App and Devices Code...")
 			atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater?.updateVer?.toInteger()]
 		}
-		if(atomicState?.appData?.updater?.updateMsg != "" && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+		if(atomicState?.appData?.updater?.updateMsg != null && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
 			if(getLastUpdateMsgSec() > 86400) {
 				sendMsg("Info", "${atomicState?.updater?.updateMsg}")
-				atomicState?.lastUpdateMsgDt = getDtNow()
+				atomicState.lastUpdateMsgDt = getDtNow()
+				atomicState.lastUpdateMsg = atomicState?.appData?.updater?.updateMsg
 			}
 		}
 	}
@@ -3811,6 +3820,11 @@ def stateCleanup() {
 	state.remove("custLocStr")
 	state.remove("autoAppInstalled")
 	state.remove("nestStructures")
+	state.remove("lastSentExceptionDataDt")
+	state.remove("pDevVer")
+	state.remove("vtDevVer")
+	state.remove("dashSetup")
+	state.remove("stateSize")
 	if(!atomicState?.cmdQlist) {
 		state.remove("cmdQ2")
 		state.remove("cmdQ3")
@@ -4071,8 +4085,6 @@ def getInputEnumLabel(inputName, enumName) {
 	}
 	return result
 }
-
-def getShowProtAlarmEvts() { return showProtAlarmStateEvts ? true : false }
 
 /******************************************************************************
 |					Application Pages						  |
