@@ -9514,7 +9514,7 @@ def editSchedule(schedData) {
 	}
 	if(act) {
 		//if(settings?.schMotSetTstatTemp && !("tstatTemp" in hideStr)) {
-		section("(${schedData?.secData?.schName}) Setpoint Configuration:		", hideable: true, hidden: (settings["${sLbl}HeatTemp"] != null || settings["${sLbl}CoolTemp"] != null) ) {
+		section("(${schedData?.secData?.schName}) Setpoint Configuration:		", hideable: true, hidden: !(settings["${sLbl}HeatTemp"] != null || settings["${sLbl}CoolTemp"] != null) ) {
 			paragraph "Configure Setpoints and HVAC modes that will be set when this Schedule is in use...", title: "Setpoints and Mode"
 			if(canHeat) {
 				input "${sLbl}HeatTemp", "decimal", title: "Heat Set Point (${tempScaleStr})", description: "Range within ${tempRangeValues()}", required: true, range: tempRangeValues(),
@@ -9557,13 +9557,14 @@ def editSchedule(schedData) {
 			}
 		}
 
-		section("(${schedData?.secData?.schName}) Schedule Restrictions:    ", hideable: true, hidden: true) {
+		def timeFrom = settings["${sLbl}restrictionTimeFrom"]
+		def timeTo = settings["${sLbl}restrictionTimeTo"]
+		def showTime = (timeFrom || timeTo || settings?."${sLbl}restrictionTimeFromCustom" || settings?."${sLbl}restrictionTimeToCustom") ? true : false
+		def myShow = !(settings["${sLbl}restrictionMode"] || settings["${sLbl}restrictionDOW"] || showTime || settings["${sLbl}restrictionSwitchOn"] || settings["${sLbl}restrictionSwitchOff"] )
+		section("(${schedData?.secData?.schName}) Schedule Restrictions:    ", hideable: true, hidden: myShow) {
 			paragraph "Restrict when this Schedule is in use...", title: "(Optional)"
 			input "${sLbl}restrictionMode", "mode", title: "Only execute in these modes", description: "Any location mode", required: false, multiple: true, image: getAppImg("mode_icon.png")
 			input "${sLbl}restrictionDOW", "enum", options: timeDayOfWeekOptions(), title: "Only execute on these days", description: "Any week day", required: false, multiple: true, image: getAppImg("day_calendar_icon2.png")
-			def timeFrom = settings["${sLbl}restrictionTimeFrom"]
-			def timeTo = settings["${sLbl}restrictionTimeTo"]
-			def showTime = (timeFrom || timeTo || settings?."${sLbl}restrictionTimeFromCustom" || settings?."${sLbl}restrictionTimeToCustom") ? true : false
 			input "${sLbl}restrictionTimeFrom", "enum", title: (timeFrom ? "Only execute if time is between" : "Only execute during this time"), options: timeComparisonOptionValues(), required: showTime, multiple: false, submitOnChange: true, image: getAppImg("start_time_icon.png")
 			if (showTime) {
 				if ((timeFrom && timeFrom.contains("custom")) || settings?."${sLbl}restrictionTimeFromCustom" != null) {
