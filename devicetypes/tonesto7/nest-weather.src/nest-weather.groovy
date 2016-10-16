@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.0" }
+def devVer() { return "4.0.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -150,8 +150,8 @@ def refresh() {
 
 def generateEvent(Map eventData) {
 	//LogAction("generateEvent Parsing data ${eventData}", "trace")
-	state.eventData = eventData
-	runIn(3, "processEvent", [overwrite: true] )
+	state.eventData = eventData  // this data size is much larger than 2500 bytes
+	runIn(12, "processEvent", [overwrite: true] )
 }
 
 def processEvent() {
@@ -765,7 +765,7 @@ def getImgBase64(url, type) {
 		}
 	}
 	catch (ex) {
-		log.error "getImageBase64 Exception:", ex
+		log.error "getImgBase64 Exception:", ex
 		exceptionDataHandler(ex.message, "getImgBase64")
 	}
 }
@@ -884,7 +884,7 @@ def getChartJsData() {
 def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
-def getWeatherIcon(weatherIcon) {
+def getWeatherIcon() {
 	try {
 		return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
 	}
