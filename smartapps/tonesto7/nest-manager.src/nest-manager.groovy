@@ -2,6 +2,7 @@
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7), Eric S. (@E_sch)                                       |
 |    Contributors: Ben W. (@desertblade)                                                    |
+| Portions Modeled on CoRE by Adrian Caramaliu                                              |
 |                                                                                           |
 |*******************************************************************************************|
 |    There maybe portions of the code that may resemble code from other apps in the         |
@@ -38,8 +39,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.1" }
-def appVerDate() { "10-14-2016" }
+def appVersion() { "4.0.2" }
+def appVerDate() { "10-16-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -1310,7 +1311,8 @@ def processResponse(resp, data) {
 			def tstr = (type == "str") ? "Structure" : "Device"
 			LogAction("processResponse - Received a different Response than expected for $tstr poll: Resp (${resp?.status})", "error", true)
 			if(resp.hasError()) {
-				log.debug "raw response: $resp.errorData"
+				log.debug "errorData response: $resp.errorData"
+				log.debug "errorMessage response: $resp.errorMessage"
 			}
 			apiIssueEvent(true)
 			atomicState.needChildUpd = true
@@ -2240,7 +2242,8 @@ def nestResponse(resp, data) {
 				LogAction("processResponse - Received a different Response than expected: Resp (${resp?.status})", "error", true)
 			}
 			if(resp.hasError()) {
-				log.debug "raw response: $resp.errorData"
+				log.debug "errorData response: $resp.errorData"
+				log.debug "errorMessage response: $resp.errorMessage"
 			}
 		}
 		finishWorkQ(command, result)
@@ -9475,14 +9478,14 @@ def showUpdateSchedule(sNum=null,hideStr=null) {
 				lact = act
 				act = settings["${sLbl}SchedActive"]
 				def schName =  settings["${sLbl}name"]
-				editSchedule("secData":["scd":scd, "schName":schName, "hideable":(sNum ? false : true), "hidden":((act || scd == 1) ? false : true), "hideStr":hideStr])
+				editSchedule("secData":["scd":scd, "schName":schName, "hideable":(sNum ? false : true), "hidden":((act || (!act && scd == 1)) ? true : false), "hideStr":hideStr])
 			}
 		} else {
 			lact = act
 			act = settings["${sLbl}SchedActive"]
 			if (lact || act) {
 				def schName =  settings["${sLbl}name"]
-				editSchedule("secData":["scd":scd, "schName":schName, "hideable":true, "hidden":((act || scd == 1) ? false : true), "hideStr":hideStr])
+				editSchedule("secData":["scd":scd, "schName":schName, "hideable":true, "hidden":((act || (!act && scd == 1)) ? true : false), "hideStr":hideStr])
 			}
 		}
 	}
@@ -9502,7 +9505,7 @@ def editSchedule(schedData) {
 	def titleStr = "Schedule ${schedData?.secData?.scd} (${sectStr})"
 
 
-	section(title: "\n${titleStr}\n												", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
+	section(title: "\n${titleStr}							", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
 		input "${sLbl}SchedActive", "bool", title: "Schedule Enabled", description: (cnt == 1 && !settings?."${sLbl}SchedActive" ? "Enable to Edit Schedule..." : null), required: true,
 				defaultValue: false, submitOnChange: true, image: getAppImg("${actIcon}_icon.png")
 		if(act) {
@@ -9511,7 +9514,7 @@ def editSchedule(schedData) {
 	}
 	if(act) {
 		//if(settings?.schMotSetTstatTemp && !("tstatTemp" in hideStr)) {
-		section("(${schedData?.secData?.schName}) Setpoint Configuration:") {
+		section("(${schedData?.secData?.schName}) Setpoint Configuration:		", hideable: true, hidden: (settings["${sLbl}HeatTemp"] != null || settings["${sLbl}CoolTemp"] != null) ) {
 			paragraph "Configure Setpoints and HVAC modes that will be set when this Schedule is in use...", title: "Setpoints and Mode"
 			if(canHeat) {
 				input "${sLbl}HeatTemp", "decimal", title: "Heat Set Point (${tempScaleStr})", description: "Range within ${tempRangeValues()}", required: true, range: tempRangeValues(),
@@ -9525,7 +9528,7 @@ def editSchedule(schedData) {
 		}
 
 		if(settings?.schMotRemoteSensor && !("remSen" in hideStr)) {
-			section("(${schedData?.secData?.schName}) Remote Sensor Options:") {
+			section("(${schedData?.secData?.schName}) Remote Sensor Options:	", hideable: true, hidden: (settings["${sLbl}remSensor"] == null)) {
 				paragraph "Configure alternate Remote Temp sensors that are active with this schedule...", title: "Alternate Remote Sensors\n(Optional)"
 				input "${sLbl}remSensor", "capability.temperatureMeasurement", title: "Alternate Temp Sensors", description: "For Remote Sensor Automation", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
 				if(settings?."${sLbl}remSensor" != null) {
@@ -9535,7 +9538,7 @@ def editSchedule(schedData) {
 			}
 		}
 		//if(!("motSen" in hideStr)) {
-		section("(${schedData?.secData?.schName}) Motion Sensor Setpoints:") {
+		section("(${schedData?.secData?.schName}) Motion Sensor Setpoints:	", hideable: true, hidden:(settings["${sLbl}Motion"] == null) ) {
 			paragraph "Activate alternate HVAC settings with Motion...", title: "(Optional)"
 			def mmot = settings["${sLbl}Motion"]
 			input "${sLbl}Motion", "capability.motionSensor", title: "Motion Sensors", description: "Select Sensors to Configure...", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
@@ -9554,7 +9557,7 @@ def editSchedule(schedData) {
 			}
 		}
 
-		section("(${schedData?.secData?.schName}) Schedule Restrictions:") {
+		section("(${schedData?.secData?.schName}) Schedule Restrictions:    ", hideable: true, hidden: true) {
 			paragraph "Restrict when this Schedule is in use...", title: "(Optional)"
 			input "${sLbl}restrictionMode", "mode", title: "Only execute in these modes", description: "Any location mode", required: false, multiple: true, image: getAppImg("mode_icon.png")
 			input "${sLbl}restrictionDOW", "enum", options: timeDayOfWeekOptions(), title: "Only execute on these days", description: "Any week day", required: false, multiple: true, image: getAppImg("day_calendar_icon2.png")
