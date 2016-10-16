@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.0"}
+def devVer() { return "4.0.1"}
 
 // for the UI
 metadata {
@@ -317,11 +317,11 @@ def refresh() {
 
 def generateEvent(Map eventData) {
 	//LogAction("generateEvent Parsing data ${eventData}", "trace")
-	state.eventData = eventData
-	runIn(8, "processEvent", [overwrite: true] )
+	def eventDR = [evt:eventData]
+	runIn(8, "processEvent", [overwrite: true, data: eventDR] )
 }
 
-def processEvent() {
+def processEvent(data) {
 	if(state?.swVersion != devVer()) {
 		installed()
 		state.swVersion = devVer()
@@ -329,8 +329,8 @@ def processEvent() {
 	def pauseUpd = !device.currentValue("pauseUpdates") ? false : device.currentValue("pauseUpdates").value
 	if(pauseUpd == "true") { LogAction("pausing", "warn"); return }
 
-	def eventData = state?.eventData
-	state.eventData = null
+	def eventData = data?.evt
+	state.remove("eventData")
 
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	try {
