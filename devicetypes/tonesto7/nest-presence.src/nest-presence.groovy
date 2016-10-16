@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.0" }
+def devVer() { return "4.0.1" }
 
 // for the UI
 metadata {
@@ -112,13 +112,13 @@ def refresh() {
 
 def generateEvent(Map eventData) {
 	//log.trace("generateEvent Parsing data ${eventData}")
-	state.eventData = eventData
-	runIn(3, "processEvent", [overwrite: true] )
+	def eventDR = [evt:eventData]
+	runIn(3, "processEvent", [overwrite: true, data:eventDR] )
 }
 
-def processEvent() {
-	def eventData = state?.eventData
-	state.eventData = null
+def processEvent(data) {
+	def eventData = data?.evt
+	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
