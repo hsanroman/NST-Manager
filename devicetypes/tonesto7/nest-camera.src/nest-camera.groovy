@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.0.0" }
+def devVer() { return "2.0.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -191,17 +191,17 @@ def refresh() {
 
 def generateEvent(Map eventData) {
 	//log.trace("generateEvent Parsing data ${eventData}")
-	state.eventData = eventData
-	runIn(3, "processEvent", [overwrite: true] )
+	def eventDR = [evt:eventData]
+	runIn(3, "processEvent", [overwrite: true, data: eventDR] )
 }
 
-def processEvent() {
+def processEvent(data) {
 	if(state?.swVersion != devVer()) {
 		installed()
 		state.swVersion = devVer()
 	}
-	def eventData = state?.eventData
-	state.eventData = null
+	def eventData = data?.evt
+	state.remove("eventData")
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
