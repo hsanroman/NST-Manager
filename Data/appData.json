@@ -21,7 +21,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.0.0"
+                "ver": "4.0.2"
             },
             "thermostat": {
                 "ver": "4.0.0"
@@ -33,7 +33,7 @@
                 "ver": "4.0.0"
             },
             "camera": {
-                "ver": "2.0.0"
+                "ver": "2.0.2"
             },
             "presence": {
                 "ver": "4.0.0"
