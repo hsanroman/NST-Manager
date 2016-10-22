@@ -56,8 +56,8 @@
         "enAaMsgQueue": true
     },
     "reportPrefs": {
-        "disVoiceZoneRprt": true,
-        "disVoiceUsageRprt": true
+        "disVoiceZoneRprt": false,
+        "disVoiceUsageRprt": false
     },
     "clientBL": {
         "clients": []
