@@ -40,7 +40,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.0.3" }
-def appVerDate() { "10-16-2016" }
+def appVerDate() { "10-24-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -1693,8 +1693,8 @@ def apiVar() {
 		rootTypes:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata" ],
 		cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
 					  targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
-					  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ],
-		hvacModes: 	[ heat:"heat", cool:"cool", heatCool:"heat-cool", off:"off" ]
+					  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", eco:"eco", streaming:"is_streaming" ],
+		hvacModes: 	[ heat:"heat", cool:"cool", eco:"eco", heatCool:"heat-cool", off:"off" ]
 	]
 	return api
 }
@@ -7269,7 +7269,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							LogAction("extTmpTempCheck: | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
 							atomicState."${pName}timeOutOn" = false
 						}
-						else if( (!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) || 
+						else if( (!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) ||
 								(atomicState?.extTmpRestoreMode && !atomicState?.extTmpTstatOffRequested) ) {
 							LogAction("extTmpTempCheck: | Unable to restore settings because of consistency error previous mode was not found.", "warn", true)
 							atomicState?.extTmpRestoreMode = null

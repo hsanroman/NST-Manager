@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.1"}
+def devVer() { return "4.0.2"}
 
 // for the UI
 metadata {
@@ -464,6 +464,10 @@ def getTimeZone() {
 	return tz
 }
 
+def tUnitStr() {
+	return "°${state?.tempUnit}"
+}
+
 def isCodeUpdateAvailable(newVer, curVer) {
 	def result = false
 	def latestVer
@@ -578,18 +582,18 @@ def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-	} else { LogAction("targetTemperature is (${rTargetTemp}) | Original Temp: (${temp})") }
+		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
+	} else { LogAction("targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
 
 def thermostatSetpointEvent(Double targetTemp) {
 	def temp = device.currentState("thermostatSetpoint")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-	} else { LogAction("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
+		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
+	} else { LogAction("thermostatSetpoint is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
 
 def temperatureEvent(Double tempVal) {
@@ -597,9 +601,9 @@ def temperatureEvent(Double tempVal) {
 		def temp = device.currentState("temperature")?.value.toString()
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
-		} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+			Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}" , displayed: true, isStateChange: true)
+		} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
 		checkSafetyTemps()
 	}
 	catch (ex) {
@@ -615,12 +619,12 @@ def heatingSetpointEvent(Double tempVal) {
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+			Logger("UPDATED | Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
 			if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-			sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
-		} else { LogAction("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+			sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "heat")
+		} else { LogAction("Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
 
@@ -631,12 +635,12 @@ def coolingSetpointEvent(Double tempVal) {
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+			Logger("UPDATED | Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
 			if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-			sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
-		} else { LogAction("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+			sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "cool")
+		} else { LogAction("Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
 
@@ -810,7 +814,7 @@ def onlineStatusEvent(online) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "issue" : "ok"
+	def newStat = issue ? "Has Issue" : "Good"
 	state?.apiStatus = newStat
 	if(!curStat.equals(newStat)) {
 		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")

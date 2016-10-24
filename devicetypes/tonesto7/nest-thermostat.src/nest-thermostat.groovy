@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.2"}
+def devVer() { return "4.0.3"}
 
 // for the UI
 metadata {
@@ -94,6 +94,9 @@ metadata {
 		attribute "canHeat", "string"
 		attribute "canCool", "string"
 		attribute "hasFan", "string"
+		attribute "sunlightCorrectionEnabled", "string"
+		attribute "sunlightCorrectionActive", "string"
+		attribute "timeToTarget", "string"
 		attribute "nestType", "string"
 		attribute "pauseUpdates", "string"
 		attribute "nestReportData", "string"
@@ -130,6 +133,7 @@ metadata {
 				attributeState("heat", label:'${name}')
 				attributeState("cool", label:'${name}')
 				attributeState("auto", label:'${name}')
+				attributeState("eco", label:'${name}')
 				attributeState("emergency Heat", label:'${name}')
 			}
 			tileAttribute("device.heatingSetpoint", key: "HEATING_SETPOINT") {
@@ -148,6 +152,7 @@ metadata {
 			state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_icon.png")
 			state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/cool_icon.png")
 			state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_cool_icon.png")
+			state("eco",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/eco_icon.png")
 		}
 		standardTile("thermostatMode", "device.thermostatMode", width:2, height:2, decoration: "flat") {
 			state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
@@ -238,10 +243,6 @@ metadata {
 		valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
 			state "default", label:'${currentValue}'
 		}
-
-		standardTile("testBtn", "device.testBtn", width:2, height:2, decoration: "flat") {
- 			state "default", label: "Test Button", action:"doSomething"
- 		}
 
 		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
@@ -355,6 +356,9 @@ def processEvent(data) {
 			if(!eventData?.data?.last_connection) { lastCheckinEvent(null) }
 			else { lastCheckinEvent(eventData?.data?.last_connection) }
 
+			sunlightCorrectionEnabledEvent(eventData?.data?.sunlight_correction_enabled)
+			sunlightCorrectionActiveEvent(eventData?.data?.sunlight_correction_active)
+			timeToTargetEvent(eventData?.data?.time_to_target, eventData?.data?.time_to_target_training)
 			softwareVerEvent(eventData?.data?.software_version.toString())
 			onlineStatusEvent(eventData?.data?.is_online.toString())
 			deviceVerEvent(eventData?.latestVer.toString())
@@ -434,7 +438,6 @@ def processEvent(data) {
 			}
 			getSomeData(true)
 			lastUpdatedEvent()
-			//nestReportStatusEvent()
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -463,6 +466,10 @@ def getTimeZone() {
 	else { tz = state?.nestTimeZone ? TimeZone.getTimeZone(state?.nestTimeZone) : null }
 	if(!tz) { Logger("getTimeZone: Hub or Nest TimeZone is not found ...", "warn") }
 	return tz
+}
+
+def tUnitStr() {
+	return "°${state?.tempUnit}"
 }
 
 def isCodeUpdateAvailable(newVer, curVer) {
@@ -516,6 +523,38 @@ def nestTypeEvent(type) {
 		Logger("UPDATED | nestType: (${type}) | Original State: (${val})")
 		sendEvent(name: 'nestType', value: type, displayed: true)
 	} else { LogAction("nestType: (${type}) | Original State: (${val})") }
+}
+
+def sunlightCorrectionEnabledEvent(sunEn) {
+	def val = device.currentState("sunlightCorrectionEnabled")?.value
+	def newVal = sunEn.toString() == "true" ? true : false
+	if(!val.equals(newVal)) {
+		Logger("UPDATED | SunLight Correction Enabled: (${newVal}) | Original State: (${val.toString().capitalize()})")
+		sendEvent(name: 'sunlightCorrectionEnabled', value: newVal, displayed: false)
+	} else { LogAction("SunLight Correction Enabled: (${newVal}) | Original State: (${val})") }
+}
+
+def sunlightCorrectionActiveEvent(sunAct) {
+	def val = device.currentState("sunlightCorrectionActive")?.value
+	def newVal = sunAct.toString() == "true" ? true : false
+	if(!val.equals(newVal)) {
+		Logger("UPDATED | SunLight Correction Active: (${newVal}) | Original State: (${val.toString().capitalize()})")
+		sendEvent(name: 'sunlightCorrectionActive', value: newVal, displayed: false)
+	} else { LogAction("SunLight Correction Active: (${newVal}) | Original State: (${val})") }
+}
+
+def timeToTargetEvent(ttt, tttTr) {
+	def val = device.currentState("timeToTarget")?.stringValue
+	def opIdle = device.currentState("thermostatOperatingState").stringValue == "idle" ? true : false
+	//log.debug "opIdle: $opIdle"
+	def nVal = ttt.toString().replaceAll("\\~", "").toInteger()
+	//log.debug "nVal: $nVal"
+	def trStr = tttTr.toString() == "training" ? "\n(Still Training)" : ""
+	def newVal = ttt ? (nVal == 0 && opIdle ? "System is Idle" : "${nVal} Minutes${trStr}") : "Not Available"
+	if(!val.equals(newVal.toString())) {
+		Logger("UPDATED | Time to Target: (${newVal}) | Original State: (${val.toString().capitalize()})")
+		sendEvent(name: 'timeToTarget', value: newVal, displayed: false)
+	} else { LogAction("Time to Target: (${newVal}) | Original State: (${val})") }
 }
 
 def debugOnEvent(debug) {
@@ -579,18 +618,18 @@ def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-	} else { LogAction("targetTemperature is (${rTargetTemp}) | Original Temp: (${temp})") }
+		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
+	} else { LogAction("targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
 
 def thermostatSetpointEvent(Double targetTemp) {
 	def temp = device.currentState("thermostatSetpoint")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}) | Original Temp: (${temp})")
-		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}", displayed: false, isStateChange: true)
-	} else { LogAction("thermostatSetpoint is (${rTargetTemp}) | Original Temp: (${temp})") }
+		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
+	} else { LogAction("thermostatSetpoint is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
 
 def temperatureEvent(Double tempVal) {
@@ -598,9 +637,9 @@ def temperatureEvent(Double tempVal) {
 		def temp = device.currentState("temperature")?.value.toString()
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
-		} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+			Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}" , displayed: true, isStateChange: true)
+		} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
 		checkSafetyTemps()
 	}
 	catch (ex) {
@@ -616,12 +655,12 @@ def heatingSetpointEvent(Double tempVal) {
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+			Logger("UPDATED | Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
 			if (hvacMode == "auto" || hvacMode == "heat") { disp = true }
-			sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "heat")
-		} else { LogAction("HeatingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+			sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "heat")
+		} else { LogAction("Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
 
@@ -632,12 +671,12 @@ def coolingSetpointEvent(Double tempVal) {
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 		if(!temp.equals(rTempVal.toString())) {
-			Logger("UPDATED | CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})")
+			Logger("UPDATED | Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
 			if (hvacMode == "auto" || hvacMode == "cool") { disp = true }
-			sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}" , displayed: disp, isStateChange: true, state: "cool")
-		} else { LogAction("CoolingSetpoint is (${rTempVal}) | Original Temp: (${temp})") }
+			sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "cool")
+		} else { LogAction("Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
 
@@ -811,7 +850,7 @@ def onlineStatusEvent(online) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "issue" : "ok"
+	def newStat = issue ? "Has Issue" : "Good"
 	state?.apiStatus = newStat
 	if(!curStat.equals(newStat)) {
 		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
@@ -2123,6 +2162,7 @@ String getDataString(Integer seriesIndex) {
 	}
 
 	//dataTable.each() {
+
 	dataTable.any { it ->
 		myval = it[2]
 
@@ -2131,7 +2171,7 @@ String getDataString(Integer seriesIndex) {
 			if(myval == "idle") { myval = 0 }
 			if(myval == "cooling") { myval = 8 }
 			if(myval == "heating") { myval = 16 }
-			else { }
+			//else { }
 		}
 /*
 		if(myhas_fan && seriesIndex == 8) {
@@ -2821,7 +2861,7 @@ def getGraphHTML() {
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
 		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
-
+		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def chartHtml = (
 				state.temperatureTable?.size() > 0 &&
 				state.operatingStateTable?.size() > 0 &&
@@ -2850,6 +2890,16 @@ def getGraphHTML() {
 				${chartHtml}
 
 				<br></br>
+				<table
+				<thead>
+				  <th>Time to Target</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td>${timeToTarget}</td>
+				  </tr>
+				</tbody>
+				</table>
 				<table>
 				<col width="40%">
 				<col width="20%">
@@ -2876,14 +2926,15 @@ def getGraphHTML() {
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
-					<tr>
-					  <th>Firmware Version</th>
-					  <th>Debug</th>
-					  <th>Device Type</th>
-					</tr>
-					<td>${state?.softwareVer.toString()}</td>
-					<td>${state?.debugStatus}</td>
-					<td>${state?.devTypeVer.toString()}</td>
+				  	<tbody>
+					  <tr>
+					    <th>Firmware Version</th>
+					    <th>Debug</th>
+					    <th>Device Type</th>
+					  </tr>
+					  <td>${state?.softwareVer.toString()}</td>
+					  <td>${state?.debugStatus}</td>
+					  <td>${state?.devTypeVer.toString()}</td>
 					</tbody>
 				  </table>
 				  <table>
@@ -2907,7 +2958,6 @@ def getGraphHTML() {
 		log.error "graphHTML Exception:", ex
 		exceptionDataHandler(ex.message, "graphHTML")
 	}
-
 }
 
 def showChartHtml() {
@@ -3071,8 +3121,8 @@ def hideChartHtml() {
 	return data
 }
 
-private def textDevName()  { return "Nest ${virtDevName()}Thermostat${appDevName()}" }
-private def appDevType()   { return false }
-private def appDevName()   { return appDevType() ? " (Dev)" : "" }
-private def virtType()	 { return false }
-private def virtDevName()  { return virtType() ? "Virtual " : "" }
+private def textDevName()  	{ return "Nest ${virtDevName()}Thermostat${appDevName()}" }
+private def appDevType()   	{ return false }
+private def appDevName()   	{ return appDevType() ? " (Dev)" : "" }
+private def virtType()		{ return false }
+private def virtDevName()  	{ return virtType() ? "Virtual " : "" }
