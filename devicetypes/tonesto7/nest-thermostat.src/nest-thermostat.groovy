@@ -528,7 +528,7 @@ def nestTypeEvent(type) {
 def sunlightCorrectionEnabledEvent(sunEn) {
 	def val = device.currentState("sunlightCorrectionEnabled")?.value
 	def newVal = sunEn.toString() == "true" ? true : false
-	if(!val.equals(newVal)) {
+	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Enabled: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionEnabled', value: newVal, displayed: false)
 	} else { LogAction("SunLight Correction Enabled: (${newVal}) | Original State: (${val})") }
@@ -537,7 +537,7 @@ def sunlightCorrectionEnabledEvent(sunEn) {
 def sunlightCorrectionActiveEvent(sunAct) {
 	def val = device.currentState("sunlightCorrectionActive")?.value
 	def newVal = sunAct.toString() == "true" ? true : false
-	if(!val.equals(newVal)) {
+	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Active: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionActive', value: newVal, displayed: false)
 	} else { LogAction("SunLight Correction Active: (${newVal}) | Original State: (${val})") }
