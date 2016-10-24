@@ -39,7 +39,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.2" }
+def appVersion() { "4.0.3" }
 def appVerDate() { "10-16-2016" }
 def appVerInfo() {
 	def str = ""
@@ -980,6 +980,7 @@ def reqSchedInfoRprt(child) {
 			str += curOper == "idle" ? " sitting idle " : " ${curOper} "
 			str += " in ${curMode} mode"
 			str += curMode != "off" ? " with " : ". "
+// ERSERS TODO add if in ECO mode
 			str += canHeat && curMode in ["auto", "heat"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
 			str += canHeat && canCool && curMode == "auto" ? " and " : ". "
 			str += canCool && curMode in ["auto", "cooling"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
@@ -1374,6 +1375,13 @@ def updateChildData(force = false) {
 		def allowVoiceZoneRprt = allowVoiceZoneRprt()
 		def allowVoiceUsageRprt = allowVoiceUsageRprt()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
+
+		def curWeatherTemp
+		if(atomicState?.thermostats && getWeatherDeviceInst()) {
+			def cur = getWData()
+			curWeatherTemp = getTemperatureScale() == "C" ?  Math.round(cur?.current_observation?.temp_c.toDouble()) : Math.round(cur?.current_observation?.temp_f).toInteger()
+		}
+
 		getAllChildDevices()?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
@@ -1389,7 +1397,7 @@ def updateChildData(force = false) {
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestTstatVer()?.ver?.toString(), "allowVoiceUsageRprt":allowVoiceUsageRprt, "allowVoiceZoneRprt":allowVoiceZoneRprt, "clientBl":clientBl]
+						"latestVer":latestTstatVer()?.ver?.toString(), "allowVoiceUsageRprt":allowVoiceUsageRprt, "allowVoiceZoneRprt":allowVoiceZoneRprt, "clientBl":clientBl, curExtTemp:curWeatherTemp ]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -1550,7 +1558,8 @@ def updateChildData(force = false) {
 
 					def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestvStatVer()?.ver?.toString(), "clientBl":clientBl]
+						"latestVer":latestvStatVer()?.ver?.toString(), "allowVoiceUsageRprt":allowVoiceUsageRprt, "allowVoiceZoneRprt":allowVoiceZoneRprt, "clientBl":clientBl, curExtTemp:curWeatherTemp ]
+
 					def oldTstatData = atomicState?."oldvStatData${devId}"
 					def tDataChecksum = generateMD5_A(tData.toString())
 					atomicState."oldvStatData${devId}" = tDataChecksum
@@ -1788,6 +1797,7 @@ def setHvacMode(child, mode, virtual=false) {
 					case "cool":
 						pChild.cool()
 						break
+// ERSERS TODO add if in ECO mode
 					case "off":
 						pChild.off()
 						break
@@ -2600,7 +2610,7 @@ def getWebFileData(now = true) {
 	}
 	catch (ex) {
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			log.warn  "appParams.json file not found..."
+			log.warn  "appData.json file not found..."
 		} else {
 			log.error "getWebFileData Exception:", ex
 		}
@@ -2624,6 +2634,7 @@ def webResponse(resp, data) {
 			updateHandler()
 			broadcastCheck()
 			helpHandler()
+			setStateVar(true)
 		} else { LogAction("appData.json did not change....", "info", true) }
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
@@ -3278,7 +3289,7 @@ def devNamePage() {
 			}
 			//paragraph "Current Device Handler Names", image: ""
 		}
-		def str1 = "\n\nName does not match what is expected.\nName Should be:"
+		def str1 = "\n\nName is not set to default.\nDefault name is:"
 		def str2 = "\n\nName cannot be customized"
 		atomicState.useAltNames = useAltNames ? true : false
 		atomicState.custLabelUsed = useCustDevNames ? true : false
@@ -3779,7 +3790,7 @@ def Logger(msg, type) {
 
 def setStateVar(frc = false) {
 	//log.trace "setStateVar..."
-	//If the developer changes the version in the web appParams JSON it will trigger
+	//If the developer changes the version in the web appData JSON it will trigger
 	//the app to create any new state values that might not exist or reset those that do to prevent errors
 	def stateVer = 3
 	def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
@@ -3947,7 +3958,7 @@ def formatDt(dt) {
 }
 
 def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
-	LogAction("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})", "warn", false)
+	//LogAction("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})", "warn", false)
 	if((strtDate && !stpDate) || (strtDate && stpDate)) {
 		if(strtDate?.contains("dtNow")) { return 10000 }
 		def now = new Date()
@@ -4349,7 +4360,7 @@ def b64Action(String str, dec=false) {
 def debugPrefPage() {
 	dynamicPage(name: "debugPrefPage", install: false) {
 		section ("Application Logs") {
-			input (name: "appDebug", type: "bool", title: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+			input (name: "appDebug", type: "bool", title: "Show Nest Manager App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(appDebug) {
 				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
 				LogAction("Debug Logs are Enabled...", "info", false)
@@ -5301,7 +5312,7 @@ def initAutoApp() {
 
 			atomicState."${sLbl}oldMotionActive" = newact
 			atomicState?."motion${cnt}UseMotionSettings" = null 		// clear automation state of schedule in use motion state
-			atomicState?."motion${mySched}LastisBtwn" = false
+			atomicState?."motion${cnt}LastisBtwn" = false
 
 			timersActive = (timersActive || atomicState."schedule${cnt}TimeActive") ? true : false
 
@@ -5317,6 +5328,17 @@ def initAutoApp() {
 	app.updateLabel(getAutoTypeLabel())
 	atomicState?.lastAutomationSchedDt = null
 	watchDogAutomation()
+
+	state.remove("motionnullLastisBtwn")
+	state.remove("motion1InBtwn")
+	state.remove("motion2InBtwn")
+	state.remove("motion3InBtwn")
+	state.remove("motion4InBtwn")
+	state.remove("TstatTurnedOff")
+	state.remove("schedule{1}TimeActive")
+	state.remove("schedule{2}TimeActive")
+	state.remove("schedule{3}TimeActive")
+	state.remove("schedule{4}TimeActive")
 }
 
 def uninstAutomationApp() {
@@ -5743,9 +5765,9 @@ def automationTstatModeEvt(evt) {
 	LogAction("Event | Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
-		def modeOff = (evt?.value == "off") ? true : false
-		if(!modeOff) { atomicState?.TstatTurnedOff = false }
-		else { atomicState?.TstatTurnedOff = true }
+		//def modeOff = (evt?.value == "off") ? true : false
+		//if(!modeOff) { atomicState?.TstatTurnedOff = false }
+		//else { atomicState?.TstatTurnedOff = true }
 		scheduleAutomationEval()
 		storeLastEventData(evt)
 	}
@@ -5874,7 +5896,7 @@ def watchDogCheck() {
 					def exceeded = d1?.currentValue("safetyTempExceeded")?.toString()
 					if(exceeded == "true") {
 						watchDogAlarmActions(d1.displayName, dni, "temp")
-						LogAction("watchDogCheck() | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
+						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
 					}
 					return d1
 				}
@@ -6166,6 +6188,7 @@ private remSenCheck() {
 			//log.info "remSenCheck:  Evaluating Event..."
 
 			def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+// ERSERS TODO add if in ECO mode
 			if(hvacMode == "off") {
 				LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
 				disableOverrideTemps()
@@ -6638,31 +6661,6 @@ def getFanSwitchDesc(showOpt = true) {
 	return (swDesc == "") ? null : "${swDesc}"
 }
 
-def getSchFanSwitchDesc(devs, showOpt = false) {
-	def swDesc = ""
-	def swCnt = 0
-	def pName = fanCtrlPrefix()
-	if(showOpt) {
-		swDesc += (devs /*&& (settings?."${pName}FanSwitchSpeedCtrl" || settings?."${pName}FanSwitchTriggerType" || settings?."${pName}FanSwitchHvacModeFilter")*/) ? "Fan Switch Config:" : ""
-	}
-	swDesc += devs ? "${showOpt ? "\n" : ""}• Fan Switches:" : ""
-	def rmSwCnt = devs?.size() ?: 0
-	devs?.each { sw ->
-		swCnt = swCnt+1
-		swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n  └" : "\n  ├"}" : "\n  └"} ${sw?.label}: (${sw?.currentSwitch?.toString().capitalize()})"
-		swDesc += "${checkFanSpeedSupport(sw) ? "\n       └ Fan Speed (${sw?.currentValue("currentState").toString()})" : ""}"
-	}
-	if(showOpt) {
-		if (devs) {
-			//swDesc += (settings?."${pName}FanSwitchSpeedCtrl" || settings?."${pName}FanSwitchTriggerType" || settings?."${pName}FanSwitchHvacModeFilter") ? "\n\nFan Triggers:" : ""
-			//swDesc += (settings?."${pName}FanSwitchSpeedCtrl") ? "\n  • 3-Speed Fan Support: (Active)" : ""
-			//swDesc += (settings?."${pName}FanSwitchTriggerType") ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), settings?."${pName}FanSwitchTriggerType")})" : ""
-			//swDesc += (settings?."${pName}FanSwitchHvacModeFilter") ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?."${pName}FanSwitchHvacModeFilter")})" : ""
-		}
-	}
-	return (swDesc == "") ? null : "${swDesc}"
-}
-
 def getFanSwitchesSpdChk() {
 	def devCnt = 0
 	def pName = fanCtrlPrefix()
@@ -6687,8 +6685,6 @@ def fanCtrlCheck() {
 
 		def reqHeatSetPoint = getRemSenHeatSetTemp()
 		def reqCoolSetPoint = getRemSenCoolSetTemp()
-
-		//def curTstatTemp = getDeviceTemp(fanCtrlTstat).toDouble()
 
 		def curTstatTemp = getRemoteSenTemp().toDouble()
 
@@ -6734,7 +6730,6 @@ def fanCtrlCheck() {
 	}
 }
 
-// similar to getFanAutoModeTemp
 def getReqSetpointTemp(curTemp, reqHeatSetPoint, reqCoolSetPoint) {
 	LogAction("getReqSetpointTemp: Current Temp: ${curTemp} Req Heat: ${reqHeatSetPoint}  Req Cool: ${reqCoolSetPoint}", "info", false)
 	def tstat = schMotTstat
@@ -7047,6 +7042,7 @@ def getExtTmpDewPoint() {
 
 def getDesiredTemp(curMode) {
 	def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 	def modeCool = (curMode == "cool") ? true : false
 	def modeHeat = (curMode == "heat") ? true : false
 	def modeAuto = (curMode == "auto") ? true : false
@@ -7059,7 +7055,7 @@ def getDesiredTemp(curMode) {
 	if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0  }
 	if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
 
-	LogAction("extTmpTempOk: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} atomicState.extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+	LogAction("getDesiredTemp: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} atomicState.extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
 
 	return desiredTemp
 }
@@ -7071,7 +7067,7 @@ def extTmpTempOk() {
 		def extTmpTstat = settings?.schMotTstat
 		def extTmpTstatMir = settings?.schMotTstatMir
 
-		//def execTime = now()
+		def execTime = now()
 		def intTemp = extTmpTstat ?  getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
 		def curMode = extTmpTstat.currentThermostatMode.toString()
@@ -7081,23 +7077,15 @@ def extTmpTempOk() {
 		def dpOk = (curDp < dpLimit) ? true : false
 
 		def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
 		def modeAuto = (curMode == "auto") ? true : false
 
-		def desiredTemp = getDesiredTemp(curMode)
-/*
-		def desiredHeatTemp = getRemSenHeatSetTemp()
-		def desiredCoolTemp = getRemSenCoolSetTemp()
-		def desiredTemp = 0
-		if(desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
-		if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp  }
-		if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0  }
-		if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
-		LogAction("extTmpTempOk: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} atomicState.extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+		def canHeat = atomicState?.schMotTstatCanHeat
+		def canCool = atomicState?.schMotTstatCanCool
 
-		if(!modeOff && desiredTemp) { atomicState?.extTmpLastDesiredTemp =  desiredTemp }
-*/
+		def desiredTemp = getDesiredTemp(curMode)
 
 		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
@@ -7105,27 +7093,28 @@ def extTmpTempOk() {
 			desiredTemp = intTemp
 			LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
 		}
-		intTemp = desiredTemp
 
-		def tempDiff = Math.abs(extTemp - intTemp)
+		def tempDiff = Math.abs(extTemp - desiredTemp)
 		//LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
 
 		def retval = true
 		def tempOk = true
 		def str = "enough different (${tempDiff})"
-		if(intTemp && extTemp && diffThresh) {
+		if(desiredTemp && extTemp && diffThresh) {
 			if(!modeAuto && tempDiff < diffThresh) {
 				retval = false
 				tempOk = false
 			}
-			def extTempHigh = (extTemp > intTemp - diffThresh) ? true : false
-			def extTempLow = (extTemp < intTemp + diffThresh) ? true : false
+			//def extTempHigh = (extTemp > desiredTemp - diffThresh) ? true : false
+			def extTempHigh = (extTemp >= desiredTemp) ? true : false
+			//def extTempLow = (extTemp < desiredTemp + diffThresh) ? true : false
+			def extTempLow = (extTemp <= desiredTemp) ? true : false
 			def oldMode = atomicState?.extTmpRestoreMode
-			if(modeCool || oldMode == "cool") {
+			if(modeCool || oldMode == "cool" || (!canHeat && canCool)) {
 				str = "greater than"
 				if(extTempHigh) { retval = false; tempOk = false }
 			}
-			if(modeHeat || oldMode == "heat") {
+			if(modeHeat || oldMode == "heat" || (!canCool && canHeat)) {
 				str = "less than"
 				if(extTempLow) { retval = false; tempOk = false }
 			}
@@ -7133,11 +7122,11 @@ def extTmpTempOk() {
 			if(!dpOk) { retval = false }
 			LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
 		}
-		LogAction("extTmpTempOk: ${retval} Desired Inside Temp: (${intTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${getTemperatureScale()}) or Dewpoint: (${curDp}°${getTemperatureScale()}) is ${dpOk ? "ok" : "TOO HIGH"}", "info", false)
-		//storeExecutionHistory((now() - execTime), "getExtTmpTempOk")
+		LogAction("extTmpTempOk: ${retval} Desired Inside Temp: (${desiredTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${getTemperatureScale()}) Inside Temp: (${intTemp}) or Dewpoint: (${curDp}°${getTemperatureScale()}) is ${dpOk ? "ok" : "TOO HIGH"}", "info", false)
+		storeExecutionHistory((now() - execTime), "extTmpTempOk")
 		return retval
 	} catch (ex) {
-		log.error "getExtTmpTempOk Exception:", ex
+		log.error "extTmpTempOk Exception:", ex
 		parent?.sendExceptionData(ex, "extTmpTempOk", true, getAutoType())
 	}
 }
@@ -7171,6 +7160,7 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			def curMode = extTmpTstat?.currentThermostatMode?.toString()
 			def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 			def safetyOk = getSafetyTempsOk(extTmpTstat)
 			def schedOk = extTmpScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
@@ -7185,7 +7175,7 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 			if(!modeOff && atomicState.extTmpTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
-				LogAction("extTmpTempCheck() | System turned on when automation had OFF, resetting state to match", "warn", true)
+				LogAction("extTmpTempCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				atomicState.extTmpTstatOffRequested = false
 				atomicState?.extTmpRestoreMode = null
@@ -7255,13 +7245,13 @@ def extTmpTempCheck(cTimeOut = false) {
 								storeExecutionHistory((now() - execTime), "extTmpTempCheck")
 								return
 
-							} else { LogAction("extTmpTempCheck() | There was problem restoring the last mode to '...", "error", true) }
+							} else { LogAction("extTmpTempCheck: | There was problem restoring the last mode to '...", "error", true) }
 						} else {
 							if(!lastMode) {
-								LogAction("extTmpTempCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+								LogAction("extTmpTempCheck: | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
 								atomicState?.extTmpTstatOffRequested = false
-							} else if(!timeOut && safetyOk) { LogAction("extTmpTstatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
-							if(!safetyOk) { LogAction("extTmpTempCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
+							} else if(!timeOut && safetyOk) { LogAction("extTmpTstatCheck: | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
+							if(!safetyOk) { LogAction("extTmpTempCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
  						// TODO check if timeout quickly cycles back...
 						}
 					} else {
@@ -7276,11 +7266,13 @@ def extTmpTempCheck(cTimeOut = false) {
 				} else {
 					if(modeOff) {
 						if(timeout || !safetyOk) {
-							LogAction("extTmpTempCheck() | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
+							LogAction("extTmpTempCheck: | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
 							atomicState."${pName}timeOutOn" = false
 						}
-						else if(!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) {
-							LogAction("extTmpTempCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+						else if( (!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) || 
+								(atomicState?.extTmpRestoreMode && !atomicState?.extTmpTstatOffRequested) ) {
+							LogAction("extTmpTempCheck: | Unable to restore settings because of consistency error previous mode was not found.", "warn", true)
+							atomicState?.extTmpRestoreMode = null
 							atomicState?.extTmpTstatOffRequested = false
 						}
 					}
@@ -7296,6 +7288,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(extTmpTstat, "off")) {
+// ERSERS TODO add if in ECO mode
 							storeLastAction("Turned Off Thermostat", getDtNow())
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
@@ -7313,7 +7306,7 @@ def extTmpTempCheck(cTimeOut = false) {
 								if(allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${pName}OffVoiceMsg",pName), pName, "nmExtTmpOff_${app?.id}", true, "nmExtTmpOn_${app?.id}") }
 								if(allowAlarm) { scheduleAlarmOn(pName) }
 							}
-						} else { LogAction("extTmpTempCheck(): Error turning themostat Off", "warn", true) }
+						} else { LogAction("extTmpTempCheck: Error turning themostat Off", "warn", true) }
 					} else {
 						def remaining = getExtTmpOffDelayVal() - getExtTmpWhileOnDtSec()
 						LogAction("extTmpTempCheck: Delaying OFF for wait period ${getExtTmpOffDelayVal()}, remaining ${remaining}", "info", true)
@@ -7322,7 +7315,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						scheduleAutomationEval(remaining)
 					}
 				} else {
-				   LogAction("extTmpTempCheck() | Skipping because Exterior temperatures in range and '${extTmpTstat?.label}' mode is already 'OFF'", "info", true)
+				   LogAction("extTmpTempCheck: | Skipping because Exterior temperatures in range and '${extTmpTstat?.label}' mode is already 'OFF'", "info", true)
 				}
 			} else {
 				if(!home) { LogAction("extTmpTempCheck: Skipping because of AWAY Nest mode...", "info", true) }
@@ -7359,6 +7352,7 @@ def extTmpDpOrTempEvt(type) {
 
 		def curMode = extTmpTstat?.currentThermostatMode.toString()
 		def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 		def offVal = getExtTmpOffDelayVal()
 		def onVal = getExtTmpOnDelayVal()
 		def timeVal
@@ -7450,6 +7444,7 @@ def conWatCheck(cTimeOut = false) {
 			def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
 			def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
 			def safetyOk = getSafetyTempsOk(conWatTstat)
 			def schedOk = conWatScheduleOk()
@@ -7469,7 +7464,7 @@ def conWatCheck(cTimeOut = false) {
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 
 			if(!modeOff && atomicState.conWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
-				LogAction("conWatCheck() | System turned on when automation had OFF, resetting state to match", "warn", true)
+				LogAction("conWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState?.conWatRestoreMode = null
 				atomicState?.conWatTstatOffRequested = false
 				atomicState?.conWatOpenDt = getDtNow()
@@ -7535,13 +7530,13 @@ def conWatCheck(cTimeOut = false) {
 								storeExecutionHistory((now() - execTime), "conWatCheck")
 								return
 
-							} else { LogAction("conWatCheck() | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
+							} else { LogAction("conWatCheck: | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
 						} else {
 							if(!lastMode) {
-								LogAction("conWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+								LogAction("conWatCheck: | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
 								atomicState?.conWatTstatOffRequested = false
-							} else if(!timeOut && safetyOk) { LogAction("conWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
-							if(!safetyOk) { LogAction("conWatCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
+							} else if(!timeOut && safetyOk) { LogAction("conWatCheck: | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
+							if(!safetyOk) { LogAction("conWatCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
 						}
 					} else {
 						if(safetyOk) {
@@ -7555,11 +7550,11 @@ def conWatCheck(cTimeOut = false) {
 				} else {
 					if(modeOff) {
 						if(timeOut || !safetyOk) {
-							LogAction("conWatCheck() | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
+							LogAction("conWatCheck: | Timeout or Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
 							atomicState."${pName}timeOutOn" = false
 						}
 						else if(!atomicState?.conWatRestoreMode && atomicState?.conWatTstatOffRequested) {
-							LogAction("conWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+							LogAction("conWatCheck: | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
 							atomicState?.conWatTstatOffRequested = false
 						}
 					}
@@ -7576,6 +7571,7 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "off")) {
+// ERSERS TODO add if in ECO mode
 							storeLastAction("Turned Off $conWatTstat", getDtNow())
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
@@ -7592,11 +7588,11 @@ def conWatCheck(cTimeOut = false) {
 								if(allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${pName}OffVoiceMsg",pName), pName, "nmConWatOff_${app?.id}", true, "nmConWatOn_${app?.id}") }
 								if(allowAlarm) { scheduleAlarmOn(pName) }
 							}
-						} else { LogAction("conWatCheck(): Error turning themostat Off", "warn", true) }
+						} else { LogAction("conWatCheck: Error turning themostat Off", "warn", true) }
 					} else {
 						if(getConWatRestoreDelayBetweenDtSec() < (getConWatRestoreDelayBetweenVal() - 2)) {
 							def remaining = getConWatRestoreDelayBetweenVal() -  getConWatRestoreDelayBetweenDtSec()
-							LogAction("conWatCheck() | Skipping OFF change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
+							LogAction("conWatCheck: | Skipping OFF change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
 							remaining = remaining > 20 ? remaining : 20
 							remaining = remaining < 60 ? remaining : 60
 							scheduleAutomationEval(remaining)
@@ -7609,7 +7605,7 @@ def conWatCheck(cTimeOut = false) {
 						}
 					}
 				} else {
-					LogAction("conWatCheck() | Skipping OFF change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
+					LogAction("conWatCheck: | Skipping OFF change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
 				}
 			} else {
 				if(!home) { LogAction("conWatCheck: Skipping because of AWAY Nest mode...", "info", true) }
@@ -7633,6 +7629,7 @@ def conWatContactEvt(evt) {
 		def conWatTstat = settings?.schMotTstat
 		def curMode = conWatTstat?.currentThermostatMode.toString()
 		def isModeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 		def conOpen = (evt?.value == "open") ? true : false
 		def canSched = false
 		def timeVal
@@ -7686,7 +7683,7 @@ def isLeakWatConfigured() {
 
 def getLeakWatSensorsOk() { return settings?.leakWatSensors?.currentState("water")?.value.contains("wet") ? false : true }
 def leakWatSensorsOk() { return (!settings?.leakWatSensors) ? false : true }
-def leakWatScheduleOk() { return autoScheduleOk(leakWatPrefix()) }
+//def leakWatScheduleOk() { return autoScheduleOk(leakWatPrefix()) }
 
 // TODO allow override from schedule?
 def getLeakWatOnDelayVal() { return !settings?.leakWatOnDelay ? 300 : settings?.leakWatOnDelay.toInteger() }
@@ -7711,16 +7708,17 @@ def leakWatCheck() {
 			def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
 			def curNestPres = getTstatPresence(leakWatTstat)
 			def modeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 			def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
 			def safetyOk = getSafetyTempsOk(leakWatTstat)
-			def schedOk = leakWatScheduleOk()
+			//def schedOk = leakWatScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
 
 			if(!modeOff && atomicState.leakWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
-				LogAction("leakWatCheck() | System turned on when automation had OFF, resetting state to match", "warn", true)
+				LogAction("leakWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState?.leakWatRestoreMode = null
 				atomicState?.leakWatTstatOffRequested = false
 			}
@@ -7771,12 +7769,12 @@ def leakWatCheck() {
 								storeExecutionHistory((now() - execTime), "leakWatCheck")
 								return
 
-							} else { LogAction("leakWatCheck() | There was problem restoring the last mode to ${lastMode}...", "error", true) }
+							} else { LogAction("leakWatCheck: | There was problem restoring the last mode to ${lastMode}...", "error", true) }
 						} else {
 							if(!safetyOk) {
-								LogAction("leakWatCheck() | Unable to restore mode and safety temperatures are exceeded", "warn", true)
+								LogAction("leakWatCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true)
 							} else {
-								LogAction("leakWatCheck() | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true)
+								LogAction("leakWatCheck: | Skipping Restore because the Mode to Restore is same as Current Mode ${curMode}", "info", true)
 							}
 						}
 					} else {
@@ -7791,10 +7789,10 @@ def leakWatCheck() {
 				} else {
 					if(modeOff) {
 						if(!safetyOk) {
-							LogAction("leakWatCheck() | Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
+							LogAction("leakWatCheck: | Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
 						}
 						else if(!atomicState?.leakWatRestoreMode && atomicState?.leakWatTstatOffRequested) {
-							LogAction("leakWatCheck() | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
+							LogAction("leakWatCheck: | Unable to restore settings because previous mode was not found. Likely due to other automation making changes.", "warn", true)
 							atomicState?.leakWatTstatOffRequested = false
 						}
 					}
@@ -7811,6 +7809,7 @@ def leakWatCheck() {
 					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
 					if(setTstatMode(leakWatTstat, "off")) {
+// ERSERS TODO add if in ECO mode
 						storeLastAction("Turned Off $leakWatTstat", getDtNow())
 						atomicState?.leakWatTstatOffRequested = true
 						atomicState?.leakWatDryDt = getDtNow()
@@ -7827,9 +7826,9 @@ def leakWatCheck() {
 							if(allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${pName}OffVoiceMsg",pName), pName, "nmLeakWatOff_${app?.id}", true, "nmLeakWatOn_${app?.id}") }
 							if(allowAlarm) { scheduleAlarmOn(pName) }
 						}
-					} else { LogAction("leakWatCheck(): Error turning themostat Off", "warn", true) }
+					} else { LogAction("leakWatCheck: Error turning themostat Off", "warn", true) }
 				} else {
-					LogAction("leakWatCheck() | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true)
+					LogAction("leakWatCheck: | Skipping change because '${leakWatTstat?.label}' mode is already 'OFF'", "info", true)
 				}
 			} else {
 				//if(!schedOk) { LogAction("leakWatCheck: Skipping because of Schedule Restrictions...", "warn", true) }
@@ -7850,6 +7849,7 @@ def leakWatSensorEvt(evt) {
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
 		def isModeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 		def leakWet = (evt?.value == "wet") ? true : false
 
 		def canSched = false
@@ -8048,7 +8048,7 @@ def checkNestMode() {
 			atomicState.lastPresSenAway = null
 		} else {
 			def execTime = now()
-			//atomicState?.lastEvalDt = getDtNow()
+			atomicState?.lastEvalDt = getDtNow()
 
 			def curStMode = location?.mode
 			def allowNotif = settings?."${nModePrefix()}NotificationsOn" ? true : false
@@ -8102,7 +8102,7 @@ def checkNestMode() {
 				}
 			}
 
-			LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
+			LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", false)
 
 			if(away && !nestModeAway && !modeMatch) {
 				LogAction("${awayDesc} Nest 'Away'", "info", true)
@@ -8722,6 +8722,7 @@ def setTstatTempCheck() {
 
 				def curMode = tstat?.currentThermostatMode?.toString()
 				def isModeOff = (curMode == "off") ? true : false
+// ERSERS TODO add if in ECO mode
 				tstatHvacMode = curMode
 
 				def heatTemp = null
@@ -9898,8 +9899,27 @@ def schMotCheck() {
 
 def storeLastEventData(evt) {
 	if(evt) {
-		atomicState?.lastEventData = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":formatDt(evt.date), "unit":evt.unit]
+		def newVal = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":formatDt(evt.date), "unit":evt.unit]
+		atomicState?.lastEventData = newVal
 		//log.debug "LastEvent: ${atomicState?.lastEventData}"
+
+		def list = atomicState?.detailEventHistory ?: []
+		def listSize = 30
+		if(list?.size() < listSize) {
+			list.push(newVal)
+		}
+		else if(list?.size() > listSize) {
+			def nSz = (list?.size()-listSize) + 1
+			def nList = list?.drop(nSz)
+			nList?.push(newVal)
+			list = nList
+		}
+		else if(list?.size() == listSize) {
+			def nList = list?.drop(1)
+			nList?.push(newVal)
+			list = nList
+		}
+		if(list) { atomicState?.detailEventHistory = list }
 	}
 }
 
@@ -9909,24 +9929,46 @@ def storeExecutionHistory(val, method = null) {
 		if(method) {
 			LogAction("${method} Execution Time: (${val} milliseconds)", "trace", false)
 		}
-		atomicState?.lastExecutionTime = val ?: null
-		def list = atomicState?.evalExecutionHistory ?: []
-		def listSize = 30
-		if(list?.size() < listSize) {
-			list.push(val)
+		if(method in ["watchDogCheck", "checkNestMode", "schMotCheck"]) {
+			atomicState?.lastExecutionTime = val ?: null
+			def list = atomicState?.evalExecutionHistory ?: []
+			def listSize = 30
+			if(list?.size() < listSize) {
+				list.push(val)
+			}
+			else if(list?.size() > listSize) {
+				def nSz = (list?.size()-listSize) + 1
+				def nList = list?.drop(nSz)
+				nList?.push(val)
+				list = nList
+			}
+			else if(list?.size() == listSize) {
+				def nList = list?.drop(1)
+				nList?.push(val)
+				list = nList
+			}
+			if(list) { atomicState?.evalExecutionHistory = list }
 		}
-		else if(list?.size() > listSize) {
-			def nSz = (list?.size()-listSize) + 1
-			def nList = list?.drop(nSz)
-			nList?.push(val)
-			list = nList
+		if(!(method in ["watchDogCheck", "checkNestMode"])) {
+			def list = atomicState?.detailExecutionHistory ?: []
+			def listSize = 30
+			def newVal = [ val, method ]
+			if(list?.size() < listSize) {
+				list.push(newVal)
+			}
+			else if(list?.size() > listSize) {
+				def nSz = (list?.size()-listSize) + 1
+				def nList = list?.drop(nSz)
+				nList?.push(newVal)
+				list = nList
+			}
+			else if(list?.size() == listSize) {
+				def nList = list?.drop(1)
+				nList?.push(newVal)
+				list = nList
+			}
+			if(list) { atomicState?.detailExecutionHistory = list }
 		}
-		else if(list?.size() == listSize) {
-			def nList = list?.drop(1)
-			nList?.push(val)
-			list = nList
-		}
-		if(list) { atomicState?.evalExecutionHistory = list }
 	} catch (ex) {
 		log.error "storeExecutionHistory Exception:", ex
 		parent?.sendExceptionData(ex, "storeExecutionHistory", true, getAutoType())
@@ -10831,6 +10873,7 @@ def setTstatMode(tstat, mode) {
 			else if(mode == "heat") { tstat.heat(); result = true }
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
+// ERSERS TODO add if in ECO mode
 
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
 			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
@@ -10977,6 +11020,7 @@ def fanModeTrigEnum() {
 }
 
 def tModeHvacEnum(canHeat, canCool) {
+// ERSERS   TODO add ECO
 	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat"]
 	if(!canHeat) {
 		vals = ["cool":"Cool"]
