@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.1"}
+def devVer() { return "4.0.2"}
 
 // for the UI
 metadata {
@@ -338,6 +338,7 @@ def processEvent(data) {
 		if(eventData) {
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			state.clientBl = eventData?.clientBl == true ? true : false
+			state.curExtTemp = eventData?.curExtTemp
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData.tz : null
 			debugOnEvent(eventData?.debug ? true : false)
@@ -2054,6 +2055,9 @@ String getDataString(Integer seriesIndex) {
 			dataTable = state?.heatSetpointTable
 			break
 		case 7:
+			dataTable = state?.extTempTable
+			break
+		case 8:
 			dataTable = state?.fanModeTable
 			break
 	}
@@ -2076,43 +2080,79 @@ String getDataString(Integer seriesIndex) {
 	if (seriesIndex == 6) {
 	   // state.can_heat
 	}
-	if (seriesIndex == 7) {
+	if (seriesIndex == 8) {
 		//state?.has_fan
 	}
+	def myhas_fan = state?.has_fan && false ? true : false    // false because not graphing fan operation now
 
-	dataTable.each() {
-		myindex = seriesIndex
-		if (state?.can_heat && state?.can_cool && state?.has_fan) {
-			//dataArray = [[it[0],it[1],0],null,null,null,null,null,null,null]
-			dataArray = [[it[0],it[1],0],null,null,null,null,null,null]
-		} else if (state?.can_heat && state?.can_cool && !state.has_fan) {
-			dataArray = [[it[0],it[1],0],null,null,null,null,null,null]
-		} else if ( ((!state?.can_heat && state?.can_cool) || (state?.can_heat && !state?.can_cool)) && state?.has_fan) {
-			//dataArray = [[it[0],it[1],0],null,null,null,null,null,null]
-			dataArray = [[it[0],it[1],0],null,null,null,null,null]
-			if (myindex == 6) {myindex = 5}
-			//if (myindex == 7) {myindex = 6}
-		} else if ( ((!state?.can_heat && state?.can_cool) || (state?.can_heat && !state?.can_cool)) && !state?.has_fan) {
-			dataArray = [[it[0],it[1],0],null,null,null,null,null]
-			if (myindex == 6) {myindex = 5}
-		}
+	def has_weather = false
+	if(state?.curExtTemp != null) { has_weather = true }
+
+	def datacolumns
+
+	myindex = seriesIndex
+//ERSERS
+	datacolumns = 8
+	//if (state?.can_heat && state?.can_cool && myhas_fan && has_weather) { datacolumns = 8 }
+	if (!myhas_fan) {
+		datacolumns -= 1
+	}
+	if (!has_weather) {
+		datacolumns -= 1
+		if (myindex == 8) { myindex = 7 }
+	}
+	if ((!state?.can_heat && state?.can_cool) || (state?.can_heat && !state?.can_cool)) {
+		datacolumns -= 1
+		if (myindex >= 6) { myindex -= 1 }
+	}
+	switch (datacolumns) {
+		case 8:
+			dataArray = [[0,0,0],null,null,null,null,null,null,null,null]
+			break
+		case 7:
+			dataArray = [[0,0,0],null,null,null,null,null,null,null]
+			break
+		case 6:
+			dataArray = [[0,0,0],null,null,null,null,null,null]
+			break
+		case 5:
+			dataArray = [[0,0,0],null,null,null,null,null]
+			break
+		default:
+			LogAction("getDataString: bad column result", "error")
+	}
+
+	//dataTable.each() {
+	dataTable.any { it ->
+		myval = it[2]
+
 		//convert idle / non-idle to numeric value
 		if (myindex == 3) {
-			myval = it[2]
-			if (myval == "idle") { myval = 0 }
-			if (myval == "cooling") { myval = 8 }
-			if (myval == "heating") { myval = 16 }
+			if(myval == "idle") { myval = 0 }
+			if(myval == "cooling") { myval = 8 }
+			if(myval == "heating") { myval = 16 }
 			else { }
-		} else { myval = it[2] }
+		}
 /*
-		if(seriesIndex == 7) {
-			if (myval == "auto") { myval = 0 }
-			if (myval == "on") { myval = 8 }
+		if(myhas_fan && seriesIndex == 8) {
+			if(myval == "auto") { myval = 0 }
+			if(myval == "on") { myval = 8 }
 			//if (myval == "circulate") { myval = 8 }
 		}
 */
-		dataArray[myindex] = myval
+		if (seriesIndex == 5) {
+			if(myval == 0) { return false }
+		// state.can_cool
+		}
+		if (seriesIndex == 6) {
+			if(myval == 0) { return false }
+		// state.can_heat
+		}
 
+		dataArray[myindex] = myval
+		dataArray[0] = [it[0],it[1],0]
+
+/*
 		//reduce # of points to graph
 		if (lastVal != myval) {
 			lastAdded = true
@@ -2123,19 +2163,25 @@ String getDataString(Integer seriesIndex) {
 			lastVal = myval
 			dataString += dataArray?.toString() + ","
 		} else { lastAdded = false; lastdataArray = dataArray }
+*/
+		dataString += dataArray?.toString() + ","
+		return false
 	}
 
+/*
 	if (!lastAdded && dataString) {
 		dataArray[myindex] = myval
 		dataString += dataArray?.toString() + ","
 	}
+*/
 
 	if (dataString == "") {
-		dataArray = [[0,0,0],null,null,null,null,null,null]
-		dataArray[myindex] = 0
+		dataArray[0] = [0,0,0]
+		//dataArray[myindex] = 0
 		dataString += dataArray?.toString() + ","
 	}
-	//LogAction("${dataString}")
+
+	//LogAction("getDataString ${seriesIndex} datacolumns: ${datacolumns}  myindex: ${myindex} datastring: ${dataString}")
 	return dataString
 }
 
@@ -2271,6 +2317,7 @@ void getSomeData(devpoll = false) {
 		state.humidityTable = []
 		state.coolSetpointTable = []
 		state.heatSetpointTable = []
+		state.extTempTable = []
 		state.fanModeTable = []
 		addNewData()
 	}
@@ -2280,12 +2327,14 @@ void getSomeData(devpoll = false) {
 	def humidityTable = state?.humidityTable
 	def coolSetpointTable = state?.coolSetpointTable
 	def heatSetpointTable = state?.heatSetpointTable
+	def extTempTable = state?.extTempTable
 	def fanModeTable = state?.fanModeTable
 
 	if(fanModeTable == null) {		// upgrade cleanup TODO
-		state.fanModeTable = []
-		fanModeTable = state.fanModeTable
-		state.fanModeTableYesterday = fanModeTable
+		state.fanModeTable = []; fanModeTable = state.fanModeTable; state.fanModeTableYesterday = fanModeTable
+	}
+	if(extTempTable == null) {		// upgrade cleanup TODO
+		state.extTempTable = []; extTempTable = state.extTempTable; state.extTempTableYesterday = extTempTable
 	}
 	def hm = state?.historyStoreMap
 	if(hm == null) {
@@ -2298,6 +2347,7 @@ void getSomeData(devpoll = false) {
 		state.humidityTableYesterday = humidityTable
 		state.coolSetpointTableYesterday = coolSetpointTable
 		state.heatSetpointTableYesterday = heatSetpointTable
+		state.extTempTableYesterday = extTempTable
 		state.fanModeTableYesterday = fanModeTable
 	}
 
@@ -2309,6 +2359,7 @@ void getSomeData(devpoll = false) {
 		state.humidityTableYesterday = humidityTable
 		state.coolSetpointTableYesterday = coolSetpointTable
 		state.heatSetpointTableYesterday = heatSetpointTable
+		state.extTempTableYesterday = extTempTable
 		state.fanModeTableYesterday = fanModeTable
 
 		state.temperatureTable = []
@@ -2316,6 +2367,7 @@ void getSomeData(devpoll = false) {
 		state.humidityTable = []
 		state.coolSetpointTable = []
 		state.heatSetpointTable = []
+		state.extTempTable = []
 		state.fanModeTable = []
 		updateOperatingHistory(today)
 
@@ -2667,12 +2719,14 @@ def addNewData() {
 	def currentoperatingState = getHvacState()
 	def currenthumidity = getHumidity()
 	def currentfanMode = getFanMode()
+	def currentExternal = state?.curExtTemp
 
 	def temperatureTable = state?.temperatureTable
 	def operatingStateTable = state?.operatingStateTable
 	def humidityTable = state?.humidityTable
 	def coolSetpointTable = state?.coolSetpointTable
 	def heatSetpointTable = state?.heatSetpointTable
+	def extTempTable = state?.extTempTable
 	def fanModeTable = state?.fanModeTable
 
 	// add latest coolSetpoint & temperature readings for the graph
@@ -2685,6 +2739,7 @@ def addNewData() {
 	state.humidityTable = addValue(humidityTable, hr, mins, currenthumidity)
 	state.coolSetpointTable = addValue(coolSetpointTable, hr, mins, currentcoolSetPoint)
 	state.heatSetpointTable = addValue(heatSetpointTable, hr, mins, currentheatSetPoint)
+	state.extTempTable = addValue(extTempTable, hr, mins, currentExternal)
 	state.fanModeTable = addValue(fanModeTable, hr, mins, currentfanMode)
 }
 
@@ -2733,21 +2788,29 @@ def getStartTime() {
 }
 
 def getMinTemp() {
+	def has_weather = false
+	if(state?.curExtTemp != null) { has_weather = true }
+
 	def list = []
 	if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
 	if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.min { it[2] }[2].toInteger()) }
-	if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
-	if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+	//if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.min { it[2] }[2].toInteger()) }
+	//if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.min { it[2] }[2].toInteger()) }
+	if (has_weather && state?.extTempTable?.size() > 0) { list.add(state?.extTempTable.min { it[2] }[2].toInteger()) }
 	//LogAction("getMinTemp: ${list.min()} result: ${list}", "trace")
 	return list?.min()
 }
 
 def getMaxTemp() {
+	def has_weather = false
+	if(state?.curExtTemp != null) { has_weather = true }
+
 	def list = []
 	if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
 	if (state?.temperatureTable?.size() > 0) { list.add(state?.temperatureTable.max { it[2] }[2].toInteger()) }
-	if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
-	if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+	//if (state?.can_cool && state?.coolSetpointTable?.size() > 0) { list.add(state?.coolSetpointTable.max { it[2] }[2].toInteger()) }
+	//if (state?.can_heat && state?.heatSetpointTable?.size() > 0) { list.add(state?.heatSetpointTable.max { it[2] }[2].toInteger()) }
+	if (has_weather && state?.extTempTable?.size() > 0) { list.add(state?.extTempTable.max { it[2] }[2].toInteger()) }
 	//LogAction("getMaxTemp: ${list.max()} result: ${list}", "trace")
 	return list?.max()
 }
@@ -2853,29 +2916,47 @@ def showChartHtml() {
 		tempStr = "°C"
 	}
 
+	def has_weather = false
+	def commastr = ""
+	if(state?.curExtTemp != null) { has_weather = true; commastr = "," }
+
 	def coolstr1 = "data.addColumn('number', 'CoolSP');"
 	def coolstr2 =  getDataString(5)
 	def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
 
 	def heatstr1 = "data.addColumn('number', 'HeatSP');"
 	def heatstr2 = getDataString(6)
-	def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}"
+	def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
 
-	if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}" }
+	def weathstr1 = "data.addColumn('number', 'ExtTmp');"
+	def weathstr2 = getDataString(7)
+	def weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 
-	if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}" }
+	if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}${commastr}" }
+
+	if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}" }
 
 	if (!state?.can_cool) {
 		coolstr1 = ""
 		coolstr2 = ""
 		coolstr3 = ""
+		weathstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
 
 	if (!state?.can_heat) {
 		heatstr1 = ""
 		heatstr2 = ""
 		heatstr3 = ""
+		weathstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
+
+	if (!has_weather) {
+		weathstr1 = ""
+		weathstr2 = ""
+		weathstr3 = ""
+	}
+
+	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
 	def minstr = "minValue: ${minval},"
@@ -2884,12 +2965,12 @@ def showChartHtml() {
 	def maxstr = "maxValue: ${maxval},"
 
 	def differ = maxval - minval
-	if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-		minstr = "minValue: ${(minval - (wantMetric() ? 10:20))},"
-		if (differ < (wantMetric() ? 10:20) ) {
-			maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:20))},"
-		}
-	}
+	//if (differ > (maxval/4) || differ < (wantMetric() ? 7:15) ) {
+		minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
+		//if (differ < (wantMetric() ? 7:15) ) {
+			maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
+		//}
+	//}
 
 	def data = """
 	<script type="text/javascript">
@@ -2904,6 +2985,7 @@ def showChartHtml() {
 			data.addColumn('number', 'Humidity');
 			${coolstr1}
 			${heatstr1}
+			${weathstr1}
 			data.addRows([
 				${getDataString(1)}
 				${getDataString(2)}
@@ -2911,6 +2993,7 @@ def showChartHtml() {
 				${getDataString(4)}
 				${coolstr2}
 				${heatstr2}
+				${weathstr2}
 			]);
 			var options = {
 				width: '100%',
@@ -2932,6 +3015,7 @@ def showChartHtml() {
 					3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
 					${coolstr3}
 					${heatstr3}
+					${weathstr3}
 				},
 				vAxes: {
 					0: {
