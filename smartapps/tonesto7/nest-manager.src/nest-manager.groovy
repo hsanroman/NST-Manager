@@ -905,11 +905,7 @@ def getInstAutoTypesDesc() {
 	def inAutoList = []
 	inAutoList?.push("nestMode":nModeCnt)
 	inAutoList?.push("watchDog":watchDogCnt)
-	if(schMotCnt > 0) {
-		inAutoList?.push("schMot":["tSched":tSchedCnt, "remSen":remSenCnt, "fanCtrl":fanCtrlCnt, "fanCirc":fanCircCnt, "conWat":conWatCnt, "extTmp":extTmpCnt, "leakWat":leakWatCnt])
-	} else {
-		inAutoList?.push("schMot":schMotCnt)
-	}
+	inAutoList?.push("schMot":["tSched":tSchedCnt, "remSen":remSenCnt, "fanCtrl":fanCtrlCnt, "fanCirc":fanCircCnt, "conWat":conWatCnt, "extTmp":extTmpCnt, "leakWat":leakWatCnt])
 	//log.debug "inAutoList: $inAutoList"
 	atomicState?.installedAutomations = inAutoList
 
