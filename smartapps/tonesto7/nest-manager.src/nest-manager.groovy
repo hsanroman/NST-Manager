@@ -899,15 +899,7 @@ def getInstAutoTypesDesc() {
 			}
 		}
 	}
-/*
-	TODO I need to add the individual thermostat automation types installed to the analytics
-*/
-	def inAutoList = []
-	inAutoList?.push("nestMode":nModeCnt)
-	inAutoList?.push("watchDog":watchDogCnt)
-	inAutoList?.push("schMot":["tSched":tSchedCnt, "remSen":remSenCnt, "fanCtrl":fanCtrlCnt, "fanCirc":fanCircCnt, "conWat":conWatCnt, "extTmp":extTmpCnt, "leakWat":leakWatCnt])
-	//log.debug "inAutoList: $inAutoList"
-	atomicState?.installedAutomations = inAutoList
+	atomicState?.installedAutomations = ["nestMode":nModeCnt,"watchDog":watchDogCnt, "schMot":["tSched":tSchedCnt, "remSen":remSenCnt, "fanCtrl":fanCtrlCnt, "fanCirc":fanCircCnt, "conWat":conWatCnt, "extTmp":extTmpCnt, "leakWat":leakWatCnt]]
 
 	def str = ""
 	str += (watchDogCnt > 0 || nModeCnt > 0 || schMotCnt > 0 || disCnt > 0) ? "Installed Automations:" : ""
