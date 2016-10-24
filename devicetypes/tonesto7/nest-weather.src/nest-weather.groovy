@@ -1280,12 +1280,12 @@ def getWeatherHTML() {
 
 			def differ = maxval - minval
 			//LogAction("differ ${differ}", "trace")
-			if (differ > (maxval/4) || differ < (wantMetric() ? 10:20) ) {
-				minstr = "minValue: ${(minval - (wantMetric() ? 10:10))},"
-				if (differ < (wantMetric() ? 10:20) ) {
-				  maxstr = "maxValue: ${(maxval + (wantMetric() ? 10:10))},"
-				}
-			}
+			//if (differ > (maxval/4) || differ < (wantMetric() ? 7:15) ) {
+				minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
+				//if (differ < (wantMetric() ? 7:15) ) {
+				  maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
+				//}
+			//}
 
 			hData = """
 				<script type="text/javascript">
