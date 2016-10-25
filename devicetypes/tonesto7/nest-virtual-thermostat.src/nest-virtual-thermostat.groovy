@@ -547,9 +547,15 @@ def timeToTargetEvent(ttt, tttTr) {
 	def val = device.currentState("timeToTarget")?.stringValue
 	def opIdle = device.currentState("thermostatOperatingState").stringValue == "idle" ? true : false
 	//log.debug "opIdle: $opIdle"
-	def nVal = ttt.toString().replaceAll("\\~", "").toInteger()
+	def nVal
+	if(ttt) {
+		nVal = ttt.toString().replaceAll("\\~", "").toInteger()
+	}
 	//log.debug "nVal: $nVal"
-	def trStr = tttTr.toString() == "training" ? "\n(Still Training)" : ""
+	def trStr
+	if(tttTr) {
+		trStr = tttTr.toString() == "training" ? "\n(Still Training)" : ""
+	}
 	def newVal = ttt ? (nVal == 0 && opIdle ? "System is Idle" : "${nVal} Minutes${trStr}") : "Not Available"
 	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | Time to Target: (${newVal}) | Original State: (${val.toString().capitalize()})")
