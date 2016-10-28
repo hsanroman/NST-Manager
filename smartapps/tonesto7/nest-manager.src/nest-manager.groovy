@@ -39,12 +39,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.3" }
-def appVerDate() { "10-24-2016" }
+def appVersion() { "4.0.4" }
+def appVerDate() { "10-28-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.0 (October 14th, 2016):"
+	str += "V4.0.0 (October 28th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • V4.0.0 Release"
 
@@ -978,8 +978,8 @@ def reqSchedInfoRprt(child) {
 				result = str
 			}
 		} else {
-			LogAction ("reqSchedInfoRprt: No Automation Schedules were found for the ${tstat} device", "warn", true)
-			result = "No Thermostat Automation Schedules were found for the ${tstat} device"
+			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for the ${tstat} device", "warn", true)
+			//result = "No Thermostat Automation Schedules were found for the ${tstat} device"
 		}
 	} else {
 		LogAction("reqSchedInfoRprt: The requested thermostat device was not found", "error", true)
@@ -990,11 +990,13 @@ def reqSchedInfoRprt(child) {
 
 def schedVoiceDesc(num, data) {
 	def str = ""
-	str += data?.lbl  ? " The active automation schedule is named ${data?.lbl}. " : ""
+	str += data?.lbl  ? " The automation schedule slot active is number ${num} and is labeled ${data?.lbl}. " : ""
 	str += data?.ctemp || data?.htemp ? "The schedules desired temps" : ""
-	str += data?.ctemp ? " are a cool temp of ${data?.ctemp} degrees " : ""
-	str += data?.ctemp &&  data?.htemp ? " and " : ". "
-	str += data?.htemp ? " ${data?.ctemp ? "and" : "are"} a heat temp of ${data?.ctemp} degrees. " : ""
+	str += data?.htemp ? " are a heat temp of ${data?.htemp} degrees" : ""
+	str += data?.ctemp ? " and " : ". "
+	str += data?.ctemp ? " ${!data?.htemp ? "are" : ""} a cool temp of ${data?.ctemp} degrees. " : ""
+	//str += data?.m0 ? " This shedule has configured motion sensor setpoints. " : ""
+	//str += data?.mo ?
 
 	return str != "" ? str : null
 }
@@ -9467,14 +9469,14 @@ def showUpdateSchedule(sNum=null,hideStr=null) {
 				lact = act
 				act = settings["${sLbl}SchedActive"]
 				def schName =  settings["${sLbl}name"]
-				editSchedule("secData":["scd":scd, "schName":schName, "hideable":(sNum ? false : true), "hidden":((act || (!act && scd == 1)) ? true : false), "hideStr":hideStr])
+				editSchedule("secData":["scd":scd, "schName":schName, "hideable":(sNum ? false : true), "hidden":(act || (!act && scd == 1)) ? true : false, "hideStr":hideStr])
 			}
 		} else {
 			lact = act
 			act = settings["${sLbl}SchedActive"]
 			if (lact || act) {
 				def schName =  settings["${sLbl}name"]
-				editSchedule("secData":["scd":scd, "schName":schName, "hideable":true, "hidden":((act || (!act && scd == 1)) ? true : false), "hideStr":hideStr])
+				editSchedule("secData":["scd":scd, "schName":schName, "hideable":true, "hidden":(act || (!act && scd == 1)) ? true : false, "hideStr":hideStr])
 			}
 		}
 	}
@@ -9494,7 +9496,7 @@ def editSchedule(schedData) {
 	def titleStr = "Schedule ${schedData?.secData?.scd} (${sectStr})"
 
 
-	section(title: "\n${titleStr}							", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
+	section(title: "${titleStr}                                                            ", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
 		input "${sLbl}SchedActive", "bool", title: "Schedule Enabled", description: (cnt == 1 && !settings?."${sLbl}SchedActive" ? "Enable to Edit Schedule..." : null), required: true,
 				defaultValue: false, submitOnChange: true, image: getAppImg("${actIcon}_icon.png")
 		if(act) {
@@ -9503,7 +9505,7 @@ def editSchedule(schedData) {
 	}
 	if(act) {
 		//if(settings?.schMotSetTstatTemp && !("tstatTemp" in hideStr)) {
-		section("(${schedData?.secData?.schName}) Setpoint Configuration:		", hideable: true, hidden: !(settings["${sLbl}HeatTemp"] != null || settings["${sLbl}CoolTemp"] != null) ) {
+		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Setpoint Configuration:                                     ", hideable: true, hidden: (settings["${sLbl}HeatTemp"] != null && settings["${sLbl}CoolTemp"] != null) ) {
 			paragraph "Configure Setpoints and HVAC modes that will be set when this Schedule is in use...", title: "Setpoints and Mode"
 			if(canHeat) {
 				input "${sLbl}HeatTemp", "decimal", title: "Heat Set Point (${tempScaleStr})", description: "Range within ${tempRangeValues()}", required: true, range: tempRangeValues(),
@@ -9517,7 +9519,7 @@ def editSchedule(schedData) {
 		}
 
 		if(settings?.schMotRemoteSensor && !("remSen" in hideStr)) {
-			section("(${schedData?.secData?.schName}) Remote Sensor Options:	", hideable: true, hidden: (settings["${sLbl}remSensor"] == null)) {
+			section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Remote Sensor Options:                                           ", hideable: true, hidden: (settings["${sLbl}remSensor"] == null)) {
 				paragraph "Configure alternate Remote Temp sensors that are active with this schedule...", title: "Alternate Remote Sensors\n(Optional)"
 				input "${sLbl}remSensor", "capability.temperatureMeasurement", title: "Alternate Temp Sensors", description: "For Remote Sensor Automation", submitOnChange: true, required: false, multiple: true, image: getAppImg("temperature_icon.png")
 				if(settings?."${sLbl}remSensor" != null) {
@@ -9527,7 +9529,7 @@ def editSchedule(schedData) {
 			}
 		}
 		//if(!("motSen" in hideStr)) {
-		section("(${schedData?.secData?.schName}) Motion Sensor Setpoints:	", hideable: true, hidden:(settings["${sLbl}Motion"] == null) ) {
+		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Motion Sensor Setpoints:                                        ", hideable: true, hidden:(settings["${sLbl}Motion"] == null) ) {
 			paragraph "Activate alternate HVAC settings with Motion...", title: "(Optional)"
 			def mmot = settings["${sLbl}Motion"]
 			input "${sLbl}Motion", "capability.motionSensor", title: "Motion Sensors", description: "Select Sensors to Configure...", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
@@ -9550,7 +9552,7 @@ def editSchedule(schedData) {
 		def timeTo = settings["${sLbl}restrictionTimeTo"]
 		def showTime = (timeFrom || timeTo || settings?."${sLbl}restrictionTimeFromCustom" || settings?."${sLbl}restrictionTimeToCustom") ? true : false
 		def myShow = !(settings["${sLbl}restrictionMode"] || settings["${sLbl}restrictionDOW"] || showTime || settings["${sLbl}restrictionSwitchOn"] || settings["${sLbl}restrictionSwitchOff"] )
-		section("(${schedData?.secData?.schName}) Schedule Restrictions:    ", hideable: true, hidden: myShow) {
+		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Schedule Restrictions:                                          ", hideable: true, hidden: myShow) {
 			paragraph "Restrict when this Schedule is in use...", title: "(Optional)"
 			input "${sLbl}restrictionMode", "mode", title: "Only execute in these modes", description: "Any location mode", required: false, multiple: true, image: getAppImg("mode_icon.png")
 			input "${sLbl}restrictionDOW", "enum", options: timeDayOfWeekOptions(), title: "Only execute on these days", description: "Any week day", required: false, multiple: true, image: getAppImg("day_calendar_icon2.png")

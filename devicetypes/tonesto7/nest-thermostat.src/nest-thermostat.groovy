@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.3"}
+def devVer() { return "4.0.4"}
 
 // for the UI
 metadata {
@@ -1709,209 +1709,6 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
-void updateNestReportData() {
-	nestReportStatusEvent()
-}
-
-def cleanDevLabel() {
-	return device.label.toString().replaceAll("-", "")
-}
-
-def getNestMgrReport() {
-	//log.trace "getNestMgrReport()..."
-	def str = ""
-	if(state?.allowVoiceZoneRprt || state?.allowVoiceUsageRprt) {
-		str += "Here is todays up to date ${cleanDevLabel()} Report. "
-
-		if(state?.allowVoiceZoneRprt == false) {
-			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
-			str += " Zone status voice reports have been disabled by Nest manager app preferences"
-		}
-		else {
-			str += parent?.reqSchedInfoRprt(this).toString() + "  "
-		}
-		if(state?.allowVoiceUsageRprt == false) {
-			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
-			str += "Zone status voice reports have been disabled by Nest manager app preferences"
-		}
-		else {
-			str += " and Now we move on to today's Usage.  "
-			str += getUsageVoiceReport("runtimeToday")
-		}
-	} else {
-		str += "All voice reports have been disabled by Nest Manager app preferences"
-		return str
-	}
-	//log.debug str
-	return str
-}
-
-def getUsageVoiceReport(type) {
-	switch(type) {
-		case "runtimeToday":
-			return generateUsageText("today" ,getTodaysUsage())
-			break
-		case "runtimeWeek":
-			return generateUsageText("week" ,getWeeksUsage())
-			break
-		case "runtimeMonth":
-			return generateUsageText("month" ,getMonthsUsage())
- 			break
-		default:
-			return "I'm sorry but the report type received was not valid"
-			break
-	}
-}
-
-def generateUsageText(timeType, timeMap) {
-	def str = ""
-	if(timeType && timeMap) {
-		str += " Based on it's activity "
-		def hData = null
-		def cData = null
-		def iData = null
-		def f1Data = null
-		def f0Data = null
-
-		timeMap?.each { item ->
-			def type = item?.key
-			def tData = item?.value?.tData
-			def h = tData?.h.toInteger()
-			def m = tData?.m.toInteger()
-			def d = tData?.d.toInteger()
-			def y = tData?.y.toInteger()
-			if(h>0 || m>0 || d>0) {
-				if(type == "heating") 	{ hData = item }
-				if(type == "cooling") 	{ cData = item }
-				if(type == "idle")	  	{ iData = item }
-				//if(type == "fanOn")   	{ f1Data = item }
-				//if(type == "fanAuto")	{ f0Data = item }
-			}
-		}
-		if(hData || cData || iData) {// || f1Data || f0Data) {
-			def showAnd = hData || cData //|| f0Data || f1Data
-			if(iData?.key == "idle") {
-				def tData = iData?.value?.tData
-				def tSec = iData?.value?.tSec.toInteger()
-				def tStr = getTimeMapString(tData)
-				if(timeType == "today") {
-					def tm = getDayTimePerc(tSec,tData)
-					if (tm>=66 && tm<=100) {
-						str += " it looks like it was a light day because your device"
-						str +=  " sat idle $tm percent of the day at "
-					}
-					else if (tm>=34 && tm<66) {
-						str += " it was a pretty moderate day because your device"
-						str +=  " sat only idle $tm percent of the day at "
-					}
-					else if (tm>0 && tm <34) {
-						str += " it was a very busy day becaue your device"
-						str +=  " sat only idle $tm percent of the day at "
-					}
-					str += tStr
-
-				}
-				else {
-					str += " spent "
-					str += tStr
-					str += " sitting ${iData?.key} this ${timeType} "
-				}
-				str += hData || cData ? " and" : ""
-			}
-			if(hData?.key == "heating") {
-				def tData = hData?.value?.tData
-				def tSec = hData?.value?.tSec.toInteger()
-				def tStr = getTimeMapString(tData)
-				if(timeType == "today") {
-					def tm = getDayTimePerc(tSec,tData)
-					if(tm>=66 && tm<=100) {
-						str += " it must have been freezing today because your device was heating your home for "
-						str += tStr
-					}
-					else if (tm>=34 && tm<66) {
-						str += " it's like the weather was a bit chilly today because your device spent "
-						str += tStr
-						str += " trying to keep your home cozy "
-
-					}
-					else if (tm>0 && tm <34) {
-						str += " Your device only had to heat up your home for "
-						str += tStr
-					}
-				} else {
-					str += " spent "
-					str += tStr
-					str += " %{cData?.key} your home this ${timeType} "
-				}
-				str += cData ? " and" : ""
-			}
-			if(cData?.key == "cooling") {
-				def tData = cData?.value?.tData
-				def tSec = cData?.value?.tSec.toInteger()
-				def tStr = getTimeMapString(tData)
-				if(timeType == "today") {
-					def tm = getDayTimePerc(tSec,tData)
-					if(tm>=66 && tm<=100) {
-
-					}
-					else if (tm>=34 && tm<66) {
-
-					}
-					else if (tm>0 && tm <34) {
-						str += " it must have been a beautiful day because your device only cooled for "
-						str += tStr
-					}
-				} else {
-					str += " spent "
-					str += tStr
-					str += " %{cData?.key} your home this ${timeType} "
-				}
-				str += f0Data || f1Data ? " and" : ""
-			}
-			str += ". "
-			/*if(type in ["fanAuto", "fanOn"]) {
-				//not sure how to format the fan strings yet
-
-			}*/
-		}
-	}
-	str += " That is all for todays nest report. Have a wonderful day..."
-	//log.debug "str: $str"
-	return str
-}
-
-def getDayTimePerc(val,data) {
-	if(!data) { return null }
-	def h = data?.h
-	def m = data?.m
-	def hr = 60*60
-	return (int) ((val.toInteger()/(h*hr+m*60))*100).toDouble().round(0)
-}
-
-def getTimeMapString(data) {
-	if(!data) { return null }
-	def str = ""
-	def d = data?.d
-	def h = data?.h
-	def m = data?.m
-	if(h>0 || m>0 || d>0) {
-		if(d>0) {
-			str += "$d day${d>1 ? "s" : ""}"
-			str += d>0 || m>0 ? " and " : ""
-		}
-		if (h>0) {
-			str += h>0 ? "$h Hour${h>1 ? "s" : ""} " : ""
-			str += m>0 ? "and " : ""
-		}
-		if (m>0) {
-			str += m>0 ? "$m minute${m>1 ? "s" : ""}" : ""
-		}
-		return str
-	} else {
-		return null
-	}
-}
-
 /**************************************************************************
 |					  HTML TILE RENDER FUNCTIONS	  					  |
 ***************************************************************************/
@@ -3127,8 +2924,250 @@ def hideChartHtml() {
 	return data
 }
 
+void updateNestReportData() {
+	nestReportStatusEvent()
+}
+
+def cleanDevLabel() {
+	return device.label.toString().replaceAll("-", "")
+}
+
+def getDayTimePerc(val,data) {
+	//log.debug "getDayTimePerc($val, $data)"
+	//log.debug "getDayElapSec: ${getDayElapSec()}"
+	if(!data) { return null }
+	return (int) ((val.toInteger()/getDayElapSec())*100).toDouble().round(0)
+}
+
+def getDayElapSec() {
+	Calendar c = Calendar.getInstance();
+	long now = c.getTimeInMillis();
+	c.set(Calendar.HOUR_OF_DAY, 0);
+	c.set(Calendar.MINUTE, 0);
+	c.set(Calendar.SECOND, 0);
+	c.set(Calendar.MILLISECOND, 0);
+	long passed = now - c.getTimeInMillis();
+	return (long) passed / 1000;
+}
+
+def getTimeMapString(data) {
+	if(!data) { return null }
+	def str = ""
+	def d = data?.d
+	def h = data?.h
+	def m = data?.m
+	if(h>0 || m>0 || d>0) {
+		if(d>0) {
+			str += "$d day${d>1 ? "s" : ""}"
+			str += d>0 || m>0 ? " and " : ""
+		}
+		if (h>0) {
+			str += h>0 ? "$h Hour${h>1 ? "s" : ""} " : ""
+			str += m>0 ? "and " : ""
+		}
+		if (m>0) {
+			str += m>0 ? "$m minute${m>1 ? "s" : ""}" : ""
+		}
+		return str
+	} else {
+		return null
+	}
+}
+
 private def textDevName()  	{ return "Nest ${virtDevName()}Thermostat${appDevName()}" }
 private def appDevType()   	{ return false }
 private def appDevName()   	{ return appDevType() ? " (Dev)" : "" }
 private def virtType()		{ return false }
 private def virtDevName()  	{ return virtType() ? "Virtual " : "" }
+
+
+def getNestMgrReport() {
+	//log.trace "getNestMgrReport()..."
+	def str = ""
+	if(state?.allowVoiceZoneRprt || state?.allowVoiceUsageRprt) {
+		str += "Here is the up to date ${cleanDevLabel()} Report. "
+
+		if(state?.allowVoiceZoneRprt == false) {
+			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
+			str += " Zone status voice reports have been disabled by Nest manager app preferences"
+		}
+		else {
+			def schRprtDesc = parent?.reqSchedInfoRprt(this)
+			if(schRprtDesc) {
+				str += schRprtDesc.toString() + "  "
+				str += " Now let's move on to usage.  "
+			}
+		}
+		if(state?.allowVoiceUsageRprt == false) {
+			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
+			str += "Zone status voice reports have been disabled by Nest manager app preferences"
+		}
+		else {
+			//str += " and Now we move on to today's Usage.  "
+			str += getUsageVoiceReport("runtimeToday")
+		}
+	} else {
+		str += "All voice reports have been disabled by Nest Manager app preferences"
+		return str
+	}
+	log.trace "NestMgrReport Response: ${str}"
+	return str
+}
+
+def getUsageVoiceReport(type) {
+	switch(type) {
+		case "runtimeToday":
+			return generateUsageText("today" ,getTodaysUsage())
+			break
+		case "runtimeWeek":
+			return generateUsageText("week" ,getWeeksUsage())
+			break
+		case "runtimeMonth":
+			return generateUsageText("month" ,getMonthsUsage())
+ 			break
+		default:
+			return "I'm sorry but the report type received was not valid"
+			break
+	}
+}
+
+def generateUsageText(timeType, timeMap) {
+	def str = ""
+	if(timeType && timeMap) {
+		def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
+
+		timeMap?.each { item ->
+			def type = item?.key
+			def tData = item?.value?.tData
+			def h = tData?.h.toInteger()
+			def m = tData?.m.toInteger()
+			def d = tData?.d.toInteger()
+			def y = tData?.y.toInteger()
+			if(h>0 || m>0 || d>0) {
+				if(type == "heating") 	{ hData = item }
+				if(type == "cooling") 	{ cData = item }
+				if(type == "idle")	  	{ iData = item }
+				//if(type == "fanOn")   	{ f1Data = item }
+				//if(type == "fanAuto")	{ f0Data = item }
+			}
+		}
+		if(hData || cData || iData) {// || f1Data || f0Data) {
+			str += " Based on the devices activity so far today. "
+			def showAnd = hData || cData //|| f0Data || f1Data
+			def iTime = 0; def hTime = 0; def cTime = 0;
+			def iTmStr; def hTmStr; def cTmStr;
+
+			//Fills Idle Usage Data
+			if(iData?.key == "idle") {
+				iTmStr = getTimeMapString(iData?.value?.tData)
+				iTime = getDayTimePerc(iData?.value?.tSec.toInteger(),iData?.value?.tData)
+			}
+			//Fills Heating Usage Data
+			if(hData?.key == "heating") {
+				hTmStr = getTimeMapString(hData?.value?.tData)
+				hTime = getDayTimePerc(hData?.value?.tSec.toInteger(),hData?.value?.tData)
+			}
+
+			//Fills Cooling Usage Data
+			if(cData?.key == "cooling") {
+				cTmStr = getTimeMapString(cData?.value?.tData)
+				cTime = getDayTimePerc(cData?.value?.tSec.toInteger(),cData?.value?.tData)
+			}
+
+			def tmMap = new TreeMap<Integer, String>(["${hTime}":"heating", "${cTime}":"cooling", "${iTime}":"idle"])
+			def mSz = tmMap?.size()
+			def last = null
+			tmMap?.reverseEach {
+				if(it?.key.toInteger() > 0) {
+					switch(it?.value.toString()) {
+						case "idle":
+							def lastOk = (last in ["cooling", "heating"])
+							str += lastOk ? " and" : ""
+							str += getIdleUsageDesc(iTime,, iTmStr, timeType)
+							last = it?.value.toString()
+							break
+						case "heating":
+							def lastOk = (last in ["idle", "cooling"])
+							str += lastOk ? " and" : ""
+							str += getHeatUsageDesc(hTime, hTmStr, timeType)
+							last = it?.value.toString()
+							break
+						case "cooling":
+							def lastOk = (last in ["idle", "heating"])
+							str += lastOk ? " and" : ""
+							str += getCoolUsageDesc(cTime, cTmStr, timeType)
+							last = it?.value.toString()
+							break
+					}
+					str += ". "
+				}
+			}
+
+			/*if(type in ["fanAuto", "fanOn"]) {
+				//not sure how to format the fan strings yet
+
+			}*/
+			//log.debug "idle: $iTime%"
+			//log.debug "heating: $hTime%"
+			//log.debug "cooling: $cTime%"
+		} else {
+			str += " There doesn't appear to have been any usage data collected yet.  "
+		}
+	}
+	str += " That is all for the current nest report. Check back later and have a wonderful day..."
+	log.debug "generateUsageText: $str"
+	return str
+}
+
+def getIdleUsageDesc(perc, tmStr, timeType) {
+	def str = ""
+	if(timeType == "today") {
+		if (perc>0 && perc <=100) {
+			str += " The device has been idle ${perc} percent of the day at "
+			str += tmStr
+		}
+	}
+}
+
+def getHeatUsageDesc(perc, tmStr, timeType) {
+	def str = ""
+	if(timeType == "today") {
+		if (perc>=86) {
+			str += " spent "
+			str += tmStr
+			str += " heating your home ${timeType != "today" ? "this " : ""}${timeType} "
+		}
+		else if(perc>=66 && perc<=85) {
+			str += " it must have been freezing today because it was heating your home for "
+			str += tmStr
+		}
+		else if (perc>=34 && perc<66) {
+			str += " it's like the weather was a bit chilly today because your device spent "
+			str += tmStr
+			str += " trying to keep your home cozy "
+		}
+		else if (perc>0 && perc<34) {
+			str += " only spent ${tmStr} heating up the home"
+		}
+	}
+	return str
+}
+
+def getCoolUsageDesc(perc, tmStr, timeType) {
+	def str = ""
+	if(timeType == "today") {
+		if(perc>=66 && perc<=100) {
+			str += " it must have been scorching outside because is was cooling for "
+			str += tmStr
+		}
+		else if (perc>=34 && perc<66) {
+			str += " it must have been a beautiful day because your device only cooled for "
+			str += tmStr
+		}
+		else if (perc>0 && perc<34) {
+			str += " it must have been a beautiful day because your device only cooled for "
+			str += tmStr
+		}
+	}
+	return str
+}
