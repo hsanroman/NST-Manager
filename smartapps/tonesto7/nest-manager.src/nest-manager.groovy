@@ -39,8 +39,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.4" }
-def appVerDate() { "10-28-2016" }
+def appVersion() { "4.0.5" }
+def appVerDate() { "10-30-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -935,7 +935,8 @@ def reqSchedInfoRprt(child) {
 
 			def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
 			def canCool = tstat?.currentCanCool.toString() == "true" ? true : false
-			def curMode = tstat?.currentThermostatMode.toString()
+			def curMode = tstat?.currentnestThermostatMode.toString()
+// TODO ECO done
 			def curOper = tstat?.currentThermostatOperatingState.toString()
 			def curHum = tstat?.currentHumidity.toString()
 			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp() ?: null
@@ -967,11 +968,11 @@ def reqSchedInfoRprt(child) {
 			str += " The HVAC is currently "
 			str += curOper == "idle" ? " sitting idle " : " ${curOper} "
 			str += " in ${curMode} mode"
-			str += curMode != "off" ? " with " : ". "
-// ERSERS TODO add if in ECO mode
+			str += curMode in ["auto", "heat", "cool"] ? " with " : ". "
+// TODO add if in ECO mode done
 			str += canHeat && curMode in ["auto", "heat"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
 			str += canHeat && canCool && curMode == "auto" ? " and " : ". "
-			str += canCool && curMode in ["auto", "cooling"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
+			str += canCool && curMode in ["auto", "cool"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
 
 			if (str != "") {
 				LogAction("reqSchedInfoRprt: Sending voice report for Zone info on (${tstat})", "info", true)
@@ -1683,8 +1684,7 @@ def apiVar() {
 		rootTypes:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata" ],
 		cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
 					  targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
-					  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", eco:"eco", streaming:"is_streaming" ],
-		hvacModes: 	[ heat:"heat", cool:"cool", eco:"eco", heatCool:"heat-cool", off:"off" ]
+					  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ]
 	]
 	return api
 }
@@ -1787,7 +1787,9 @@ def setHvacMode(child, mode, virtual=false) {
 					case "cool":
 						pChild.cool()
 						break
-// ERSERS TODO add if in ECO mode
+					case "eco":
+						pChild.eco()
+						break
 					case "off":
 						pChild.off()
 						break
@@ -6177,10 +6179,10 @@ private remSenCheck() {
 		} else if(home) {
 			//log.info "remSenCheck:  Evaluating Event..."
 
-			def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
-// ERSERS TODO add if in ECO mode
-			if(hvacMode == "off") {
-				LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is 'OFF'...", "info", true)
+			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode.toString() : null
+// TODO add if in ECO mode done
+			if(hvacMode in [ "off", "eco"] ) {
+				LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is '${strCapitalize(hvacMode)}'...", "info", true)
 				disableOverrideTemps()
 				storeExecutionHistory((now() - execTime), "remSenCheck")
 				return
@@ -6689,7 +6691,8 @@ def fanCtrlCheck() {
 			def threshold = !remSenTempDiffDegrees ? 2.0 : remSenTempDiffDegrees.toDouble()
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
-			def hvacMode = schMotTstat ? schMotTstat?.currentThermostatMode.toString() : null
+// TODO ECO done
+			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
 /*
 			if(atomicState?.haveRunFan) {
 				if(schMotFanRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
@@ -6706,7 +6709,8 @@ def fanCtrlCheck() {
 			if( (hvacMode in ["cool"] && schMotFanRuleType in ["Cool_Circ"]) ||
 			    (hvacMode in ["heat"] && schMotFanRuleType in ["Heat_Circ"]) ||
 			    (hvacMode in ["auto"] && schMotFanRuleType in ["Heat_Cool_Circ"]) ||
-			    (hvacMode in ["off"] && schMotFanRuleType in ["Circ"]) ) {
+			    (hvacMode in ["off", "eco"] && schMotFanRuleType in ["Circ"]) ) {
+// TODO ECO done
 
 				def sTemp = getReqSetpointTemp(curTstatTemp, reqHeatSetPoint, reqCoolSetPoint)
 				circulateFanControl(sTemp?.type?.toString(), curTstatTemp, sTemp?.req?.toDouble(), threshold, fanOn)
@@ -6752,7 +6756,7 @@ def doFanOperation(tempDiff) {
 		def curCoolSetpoint = getRemSenCoolSetTemp()
 		def curHeatSetpoint = getRemSenHeatSetTemp()
 
-		def hvacMode = tstat ? tstat?.currentThermostatMode.toString() : null
+		def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 		def curTstatOperState = tstat?.currentThermostatOperatingState.toString()
 		def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
 		LogAction("doFanOperation: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)
@@ -6847,73 +6851,74 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def tstat = schMotTstat
 	def tstatsMir = schMotTstatMir
 
-	def hvacMode = tstat ? tstat?.currentThermostatMode.toString() : null
+	def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 	def home = false
 	def away = false
+// TODO ECO done
 	if(tstat && getTstatPresence(tstat) == "present") { home = true }
 	else { away = true }
 
-	if(home && hvacMode in ["heat", "auto", "cool"]) {
-		def curOperState = tstat?.currentThermostatOperatingState.toString()
-		def curFanMode = tstat?.currentThermostatFanMode.toString()
+	def returnToAuto = false
+	if(away || hvacMode in ["off", "eco"]) { returnToAuto = true }
 
-		def returnToAuto = false
-		def tstatOperStateOk = (curOperState == "idle") ? true : false
-		// if ac or heat is on, we should put fan back to auto
-		if(!tstatOperStateOk) {
-			LogAction("Circulate Fan Run: The Thermostat OperatingState is Currently (${curOperState?.toString().toUpperCase()})... Skipping!!!", "info", true)
+	def curOperState = tstat?.currentThermostatOperatingState.toString()
+	def curFanMode = tstat?.currentThermostatFanMode.toString()
 
-			if( atomicState?.lastRemSenFanOffDt > atomicState?.lastRemSenFanRunDt) { return }
-			returnToAuto = true
+	def tstatOperStateOk = (curOperState == "idle") ? true : false
+	// if ac or heat is on, we should put fan back to auto
+	if(!tstatOperStateOk) {
+		LogAction("Circulate Fan Run: The Thermostat OperatingState is Currently (${curOperState?.toString().toUpperCase()})... Skipping!!!", "info", true)
+
+		if( atomicState?.lastRemSenFanOffDt > atomicState?.lastRemSenFanRunDt) { return }
+		returnToAuto = true
+	}
+	def fanTempOk = getCirculateFanTempOk(curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
+
+	if(home && hvacMode in ["heat", "auto", "cool"] && fanTempOk && !fanOn && !returnToAuto) {
+		def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
+		def timeSinceLastOffOk = (getLastRemSenFanOffDtSec() > waitTimeVal) ? true : false
+		if(!timeSinceLastOffOk) {
+			def remaining = waitTimeVal - getLastRemSenFanOffDtSec()
+			LogAction("Circulate Fan: Want to RUN Fan | Delaying for wait period ${waitTimeVal}, remaining ${remaining} seconds", "info", true)
+			remaining = remaining > 20 ? remaining : 20
+			remaining = remaining < 60 ? remaining : 60
+			scheduleAutomationEval(remaining)
+			return
 		}
-
-		def fanTempOk = getCirculateFanTempOk(curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
-		if(fanTempOk && !fanOn && !returnToAuto) {
-			def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
-			def timeSinceLastOffOk = (getLastRemSenFanOffDtSec() > waitTimeVal) ? true : false
-			if(!timeSinceLastOffOk) {
-				def remaining = waitTimeVal - getLastRemSenFanOffDtSec()
-				LogAction("Circulate Fan: Want to RUN Fan | Delaying for wait period ${waitTimeVal}, remaining ${remaining} seconds", "info", true)
-				remaining = remaining > 20 ? remaining : 20
-				remaining = remaining < 60 ? remaining : 60
-				scheduleAutomationEval(remaining)
-				return
+		LogAction("Circulate Fan: Activating '${tstat?.displayName}'' Fan for ${operType.toString().toUpperCase()}ING Circulation...", "debug", true)
+		tstat?.fanOn()
+		storeLastAction("Turned ${tstat} Fan 'On'", getDtNow())
+		if(tstatsMir) {
+			tstatsMir?.each { mt ->
+				LogAction("Circulate Fan: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan for ${operType.toString().toUpperCase()}ING Circulation", "debug", true)
+				mt?.fanOn()
 			}
-			LogAction("Circulate Fan: Activating '${tstat?.displayName}'' Fan for ${operType.toString().toUpperCase()}ING Circulation...", "debug", true)
-			tstat?.fanOn()
-			storeLastAction("Turned ${tstat} Fan 'On'", getDtNow())
+		}
+		atomicState?.lastRemSenFanRunDt = getDtNow()
+
+	} else {
+		if(fanOn && (returnToAuto || !fanTempOk)) {
+			if(!returnToAuto) {
+				def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > 600) ? true : false
+				if(!timeSinceLastRunOk) {
+					def remaining = 600 - getLastRemSenFanRunDtSec()
+					LogAction("Circulate Fan Run: Want to STOP Fan  Delaying for wait period 600, remaining ${remaining} seconds", "info", true)
+					remaining = remaining > 20 ? remaining : 20
+					remaining = remaining < 60 ? remaining : 60
+					scheduleAutomationEval(remaining)
+					return
+				}
+			}
+			LogAction("Circulate Fan: Turning OFF '${remSenTstat?.displayName}' Fan that was used for ${operType.toString().toUpperCase()}ING Circulation", "info", true)
+			tstat?.fanAuto()
+			storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow())
 			if(tstatsMir) {
 				tstatsMir?.each { mt ->
-					LogAction("Circulate Fan: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan for ${operType.toString().toUpperCase()}ING Circulation", "debug", true)
-					mt?.fanOn()
+					LogAction("Circulate Fan: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan that was used for ${operType.toString().toUpperCase()}ING Circulation", "info", true)
+					mt?.fanAuto()
 				}
 			}
-			atomicState?.lastRemSenFanRunDt = getDtNow()
-
-		} else {
-			if(fanOn && (returnToAuto || !fanTempOk)) {
-				if(!returnToAuto) {
-					def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > 600) ? true : false
-					if(!timeSinceLastRunOk) {
-						def remaining = 600 - getLastRemSenFanRunDtSec()
-						LogAction("Circulate Fan Run: Want to STOP Fan  Delaying for wait period 600, remaining ${remaining} seconds", "info", true)
-						remaining = remaining > 20 ? remaining : 20
-						remaining = remaining < 60 ? remaining : 60
-						scheduleAutomationEval(remaining)
-						return
-					}
-				}
-				LogAction("Circulate Fan: Turning OFF '${remSenTstat?.displayName}' Fan that was used for ${operType.toString().toUpperCase()}ING Circulation", "info", true)
-				tstat?.fanAuto()
-				storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow())
-				if(tstatsMir) {
-					tstatsMir?.each { mt ->
-						LogAction("Circulate Fan: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan that was used for ${operType.toString().toUpperCase()}ING Circulation", "info", true)
-						mt?.fanAuto()
-					}
-				}
-				atomicState?.lastRemSenFanOffDt = getDtNow()
-			}
+			atomicState?.lastRemSenFanOffDt = getDtNow()
 		}
 	}
 }
@@ -7031,7 +7036,7 @@ def getExtTmpDewPoint() {
 }
 
 def getDesiredTemp(curMode) {
-	def modeOff = (curMode == "off") ? true : false
+	def modeOff = (curMode in ["off","eco"]) ? true : false
 // ERSERS TODO add if in ECO mode
 	def modeCool = (curMode == "cool") ? true : false
 	def modeHeat = (curMode == "heat") ? true : false
@@ -7060,14 +7065,15 @@ def extTmpTempOk() {
 		def execTime = now()
 		def intTemp = extTmpTstat ?  getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
-		def curMode = extTmpTstat.currentThermostatMode.toString()
+		def curMode = extTmpTstat.currentnestThermostatMode.toString()
+// TODO add if in ECO mode done
 		def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
 		def curDp = getExtTmpDewPoint()
 		def diffThresh = getExtTmpTempDiffVal()
 		def dpOk = (curDp < dpLimit) ? true : false
 
 		def modeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+// TODO add if in ECO mode done
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
 		def modeAuto = (curMode == "auto") ? true : false
@@ -7090,7 +7096,17 @@ def extTmpTempOk() {
 		def retval = true
 		def tempOk = true
 		def str = "enough different (${tempDiff})"
-		if(desiredTemp && extTemp && diffThresh) {
+
+		def home = false
+		def away = false
+		if(extTmpTstat && getTstatPresence(extTmpTstat) == "present") { home = true }
+		else { away = true }
+		if(away) {
+			retval = false
+			str = "Nest is away"
+		}
+
+		if(desiredTemp && extTemp && diffThresh && retval) {
 			if(!modeAuto && tempDiff < diffThresh) {
 				retval = false
 				tempOk = false
@@ -7148,9 +7164,9 @@ def extTmpTempCheck(cTimeOut = false) {
 			if(cTimeOut) { atomicState."${pName}timeOutOn" = true }
 			def timeOut = atomicState."${pName}timeOutOn" ?: false
 
-			def curMode = extTmpTstat?.currentThermostatMode?.toString()
-			def modeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+			def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
+			def modeOff = (curMode in ["off", "eco"]) ? true : false
+// TODO add if in ECO mode done
 			def safetyOk = getSafetyTempsOk(extTmpTstat)
 			def schedOk = extTmpScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
@@ -7277,17 +7293,17 @@ def extTmpTempCheck(cTimeOut = false) {
 						atomicState?.extTmpRestoreMode = curMode
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
 						scheduleAutomationEval(60)
-						if(setTstatMode(extTmpTstat, "off")) {
-// ERSERS TODO add if in ECO mode
-							storeLastAction("Turned Off Thermostat", getDtNow())
+						if(setTstatMode(extTmpTstat, "eco")) {
+// TODO add if in ECO mode done
+							storeLastAction("Set Thermostat to ECO", getDtNow())
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
 							scheduleTimeoutRestore(pName)
 							modeOff = true
-							rmsg = "${extTmpTstat.label} has been turned 'Off' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!"
+							rmsg = "${extTmpTstat.label} has been turned 'ECO' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!"
 							if(extTmpTstatMir) {
-								setMultipleTstatMode(extTmpTstatMir, "off") {
-									LogAction("Mirroring (Off) Mode to ${extTmpTstatMir}", "info", true)
+								setMultipleTstatMode(extTmpTstatMir, "eco") {
+									LogAction("Mirroring (ECO) Mode to ${extTmpTstatMir}", "info", true)
 								}
 							}
 							LogAction(rmsg, "info", true)
@@ -7296,16 +7312,16 @@ def extTmpTempCheck(cTimeOut = false) {
 								if(allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${pName}OffVoiceMsg",pName), pName, "nmExtTmpOff_${app?.id}", true, "nmExtTmpOn_${app?.id}") }
 								if(allowAlarm) { scheduleAlarmOn(pName) }
 							}
-						} else { LogAction("extTmpTempCheck: Error turning themostat Off", "warn", true) }
+						} else { LogAction("extTmpTempCheck: Error turning themostat to Eco", "warn", true) }
 					} else {
 						def remaining = getExtTmpOffDelayVal() - getExtTmpWhileOnDtSec()
-						LogAction("extTmpTempCheck: Delaying OFF for wait period ${getExtTmpOffDelayVal()}, remaining ${remaining}", "info", true)
+						LogAction("extTmpTempCheck: Delaying ECO for wait period ${getExtTmpOffDelayVal()}, remaining ${remaining}", "info", true)
 						remaining = remaining > 20 ? remaining : 20
 						remaining = remaining < 60 ? remaining : 60
 						scheduleAutomationEval(remaining)
 					}
 				} else {
-				   LogAction("extTmpTempCheck: | Skipping because Exterior temperatures in range and '${extTmpTstat?.label}' mode is already 'OFF'", "info", true)
+				   LogAction("extTmpTempCheck: | Skipping because Exterior temperatures in range and '${extTmpTstat?.label}' mode is already 'OFF or ECO'", "info", true)
 				}
 			} else {
 				if(!home) { LogAction("extTmpTempCheck: Skipping because of AWAY Nest mode...", "info", true) }
@@ -7340,9 +7356,9 @@ def extTmpDpOrTempEvt(type) {
 		def extTmpTstat = settings?.schMotTstat
 		def extTmpTstatMir = settings?.schMotTstatMir
 
-		def curMode = extTmpTstat?.currentThermostatMode.toString()
-		def modeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+		def curMode = extTmpTstat?.currentnestThermostatMode.toString()
+		def modeOff = (curMode in ["off", "eco"]) ? true : false
+// TODO add if in ECO mode done
 		def offVal = getExtTmpOffDelayVal()
 		def onVal = getExtTmpOnDelayVal()
 		def timeVal
@@ -7431,10 +7447,10 @@ def conWatCheck(cTimeOut = false) {
 			if(!atomicState?."${pName}timeOutOn") { atomicState."${pName}timeOutOn" = false }
 			if(cTimeOut) { atomicState."${pName}timeOutOn" = true }
 			def timeOut = atomicState."${pName}timeOutOn" ?: false
-			def curMode = conWatTstat?.currentState("thermostatMode")?.value.toString()
+			def curMode = conWatTstat ? conWatTstat?.currentnestThermostatMode.toString() : null
 			def curNestPres = getTstatPresence(conWatTstat)
-			def modeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+			def modeOff = (curMode in ["off", "eco"]) ? true : false
+// ERSERS TODO add if in ECO mode done
 			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
 			def safetyOk = getSafetyTempsOk(conWatTstat)
 			def schedOk = conWatScheduleOk()
@@ -7560,42 +7576,42 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${atomicState?.conWatRestoreMode.toString().toUpperCase()}) for Restore later.", "info", true)
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
-						if(setTstatMode(conWatTstat, "off")) {
-// ERSERS TODO add if in ECO mode
+						if(setTstatMode(conWatTstat, "eco")) {
+// TODO add if in ECO mode done
 							storeLastAction("Turned Off $conWatTstat", getDtNow())
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
 							if(conWatTstatMir) {
-								setMultipleTstatMode(conWatTstatMir, "off") {
+								setMultipleTstatMode(conWatTstatMir, "eco") {
 									LogAction("Mirroring (Off) Mode to ${conWatTstatMir}", "info", true)
 								}
 							}
-							rmsg = "${conWatTstat.label} has been turned 'OFF' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})..."
+							rmsg = "${conWatTstat.label} has been turned to 'ECO' because${openCtDesc}has been Opened for (${getEnumValue(longTimeSecEnum(), conWatOffDelay)})..."
 							LogAction(rmsg, "info", true)
 							if(allowNotif) {
 								sendEventPushNotifications(rmsg, "Info", pName) // this uses parent and honors quiet times, others do NOT
 								if(allowSpeech) { sendEventVoiceNotifications(voiceNotifString(atomicState?."${pName}OffVoiceMsg",pName), pName, "nmConWatOff_${app?.id}", true, "nmConWatOn_${app?.id}") }
 								if(allowAlarm) { scheduleAlarmOn(pName) }
 							}
-						} else { LogAction("conWatCheck: Error turning themostat Off", "warn", true) }
+						} else { LogAction("conWatCheck: Error turning themostat to ECO", "warn", true) }
 					} else {
 						if(getConWatRestoreDelayBetweenDtSec() < (getConWatRestoreDelayBetweenVal() - 2)) {
 							def remaining = getConWatRestoreDelayBetweenVal() -  getConWatRestoreDelayBetweenDtSec()
-							LogAction("conWatCheck: | Skipping OFF change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
+							LogAction("conWatCheck: | Skipping ECO change because the delay since last restore has been less than (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
 							remaining = remaining > 20 ? remaining : 20
 							remaining = remaining < 60 ? remaining : 60
 							scheduleAutomationEval(remaining)
 						} else {
 							def remaining = getConWatOffDelayVal() - getConWatOpenDtSec()
-							LogAction("conWatCheck: Delaying OFF for wait period ${getConWatOffDelayVal()}, remaining ${remaining}", "info", true)
+							LogAction("conWatCheck: Delaying ECO for wait period ${getConWatOffDelayVal()}, remaining ${remaining}", "info", true)
 							remaining = remaining > 20 ? remaining : 20
 							remaining = remaining < 60 ? remaining : 60
 							scheduleAutomationEval(remaining)
 						}
 					}
 				} else {
-					LogAction("conWatCheck: | Skipping OFF change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
+					LogAction("conWatCheck: | Skipping ECO change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
 				}
 			} else {
 				if(!home) { LogAction("conWatCheck: Skipping because of AWAY Nest mode...", "info", true) }
@@ -7617,9 +7633,9 @@ def conWatContactEvt(evt) {
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
-		def curMode = conWatTstat?.currentThermostatMode.toString()
-		def isModeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+		def curMode = conWatTstat?.currentnestThermostatMode.toString()
+		def isModeOff = (curMode in ["off", "eco"]) ? true : false
+// TODO add if in ECO mode done
 		def conOpen = (evt?.value == "open") ? true : false
 		def canSched = false
 		def timeVal
@@ -7695,7 +7711,7 @@ def leakWatCheck() {
 			def execTime = now()
 			//atomicState?.lastEvalDt = getDtNow()
 
-			def curMode = leakWatTstat?.currentState("thermostatMode")?.value.toString()
+			def curMode = leakWatTstat?.currentThermostatMode.toString()
 			def curNestPres = getTstatPresence(leakWatTstat)
 			def modeOff = (curMode == "off") ? true : false
 // ERSERS TODO add if in ECO mode
@@ -8628,7 +8644,7 @@ def setTstatTempCheck() {
 		def execTime = now()
 
 		def away = (getNestLocPres() == "home") ? false : true
-// ERSERS
+
 		def mySched = getCurrentSchedule()
 		def noSched = (mySched == null) ? true : false
 
@@ -8695,7 +8711,8 @@ def setTstatTempCheck() {
 				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
 
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
-				def tstatHvacMode = tstat?.currentThermostatMode?.toString()
+				def tstatHvacMode = tstat?.currentnestThermostatMode?.toString()
+// TODO add if in ECO mode done
 				if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode)) {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow())
@@ -8710,9 +8727,9 @@ def setTstatTempCheck() {
  					return
  				}
 
-				def curMode = tstat?.currentThermostatMode?.toString()
-				def isModeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
+				def curMode = tstat?.currentnestThermostatMode?.toString()
+				def isModeOff = (curMode in ["off","eco"]) ? true : false
+// TODO add if in ECO mode done
 				tstatHvacMode = curMode
 
 				def heatTemp = null
@@ -10032,7 +10049,7 @@ this is a parent only method today
 						if(!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because ALL contacts have been Closed again for (%ondelay%)" }
 					}
 					if(pName == "extTmp") {
-						if(!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned OFF because External Temp is above the temp threshold for (%offdelay%)" }
+						if(!atomicState?."${pName}OffVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OffVoiceMsg" = "ATTENTION: %devicename% has been turned to ECO because External Temp is above the temp threshold for (%offdelay%)" }
 						if(!atomicState?."${pName}OnVoiceMsg" || !settings["${pName}UseCustomSpeechNotifMsg"]) { atomicState?."${pName}OnVoiceMsg" = "Restoring %devicename% to %lastmode% Mode because External Temp has been above the temp threshold for (%ondelay%)" }
 					}
 					input "${pName}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
@@ -10863,7 +10880,8 @@ def setTstatMode(tstat, mode) {
 			else if(mode == "heat") { tstat.heat(); result = true }
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
-// ERSERS TODO add if in ECO mode
+			else if(mode == "eco") { tstat.eco(); result = true }
+// TODO add if in ECO mode done
 
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
 			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
@@ -10902,7 +10920,8 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint) {
 	LogAction("setTstatAutoTemps: [tstat: ${tstat?.displayName} | coolSetpoint: ${coolSetpoint}°${getTemperatureScale()} | heatSetpoint: ${heatSetpoint}°${getTemperatureScale()}]", "info", true)
 	def retVal = false
 	if(tstat) {
-		def hvacMode = tstat?.currentThermostatMode.toString()
+		def hvacMode = tstat?.currentnestThermostatMode.toString()
+// TODO ECO done
 		def curCoolSetpoint = getTstatSetpoint(tstat, "cool")
 		def curHeatSetpoint = getTstatSetpoint(tstat, "heat")
 		def diff = getTemperatureScale() == "C" ? 2.0 : 3.0
@@ -10999,24 +11018,25 @@ def fanModeTrigEnum() {
 	def canCool = atomicState?."${pName}TstatCanCool" ? true : false
 	def canHeat = atomicState?."${pName}TstatCanHeat" ? true : false
 	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
-	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "any":"Any Mode"]
+// TODO add ECO done
+	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco", "any":"Any Mode"]
 	if(!canHeat) {
-		vals = ["cool":"Cool", "any":"Any Mode"]
+		vals = ["cool":"Cool", "eco":"Eco", "any":"Any Mode"]
 	}
 	if(!canCool) {
-		vals = ["heat":"Heat", "any":"Any Mode"]
+		vals = ["heat":"Heat", "eco":"Eco", "any":"Any Mode"]
 	}
 	return vals
 }
 
 def tModeHvacEnum(canHeat, canCool) {
-// ERSERS   TODO add ECO
-	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat"]
+// TODO add ECO done
+	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco"]
 	if(!canHeat) {
-		vals = ["cool":"Cool"]
+		vals = ["cool":"Cool", "eco":"Eco"]
 	}
 	if(!canCool) {
-		vals = ["heat":"Heat"]
+		vals = ["heat":"Heat", "eco":"Eco"]
 	}
 	return vals
 }
