@@ -1778,7 +1778,7 @@ def setHvacMode(child, mode, virtual=false) {
 
 			if(pChild) {
 				switch (mode) {
-					case "auto":
+					case "heat-cool":
 						pChild.auto()
 						break
 					case "heat":
