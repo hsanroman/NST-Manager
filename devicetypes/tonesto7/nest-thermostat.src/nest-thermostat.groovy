@@ -347,7 +347,7 @@ def processEvent(data) {
 			state.nestTimeZone = !location?.timeZone ? eventData.tz : null
 			debugOnEvent(eventData?.debug ? true : false)
 			tempUnitEvent(getTemperatureScale())
-			if(eventData?.data?.is_locked) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
+			if(eventData?.data?.is_locked != null) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
@@ -627,11 +627,12 @@ def tempUnitEvent(unit) {
 	} else { LogAction("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
+// TODO NOT USED
 def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		Logger("UPDATED | targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
@@ -743,9 +744,10 @@ def hvacModeEvent(mode) {
 	def oldnestmode = state?.nestHvac_mode
 	newMode = (mode == "heat-cool") ? "auto" : mode
 	state?.nestHvac_mode = newMode
-	if(!oldnestmode || newMode != oldnestmode) {
+	if(!oldnestmode.equals(newMode)) {
+		Logger("UPDATED | NEST Hvac Mode is (${newMode.toString().capitalize()}) | Original State: (${oldnestmode.toString().capitalize()})")
 		sendEvent(name: "nestThermostatMode", value: newMode, descriptionText: "Nest HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
-	}
+	} else { LogAction("NEST Hvac Mode is (${newMode}) | Original State: (${oldnestmode})") }
 }
 
 def fanModeEvent(fanActive) {
