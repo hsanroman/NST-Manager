@@ -7069,32 +7069,26 @@ def extTmpTempOk() {
 // TODO add if in ECO mode done
 		def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
 		def curDp = getExtTmpDewPoint()
-		def diffThresh = getExtTmpTempDiffVal()
-		def dpOk = (curDp < dpLimit) ? true : false
+		def diffThresh = Math.abs(getExtTmpTempDiffVal())
 
 		def modeOff = (curMode == "off") ? true : false
-// TODO add if in ECO mode done
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
-		def modeAuto = (curMode == "auto") ? true : false
 
 		def canHeat = atomicState?.schMotTstatCanHeat
 		def canCool = atomicState?.schMotTstatCanCool
 
-		def desiredTemp = getDesiredTemp(curMode)
+		def modeAuto = ((curMode == "auto") || (curMode == "eco" && canHeat && canCool)) ? true : false
+// TODO add if in ECO mode done
 
 		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
-		if(!desiredTemp) {
-			desiredTemp = intTemp
-			LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
-		}
-
-		def tempDiff = Math.abs(extTemp - desiredTemp)
-		//LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
-
 		def retval = true
 		def tempOk = true
+
+		def dpOk = (curDp < dpLimit) ? true : false
+		if(!dpOk) { retval = false }
+
 		def str = "enough different (${tempDiff})"
 
 		def home = false
@@ -7106,27 +7100,49 @@ def extTmpTempOk() {
 			str = "Nest is away"
 		}
 
-		if(desiredTemp && extTemp && diffThresh && retval) {
-			if(!modeAuto && tempDiff < diffThresh) {
+		if(!getSafetyTempsOk(extTmpTstat)) {
+			retval = false
+			tempOk = false
+			str = "within safety Temperatures "
+		}
+
+		if(modeAuto && retval) {
+			def desiredHeatTemp = getRemSenHeatSetTemp()
+			def desiredCoolTemp = getRemSenCoolSetTemp()
+			if( !(extTemp > desiredHeatTemp+diffThresh && extTemp < desiredCoolTemp-diffThresh) ) {
 				retval = false
 				tempOk = false
+				str = "within range (${desiredHeatTemp} ${desiredCoolTemp})"
 			}
-			//def extTempHigh = (extTemp > desiredTemp - diffThresh) ? true : false
-			def extTempHigh = (extTemp >= desiredTemp) ? true : false
-			//def extTempLow = (extTemp < desiredTemp + diffThresh) ? true : false
-			def extTempLow = (extTemp <= desiredTemp) ? true : false
-			def oldMode = atomicState?.extTmpRestoreMode
-			if(modeCool || oldMode == "cool" || (!canHeat && canCool)) {
-				str = "greater than"
-				if(extTempHigh) { retval = false; tempOk = false }
+		}
+
+		if(!modeAuto && extTemp && retval) {
+			def desiredTemp = getDesiredTemp(curMode)
+			if(!desiredTemp) {
+				desiredTemp = intTemp
+				LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
+				retval = false
+			} else {
+				def tempDiff = Math.abs(extTemp - desiredTemp)
+				//LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
+
+				if(diffThresh && tempDiff < diffThresh) {
+					retval = false
+					tempOk = false
+				}
+				def extTempHigh = (extTemp >= desiredTemp) ? true : false
+				def extTempLow = (extTemp <= desiredTemp) ? true : false
+				def oldMode = atomicState?.extTmpRestoreMode
+				if(modeCool || oldMode == "cool" || (!canHeat && canCool)) {
+					str = "greater than"
+					if(extTempHigh) { retval = false; tempOk = false }
+				}
+				if(modeHeat || oldMode == "heat" || (!canCool && canHeat)) {
+					str = "less than"
+					if(extTempLow) { retval = false; tempOk = false }
+				}
+				LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
 			}
-			if(modeHeat || oldMode == "heat" || (!canCool && canHeat)) {
-				str = "less than"
-				if(extTempLow) { retval = false; tempOk = false }
-			}
-			if(modeAuto) { retval = false; str = "in supported mode" } // no point in turning off if in auto mode
-			if(!dpOk) { retval = false }
-			LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
 		}
 		LogAction("extTmpTempOk: ${retval} Desired Inside Temp: (${desiredTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${getTemperatureScale()}) Inside Temp: (${intTemp}) or Dewpoint: (${curDp}°${getTemperatureScale()}) is ${dpOk ? "ok" : "TOO HIGH"}", "info", false)
 		storeExecutionHistory((now() - execTime), "extTmpTempOk")
@@ -10759,7 +10775,10 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 def getSafetyTemps(tstat) {
 	def minTemp = tstat?.currentState("safetyTempMin")?.doubleValue
 	def maxTemp = tstat?.currentState("safetyTempMax")?.doubleValue
-	if(minTemp == 0) { minTemp = null }
+	if(minTemp == 0) {
+		//minTemp = null
+		minTemp = (getTemperatureScale() == "C") ? 7 : 45
+	}
 	if(maxTemp == 0) { maxTemp = null }
 	if(minTemp || maxTemp) {
 		return ["min":minTemp, "max":maxTemp]
@@ -10791,7 +10810,7 @@ def getSafetyTempsOk(tstat) {
 	if(sTemps) {
 		def curTemp = tstat?.currentTemperature?.toDouble()
 		//log.debug "curTemp: ${curTemp}"
-		if( ((sTemps?.min.toDouble() != 0) && (curTemp < sTemps?.min.toDouble())) || ((sTemps?.max?.toDouble() != 0) && (curTemp > sTemps?.max?.toDouble())) ) {
+		if( ((sTemps?.min != null && sTemps?.min.toDouble() != 0) && (curTemp < sTemps?.min.toDouble())) || ((sTemps?.max != null && sTemps?.max?.toDouble() != 0) && (curTemp > sTemps?.max?.toDouble())) ) {
 			return false
 		}
 	} // else { log.debug "getSafetyTempsOk: no safety Temps" }
