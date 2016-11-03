@@ -2778,6 +2778,7 @@ def getGraphHTML() {
 			  </p>
 
 			  <div id="openModal" class="topModal">
+			    ${incInfoBtnTapCnt()}
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
@@ -2808,7 +2809,7 @@ def getGraphHTML() {
 			</body>
 		</html>
 		"""
-		incVtstatHtmlLoadCnt()
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "graphHTML Exception:", ex
@@ -3027,13 +3028,6 @@ def getTimeMapString(data) {
 	}
 }
 
-private def textDevName()  	{ return "Nest ${virtDevName()}Thermostat${appDevName()}" }
-private def appDevType()   	{ return false }
-private def appDevName()   	{ return appDevType() ? " (Dev)" : "" }
-private def virtType()		{ return true }
-private def virtDevName()  	{ return virtType() ? "Virtual " : "" }
-
-
 def getNestMgrReport() {
 	//log.trace "getNestMgrReport()..."
 	def str = ""
@@ -3078,13 +3072,13 @@ def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.
 def incProgModeChgCnt() { state?.progModeChgCnt = (state?.progModeChgCnt ? state?.progModeChgCnt.toInteger()+1 : 1) }
 def incManFanChgCnt() 	{ state?.manFanChgCnt = (state?.manFanChgCnt ? state?.manFanChgCnt.toInteger()+1 : 1) }
 def incProgFanChgCnt() 	{ state?.progFanChgCnt = (state?.progFanChgCnt ? state?.progFanChgCnt.toInteger()+1 : 1) }
-def incVtstatHtmlLoadCnt() 		{ state?.vtstatHtmlLoadCnt = (state?.vtstatHtmlLoadCnt ? state?.vtstatHtmlLoadCnt.toInteger()+1 : 1) }
-def incVtstatInfoBtnTapCnt()	{ state?.vtstatInfoBtnTapCnt = (state?.vtstatInfoBtnTapCnt ? state?.vtstatInfoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
-	return [voiceRprtCnt:(state?.voiceRprtCnt ?: 0), manTmpChgCnt:(state?.manTmpChgCnt ?: 0), progTmpChgCnt:(state?.progTmpChgCnt ?: 0), manModeChgCnt:(state?.manModeChgCnt ?: 0),
-			progModeChgCnt:(state?.progModeChgCnt ?: 0), progModeChgCnt:(state?.manFanChgCnt ?: 0),	progModeChgCnt:(state?.progFanChgCnt ?: 0), vtstatHtmlLoadCnt:(state?.vtstatHtmlLoadCnt ?: 0),
-			vtstatInfoBtnTapCnt:(state?.vtstatInfoBtnTapCnt ?: 0)
+	return [vTstatVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vTstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vTstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vTstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
+			vTstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), vTstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	vTstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
+			vtstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
 
@@ -3245,3 +3239,9 @@ def getCoolUsageDesc(perc, tmStr, timeType) {
 	}
 	return str
 }
+
+private def textDevName()  	{ return "Nest ${virtDevName()}Thermostat${appDevName()}" }
+private def appDevType()   	{ return false }
+private def appDevName()   	{ return appDevType() ? " (Dev)" : "" }
+private def virtType()		{ return true }
+private def virtDevName()  	{ return virtType() ? "Virtual " : "" }

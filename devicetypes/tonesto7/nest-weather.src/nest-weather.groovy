@@ -1258,10 +1258,10 @@ def getMaxTemp() {
 	return list?.max()
 }
 
-def incWeatHtmlLoadCnt() 	{ state?.weatHtmlLoadCnt = (state?.weatHtmlLoadCnt ? state?.weatHtmlLoadCnt.toInteger()+1 : 1) }
-def incForecastBtnTapCnt()		{ state?.forecastBtnTapCnt = (state?.forecastBtnTapCnt ? state?.forecastBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def incForecastBtnTapCnt() { state?.forecastBtnTapCnt = (state?.forecastBtnTapCnt ? state?.forecastBtnTapCnt.toInteger()+1 : 1); return ""; }
 def getMetricCntData() {
-	return [weatHtmlLoadCnt:(state?.weatHtmlLoadCnt ?: 0), forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
+	return [weatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
 }
 
 def getWeatherHTML() {
@@ -1460,7 +1460,7 @@ def getWeatherHTML() {
 				</body>
 			</html>
 		"""
-		incWeatHtmlLoadCnt()
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {

@@ -544,10 +544,10 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
-def incProtHtmlLoadCnt() 	{ state?.protHtmlLoadCnt = (state?.protHtmlLoadCnt ? state?.protHtmlLoadCnt.toInteger()+1 : 1) }
-def incProtInfoBtnTapCnt()	{ state?.protInfoBtnTapCnt = (state?.protInfoBtnTapCnt ? state?.protInfoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
+def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 def getMetricCntData() {
-	return [protHtmlLoadCnt:(state?.protHtmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.protInfoBtnTapCnt ?: 0)]
+	return [protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
 }
 
 def getCarbonImg() {
@@ -743,7 +743,7 @@ def getInfoHtml() {
 				<a href="#openModal" class="button">More info</a>
 			  </p>
 			  <div id="openModal" class="topModal">
-			  	${incProtInfoBtnTapCnt}
+			  	${incInfoBtnTapCnt()}
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>

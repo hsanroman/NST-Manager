@@ -638,16 +638,19 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
-def incCamHtmlLoadedCnt() 	{ state?.camHtmlLoadedCnt = (state?.camHtmlLoadedCnt ? state?.camHtmlLoadedCnt.toInteger()+1 : 1) }
+def incHtmlLoadedCnt() 		{ state?.htmlLoadedCnt = (state?.htmlLoadedCnt ? state?.htmlLoadedCnt.toInteger()+1 : 1) }
 def incManStreamChgCnt() 	{ state?.manStreamChgCnt = (state?.manStreamChgCnt ? state?.manStreamChgCnt.toInteger()+1 : 1) }
 def incProgStreamChgCnt() 	{ state?.progStreamChgCnt = (state?.progStreamChgCnt ? state?.progStreamChgCnt.toInteger()+1 : 1) }
 def incVideoBtnTapCnt()		{ state?.videoBtnTapCnt = (state?.videoBtnTapCnt ? state?.videoBtnTapCnt.toInteger()+1 : 1); return ""; }
 def incImageBtnTapCnt()		{ state?.imageBtnTapCnt = (state?.imageBtnTapCnt ? state?.imageBtnTapCnt.toInteger()+1 : 1); return ""; }
 def incEventBtnTapCnt()		{ state?.eventBtnTapCnt = (state?.eventBtnTapCnt ? state?.eventBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incInfoBtnTapCnt()		{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
 	return [manStreamChgCnt:(state?.manStreamChgCnt ?: 0), progStreamChgCnt:(state?.progStreamChgCnt ?: 0), videoBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
-			imageBtnTapCnt:(state?.imageBtnTapCnt ?: 0), eventBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.camHtmlLoadedCnt ?: 0)]
+			imageBtnTapCnt:(state?.imageBtnTapCnt ?: 0), eventBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
+			camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
+			]
 }
 
 /************************************************************************************************
@@ -931,6 +934,7 @@ def getCamHtml() {
 				  <a href="#openModal" class="button">More info</a>
 				</p>
 				<div id="openModal" class="topModal">
+				  ${incInfoBtnTapCnt()}
 				  <div>
 					<a href="#close" title="Close" class="close">X</a>
 					<table>
@@ -960,6 +964,7 @@ def getCamHtml() {
 			</body>
 		</html>
 		"""
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
@@ -1010,7 +1015,6 @@ def showCamHtml() {
 		  ${lastEvtBtn}
 		</div>
 	"""
-	incCamHtmlLoadedCnt()
 }
 
 def hideCamHtml() {

@@ -345,9 +345,9 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
-def incPresHtmlLoadCnt() 	{ state?.presHtmlLoadCnt = (state?.presHtmlLoadCnt ? state?.presHtmlLoadCnt.toInteger()+1 : 1) }
+def incHtmlLoadCnt() { state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
 def getMetricCntData() {
-	return [presHtmlLoadCnt:(state?.presHtmlLoadCnt ?: 0)]
+	return [presHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]
 }
 
 def getImgBase64(url,type) {
@@ -447,7 +447,7 @@ def getHtml() {
 			</body>
 		</html>
 		"""
-		incPresHtmlLoadCnt()
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
