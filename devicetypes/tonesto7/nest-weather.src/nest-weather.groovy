@@ -1258,6 +1258,12 @@ def getMaxTemp() {
 	return list?.max()
 }
 
+def incWeatHtmlLoadCnt() 	{ state?.weatHtmlLoadCnt = (state?.weatHtmlLoadCnt ? state?.weatHtmlLoadCnt.toInteger()+1 : 1) }
+def incForecastBtnTapCnt()		{ state?.forecastBtnTapCnt = (state?.forecastBtnTapCnt ? state?.forecastBtnTapCnt.toInteger()+1 : 1); return ""; }
+def getMetricCntData() {
+	return [weatHtmlLoadCnt:(state?.weatHtmlLoadCnt ?: 0), forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
+}
+
 def getWeatherHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
@@ -1284,7 +1290,7 @@ def getWeatherHTML() {
 			//if (differ > (maxval/4) || differ < (wantMetric() ? 7:15) ) {
 				minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
 				//if (differ < (wantMetric() ? 7:15) ) {
-				  maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
+				maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
 				//}
 			//}
 
@@ -1454,24 +1460,13 @@ def getWeatherHTML() {
 				</body>
 			</html>
 		"""
+		incWeatHtmlLoadCnt()
 		render contentType: "text/html", data: mainHtml, status: 200
 	}
 	catch (ex) {
 		log.error "getWeatherHTML Exception:", ex
 		exceptionDataHandler(ex.message, "getWeatherHTML")
 	}
-}
-
-def hideChartHtml() {
-	def data = """
-		<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-		<br></br>
-		<div class="centerText">
-		  <p>Waiting for more data to be collected</p>
-		  <p>This may take at least 24 hours</p>
-		</div>
-	"""
-	return data
 }
 
 private def textDevName()  { return "Nest Weather${appDevName()}" }

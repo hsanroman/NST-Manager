@@ -43,7 +43,7 @@ metadata {
 		command "log", ["string","string"]
 		command "streamingOn"
 		command "streamingOff"
-		command "changeStreaming"
+		command "chgStreaming"
 
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
@@ -92,13 +92,15 @@ metadata {
 		}
 
 		standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
-			state("on", label: "Streaming", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
-			state("off", label: "Off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+			state("on", label: "Streaming", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
+			state("off", label: "Off", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state("unavailable", label: "Unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
 		}
 		standardTile("isStreaming", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
-			state("on", action: "streamingOff", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_stream_btn_icon.png")
-			state("off", action: "streamingOn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
+			state("on", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_stream_btn_icon.png")
+			state("off", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_off_btn_icon.png")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state("unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_offline_btn_icon.png")
 		}
 		carouselTile("cameraDetails", "device.image", width: 4, height: 4) { }
@@ -504,11 +506,24 @@ def getPublicVideoId() {
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
-def streamingOn() {
+def chgStreaming() {
+	def cur = latestValue("isStreaming").toString()
+	if(cur == "on" || cur == "unavailable" || !cur) {
+		streamingOn()
+	} else {
+		streamingOff()
+	}
+}
+
+def streamingOn(isManu=false) {
 	try {
 		log.trace "streamingOn..."
-		parent?.setCamStreaming(this, "true")
-		sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+		if(parent?.setCamStreaming(this, "true")) {
+			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+			if(isManu) { incManStreamChgCnt() }
+			else { incProgStreamChgCnt() }
+		}
+
 	} catch (ex) {
 		log.error "streamingOn Exception:", ex
 		exceptionDataHandler(ex.message, "streamingOn")
@@ -518,8 +533,11 @@ def streamingOn() {
 def streamingOff() {
 	try {
 		log.trace "streamingOff..."
-		parent?.setCamStreaming(this, "false")
-		sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+		if(parent?.setCamStreaming(this, "false")) {
+			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+			if(isManu) { incManStreamChgCnt() }
+			else { incProgStreamChgCnt() }
+		}
 	} catch (ex) {
 		log.error "streamingOff Exception:", ex
 		exceptionDataHandler(ex.message, "streamingOff")
@@ -618,6 +636,18 @@ def exceptionDataHandler(msg, methodName) {
 			parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
 		}
 	}
+}
+
+def incCamHtmlLoadedCnt() 	{ state?.camHtmlLoadedCnt = (state?.camHtmlLoadedCnt ? state?.camHtmlLoadedCnt.toInteger()+1 : 1) }
+def incManStreamChgCnt() 	{ state?.manStreamChgCnt = (state?.manStreamChgCnt ? state?.manStreamChgCnt.toInteger()+1 : 1) }
+def incProgStreamChgCnt() 	{ state?.progStreamChgCnt = (state?.progStreamChgCnt ? state?.progStreamChgCnt.toInteger()+1 : 1) }
+def incVideoBtnTapCnt()		{ state?.videoBtnTapCnt = (state?.videoBtnTapCnt ? state?.videoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incImageBtnTapCnt()		{ state?.imageBtnTapCnt = (state?.imageBtnTapCnt ? state?.imageBtnTapCnt.toInteger()+1 : 1); return ""; }
+def incEventBtnTapCnt()		{ state?.eventBtnTapCnt = (state?.eventBtnTapCnt ? state?.eventBtnTapCnt.toInteger()+1 : 1); return ""; }
+
+def getMetricCntData() {
+	return [manStreamChgCnt:(state?.manStreamChgCnt ?: 0), progStreamChgCnt:(state?.progStreamChgCnt ?: 0), videoBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
+			imageBtnTapCnt:(state?.imageBtnTapCnt ?: 0), eventBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.camHtmlLoadedCnt ?: 0)]
 }
 
 /************************************************************************************************
@@ -980,6 +1010,7 @@ def showCamHtml() {
 		  ${lastEvtBtn}
 		</div>
 	"""
+	incCamHtmlLoadedCnt()
 }
 
 def hideCamHtml() {

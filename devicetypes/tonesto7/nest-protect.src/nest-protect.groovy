@@ -544,6 +544,12 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
+def incProtHtmlLoadCnt() 	{ state?.protHtmlLoadCnt = (state?.protHtmlLoadCnt ? state?.protHtmlLoadCnt.toInteger()+1 : 1) }
+def incProtInfoBtnTapCnt()	{ state?.protInfoBtnTapCnt = (state?.protInfoBtnTapCnt ? state?.protInfoBtnTapCnt.toInteger()+1 : 1); return ""; }
+def getMetricCntData() {
+	return [protHtmlLoadCnt:(state?.protHtmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.protInfoBtnTapCnt ?: 0)]
+}
+
 def getCarbonImg() {
 	def carbonVal = device.currentState("nestCarbonMonoxide")?.value
 	//values in ST are tested, clear, detected
@@ -737,6 +743,7 @@ def getInfoHtml() {
 				<a href="#openModal" class="button">More info</a>
 			  </p>
 			  <div id="openModal" class="topModal">
+			  	${incProtInfoBtnTapCnt}
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
@@ -767,6 +774,7 @@ def getInfoHtml() {
 			</body>
 		</html>
 		"""
+		incProtHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	}
 	catch (ex) {

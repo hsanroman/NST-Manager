@@ -67,6 +67,7 @@ metadata {
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
 		command "changeMode"
+		command "changeFanMode"
 		command "updateNestReportData"
 
 		attribute "temperatureUnit", "string"
@@ -157,17 +158,18 @@ metadata {
 			state("eco",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/eco_icon.png")
 		}
 		standardTile("thermostatMode", "device.nestThermostatMode", width:2, height:2, decoration: "flat") {
-			state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
-			state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
-			state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
-			state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
-			state("eco", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
+			state("off", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+			state("heat", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+			state("cool", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+			state("auto", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+			state("eco", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
 			state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 		}
-	   standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
-			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
-			state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
+		standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
+			state("auto", action: "changeFanMode", 	nextState: "updating",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png")
+			state("on",	action: "changeFanMode",	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state "disabled", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_disabled_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
@@ -1157,7 +1159,6 @@ def formatDt(dt) {
 	return tf.format(dt)
 }
 
-
 //Returns time differences is seconds
 def GetTimeDiffSeconds(lastDate) {
 	if(lastDate?.contains("dtNow")) { return 10000 }
@@ -1496,7 +1497,7 @@ def changeMode() {
 		def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
 		def nextMode = next(lastTriedMode)
 		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
-		setHvacMode(nextMode)
+		setHvacMode(nextMode, true)
 	}
 	catch (ex) {
 		log.error "changeMode Exception:", ex
@@ -1504,12 +1505,15 @@ def changeMode() {
 	}
 }
 
-def setHvacMode(nextMode) {
+def setHvacMode(nextMode, manChg=false) {
 	try {
 		LogAction("setHvacMode(${nextMode})")
 		if (nextMode in getHvacModes()) {
 			state.lastTriedMode = nextMode
 			"$nextMode"()
+			if(manChg) {
+				incManModeChgCnt()
+			} else { incProgModeChgCnt() }
 		} else {
 			Logger("Invalid Mode '$nextMode'")
 		}
@@ -1632,10 +1636,19 @@ void setThermostatMode(modeStr) {
 /************************************************************************************************
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
+void changeFanMode() {
+	def cur = device.currentState("thermostatFanMode")?.value
+	if(cur == "on" || !cur) {
+		setThermostatFanMode("fanAuto", true)
+	} else {
+		setThermostatFanMode("fanOn", true)
+	}
+}
+
 void fanOn() {
 	try {
 		LogAction("fanOn()...", "trace")
-		if ( state?.has_fan.toBoolean() ) {
+		if (state?.has_fan.toBoolean()) {
 			if (parent.setFanMode(this, true, virtType()) ) { fanModeEvent("true") }
 		} else { Logger("Error setting fanOn", "error") }
 	}
@@ -1659,7 +1672,7 @@ void fanCirculate() {
 void fanAuto() {
 	try {
 		LogAction("fanAuto()...", "trace")
-		if ( state?.has_fan.toBoolean() ) {
+		if (state?.has_fan.toBoolean()) {
 			if (parent.setFanMode(this,false, virtType()) ) { fanModeEvent("false") }
 		} else { Logger("Error setting fanAuto", "error") }
 	}
@@ -1669,7 +1682,7 @@ void fanAuto() {
 	}
 }
 
-void setThermostatFanMode(fanModeStr) {
+void setThermostatFanMode(fanModeStr, manChg=false) {
 	LogAction("setThermostatFanMode()... ($fanModeStr)", "trace")
 	switch(fanModeStr) {
 		case "auto":
@@ -1687,6 +1700,11 @@ void setThermostatFanMode(fanModeStr) {
 		default:
 			Logger("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
 			break
+	}
+	if(manChg) {
+		incManFanChgCnt()
+	} else {
+		incProgFanChgCnt()
 	}
 }
 
@@ -2623,15 +2641,15 @@ def addNewData() {
 
 def addValue(table, hr, mins, val) {
 	def newTable = table
-        if(table?.size() > 2) {
-                def last = table?.last()[2]
-                def secondtolast = table[-2][2]
-                if(val == last && val == secondtolast) {
-                        newTable = table?.take(table.size() - 1)
-                }
-        }
-        newTable?.add([hr, mins, val])
-        return newTable
+		if(table?.size() > 2) {
+				def last = table?.last()[2]
+				def secondtolast = table[-2][2]
+				if(val == last && val == secondtolast) {
+						newTable = table?.take(table.size() - 1)
+				}
+		}
+		newTable?.add([hr, mins, val])
+		return newTable
 }
 
 def getIntListAvg(itemList) {
@@ -2764,11 +2782,11 @@ def getGraphHTML() {
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
-				  	<tbody>
+					  <tbody>
 					  <tr>
-					    <th>Firmware Version</th>
-					    <th>Debug</th>
-					    <th>Device Type</th>
+						<th>Firmware Version</th>
+						<th>Debug</th>
+						<th>Device Type</th>
 					  </tr>
 					  <td>${state?.softwareVer.toString()}</td>
 					  <td>${state?.debugStatus}</td>
@@ -2791,6 +2809,7 @@ def getGraphHTML() {
 			</body>
 		</html>
 		"""
+		incTstatHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "graphHTML Exception:", ex
@@ -3053,14 +3072,23 @@ def getNestMgrReport() {
 	return str
 }
 
-def incVoiceRprtCnt() {
-	def rCnt = state?.voiceRprtCnt ?: 0
-	rCnt = rCnt?.toInteger()+1
-	//Logger("Voice Report Count: $rCnt", "info")
-	state?.voiceRprtCnt = rCnt?.toInteger()
-}
+def incVoiceRprtCnt() 	{ state?.voiceRprtCnt = (state?.voiceRprtCnt ? state?.voiceRprtCnt.toInteger()+1 : 1) }
+def incManTmpChgCnt() 	{ state?.manTmpChgCnt = (state?.manTmpChgCnt ? state?.manTmpChgCnt.toInteger()+1 : 1) }
+def incProgTmpChgCnt() 	{ state?.progTmpChgCnt = (state?.progTmpChgCnt ? state?.progTmpChgCnt.toInteger()+1 : 1) }
+def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
+def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
+def incProgModeChgCnt() { state?.progModeChgCnt = (state?.progModeChgCnt ? state?.progModeChgCnt.toInteger()+1 : 1) }
+def incManFanChgCnt() 	{ state?.manFanChgCnt = (state?.manFanChgCnt ? state?.manFanChgCnt.toInteger()+1 : 1) }
+def incProgFanChgCnt() 	{ state?.progFanChgCnt = (state?.progFanChgCnt ? state?.progFanChgCnt.toInteger()+1 : 1) }
+def incTstatHtmlLoadCnt() 	{ state?.tstatHtmlLoadCnt = (state?.tstatHtmlLoadCnt ? state?.tstatHtmlLoadCnt.toInteger()+1 : 1) }
+def incTstatInfoBtnTapCnt()	{ state?.tstatInfoBtnTapCnt = (state?.tstatInfoBtnTapCnt ? state?.tstatInfoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
-def voiceRprtCnt() { return state?.voiceRprtCnt ?: 0 }
+def getMetricCntData() {
+	return [voiceRprtCnt:(state?.voiceRprtCnt ?: 0), manTmpChgCnt:(state?.manTmpChgCnt ?: 0), progTmpChgCnt:(state?.progTmpChgCnt ?: 0), manModeChgCnt:(state?.manModeChgCnt ?: 0),
+			progModeChgCnt:(state?.progModeChgCnt ?: 0), progModeChgCnt:(state?.manFanChgCnt ?: 0),	progModeChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
+			tstatInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
+			]
+}
 
 def getUsageVoiceReport(type) {
 	switch(type) {
@@ -3072,7 +3100,7 @@ def getUsageVoiceReport(type) {
 			break
 		case "runtimeMonth":
 			return generateUsageText("month" ,getMonthsUsage())
- 			break
+			 break
 		default:
 			return "I'm sorry but the report type received was not valid"
 			break

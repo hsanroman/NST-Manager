@@ -67,6 +67,7 @@ metadata {
 		command "coolingSetpointUp"
 		command "coolingSetpointDown"
 		command "changeMode"
+		command "changeFanMode"
 		command "updateNestReportData"
 
 		attribute "temperatureUnit", "string"
@@ -165,9 +166,10 @@ metadata {
 			state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 		}
-	   standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
-			state "auto",	action:"fanOn", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png"
-			state "on",		action:"fanAuto", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png"
+		standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
+			state("auto", action: "changeFanMode", 	nextState: "updating",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png")
+			state("on",	action: "changeFanMode",	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png")
+			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 			state "disabled", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_disabled_icon.png"
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
@@ -1493,8 +1495,8 @@ def changeMode() {
 		def modeOrder = getHvacModes()
 		def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
 		def nextMode = next(lastTriedMode)
-		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
-		setHvacMode(nextMode)
+		LogAction("changeMode: [currentMode: ${currentMode} | lastTriedMode: ${lastTriedMode} | modeOrder: ${modeOrder} | nextMode: ${nextMode}]", "trace")
+		setHvacMode(nextMode, true)
 	}
 	catch (ex) {
 		log.error "changeMode Exception:", ex
@@ -1502,12 +1504,15 @@ def changeMode() {
 	}
 }
 
-def setHvacMode(nextMode) {
+def setHvacMode(nextMode, manChg=false) {
 	try {
 		LogAction("setHvacMode(${nextMode})")
 		if (nextMode in getHvacModes()) {
 			state.lastTriedMode = nextMode
 			"$nextMode"()
+			if(manChg) {
+				incManModeChgCnt()
+			} else { incProgModeChgCnt() }
 		} else {
 			Logger("Invalid Mode '$nextMode'")
 		}
@@ -1550,11 +1555,11 @@ def doChangeMode() {
 				}
 				break
 			default:
-				Logger("doChangeMode Received an Invalid Request: ${currentMode}", "warn")
+				Logger("doChangeMode: Received an Invalid Mode Request: (${currentMode})", "warn")
 				break
 		}
 		if (errflag) {
-			Logger("doChangeMode call to change mode failed: ${currentMode}", "warn")
+			Logger("doChangeMode: The call to change mode failed for: (${currentMode})", "warn")
 			refresh()
 		}
 	}
@@ -1630,10 +1635,19 @@ void setThermostatMode(modeStr) {
 /************************************************************************************************
 |										FAN MODE FUNCTIONS										|
 *************************************************************************************************/
+void changeFanMode() {
+	def cur = device.currentState("thermostatFanMode")?.value
+	if(cur == "on" || !cur) {
+		setThermostatFanMode("fanAuto", true)
+	} else {
+		setThermostatFanMode("fanOn", true)
+	}
+}
+
 void fanOn() {
 	try {
 		LogAction("fanOn()...", "trace")
-		if ( state?.has_fan.toBoolean() ) {
+		if (state?.has_fan.toBoolean()) {
 			if (parent.setFanMode(this, true, virtType()) ) { fanModeEvent("true") }
 		} else { Logger("Error setting fanOn", "error") }
 	}
@@ -1657,7 +1671,7 @@ void fanCirculate() {
 void fanAuto() {
 	try {
 		LogAction("fanAuto()...", "trace")
-		if ( state?.has_fan.toBoolean() ) {
+		if (state?.has_fan.toBoolean()) {
 			if (parent.setFanMode(this,false, virtType()) ) { fanModeEvent("false") }
 		} else { Logger("Error setting fanAuto", "error") }
 	}
@@ -1667,7 +1681,7 @@ void fanAuto() {
 	}
 }
 
-void setThermostatFanMode(fanModeStr) {
+void setThermostatFanMode(fanModeStr, manChg=false) {
 	LogAction("setThermostatFanMode()... ($fanModeStr)", "trace")
 	switch(fanModeStr) {
 		case "auto":
@@ -1685,6 +1699,11 @@ void setThermostatFanMode(fanModeStr) {
 		default:
 			Logger("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
 			break
+	}
+	if(manChg) {
+		incManFanChgCnt()
+	} else {
+		incProgFanChgCnt()
 	}
 }
 
@@ -2789,6 +2808,7 @@ def getGraphHTML() {
 			</body>
 		</html>
 		"""
+		incVtstatHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	} catch (ex) {
 		log.error "graphHTML Exception:", ex
@@ -3051,14 +3071,23 @@ def getNestMgrReport() {
 	return str
 }
 
-def incVoiceRprtCnt() {
-	def rCnt = state?.voiceRprtCnt ?: 0
-	rCnt = rCnt?.toInteger()+1
-	//Logger("Voice Report Count: $rCnt", "info")
-	state?.voiceRprtCnt = rCnt?.toInteger()
-}
+def incVoiceRprtCnt() 	{ state?.voiceRprtCnt = (state?.voiceRprtCnt ? state?.voiceRprtCnt.toInteger()+1 : 1) }
+def incManTmpChgCnt() 	{ state?.manTmpChgCnt = (state?.manTmpChgCnt ? state?.manTmpChgCnt.toInteger()+1 : 1) }
+def incProgTmpChgCnt() 	{ state?.progTmpChgCnt = (state?.progTmpChgCnt ? state?.progTmpChgCnt.toInteger()+1 : 1) }
+def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
+def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
+def incProgModeChgCnt() { state?.progModeChgCnt = (state?.progModeChgCnt ? state?.progModeChgCnt.toInteger()+1 : 1) }
+def incManFanChgCnt() 	{ state?.manFanChgCnt = (state?.manFanChgCnt ? state?.manFanChgCnt.toInteger()+1 : 1) }
+def incProgFanChgCnt() 	{ state?.progFanChgCnt = (state?.progFanChgCnt ? state?.progFanChgCnt.toInteger()+1 : 1) }
+def incVtstatHtmlLoadCnt() 		{ state?.vtstatHtmlLoadCnt = (state?.vtstatHtmlLoadCnt ? state?.vtstatHtmlLoadCnt.toInteger()+1 : 1) }
+def incVtstatInfoBtnTapCnt()	{ state?.vtstatInfoBtnTapCnt = (state?.vtstatInfoBtnTapCnt ? state?.vtstatInfoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
-def voiceRprtCnt() { return state?.voiceRprtCnt ?: 0 }
+def getMetricCntData() {
+	return [voiceRprtCnt:(state?.voiceRprtCnt ?: 0), manTmpChgCnt:(state?.manTmpChgCnt ?: 0), progTmpChgCnt:(state?.progTmpChgCnt ?: 0), manModeChgCnt:(state?.manModeChgCnt ?: 0),
+			progModeChgCnt:(state?.progModeChgCnt ?: 0), progModeChgCnt:(state?.manFanChgCnt ?: 0),	progModeChgCnt:(state?.progFanChgCnt ?: 0), vtstatHtmlLoadCnt:(state?.vtstatHtmlLoadCnt ?: 0),
+			vtstatInfoBtnTapCnt:(state?.vtstatInfoBtnTapCnt ?: 0)
+			]
+}
 
 def getUsageVoiceReport(type) {
 	switch(type) {
