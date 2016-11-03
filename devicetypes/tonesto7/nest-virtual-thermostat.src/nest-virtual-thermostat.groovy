@@ -3076,9 +3076,10 @@ def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLo
 def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
-	return [vTstatVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vTstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vTstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vTstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
-			vTstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), vTstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	vTstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
-			vtstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
+	return 	[
+			vtsVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vtsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vtsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vtsManModeChgCnt:(state?.manModeChgCnt ?: 0),
+			vtsProgModeChgCnt:(state?.progModeChgCnt ?: 0), vtsManFanChgCnt:(state?.manFanChgCnt ?: 0),	vtsProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtsHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
+			vtsInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
 

@@ -4960,6 +4960,51 @@ def sendFeedbackPage() {
 	setSettings(theSettingNameHer: [type: "capability.contactSensor", value: settingValueToSet])
 */
 
+
+/*
+		[
+		tsVrCnt:(state?.voiceRprtCnt ?: 0), tsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tsManModeChgCnt:(state?.tstatManModeChgCnt ?: 0),
+		tsProgModeChgCnt:(state?.progModeChgCnt ?: 0), tsManFanChgCnt:(state?.manFanChgCnt ?: 0),	tsProgFanChgCnt:(state?.progFanChgCnt ?: 0), tsHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
+		tsInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
+		]
+
+		[
+		vtsVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vtsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vtsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vtsManModeChgCnt:(state?.manModeChgCnt ?: 0),
+		vtsProgModeChgCnt:(state?.progModeChgCnt ?: 0), vtsManFanChgCnt:(state?.manFanChgCnt ?: 0),	vtsProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtsHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
+		vtsInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
+		]
+
+		[presHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]
+
+		[weatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
+
+		[protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
+
+		[
+		camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
+		camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
+		camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
+		]
+
+*/
+
+def getDeviceMetricCnts() {
+	def data = []
+	def devs = getAllChildDevices()
+	if(devs?.size() >= 1) {
+		devs?.each { dev ->
+			def mData = dev?.getMetricCntData()
+			if(mData != null) {
+				log.debug "mData: ${mData}"
+				mData?.each { md ->
+					data?.add("${md?.key}:${md?.value}")
+				}
+			}
+		}
+	}
+	log.debug "data: ${data}"
+	return null
+}
 /******************************************************************************
 *					Firebase Analytics Functions		  	  *
 *******************************************************************************/
@@ -4984,10 +5029,10 @@ def createInstallDataJson() {
 		def cltType = !mobileClientType ? "Not Configured" : mobileClientType?.toString()
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
-		def vRprtCnt = getVoiceRprtCnt() ?: 0
+		def devUseMetCnt = getDeviceMetricCnts()
 		def data = [
 			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
-			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "voiceRprtCnt":vRprtCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
+			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
 		]
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
 		return resultJson

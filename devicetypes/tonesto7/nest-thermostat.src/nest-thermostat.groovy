@@ -3077,9 +3077,10 @@ def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLo
 def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
-	return [tstatVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), tstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tstatManModeChgCnt:(state?.tstatManModeChgCnt ?: 0),
-			tstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), tstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	tstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
-			tstatInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
+	return 	[
+				tsVrCnt:(state?.voiceRprtCnt ?: 0), tsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tsManModeChgCnt:(state?.tstatManModeChgCnt ?: 0),
+				tsProgModeChgCnt:(state?.progModeChgCnt ?: 0), tsManFanChgCnt:(state?.manFanChgCnt ?: 0),	tsProgFanChgCnt:(state?.progFanChgCnt ?: 0), tsHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
+				tsInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
 			]
 }
 

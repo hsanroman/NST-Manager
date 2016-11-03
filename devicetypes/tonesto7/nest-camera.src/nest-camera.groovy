@@ -647,8 +647,9 @@ def incEventBtnTapCnt()		{ state?.eventBtnTapCnt = (state?.eventBtnTapCnt ? stat
 def incInfoBtnTapCnt()		{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
-	return [manStreamChgCnt:(state?.manStreamChgCnt ?: 0), progStreamChgCnt:(state?.progStreamChgCnt ?: 0), videoBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
-			imageBtnTapCnt:(state?.imageBtnTapCnt ?: 0), eventBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
+	return 	[
+			camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
+			camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
 			camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
