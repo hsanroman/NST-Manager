@@ -1211,11 +1211,11 @@ void changeSetpoint() {
 			switch (hvacMode) {
 				case "heat":
 					state.oldHeat = null
-					setHeatingSetpoint(curHeatpoint)
+					setHeatingSetpoint(curHeatpoint,true)
 					break
 				case "cool":
 					state.oldCool = null
-					setCoolingSetpoint(curCoolpoint)
+					setCoolingSetpoint(curCoolpoint,true)
 					break
 				case "auto":
 					if ( (state?.oldCool != null) && (state?.oldHeat == null) ) { md = "cool"}
@@ -1236,14 +1236,14 @@ void changeSetpoint() {
 								else { heatFirst = true }
 								if (heatFirst) {
 									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint)
+									setHeatingSetpoint(curHeatpoint,true)
 									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint)
+									setCoolingSetpoint(curCoolpoint,true)
 								} else {
 									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint)
+									setCoolingSetpoint(curCoolpoint,true)
 									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint)
+									setHeatingSetpoint(curHeatpoint,true)
 								}
 							}
 						}
@@ -1271,11 +1271,11 @@ void changeSetpoint() {
 }
 
 // Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
-void setHeatingSetpoint(temp) {
-	setHeatingSetpoint(temp.toDouble())
+void setHeatingSetpoint(temp, manChg=false) {
+	setHeatingSetpoint(temp.toDouble(), manChg)
 }
 
-void setHeatingSetpoint(Double reqtemp) {
+void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	try {
 		LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
@@ -1331,6 +1331,9 @@ void setHeatingSetpoint(Double reqtemp) {
 			Logger("Skipping heat change")
 			result = false
 		}
+		if(result) {
+			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
+		}
 	}
 	catch (ex) {
 		log.error "setHeatingSetpoint Exception:", ex
@@ -1338,11 +1341,11 @@ void setHeatingSetpoint(Double reqtemp) {
 	}
 }
 
-void setCoolingSetpoint(temp) {
-	setCoolingSetpoint( temp.toDouble() )
+void setCoolingSetpoint(temp, manChg=false) {
+	setCoolingSetpoint( temp.toDouble(), manChg)
 }
 
-void setCoolingSetpoint(Double reqtemp) {
+void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	try {
 		LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
@@ -1398,6 +1401,9 @@ void setCoolingSetpoint(Double reqtemp) {
 		} else {
 			Logger("Skipping cool change")
 			result = false
+		}
+		if(result) {
+			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 		}
 	}
 	catch (ex) {
@@ -1497,7 +1503,7 @@ def changeMode() {
 		def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
 		def nextMode = next(lastTriedMode)
 		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
-		setHvacMode(nextMode, true)
+		setHvacMode(nextMode)
 	}
 	catch (ex) {
 		log.error "changeMode Exception:", ex
@@ -1505,15 +1511,12 @@ def changeMode() {
 	}
 }
 
-def setHvacMode(nextMode, manChg=false) {
+def setHvacMode(nextMode) {
 	try {
 		LogAction("setHvacMode(${nextMode})")
 		if (nextMode in getHvacModes()) {
 			state.lastTriedMode = nextMode
-			"$nextMode"()
-			if(manChg) {
-				incManModeChgCnt()
-			} else { incProgModeChgCnt() }
+			"$nextMode"(true)
 		} else {
 			Logger("Invalid Mode '$nextMode'")
 		}
@@ -1570,39 +1573,44 @@ def doChangeMode() {
 	}
 }
 
-void off() {
+void off(manChg=false) {
 	LogAction("off()...", "trace")
 	hvacModeEvent("off")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void heat() {
+void heat(manChg=false) {
 	LogAction("heat()...", "trace")
 	hvacModeEvent("heat")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void emergencyHeat() {
+void emergencyHeat(manChg=false) {
 	LogAction("emergencyHeat()...", "trace")
 	Logger("Emergency Heat setting not allowed", "warn")
 }
 
-void cool() {
+void cool(manChg=false) {
 	LogAction("cool()...", "trace")
 	hvacModeEvent("cool")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void auto() {
+void auto(manChg=false) {
 	LogAction("auto()...", "trace")
 	hvacModeEvent("auto")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void eco() {
+void eco(manChg=false) {
 	LogAction("eco()...", "trace")
 	hvacModeEvent("eco")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
 void setThermostatMode(modeStr) {
@@ -1701,11 +1709,7 @@ void setThermostatFanMode(fanModeStr, manChg=false) {
 			Logger("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
 			break
 	}
-	if(manChg) {
-		incManFanChgCnt()
-	} else {
-		incProgFanChgCnt()
-	}
+	if(manChg) { incManFanChgCnt() } else { incProgFanChgCnt() }
 }
 
 
