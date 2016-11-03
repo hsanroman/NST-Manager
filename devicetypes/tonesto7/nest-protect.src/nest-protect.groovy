@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.0.1" }
+def devVer() { return "4.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -267,6 +267,7 @@ def processEvent(data) {
 			def results = eventData?.data
 			state?.useMilitaryTime = eventData?.mt ? true : false
             state.clientBl = eventData?.clientBl == true ? true : false
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
@@ -499,7 +500,7 @@ def testingStateEvent(test) {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"

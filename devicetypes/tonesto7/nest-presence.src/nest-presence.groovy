@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.1" }
+def devVer() { return "4.0.2" }
 
 // for the UI
 metadata {
@@ -123,6 +123,7 @@ def processEvent(data) {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			state?.useMilitaryTime = !eventData?.mt ? false : true
 			debugOnEvent(!eventData?.debug ? false : true)
@@ -296,7 +297,7 @@ def setHome() {
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"

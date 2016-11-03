@@ -39,12 +39,18 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.5" }
-def appVerDate() { "10-30-2016" }
+def appVersion() { "4.0.6" }
+def appVerDate() { "11-3-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.0 (October 28th, 2016):"
+	str += "V4.0.6 (November 3rd, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • Updated: Updated all device logging methods to honor the manager setting to disable appending app/device name to log entries"
+	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable (zone info, automation schedule info, device usage info)"
+	str += "\n • Updated: Added filters to the devices diagnostic data page to not show irrelavent data. "
+
+	str += "\n\nV4.0.0 (October 28th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • V4.0.0 Release"
 
@@ -60,6 +66,7 @@ preferences {
 	page(name: "mainPage")
 	page(name: "deviceSelectPage")
 	page(name: "reviewSetupPage")
+	page(name: "voiceRprtPrefPage")
 	page(name: "changeLogPage")
 	page(name: "prefsPage")
 	page(name: "infoPage")
@@ -166,7 +173,7 @@ def authPage() {
 	}
 	updateWebStuff(true)
 	setStateVar(true)
-	if(atomicState?.newSetupComplete) {
+	if(atomicState?.newSetupComplete && (atomicState?.appData?.updater?.versions?.app?.ver.toString() == appVersion())) {
 		def result = ((atomicState?.appData?.updater?.setupVersion && !atomicState?.setupVersion) || (atomicState?.setupVersion?.toInteger() < atomicState?.appData?.updater?.setupVersion?.toInteger())) ? true : false
 		if(result) { atomicState?.newSetupComplete = null }
 	}
@@ -339,6 +346,9 @@ def reviewSetupPage() {
 				href "devNamePage", title: "Customize Device Names?", description: (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Tap to Modify..." : "Tap to configure...", state: ((atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : null), image: getAppImg("device_name_icon.png")
 			}
 		}
+
+		showVoiceRprtPrefs()
+
 		section("Notifications:") {
 			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify..." : "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
 		}
@@ -385,6 +395,9 @@ def prefsPage() {
 						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
+
+		showVoiceRprtPrefs()
+
 		section("Notifications Options:") {
 			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify..." : "Tap to configure..."), state: (getAppNotifConfDesc() ? "complete" : null),
 					image: getAppImg("notification_icon.png")
@@ -397,7 +410,7 @@ def prefsPage() {
 		section ("Misc. Options:") {
 			input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
 			input ("disAppIcons", "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
-			input ("debugAppendAppName", "bool", title: "Append App Name to Log Entries?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("log.png"))
+			input ("debugAppendAppName", "bool", title: "Append App/Device Name to Log Entries?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("log.png"))
 			atomicState.needChildUpd = true
 		}
 		section("Manage Your Nest Login:") {
@@ -650,6 +663,35 @@ def getSafetyValuesDesc() {
 		}
 	}
 	return (str != "") ? "${str}" : null
+}
+
+def showVoiceRprtPrefs() {
+	if(atomicState?.thermostats) {
+		section("Thermostat Voice Reports:") {
+			href "voiceRprtPrefPage", title: "Voice Report Preferences", description: "", image: getAppImg("speech2_icon.png")
+		}
+	}
+}
+
+def voiceRprtPrefPage() {
+	return dynamicPage(name: "voiceRprtPrefPage", title: "Voice Report Preferences", install: false, uninstall: false) {
+		section("Report Options:") {
+			paragraph "These options allow you to configure how much info is included in the Thermostat voice reporting."
+			input ("vRprtIncSchedInfo", "bool", title: "Automation Schedule?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("automation_icon.png"))
+			input ("vRprtIncZoneInfo", "bool", title: "Current Zone Info?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("thermostat_icon.png"))
+			input ("vRprtIncUsageInfo", "bool", title: "Current Usage Info?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("usage_icon.png"))
+		}
+	}
+}
+
+def getVoiceRprtPrefs() {
+	return [
+		"allowVoiceUsageRprt":(atomicState?.appData?.reportPrefs?.disVoiceUsageRprt == true || settings?.disableVoiceUsageRprt == true) ? false : true,
+		"allowVoiceZoneRprt":(atomicState?.appData?.reportPrefs?.disVoiceZoneRprt == true || settings?.disableVoiceZoneRprt == true) ? false : true,
+		"vRprtSched":(settings?.vRprtIncSchedInfo == false ? false : true),
+		"vRprtZone":(settings?.vRprtIncZoneInfo == false ? false : true),
+		"vRprtUsage":(settings?.vRprtIncUsageInfo == false ? false : true)
+	]
 }
 
 def setMyLockId(val) {
@@ -950,32 +992,34 @@ def reqSchedInfoRprt(child) {
 
 			str += schedDesc ?: " There are No Schedules currently Active. "
 
-			if(tempSrcStr && curZoneTemp) {
-				def zTmp = curZoneTemp.toDouble()
-				str += "The ${tempSrcStr} has an ambient temperature of "
-				if(zTmp > adj_temp(78.0) && zTmp <= adj_temp(85.0)) { str += "a scorching " }
-				else if(zTmp > adj_temp(76.0) && zTmp <= adj_temp(80.0)) { str += "a roasting " }
-				else if(zTmp > adj_temp(74.0) && zTmp <= adj_temp(76.0)) { str += "a balmy " }
-				else if(zTmp >= adj_temp(68.0) && zTmp <= adj_temp(74.0)) { str += "a comfortable " }
-				else if(zTmp >= adj_temp(64.0) && zTmp <= adj_temp(68.0)) { str += "a breezy " }
-				else if(zTmp >= adj_temp(60.0) && zTmp < adj_temp(64.0)) { str += "a chilly " }
-				else if(zTmp < adj_temp(60.0)) { str += "a freezing " }
-				str += "${curZoneTemp}${tempScaleStr}"
-				str += curHum ? " with a humidity of ${curHum}%. " : ". "
-				if(zTmp < adj_temp(60.0)) { str += " (Make sure to dress warmly.  " }
+			if(getVoiceRprtPrefs()?.vRprtZone == true) {
+				if(tempSrcStr && curZoneTemp) {
+					def zTmp = curZoneTemp.toDouble()
+					str += "The ${tempSrcStr} has an ambient temperature of "
+					if(zTmp > adj_temp(78.0) && zTmp <= adj_temp(85.0)) { str += "a scorching " }
+					else if(zTmp > adj_temp(76.0) && zTmp <= adj_temp(80.0)) { str += "a roasting " }
+					else if(zTmp > adj_temp(74.0) && zTmp <= adj_temp(76.0)) { str += "a balmy " }
+					else if(zTmp >= adj_temp(68.0) && zTmp <= adj_temp(74.0)) { str += "a comfortable " }
+					else if(zTmp >= adj_temp(64.0) && zTmp <= adj_temp(68.0)) { str += "a breezy " }
+					else if(zTmp >= adj_temp(60.0) && zTmp < adj_temp(64.0)) { str += "a chilly " }
+					else if(zTmp < adj_temp(60.0)) { str += "a freezing " }
+					str += "${curZoneTemp}${tempScaleStr}"
+					str += curHum ? " with a humidity of ${curHum}%. " : ". "
+					if(zTmp < adj_temp(60.0)) { str += " (Make sure to dress warmly.  " }
+				}
 			}
 
 			str += " The HVAC is currently "
 			str += curOper == "idle" ? " sitting idle " : " ${curOper} "
 			str += " in ${curMode} mode"
-			str += curMode in ["auto", "heat", "cool"] ? " with " : ". "
+			str += curMode in ["auto", "heat", "cool", "eco"] ? " with " : ". "
 // TODO add if in ECO mode done
 			str += canHeat && curMode in ["auto", "heat"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
 			str += canHeat && canCool && curMode == "auto" ? " and " : ". "
 			str += canCool && curMode in ["auto", "cool"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
 
 			if (str != "") {
-				LogAction("reqSchedInfoRprt: Sending voice report for Zone info on (${tstat})", "info", true)
+				LogAction("reqSchedInfoRprt: Sending voice report for Zone info [$str] to (${tstat})", "info", false)
 				result = str
 			}
 		} else {
@@ -989,11 +1033,27 @@ def reqSchedInfoRprt(child) {
 	return result
 }
 
+def getVoiceRprtCnt() {
+	def cnt = 0
+	def devs = getAllChildDevices()
+	if(devs?.size() >= 1) {
+		devs?.each { dev ->
+			def rCnt = dev?.getDataByName("voiceRprtCnt")
+			if(rCnt != null) {
+				log.debug "rCnt: ${rCnt}"
+				cnt = cnt + rCnt.toInteger()
+			}
+		}
+	}
+	atomicState?.voiceRprtCnt = cnt
+	return cnt
+}
+
 def schedVoiceDesc(num, data) {
 	def str = ""
 	str += data?.lbl  ? " The automation schedule slot active is number ${num} and is labeled ${data?.lbl}. " : ""
 	str += data?.ctemp || data?.htemp ? "The schedules desired temps" : ""
-	str += data?.htemp ? " are a heat temp of ${data?.htemp} degrees" : ""
+	str += data?.htemp ? " are set to a heat temp of ${data?.htemp} degrees" : ""
 	str += data?.ctemp ? " and " : ". "
 	str += data?.ctemp ? " ${!data?.htemp ? "are" : ""} a cool temp of ${data?.ctemp} degrees. " : ""
 	//str += data?.m0 ? " This shedule has configured motion sensor setpoints. " : ""
@@ -1359,12 +1419,11 @@ def updateChildData(force = false) {
 		atomicState?.lastChildUpdDt = getDtNow()
 		def useMt = !useMilitaryTime ? false : true
 		def dbg = !childDebug ? false : true
+		def logPrefix = settings?.debugAppendAppName == true ? true : false
 		def nestTz = getNestTimeZone()?.toString()
 		def api = !apiIssues() ? false : true
 		def htmlInfo = getHtmlInfo()
-		def allowDbException = allowDbException()
-		def allowVoiceZoneRprt = allowVoiceZoneRprt()
-		def allowVoiceUsageRprt = allowVoiceUsageRprt()
+		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
 
 		def curWeatherTemp
@@ -1388,7 +1447,7 @@ def updateChildData(force = false) {
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestTstatVer()?.ver?.toString(), "allowVoiceUsageRprt":allowVoiceUsageRprt, "allowVoiceZoneRprt":allowVoiceZoneRprt, "clientBl":clientBl, curExtTemp:curWeatherTemp ]
+						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix ]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -1407,7 +1466,7 @@ def updateChildData(force = false) {
 				return true
 			}
 			else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
-				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true),
+				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true), "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl]
 				def oldProtData = atomicState?."oldProtData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
@@ -1427,7 +1486,7 @@ def updateChildData(force = false) {
 				return true
 			}
 			else if(atomicState?.cameras && atomicState?.deviceData?.cameras[devId]) {
-				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg,
+				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
@@ -1474,7 +1533,7 @@ def updateChildData(force = false) {
 					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather?.val)) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
 						LogTrace("UpdateChildData >> Weather id: ${devId}")
-						it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "apiIssues":api, "htmlInfo":htmlInfo, "allowDbException":allowDbException, "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(), "clientBl":clientBl])
+						it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo, "allowDbException":allowDbException, "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(), "clientBl":clientBl])
 					} else {
 						LogAction("VERSION RESTRICTION: Your Weather Device Version (v${atomicState?.weatDevVer}) is lower than the Required Minimum (v${minDevVersions()?.weather?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 						return false
@@ -1549,7 +1608,7 @@ def updateChildData(force = false) {
 
 					def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestvStatVer()?.ver?.toString(), "allowVoiceUsageRprt":allowVoiceUsageRprt, "allowVoiceZoneRprt":allowVoiceZoneRprt, "clientBl":clientBl, curExtTemp:curWeatherTemp ]
+						"latestVer":latestvStatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix ]
 
 					def oldTstatData = atomicState?."oldvStatData${devId}"
 					def tDataChecksum = generateMD5_A(tData.toString())
@@ -2697,13 +2756,7 @@ def getAskAlexaQueueEnabled() {
 	if(!parent) { return (atomicState?.appData?.aaPrefs?.enAaMsgQueue == true) ? true : false }
 }
 
-def allowVoiceUsageRprt() {
-	if(!parent) { return (atomicState?.appData?.reportPrefs?.disVoiceUsageRprt == true || settings?.disableVoiceUsageRprt == true) ? false : true }
-}
 
-def allowVoiceZoneRprt() {
-	if(!parent) { return (atomicState?.appData?.reportPrefs?.disVoiceZoneRprt == true || settings?.disableVoiceZoneRprt == true) ? false : true }
-}
 
 def isCodeUpdateAvailable(newVer, curVer, type) {
 	def result = false
@@ -3745,13 +3798,14 @@ def LogTrace(msg) {
 def LogAction(msg, type = "debug", showAlways = false) {
 	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
 	if(showAlways) { Logger(msg, type) }
-
 	else if(isDbg && !showAlways) { Logger(msg, type) }
 }
 
 def Logger(msg, type) {
 	if(msg && type) {
 		def labelstr = ""
+
+		/* Todo:  This may not update the child apps after being Modified */
 		if(!atomicState?.debugAppendAppName) {
 			atomicState?.debugAppendAppName = (parent ? parent?.settings?.debugAppendAppName : settings?.debugAppendAppName) ? true : false
 		}
@@ -4750,7 +4804,7 @@ def appParamsDataPage() {
 
 def managAppDataPage() {
 	dynamicPage(name: "managAppDataPage", refreshInterval:30, install: false) {
-		def noShow = ["accessToken", "authToken" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
+		def noShow = ["accessToken", "authToken", "cssData" /*, "curAlerts", "curAstronomy", "curForecast", "curWeather"*/]
 		section("SETTINGS DATA:") {
 			def str = ""
 			def cnt = 0
@@ -4816,11 +4870,13 @@ def childAppDataPage() {
 
 def childDevDataPage() {
 	dynamicPage(name: "childDevDataPage", refreshInterval:180, install: false) {
+		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTmpTable", "extTempTableYesterday", "historyStoreMap"]
 		getAllChildDevices().each { dev ->
 			def str = ""
 			section("${dev?.displayName.toString().capitalize()}:") {
 				str += "  ───────STATE DATA──────"
-				dev?.getDeviceStateData()?.sort().each { par ->
+				def data = dev?.getDeviceStateData()?.findAll { !(it.key in noShow) }
+				data?.sort().each { par ->
 					str += "\n\n• ${par?.key.toString()}: (${par?.value})"
 				}
 				str += "\n\n\n  ────SUPPORTED ATTRIBUTES────"
@@ -4928,9 +4984,10 @@ def createInstallDataJson() {
 		def cltType = !mobileClientType ? "Not Configured" : mobileClientType?.toString()
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
+		def vRprtCnt = getVoiceRprtCnt() ?: 0
 		def data = [
 			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
-			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
+			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "voiceRprtCnt":vRprtCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
 		]
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
 		return resultJson

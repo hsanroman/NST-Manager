@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.5"}
+def devVer() { return "4.0.6"}
 
 // for the UI
 metadata {
@@ -342,6 +342,7 @@ def processEvent(data) {
 		if(eventData) {
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			state.clientBl = eventData?.clientBl == true ? true : false
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.curExtTemp = eventData?.curExtTemp
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData.tz : null
@@ -372,8 +373,7 @@ def processEvent(data) {
 			if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
 			if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
 			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
-			state.allowVoiceUsageRprt = eventData?.allowVoiceUsageRprt == false ? false : true
-			state.allowVoiceZoneRprt = eventData?.allowVoiceZoneRprt == false ? false : true
+			state.voiceReportPrefs = eventData?.vReportPrefs
 			def hvacMode = state?.hvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
@@ -888,7 +888,7 @@ def nestReportStatusEvent() {
 	def val = currentNestReportData?.toString()
 	def rprtData = getNestMgrReport()?.toString()
 	if(!val || (val && rprtData && !val.equals(rprtData))) {
-		Logger("UPDATED | Report Data has been updated", "info")
+		Logger("UPDATED | Current Nest Report Data has been updated", "info")
 		sendEvent(name: 'nestReportData', value: rprtData, descriptionText: "Nest Report Data has been updated...", display: false, displayed: false)
 	}
 }
@@ -1696,7 +1696,7 @@ void setThermostatFanMode(fanModeStr) {
 ***************************************************************************/
 
 void Logger(msg, logType = "debug") {
-	def smsg = "${device.displayName}: ${msg}"
+	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
 			log.trace "${smsg}"
@@ -3019,35 +3019,48 @@ private def virtDevName()  	{ return virtType() ? "Virtual " : "" }
 def getNestMgrReport() {
 	//log.trace "getNestMgrReport()..."
 	def str = ""
-	if(state?.allowVoiceZoneRprt || state?.allowVoiceUsageRprt) {
+	if(state?.voiceReportPrefs?.allowVoiceZoneRprt || state?.voiceReportPrefs?.allowVoiceUsageRprt) {
 		str += "Here is the up to date ${cleanDevLabel()} Report. "
 
-		if(state?.allowVoiceZoneRprt == false) {
-			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
-			str += " Zone status voice reports have been disabled by Nest manager app preferences"
-		}
-		else {
-			def schRprtDesc = parent?.reqSchedInfoRprt(this)
-			if(schRprtDesc) {
-				str += schRprtDesc.toString() + "  "
-				str += " Now let's move on to usage.  "
+		if(state?.voiceReportPrefs?.vRprtSched == true) {
+			if(state?.voiceReportPrefs?.allowVoiceZoneRprt == false) {
+				Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
+				str += " automation schedule voice reports have been disabled by Nest manager app preferences. Please open your manager app and change the preferences and try again. "
+			}
+			else {
+				def schRprtDesc = parent?.reqSchedInfoRprt(this)
+				if(schRprtDesc) {
+					str += schRprtDesc.toString() + "  "
+					str += " Now let's move on to usage.  "
+				}
 			}
 		}
-		if(state?.allowVoiceUsageRprt == false) {
-			Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
-			str += "Zone status voice reports have been disabled by Nest manager app preferences"
-		}
-		else {
-			//str += " and Now we move on to today's Usage.  "
-			str += getUsageVoiceReport("runtimeToday")
+
+		if(state?.voiceReportPrefs?.vRprtUsage == true) {
+			if(state?.voiceReportPrefs?.allowVoiceUsageRprt == false) {
+				Logger("getNestMgrReport: Zone status voice reports have been disabled by Nest manager app preferences", "info")
+				str += "Zone status voice reports have been disabled by Nest manager app preferences. Please open your manager app and change the preferences and try again. "
+			} else {
+				str += getUsageVoiceReport("runtimeToday")
+			}
 		}
 	} else {
-		str += "All voice reports have been disabled by Nest Manager app preferences"
+		str += "All voice reports have been disabled by Nest Manager app preferences. Please open your manager app and change the preferences and try again. "
 		return str
 	}
 	log.trace "NestMgrReport Response: ${str}"
+	incVoiceRprtCnt()
 	return str
 }
+
+def incVoiceRprtCnt() {
+	def rCnt = state?.voiceRprtCnt ?: 0
+	rCnt = rCnt?.toInteger()+1
+	//Logger("Voice Report Count: $rCnt", "info")
+	state?.voiceRprtCnt = rCnt?.toInteger()
+}
+
+def voiceRprtCnt() { return state?.voiceRprtCnt ?: 0 }
 
 def getUsageVoiceReport(type) {
 	switch(type) {
@@ -3150,7 +3163,7 @@ def generateUsageText(timeType, timeMap) {
 		}
 	}
 	str += " That is all for the current nest report. Check back later and have a wonderful day..."
-	log.debug "generateUsageText: $str"
+	//log.debug "generateUsageText: $str"
 	return str
 }
 
