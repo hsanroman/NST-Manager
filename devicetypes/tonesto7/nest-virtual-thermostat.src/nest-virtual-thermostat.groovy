@@ -3075,7 +3075,6 @@ def incVoiceRprtCnt() 	{ state?.voiceRprtCnt = (state?.voiceRprtCnt ? state?.voi
 def incManTmpChgCnt() 	{ state?.manTmpChgCnt = (state?.manTmpChgCnt ? state?.manTmpChgCnt.toInteger()+1 : 1) }
 def incProgTmpChgCnt() 	{ state?.progTmpChgCnt = (state?.progTmpChgCnt ? state?.progTmpChgCnt.toInteger()+1 : 1) }
 def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
-def incManModeChgCnt() 	{ state?.manModeChgCnt = (state?.manModeChgCnt ? state?.manModeChgCnt.toInteger()+1 : 1) }
 def incProgModeChgCnt() { state?.progModeChgCnt = (state?.progModeChgCnt ? state?.progModeChgCnt.toInteger()+1 : 1) }
 def incManFanChgCnt() 	{ state?.manFanChgCnt = (state?.manFanChgCnt ? state?.manFanChgCnt.toInteger()+1 : 1) }
 def incProgFanChgCnt() 	{ state?.progFanChgCnt = (state?.progFanChgCnt ? state?.progFanChgCnt.toInteger()+1 : 1) }

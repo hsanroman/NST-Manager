@@ -509,18 +509,18 @@ def getPublicVideoId() {
 def chgStreaming() {
 	def cur = latestValue("isStreaming").toString()
 	if(cur == "on" || cur == "unavailable" || !cur) {
-		streamingOn()
+		streamingOn(true)
 	} else {
-		streamingOff()
+		streamingOff(true)
 	}
 }
 
-def streamingOn(isManu=false) {
+def streamingOn(manChg=false) {
 	try {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
 			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
-			if(isManu) { incManStreamChgCnt() }
+			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
 
@@ -530,12 +530,12 @@ def streamingOn(isManu=false) {
 	}
 }
 
-def streamingOff() {
+def streamingOff(manChg=false) {
 	try {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
 			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
-			if(isManu) { incManStreamChgCnt() }
+			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
 	} catch (ex) {
