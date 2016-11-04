@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.0.2" }
+def devVer() { return "4.0.3" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -547,7 +547,7 @@ def exceptionDataHandler(msg, methodName) {
 def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
 def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 def getMetricCntData() {
-	return [protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
+	return [protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]//, protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
 }
 
 def getCarbonImg() {
