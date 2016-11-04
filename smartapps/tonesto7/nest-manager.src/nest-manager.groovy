@@ -39,12 +39,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.6" }
-def appVerDate() { "11-3-2016" }
+def appVersion() { "4.0.7" }
+def appVerDate() { "11-4-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.6 (November 3rd, 2016):"
+	str += "V4.0.7 (November 4th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Updated all device logging methods to honor the manager setting to disable appending app/device name to log entries"
 	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable (zone info, automation schedule info, device usage info)"
@@ -4960,50 +4960,32 @@ def sendFeedbackPage() {
 	setSettings(theSettingNameHer: [type: "capability.contactSensor", value: settingValueToSet])
 */
 
-
-/*
-		[
-		tsVrCnt:(state?.voiceRprtCnt ?: 0), tsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tsManModeChgCnt:(state?.tstatManModeChgCnt ?: 0),
-		tsProgModeChgCnt:(state?.progModeChgCnt ?: 0), tsManFanChgCnt:(state?.manFanChgCnt ?: 0),	tsProgFanChgCnt:(state?.progFanChgCnt ?: 0), tsHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
-		tsInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
-		]
-
-		[
-		vtsVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vtsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vtsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vtsManModeChgCnt:(state?.manModeChgCnt ?: 0),
-		vtsProgModeChgCnt:(state?.progModeChgCnt ?: 0), vtsManFanChgCnt:(state?.manFanChgCnt ?: 0),	vtsProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtsHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
-		vtsInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
-		]
-
-		[presHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]
-
-		[weatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
-
-		[protHtmlLoadCnt:(state?.htmlLoadCnt ?: 0), protInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)]
-
-		[
-		camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
-		camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
-		camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
-		]
-
-*/
-
 def getDeviceMetricCnts() {
-	def data = []
+	def data = [:]
 	def devs = getAllChildDevices()
 	if(devs?.size() >= 1) {
 		devs?.each { dev ->
 			def mData = dev?.getMetricCntData()
 			if(mData != null) {
-				log.debug "mData: ${mData}"
+				//log.debug "mData: ${mData}"
 				mData?.each { md ->
-					data?.add("${md?.key}:${md?.value}")
+					def objKey = md?.key.toString()
+					def objVal = md?.value.toInteger()
+					if(data?.containsKey("${objKey}")) {
+						def newVal = 0
+						def prevVal = data?.get("${objKey}")
+						newVal = prevVal?.toInteger()+objVal
+						//log.debug "$objKey Data: [prevVal: $prevVal | objVal: $objVal | newVal: $newVal]"
+						data << ["${objKey}":newVal]
+					} else {
+						data << ["${objKey}":objVal]
+					}
 				}
 			}
 		}
 	}
 	log.debug "data: ${data}"
-	return null
+	return data
 }
 /******************************************************************************
 *					Firebase Analytics Functions		  	  *

@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.0.4" }
+def devVer() { return "2.0.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -648,9 +648,9 @@ def incInfoBtnTapCnt()		{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.
 
 def getMetricCntData() {
 	return 	[
-			camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0),
-			camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0),
-			camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
+			camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadedCnt ?: 0)//,
+			//camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0), camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0),
+			//camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
 

@@ -711,6 +711,27 @@ def getInfoHtml() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<style>
+                .modal {
+                    display: none; /* Hidden by default */
+                    position: fixed; /* Stay in place */
+                    z-index: 1; /* Sit on top */
+                    left: 0;
+                    top: 0;
+                    width: 100%; /* Full width */
+                    height: 100%; /* Full height */
+                    overflow: auto; /* Enable scroll if needed */
+                    background-color: rgb(0,0,0); /* Fallback color */
+                    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+                }
+                .modal-content {
+                    background-color: #fefefe;
+                    margin: 5% auto;
+                    padding: 20px;
+                    border: 1px solid #888;
+                    width: 80%;
+                }
+              </style>
 			</head>
 			<body>
 			  ${clientBl}
@@ -740,12 +761,10 @@ def getInfoHtml() {
 			  </table>
 
 			  <p class="centerText">
-				<a href="#openModal" class="button">More info</a>
+				 <button id="myBtn" class="button">More Info</button>
 			  </p>
-			  <div id="openModal" class="topModal">
-			  	${incInfoBtnTapCnt()}
-				<div>
-				  <a href="#close" title="Close" class="close">X</a>
+			  	<div id="myModal" class="modal">
+				 <div class="modal-content">
 				  <table>
 					<tr>
 					  <th>Firmware Version</th>
@@ -770,11 +789,31 @@ def getInfoHtml() {
 				  </table>
 				</div>
 			  </div>
-			  </div>
+			  <script>
+                    // Get the modal
+                    var modal = document.getElementById('myModal');
+
+                    // Get the button that opens the modal
+                    var btn = document.getElementById("myBtn");
+
+                    // When the user clicks on the button, open the modal
+                    btn.onclick = function() {
+                        modal.style.display = "block";
+                    }
+    				modal.onclick = function() {
+                        modal.style.display = "none";
+                    }
+                    // When the user clicks anywhere outside of the modal, close it
+                    window.onclick = function(event) {
+                        if (event.target == modal) {
+                            modal.style.display = "none";
+                        }
+                    }
+             </script>
 			</body>
 		</html>
 		"""
-		incProtHtmlLoadCnt()
+		incHtmlLoadCnt()
 		render contentType: "text/html", data: html, status: 200
 	}
 	catch (ex) {

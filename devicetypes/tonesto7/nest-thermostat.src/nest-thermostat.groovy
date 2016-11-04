@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.6"}
+def devVer() { return "4.0.7"}
 
 // for the UI
 metadata {
@@ -3082,9 +3082,9 @@ def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.i
 
 def getMetricCntData() {
 	return 	[
-				tsVrCnt:(state?.voiceRprtCnt ?: 0), tsManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tsProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tsManModeChgCnt:(state?.tstatManModeChgCnt ?: 0),
-				tsProgModeChgCnt:(state?.progModeChgCnt ?: 0), tsManFanChgCnt:(state?.manFanChgCnt ?: 0),	tsProgFanChgCnt:(state?.progFanChgCnt ?: 0), tsHtmlLoadCnt:(state?.tstatHtmlLoadCnt ?: 0),
-				tsInfoBtnTapCnt:(state?.tstatInfoBtnTapCnt ?: 0)
+			tstatVoiceRptCnt:(state?.voiceRprtCnt ?: 0), tstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
+			tstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), tstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	tstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
+			//tstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
 
