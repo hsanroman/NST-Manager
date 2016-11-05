@@ -158,11 +158,11 @@ metadata {
 			state("eco",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/eco_icon.png")
 		}
 		standardTile("thermostatMode", "device.nestThermostatMode", width:2, height:2, decoration: "flat") {
-			state("off", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
-			state("heat", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
-			state("cool", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
-			state("auto", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
-			state("eco", 	action:"changeMode", 	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
+			state("off", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+			state("heat", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+			state("cool", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+			state("auto", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+			state("eco", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
 			state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 		}
@@ -350,7 +350,7 @@ def processEvent(data) {
 			state.nestTimeZone = !location?.timeZone ? eventData.tz : null
 			debugOnEvent(eventData?.debug ? true : false)
 			tempUnitEvent(getTemperatureScale())
-			if(eventData?.data?.is_locked) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
+			if(eventData?.data?.is_locked != null) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
@@ -629,11 +629,12 @@ def tempUnitEvent(unit) {
 	} else { LogAction("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
 }
 
+// TODO NOT USED
 def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(!temp.equals(rTargetTemp.toString())) {
-		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		Logger("UPDATED | targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 }
@@ -745,9 +746,10 @@ def hvacModeEvent(mode) {
 	def oldnestmode = state?.nestHvac_mode
 	newMode = (mode == "heat-cool") ? "auto" : mode
 	state?.nestHvac_mode = newMode
-	if(!oldnestmode || newMode != oldnestmode) {
+	if(!oldnestmode.equals(newMode)) {
+		Logger("UPDATED | NEST Hvac Mode is (${newMode.toString().capitalize()}) | Original State: (${oldnestmode.toString().capitalize()})")
 		sendEvent(name: "nestThermostatMode", value: newMode, descriptionText: "Nest HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
-	}
+	} else { LogAction("NEST Hvac Mode is (${newMode}) | Original State: (${oldnestmode})") }
 }
 
 def fanModeEvent(fanActive) {
@@ -1157,7 +1159,6 @@ def formatDt(dt) {
 	return tf.format(dt)
 }
 
-
 //Returns time differences is seconds
 def GetTimeDiffSeconds(lastDate) {
 	if(lastDate?.contains("dtNow")) { return 10000 }
@@ -1210,11 +1211,11 @@ void changeSetpoint() {
 			switch (hvacMode) {
 				case "heat":
 					state.oldHeat = null
-					setHeatingSetpoint(curHeatpoint)
+					setHeatingSetpoint(curHeatpoint,true)
 					break
 				case "cool":
 					state.oldCool = null
-					setCoolingSetpoint(curCoolpoint)
+					setCoolingSetpoint(curCoolpoint,true)
 					break
 				case "auto":
 					if ( (state?.oldCool != null) && (state?.oldHeat == null) ) { md = "cool"}
@@ -1235,14 +1236,14 @@ void changeSetpoint() {
 								else { heatFirst = true }
 								if (heatFirst) {
 									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint)
+									setHeatingSetpoint(curHeatpoint,true)
 									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint)
+									setCoolingSetpoint(curCoolpoint,true)
 								} else {
 									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint)
+									setCoolingSetpoint(curCoolpoint,true)
 									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint)
+									setHeatingSetpoint(curHeatpoint,true)
 								}
 							}
 						}
@@ -1270,11 +1271,11 @@ void changeSetpoint() {
 }
 
 // Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
-void setHeatingSetpoint(temp) {
-	setHeatingSetpoint(temp.toDouble())
+void setHeatingSetpoint(temp, manChg=false) {
+	setHeatingSetpoint(temp.toDouble(), manChg)
 }
 
-void setHeatingSetpoint(Double reqtemp) {
+void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	try {
 		LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
@@ -1330,6 +1331,9 @@ void setHeatingSetpoint(Double reqtemp) {
 			Logger("Skipping heat change")
 			result = false
 		}
+		if(result) {
+			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
+		}
 	}
 	catch (ex) {
 		log.error "setHeatingSetpoint Exception:", ex
@@ -1337,11 +1341,11 @@ void setHeatingSetpoint(Double reqtemp) {
 	}
 }
 
-void setCoolingSetpoint(temp) {
-	setCoolingSetpoint( temp.toDouble() )
+void setCoolingSetpoint(temp, manChg=false) {
+	setCoolingSetpoint( temp.toDouble(), manChg)
 }
 
-void setCoolingSetpoint(Double reqtemp) {
+void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	try {
 		LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
@@ -1397,6 +1401,9 @@ void setCoolingSetpoint(Double reqtemp) {
 		} else {
 			Logger("Skipping cool change")
 			result = false
+		}
+		if(result) {
+			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 		}
 	}
 	catch (ex) {
@@ -1495,8 +1502,8 @@ def changeMode() {
 		def modeOrder = getHvacModes()
 		def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
 		def nextMode = next(lastTriedMode)
-		LogAction("changeMode: [currentMode: ${currentMode} | lastTriedMode: ${lastTriedMode} | modeOrder: ${modeOrder} | nextMode: ${nextMode}]", "trace")
-		setHvacMode(nextMode, true)
+		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
+		setHvacMode(nextMode)
 	}
 	catch (ex) {
 		log.error "changeMode Exception:", ex
@@ -1504,15 +1511,12 @@ def changeMode() {
 	}
 }
 
-def setHvacMode(nextMode, manChg=false) {
+def setHvacMode(nextMode) {
 	try {
 		LogAction("setHvacMode(${nextMode})")
 		if (nextMode in getHvacModes()) {
 			state.lastTriedMode = nextMode
-			"$nextMode"()
-			if(manChg) {
-				incManModeChgCnt()
-			} else { incProgModeChgCnt() }
+			"$nextMode"(true)
 		} else {
 			Logger("Invalid Mode '$nextMode'")
 		}
@@ -1555,11 +1559,11 @@ def doChangeMode() {
 				}
 				break
 			default:
-				Logger("doChangeMode: Received an Invalid Mode Request: (${currentMode})", "warn")
+				Logger("doChangeMode Received an Invalid Request: ${currentMode}", "warn")
 				break
 		}
 		if (errflag) {
-			Logger("doChangeMode: The call to change mode failed for: (${currentMode})", "warn")
+			Logger("doChangeMode call to change mode failed: ${currentMode}", "warn")
 			refresh()
 		}
 	}
@@ -1569,39 +1573,44 @@ def doChangeMode() {
 	}
 }
 
-void off() {
+void off(manChg=false) {
 	LogAction("off()...", "trace")
 	hvacModeEvent("off")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void heat() {
+void heat(manChg=false) {
 	LogAction("heat()...", "trace")
 	hvacModeEvent("heat")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void emergencyHeat() {
+void emergencyHeat(manChg=false) {
 	LogAction("emergencyHeat()...", "trace")
 	Logger("Emergency Heat setting not allowed", "warn")
 }
 
-void cool() {
+void cool(manChg=false) {
 	LogAction("cool()...", "trace")
 	hvacModeEvent("cool")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void auto() {
+void auto(manChg=false) {
 	LogAction("auto()...", "trace")
 	hvacModeEvent("auto")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
-void eco() {
+void eco(manChg=false) {
 	LogAction("eco()...", "trace")
 	hvacModeEvent("eco")
 	doChangeMode()
+	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
 void setThermostatMode(modeStr) {
@@ -1700,11 +1709,7 @@ void setThermostatFanMode(fanModeStr, manChg=false) {
 			Logger("setThermostatFanMode Received an Invalid Request: ${fanModeStr}", "warn")
 			break
 	}
-	if(manChg) {
-		incManFanChgCnt()
-	} else {
-		incProgFanChgCnt()
-	}
+	if(manChg) { incManFanChgCnt() } else { incProgFanChgCnt() }
 }
 
 
@@ -2640,15 +2645,15 @@ def addNewData() {
 
 def addValue(table, hr, mins, val) {
 	def newTable = table
-        if(table?.size() > 2) {
-                def last = table?.last()[2]
-                def secondtolast = table[-2][2]
-                if(val == last && val == secondtolast) {
-                        newTable = table?.take(table.size() - 1)
-                }
-        }
-        newTable?.add([hr, mins, val])
-        return newTable
+		if(table?.size() > 2) {
+				def last = table?.last()[2]
+				def secondtolast = table[-2][2]
+				if(val == last && val == secondtolast) {
+						newTable = table?.take(table.size() - 1)
+				}
+		}
+		newTable?.add([hr, mins, val])
+		return newTable
 }
 
 def getIntListAvg(itemList) {
@@ -2778,15 +2783,15 @@ def getGraphHTML() {
 			  </p>
 
 			  <div id="openModal" class="topModal">
-			    ${incInfoBtnTapCnt()}
+			  	${incInfoBtnTapCnt()}
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
-				  	<tbody>
+					  <tbody>
 					  <tr>
-					    <th>Firmware Version</th>
-					    <th>Debug</th>
-					    <th>Device Type</th>
+						<th>Firmware Version</th>
+						<th>Debug</th>
+						<th>Device Type</th>
 					  </tr>
 					  <td>${state?.softwareVer.toString()}</td>
 					  <td>${state?.debugStatus}</td>
@@ -3077,9 +3082,9 @@ def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.i
 
 def getMetricCntData() {
 	return 	[
-			vtstatVoiceRprtCnt:(state?.voiceRprtCnt ?: 0), vtstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), vtstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), vtstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
-			vtstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), vtstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	vtstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), vtstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
-			//vtstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
+			tstatVoiceRptCnt:(state?.voiceRprtCnt ?: 0), tstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
+			tstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), tstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	tstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
+			//tstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
 			]
 }
 
@@ -3093,7 +3098,7 @@ def getUsageVoiceReport(type) {
 			break
 		case "runtimeMonth":
 			return generateUsageText("month" ,getMonthsUsage())
- 			break
+			 break
 		default:
 			return "I'm sorry but the report type received was not valid"
 			break
