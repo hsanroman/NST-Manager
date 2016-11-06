@@ -8264,6 +8264,8 @@ def checkNestMode() {
 			}
 			else {
 				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
+				atomicState.lastStMode = curStMode
+				atomicState.lastPresSenAway = away
 			}
 			storeExecutionHistory((now() - execTime), "checkNestMode")
 		}
