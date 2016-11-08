@@ -1419,7 +1419,7 @@ def updateChildData(force = false) {
 		atomicState?.lastChildUpdDt = getDtNow()
 		def useMt = !useMilitaryTime ? false : true
 		def dbg = !childDebug ? false : true
-		def logPrefix = settings?.debugAppendAppName == true ? true : false
+		def logNamePrefix = settings?.debugAppendAppName == true ? true : false
 		def nestTz = getNestTimeZone()?.toString()
 		def api = !apiIssues() ? false : true
 		def htmlInfo = getHtmlInfo()
