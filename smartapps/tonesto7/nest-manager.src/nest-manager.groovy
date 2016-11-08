@@ -1419,7 +1419,7 @@ def updateChildData(force = false) {
 		atomicState?.lastChildUpdDt = getDtNow()
 		def useMt = !useMilitaryTime ? false : true
 		def dbg = !childDebug ? false : true
-		def logPrefix = settings?.debugAppendAppName == true ? true : false
+		def logNamePrefix = settings?.debugAppendAppName == true ? true : false
 		def nestTz = getNestTimeZone()?.toString()
 		def api = !apiIssues() ? false : true
 		def htmlInfo = getHtmlInfo()
@@ -1504,7 +1504,7 @@ def updateChildData(force = false) {
 				return true
 			}
 			else if(atomicState?.presDevice && devId == getNestPresId()) {
-				def pData = ["debug":dbg, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestPresVer()?.ver?.toString(), "clientBl":clientBl]
+				def pData = ["debug":dbg, "logPrefix":logNamePrefix, "tz":nestTz, "mt":useMt, "pres":locationPresence(), "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestPresVer()?.ver?.toString(), "clientBl":clientBl]
 				def oldPresData = atomicState?."oldPresData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldPresData${devId}" = pDataChecksum
@@ -8264,6 +8264,8 @@ def checkNestMode() {
 			}
 			else {
 				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
+				atomicState.lastStMode = curStMode
+				atomicState.lastPresSenAway = away
 			}
 			storeExecutionHistory((now() - execTime), "checkNestMode")
 		}
