@@ -39,16 +39,19 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.7" }
-def appVerDate() { "11-4-2016" }
+def appVersion() { "4.0.8" }
+def appVerDate() { "11-10-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.7 (November 4th, 2016):"
+	str += "V4.0.8 (November 10th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Updated all device logging methods to honor the manager setting to disable appending app/device name to log entries"
+	str += "\n • Updated: Updated to support all of the lastest Nest Api features like time-to-temp and Eco mode."
+	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
 	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable (zone info, automation schedule info, device usage info)"
-	str += "\n • Updated: Added filters to the devices diagnostic data page to not show irrelavent data. "
+	str += "\n • Added: Thermostat device graphs updated to display external temps and hvac runtime."
+	str += "\n • Updated: Added filters to the devices diagnostic data page to not show irrelavent data."
+	str += "\n • Updated: Lot's of Bugfixes"
 
 	str += "\n\nV4.0.0 (October 28th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -436,14 +439,9 @@ def automationsPage() {
 		}
 		section("") {
 			app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation...", image: getAppImg("automation_icon.png"))
-			/*
-				def rText = "NOTICE:\nAutomations is still in BETA!!!\n" +
-					"We are not responsible for any damages caused by using this SmartApp.\n\n	       USE AT YOUR OWN RISK!!!"
-					paragraph "${rText}"//, required: true, state: null
-			*/
 		}
 		if(autoAppInst) {
-			section("View Details:") {
+			section("Automation Details:") {
 				def schEn = getChildApps()?.findAll { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState()) }
 				if(schEn?.size()) {
 					href "automationSchedulePage", title: "View Automation Schedule(s)", description: "", image: getAppImg("schedule_icon.png")
@@ -470,6 +468,16 @@ def automationsPage() {
 
 def automationSchedulePage() {
 	dynamicPage(name: "automationSchedulePage", title: "View Schedule Data..", uninstall: false) {
+		section("SmartThings Location:") {
+			def str = ""
+			def tz = TimeZone.getTimeZone(location.timeZone.ID)
+			def sunsetT = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunsetTime')).format('h:mm a', tz)
+			def sunriseT = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunriseTime')).format('h:mm a', tz)
+			str += "Current Mode: ${location?.mode}"
+			str += "\nSunrise: ${sunriseT}"
+			str += "\nSunset: ${sunsetT}"
+			paragraph "$str", state: "complete"
+		}
 		def schMap = []
 		getChildApps()?.each {
 			def actSch = it?.getScheduleDesc() ?: null
