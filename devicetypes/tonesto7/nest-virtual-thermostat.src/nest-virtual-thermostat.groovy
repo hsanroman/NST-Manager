@@ -2723,12 +2723,12 @@ def getGraphHTML() {
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def chartHtml = (
-				state.temperatureTable?.size() > 0 &&
-				state.operatingStateTable?.size() > 0 &&
-				state.temperatureTableYesterday?.size() > 0 &&
-				state.humidityTable?.size() > 0 &&
-				state.coolSetpointTable?.size() > 0 &&
-				state.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
+				state?.temperatureTable?.size() > 0 &&
+				state?.operatingStateTable?.size() > 0 &&
+				state?.temperatureTableYesterday?.size() > 0 &&
+				state?.humidityTable?.size() > 0 &&
+				state?.coolSetpointTable?.size() > 0 &&
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
 
 		def html = """
 		<!DOCTYPE html>

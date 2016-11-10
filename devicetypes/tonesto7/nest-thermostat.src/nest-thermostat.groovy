@@ -2719,16 +2719,16 @@ def getGraphHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
-		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
+		def updateAvail = !state?.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def chartHtml = (
-				state.temperatureTable?.size() > 0 &&
-				state.operatingStateTable?.size() > 0 &&
-				state.temperatureTableYesterday?.size() > 0 &&
-				state.humidityTable?.size() > 0 &&
-				state.coolSetpointTable?.size() > 0 &&
-				state.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
+				state?.temperatureTable?.size() > 0 &&
+				state?.operatingStateTable?.size() > 0 &&
+				state?.temperatureTableYesterday?.size() > 0 &&
+				state?.humidityTable?.size() > 0 &&
+				state?.coolSetpointTable?.size() > 0 &&
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
 
 		def html = """
 		<!DOCTYPE html>
