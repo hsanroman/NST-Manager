@@ -39,12 +39,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.8" }
-def appVerDate() { "11-10-2016" }
+def appVersion() { "4.0.9" }
+def appVerDate() { "11-11-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.8 (November 10th, 2016):"
+	str += "V4.0.9 (November 11th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Updated to support all of the lastest Nest Api features like time-to-temp and Eco mode."
 	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
@@ -5317,7 +5317,7 @@ def mainAutoPage(params) {
 
 // parent only method
 def automationNestModeEnabled(val) {
-LogAction("automationNestModeEnabled: val: $val", "info", true)
+LogAction("automationNestModeEnabled: val: $val", "info", false)
 	if(val == null) {
 		return atomicState?.automationNestModeEnabled ?: false
 	} else {
@@ -5339,8 +5339,7 @@ def initAutoApp() {
 	automationsInst()
 
 	if(autoType == "schMot" && isSchMotConfigured()) {
-		atomicState.scheduleList = [ 1,2,3,4 ]
-		def schedList = atomicState.scheduleList
+		def schedList = getScheduleList()
 		def timersActive = false
 		def sLbl
 		def cnt = 1
@@ -5641,7 +5640,7 @@ def subscribeToEvents() {
 				subscribe(schMotTstat, "thermostatFanMode", automationTstatFanEvt)
 			}
 
-			def schedList = atomicState?.scheduleList
+			def schedList = getScheduleList()
 			def sLbl
 			def cnt = 1
 			def swlist = []
@@ -6095,7 +6094,7 @@ def automationMotionEvt(evt) {
 
 		def mySched = getCurrentSchedule()
 
-		def schedList = atomicState?.scheduleList
+		def schedList = getScheduleList()
 		for (cnt in schedList) {
 			sLbl = "schMot_${cnt}_"
 			def act = settings["${sLbl}SchedActive"]
@@ -8447,7 +8446,7 @@ def getCurrentSchedule() {
 	def noSched = false
 	def mySched
 
-	def schedList = atomicState?.scheduleList
+	def schedList = getScheduleList()
 	def res1
 	def ccnt = 1
 	for (cnt in schedList) {
@@ -9581,10 +9580,15 @@ def schMotSchedulePage(params) {
 	}
 }
 
+def getScheduleList() {
+	def maxCnt = atomicState?.appData?.schedules?.count ? atomicState?.appData?.schedules?.count.toInteger() : 4
+	def sList = 1..maxCnt
+	return sList
+}
+
 def showUpdateSchedule(sNum=null,hideStr=null) {
 	updateScheduleStateMap()
-	def schedList = atomicState?.scheduleList  // setting in initAutoApp adjust # of schedule slots
-	if(schedList == null) { atomicState.scheduleList = [ 1,2,3,4 ]; schedList = atomicState?.scheduleList }
+	def schedList = getScheduleList()  // setting in initAutoApp adjust # of schedule slots
 	def lact
 	def act = 1
 	def sLbl
@@ -9891,7 +9895,7 @@ def updateScheduleStateMap() {
 		def actSchedules = null
 		def numAct = 0
 		actSchedules = [:]
-		atomicState?.scheduleList?.each { scdNum ->
+		getScheduleList()?.each { scdNum ->
 			def sLbl = "schMot_${scdNum}_"
 			def newScd = []
 			def schActive = settings["${sLbl}SchedActive"]
