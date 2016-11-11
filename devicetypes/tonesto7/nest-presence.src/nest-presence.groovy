@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.2" }
+def devVer() { return "4.0.3" }
 
 // for the UI
 metadata {
@@ -125,6 +125,8 @@ def processEvent(data) {
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state?.useMilitaryTime = !eventData?.mt ? false : true
 			debugOnEvent(!eventData?.debug ? false : true)
 			presenceEvent(eventData?.pres)

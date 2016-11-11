@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.7"}
+def devVer() { return "4.0.8"}
 
 // for the UI
 metadata {
@@ -344,6 +344,7 @@ def processEvent(data) {
 		if(eventData) {
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.curExtTemp = eventData?.curExtTemp
 			state.useMilitaryTime = eventData?.mt ? true : false

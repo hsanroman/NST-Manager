@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.0.3" }
+def devVer() { return "4.0.4" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -164,6 +164,7 @@ def processEvent() {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.tempUnit = getTemperatureScale()
 			state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true

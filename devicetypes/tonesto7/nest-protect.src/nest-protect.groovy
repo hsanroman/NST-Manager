@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.0.3" }
+def devVer() { return "4.0.4" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -267,6 +267,7 @@ def processEvent(data) {
 			def results = eventData?.data
 			state?.useMilitaryTime = eventData?.mt ? true : false
             state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false

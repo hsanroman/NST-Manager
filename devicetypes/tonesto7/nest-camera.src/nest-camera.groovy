@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.0.5" }
+def devVer() { return "2.0.6" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -213,6 +213,7 @@ def processEvent() {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state?.useMilitaryTime = eventData?.mt ? true : false
             state.clientBl = eventData?.clientBl == true ? true : false
+			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
 			isStreamingEvent(results?.is_streaming)
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
