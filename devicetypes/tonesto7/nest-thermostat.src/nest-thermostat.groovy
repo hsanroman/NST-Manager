@@ -3011,7 +3011,7 @@ def showChartHtml() {
 }
 
 def hideChartHtml() {
-	def resetMsg = state.graphDataResetActive = "Your Graph Data was recently reset" : ""
+	def resetMsg = state.graphDataResetActive ? "Your Graph Data was recently reset" : ""
 	def data = """
 	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
 	<br></br>
