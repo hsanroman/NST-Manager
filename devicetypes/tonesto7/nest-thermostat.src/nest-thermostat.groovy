@@ -2856,7 +2856,6 @@ def resetGraphData() {
 
 def showChartHtml() {
 	try {
-		if(state?.graphDataResetActive || state?.graphDataResetActive == null) { state?.graphDataResetActive = false } 
 		def tempStr = "°F"
 		if ( wantMetric() ) {
 			tempStr = "°C"
@@ -3001,6 +3000,7 @@ def showChartHtml() {
 		  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
 		  <div id="chart_div" style="width: 100%; height: 225px;"></div>
 		"""
+		if(state?.graphDataResetActive || state?.graphDataResetActive == null) { state?.graphDataResetActive = false }
 		return data
 	} catch (ex) {
 		log.error "showChartHtml Exception: ", ex
