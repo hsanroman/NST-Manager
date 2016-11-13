@@ -1438,7 +1438,9 @@ def updateChildData(force = false) {
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
 			def cur = getWData()
-			curWeatherTemp = getTemperatureScale() == "C" ?  Math.round(cur?.current_observation?.temp_c.toDouble()) : Math.round(cur?.current_observation?.temp_f).toInteger()
+			if(cur) {
+				curWeatherTemp = getTemperatureScale() == "C" ?  Math.round(cur?.current_observation?.temp_c.toDouble()) : Math.round(cur?.current_observation?.temp_f).toInteger()
+			}
 		}
 
 		getAllChildDevices()?.each {
@@ -2609,7 +2611,7 @@ def getWData() {
 			return atomicState?.curWeather
 		}
 	}
-
+	return null
 }
 
 def getWForecastData() {
@@ -2620,6 +2622,7 @@ def getWForecastData() {
 			return atomicState?.curForecast
 		}
 	}
+	return null
 }
 
 def getWAstronomyData() {
@@ -2630,6 +2633,7 @@ def getWAstronomyData() {
 			return atomicState?.curAstronomy
 		}
 	}
+	return null
 }
 
 def getWAlertsData() {
@@ -2640,6 +2644,7 @@ def getWAlertsData() {
 			return atomicState?.curAlerts
 		}
 	}
+	return null
 }
 
 def getWeatherDeviceInst() {
@@ -7078,29 +7083,31 @@ def getExtConditions( doEvent = false ) {
 		def cur = parent?.getWData()
 		def weather = parent.getWeatherDevice()
 
-		atomicState?.curWeather = cur?.current_observation
-		atomicState?.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
-		atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c.toDouble())
-		atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()  // This is not available as attribute in dth
-		//atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
+		if(cur) {
+			atomicState?.curWeather = cur?.current_observation
+			atomicState?.curWeatherTemp_f = Math.round(cur?.current_observation?.temp_f).toInteger()
+			atomicState?.curWeatherTemp_c = Math.round(cur?.current_observation?.temp_c.toDouble())
+			atomicState?.curWeatherLoc = cur?.current_observation?.display_location?.full.toString()  // This is not available as attribute in dth
+			//atomicState?.curWeatherHum = cur?.current_observation?.relative_humidity?.toString().replaceAll("\\%", "")
 
-		def dp = 0.0
-		if(weather) {  // Dewpoint is calculated in dth
-			dp = weather?.currentValue("dewpoint")?.toString().replaceAll("\\[|\\]", "").toDouble()
-		}
-		def c_temp = 0.0
-		def f_temp = 0 as Integer
-		if(getTemperatureScale() == "C") {
-			c_temp = dp as Double
-			f_temp = c_temp * 9/5 + 32
-		} else {
-			f_temp = dp as Integer
-			c_temp = (f_temp - 32) * 5/9 as Double
-		}
-		atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f
-		atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
+			def dp = 0.0
+			if(weather) {  // Dewpoint is calculated in dth
+				dp = weather?.currentValue("dewpoint")?.toString().replaceAll("\\[|\\]", "").toDouble()
+			}
+			def c_temp = 0.0
+			def f_temp = 0 as Integer
+			if(getTemperatureScale() == "C") {
+				c_temp = dp as Double
+				f_temp = c_temp * 9/5 + 32
+			} else {
+				f_temp = dp as Integer
+				c_temp = (f_temp - 32) * 5/9 as Double
+			}
+			atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f
+			atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
 
-		atomicState.NeedwUpd = false
+			atomicState.NeedwUpd = false
+		}
 	}
 }
 
