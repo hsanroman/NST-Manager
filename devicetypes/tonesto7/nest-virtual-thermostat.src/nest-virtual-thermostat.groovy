@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.8"}
+def devVer() { return "4.0.12"}
 
 // for the UI
 metadata {
@@ -1986,7 +1986,7 @@ String getDataString(Integer seriesIndex) {
 	def myhas_fan = state?.has_fan && false ? true : false    // false because not graphing fan operation now
 
 	def has_weather = false
-	if(state?.curExtTemp != null) { has_weather = true }
+	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { has_weather = true }
 
 	def datacolumns
 
@@ -2620,7 +2620,8 @@ def addNewData() {
 	def currentoperatingState = getHvacState()
 	def currenthumidity = getHumidity()
 	def currentfanMode = getFanMode()
-	def currentExternal = state?.curExtTemp
+	def currentExternal = null
+	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { currentExternal = state?.curExtTemp }
 
 	def temperatureTable = state?.temperatureTable
 	def operatingStateTable = state?.operatingStateTable
@@ -2690,7 +2691,7 @@ def getStartTime() {
 
 def getMinTemp() {
 	def has_weather = false
-	if(state?.curExtTemp != null) { has_weather = true }
+	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { has_weather = true }
 
 	def list = []
 	if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday?.min { it[2] }[2].toInteger()) }
@@ -2704,7 +2705,7 @@ def getMinTemp() {
 
 def getMaxTemp() {
 	def has_weather = false
-	if(state?.curExtTemp != null) { has_weather = true }
+	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { has_weather = true }
 
 	def list = []
 	if (state?.temperatureTableYesterday?.size() > 0) { list.add(state?.temperatureTableYesterday.max { it[2] }[2].toInteger()) }
@@ -2784,7 +2785,6 @@ def getGraphHTML() {
 			  </p>
 
 			  <div id="openModal" class="topModal">
-			  	${incInfoBtnTapCnt()}
 				<div>
 				  <a href="#close" title="Close" class="close">X</a>
 				  <table>
@@ -2831,19 +2831,35 @@ def showChartHtml() {
 
 	def has_weather = false
 	def commastr = ""
-	if(state?.curExtTemp != null) { has_weather = true; commastr = "," }
+	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { has_weather = true; commastr = "," }
 
-	def coolstr1 = "data.addColumn('number', 'CoolSP');"
-	def coolstr2 =  getDataString(5)
-	def coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
+	def coolstr1
+	def coolstr2
+	def coolstr3
+	if(state?.can_cool) {
+		coolstr1 = "data.addColumn('number', 'CoolSP');"
+		coolstr2 =  getDataString(5)
+		coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
+	}
 
-	def heatstr1 = "data.addColumn('number', 'HeatSP');"
-	def heatstr2 = getDataString(6)
-	def heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
+	def heatstr1
+	def heatstr2
+	def heatstr3
+	if(state?.can_heat) {
+		heatstr1 = "data.addColumn('number', 'HeatSP');"
+		heatstr2 = getDataString(6)
+		heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
+	}
+
 
 	def weathstr1 = "data.addColumn('number', 'ExtTmp');"
 	def weathstr2 = getDataString(7)
 	def weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
+	if(state?.has_weather) {
+		weathstr1 = "data.addColumn('number', 'ExtTmp');"
+		weathstr2 = getDataString(7)
+		weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
+	}
 
 	if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}${commastr}" }
 
@@ -2978,7 +2994,7 @@ def hideChartHtml() {
 	<br></br>
 	<div class="centerText">
 	  <p>Waiting for more data to be collected...</p>
-	  <p>This may take at least 24 hours</p>
+	  <p>This may take a few hours</p>
 	</div>
 	"""
 	return data
