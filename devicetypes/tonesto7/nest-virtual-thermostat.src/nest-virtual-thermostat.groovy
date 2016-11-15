@@ -3072,6 +3072,7 @@ def getNestMgrReport() {
 				def schRprtDesc = parent?.reqSchedInfoRprt(this)
 				if(schRprtDesc) {
 					str += schRprtDesc.toString() + "  "
+					str += getExtTempVoiceDesc()
 					str += " Now let's move on to usage.  "
 				}
 			}
@@ -3110,6 +3111,31 @@ def getMetricCntData() {
 			tstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), tstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	tstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
 			//tstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
 			]
+}
+
+def getExtTempVoiceDesc() {
+	def str = ""
+	def extTmp = !(state?.curExtTemp == null || state?.curExtTemp == [:]) ? state?.curExtTemp.toDouble() : null
+	if(extTmp) {
+		str += "Looking Outside the current external temp is "
+		if(extTmp > adj_temp(78.0) && extTmp <= adj_temp(85.0)) { str += "a scorching " }
+		else if(extTmp > adj_temp(76.0) && extTmp <= adj_temp(80.0)) { str += "a roasting " }
+		else if(extTmp > adj_temp(74.0) && extTmp <= adj_temp(76.0)) { str += "a balmy " }
+		else if(extTmp >= adj_temp(68.0) && extTmp <= adj_temp(74.0)) { str += "a comfortable " }
+		else if(extTmp >= adj_temp(64.0) && extTmp <= adj_temp(68.0)) { str += "a breezy " }
+		else if(extTmp >= adj_temp(50.0) && extTmp < adj_temp(64.0)) { str += "a chilly " }
+		else if(extTmp < adj_temp(50.0)) { str += "a freezing " }
+		str += "${extTmp} degrees. "
+	}
+	return str
+}
+
+private adj_temp(tempF) {
+	if(getTemperatureScale() == "C") {
+		return (tempF - 32) * 5/9 as Double
+	} else {
+		return tempF
+	}
 }
 
 def getUsageVoiceReport(type) {
