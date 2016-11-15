@@ -2,7 +2,7 @@
 |    Application Name: Nest Manager and Automations                                         |
 |    Author: Anthony S. (@tonesto7), Eric S. (@E_sch)                                       |
 |    Contributors: Ben W. (@desertblade)                                                    |
-| Portions Modeled on CoRE by Adrian Caramaliu                                              |
+|    A few code methods are modeled from CoRE by Adrian Caramaliu                           |
 |                                                                                           |
 |*******************************************************************************************|
 |    There maybe portions of the code that may resemble code from other apps in the         |
@@ -991,11 +991,14 @@ def reqSchedInfoRprt(child) {
 			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp() ?: null
 			def reqSenCoolSetPoint = chldSch?.getRemSenCoolSetTemp() ?: null
 			def curZoneTemp = chldSch?.getRemoteSenTemp() ?: null
+			def curWeatherTemp = null
 
 			def schedData = chldSch?.getSchedData(actNum) ?: null
+			def schedMotData = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
+
 			def tempSrc = chldSch?.getRemSenTempSrc() ?: null
 			def tempSrcStr = (actNum && tempSrc == "Schedule") ? "Schedule ${actNum}" : tempSrc
-			def schedDesc = schedVoiceDesc(actNum, schedData) ?: null
+			def schedDesc = schedVoiceDesc(actNum, schedData, schedMotData) ?: null
 
 			str += schedDesc ?: " There are No Schedules currently Active. "
 
@@ -1055,15 +1058,14 @@ def getVoiceRprtCnt() {
 	return cnt
 }
 
-def schedVoiceDesc(num, data) {
+def schedVoiceDesc(num, data, motion) {
 	def str = ""
 	str += data?.lbl  ? " The automation schedule slot active is number ${num} and is labeled ${data?.lbl}. " : ""
-	str += data?.ctemp || data?.htemp ? "The schedules desired temps" : ""
-	str += data?.htemp ? " are set to a heat temp of ${data?.htemp} degrees" : ""
-	str += data?.ctemp ? " and " : ". "
-	str += data?.ctemp ? " ${!data?.htemp ? "are" : ""} a cool temp of ${data?.ctemp} degrees. " : ""
-	//str += data?.m0 ? " This shedule has configured motion sensor setpoints. " : ""
-	//str += data?.mo ?
+	str += (!motion && (data?.ctemp || data?.htemp)) ? "The schedules desired temps" : ""
+	str += (motion && (data?.mctemp || data?.mhtemp)) ? "The schedules desired motion triggered temps" : ""
+	str += ((motion && data?.mhtemp) || (!motion && data?.htemp)) ? " are set to a heat temp of ${!motion ? data?.htemp : data?.mhtemp} degrees" : ""
+	str += ((motion && data?.mctemp) || (!motion && data?.ctemp)) ? " and " : ". "
+	str += ((motion && data?.mctemp) || (!motion && data?.ctemp)) ? " ${((!motion && !data?.htemp) || (motion && !data?.mhtemp)) ? "are" : ""} a cool temp of ${!motion ? data?.ctemp : data?.mctemp} degrees. " : ""
 
 	return str != "" ? str : null
 }
@@ -1410,7 +1412,7 @@ def minDevVer2Str(val) {
 		list.add(it)
 		//str += "${it}"
 	}
-	log.debug "list: $list"
+	// log.debug "list: $list"
 }
 
 def updateChildData(force = false) {
@@ -3745,12 +3747,12 @@ def connectionStatus(message, redirectUrl = null) {
 		</style>
 		</head>
 		<body>
-				<div class="container">
-						<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/st-logo%402x.png" alt="SmartThings logo" />
-						<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/connected-device-icn%402x.png" alt="connected device icon" />
-						<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_icon128.png" alt="nest icon" />
-						${message}
-				</div>
+			<div class="container">
+				<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/st-logo%402x.png" alt="SmartThings logo" />
+				<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/connected-device-icn%402x.png" alt="connected device icon" />
+				<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png" alt="nest icon" width="215" height="215"/>
+				${message}
+			</div>
 		</body>
 		</html>
 		"""
@@ -8774,7 +8776,7 @@ def setTstatTempCheck() {
 				LogAction("setTstatTempCheck: Skipping check because [Nest is set AWAY]", "info", true)
 				mySched = null
 			}
-			else {     LogAction("setTstatTempCheck: Skipping check because [No matching Schedule]", "info", true) }
+			else { LogAction("setTstatTempCheck: Skipping check because [No matching Schedule]", "info", true) }
 		} else {
 			def isBtwn = checkOnMotion(mySched)
 			def previousBtwn = atomicState?."motion${mySched}LastisBtwn"
