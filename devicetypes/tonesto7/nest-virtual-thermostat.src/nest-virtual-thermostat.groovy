@@ -27,7 +27,7 @@ import groovy.time.*
 
 preferences {  }
 
-def devVer() { return "4.0.12"}
+def devVer() { return "4.1.0"}
 
 // for the UI
 metadata {

@@ -39,14 +39,14 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.0.9" }
-def appVerDate() { "11-11-2016" }
+def appVersion() { "4.1.0" }
+def appVerDate() { "11-16-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.0.9 (November 11th, 2016):"
+	str += "V4.1.0 (November 15th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Updated to support all of the lastest Nest Api features like time-to-temp and Eco mode."
+	str += "\n • Updated: Added support for all of the lastest Nest Api features like time-to-temp, sunlight correction, and Eco mode."
 	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
 	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable (zone info, automation schedule info, device usage info)"
 	str += "\n • Added: Thermostat device graphs updated to display external temps and hvac runtime."
@@ -4106,12 +4106,12 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":400, "desc":"4.0.0"],
-		"protect":["val":400, "desc":"4.0.0"],
-		"presence":["val":400, "desc":"4.0.0"],
-		"weather":["val":400, "desc":"4.0.0"],
-		"camera":["val":200 , "desc":"2.0.0"],
-		"vthermostat":["val":400, "desc":"4.0.0"]
+		"thermostat":["val":400, "desc":"4.1.0"],
+		"protect":["val":400, "desc":"4.1.0"],
+		"presence":["val":400, "desc":"4.1.0"],
+		"weather":["val":400, "desc":"4.1.0"],
+		"camera":["val":200 , "desc":"2.1.0"],
+		"vthermostat":["val":400, "desc":"4.1.0"]
 	]
 }
 
