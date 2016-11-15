@@ -3257,7 +3257,7 @@ def getHeatUsageDesc(perc, tmStr, timeType) {
 	def str = ""
 	if(timeType == "today") {
 		if (perc>=86) {
-			str += " spent "
+			str += " spent way too much time "
 			str += tmStr
 			str += " heating your home ${timeType != "today" ? "this " : ""}${timeType} "
 		}
@@ -3271,7 +3271,7 @@ def getHeatUsageDesc(perc, tmStr, timeType) {
 			str += " trying to keep your home cozy "
 		}
 		else if (perc>0 && perc<34) {
-			str += " only spent ${tmStr} heating up the home"
+			str += " It only spent ${tmStr} heating up the home"
 		}
 	}
 	return str
