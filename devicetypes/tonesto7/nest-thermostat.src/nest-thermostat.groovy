@@ -181,22 +181,6 @@ metadata {
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", label: 'refresh', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
 		}
-		valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Firmware:\nv${currentValue}')
-		}
-		valueTile("hasLeaf", "device.hasLeaf", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Leaf:\n${currentValue}')
-		}
-		valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Network Status:\n${currentValue}')
-		}
-		valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
-			state "true", 	label: 'Debug:\n${currentValue}'
-			state "false", 	label: 'Debug:\n${currentValue}'
-		}
-		valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
-		}
 		valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1) {
 			state("heatingSetpoint", label:'${currentValue}', unit: "Heat", foregroundColor: "#FFFFFF",
 				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#FF3300"], [value: 15, color: "#FF3300"] ])
