@@ -986,7 +986,6 @@ def reqSchedInfoRprt(child) {
 			def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
 			def canCool = tstat?.currentCanCool.toString() == "true" ? true : false
 			def curMode = tstat?.currentnestThermostatMode.toString()
-// TODO ECO done
 			def curOper = tstat?.currentThermostatOperatingState.toString()
 			def curHum = tstat?.currentHumidity.toString()
 			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp() ?: null
@@ -1021,7 +1020,6 @@ def reqSchedInfoRprt(child) {
 			str += curOper == "idle" ? " sitting idle " : " ${curOper} "
 			str += " in ${curMode} mode"
 			str += curMode in ["auto", "heat", "cool", "eco"] ? " with " : ". "
-// TODO add if in ECO mode done
 			str += canHeat && curMode in ["auto", "heat"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
 			str += canHeat && canCool && curMode == "auto" ? " and " : ". "
 			str += canCool && curMode in ["auto", "cool"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
@@ -6277,7 +6275,6 @@ private remSenCheck() {
 			//log.info "remSenCheck:  Evaluating Event..."
 
 			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode.toString() : null
-// TODO add if in ECO mode done
 			if(hvacMode in [ "off", "eco"] ) {
 				LogAction("Remote Sensor: Skipping Evaluation... The Current Thermostat Mode is '${strCapitalize(hvacMode)}'...", "info", true)
 				disableOverrideTemps()
@@ -6625,7 +6622,7 @@ def getRemoteSenAutomationEnabled() {
 	return atomicState?.disableAutomation ? false : true
 }
 
-// TODO When a temp change is sent to virtual device, it lasts for 4 hours, or next turn off, then we return to automation settings
+// TODO When a temp change is sent to virtual device, it lasts for 4 hours, next turn off, or next schedule change, then we return to automation settings
 // Other choices could be to change the schedule setpoint permanently if one is active,  or allow folks to set timer,  or have next schedule change clear override
 
 def getLastOverrideCoolSec() { return !atomicState?.lastOverrideCoolDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastOverrideCoolDt, null, "getLastOverrideCoolSec").toInteger() }
@@ -6788,7 +6785,6 @@ def fanCtrlCheck() {
 			def threshold = !remSenTempDiffDegrees ? 2.0 : remSenTempDiffDegrees.toDouble()
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
-// TODO ECO done
 			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
 /*
 			if(atomicState?.haveRunFan) {
@@ -6807,8 +6803,6 @@ def fanCtrlCheck() {
 			    (hvacMode in ["heat"] && schMotFanRuleType in ["Heat_Circ"]) ||
 			    (hvacMode in ["auto"] && schMotFanRuleType in ["Heat_Cool_Circ"]) ||
 			    (hvacMode in ["off", "eco"] && schMotFanRuleType in ["Circ"]) ) {
-// TODO ECO done
-
 				def sTemp = getReqSetpointTemp(curTstatTemp, reqHeatSetPoint, reqCoolSetPoint)
 				circulateFanControl(sTemp?.type?.toString(), curTstatTemp, sTemp?.req?.toDouble(), threshold, fanOn)
 			}
@@ -6951,7 +6945,6 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 	def home = false
 	def away = false
-// TODO ECO done
 	if(tstat && getTstatPresence(tstat) == "present") { home = true }
 	else { away = true }
 
@@ -7136,7 +7129,6 @@ def getExtTmpDewPoint() {
 
 def getDesiredTemp(curMode) {
 	def modeOff = (curMode in ["off","eco"]) ? true : false
-// ERSERS TODO add if in ECO mode
 	def modeCool = (curMode == "cool") ? true : false
 	def modeHeat = (curMode == "heat") ? true : false
 	def modeAuto = (curMode == "auto") ? true : false
@@ -7165,7 +7157,6 @@ def extTmpTempOk() {
 		def intTemp = extTmpTstat ?  getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
 		def curMode = extTmpTstat.currentnestThermostatMode.toString()
-// TODO add if in ECO mode done
 		def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
 		def curDp = getExtTmpDewPoint()
 		def diffThresh = Math.abs(getExtTmpTempDiffVal())
@@ -7281,7 +7272,6 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
-// TODO add if in ECO mode done
 			def safetyOk = getSafetyTempsOk(extTmpTstat)
 			def schedOk = extTmpScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
@@ -7409,7 +7399,6 @@ def extTmpTempCheck(cTimeOut = false) {
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${atomicState?.extTmpRestoreMode.toString().toUpperCase()}) mode for Restore later.", "info", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(extTmpTstat, "eco")) {
-// TODO add if in ECO mode done
 							storeLastAction("Set Thermostat to ECO", getDtNow())
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
@@ -7473,7 +7462,6 @@ def extTmpDpOrTempEvt(type) {
 
 		def curMode = extTmpTstat?.currentnestThermostatMode.toString()
 		def modeOff = (curMode in ["off", "eco"]) ? true : false
-// TODO add if in ECO mode done
 		def offVal = getExtTmpOffDelayVal()
 		def onVal = getExtTmpOnDelayVal()
 		def timeVal
@@ -7565,7 +7553,6 @@ def conWatCheck(cTimeOut = false) {
 			def curMode = conWatTstat ? conWatTstat?.currentnestThermostatMode.toString() : null
 			def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
-// ERSERS TODO add if in ECO mode done
 			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
 			def safetyOk = getSafetyTempsOk(conWatTstat)
 			def schedOk = conWatScheduleOk()
@@ -7692,7 +7679,6 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "eco")) {
-// TODO add if in ECO mode done
 							storeLastAction("Turned Off $conWatTstat", getDtNow())
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
@@ -7750,7 +7736,6 @@ def conWatContactEvt(evt) {
 		def conWatTstat = settings?.schMotTstat
 		def curMode = conWatTstat?.currentnestThermostatMode.toString()
 		def isModeOff = (curMode in ["off", "eco"]) ? true : false
-// TODO add if in ECO mode done
 		def conOpen = (evt?.value == "open") ? true : false
 		def canSched = false
 		def timeVal
@@ -7829,7 +7814,6 @@ def leakWatCheck() {
 			def curMode = leakWatTstat?.currentThermostatMode.toString()
 			def curNestPres = getTstatPresence(leakWatTstat)
 			def modeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
 			def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
 			def safetyOk = getSafetyTempsOk(leakWatTstat)
 			//def schedOk = leakWatScheduleOk()
@@ -7930,7 +7914,6 @@ def leakWatCheck() {
 					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
 					if(setTstatMode(leakWatTstat, "off")) {
-// ERSERS TODO add if in ECO mode
 						storeLastAction("Turned Off $leakWatTstat", getDtNow())
 						atomicState?.leakWatTstatOffRequested = true
 						atomicState?.leakWatDryDt = getDtNow()
@@ -7970,7 +7953,6 @@ def leakWatSensorEvt(evt) {
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
 		def isModeOff = (curMode == "off") ? true : false
-// ERSERS TODO add if in ECO mode
 		def leakWet = (evt?.value == "wet") ? true : false
 
 		def canSched = false
@@ -8829,7 +8811,6 @@ def setTstatTempCheck() {
 
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
 				def tstatHvacMode = tstat?.currentnestThermostatMode?.toString()
-// TODO add if in ECO mode done
 				if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode)) {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow())
@@ -8846,7 +8827,6 @@ def setTstatTempCheck() {
 
 				def curMode = tstat?.currentnestThermostatMode?.toString()
 				def isModeOff = (curMode in ["off","eco"]) ? true : false
-// TODO add if in ECO mode done
 				tstatHvacMode = curMode
 
 				def heatTemp = null
@@ -9427,7 +9407,6 @@ def tstatConfigAutoPage(params) {
 				}
 				if(settings?.conWatContacts) {
 					section("Trigger Actions:") {
-						// TODO can these delays be set to 0?
 						input name: "conWatOffDelay", type: "enum", title: "Delay Off (in Minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 
@@ -9437,7 +9416,6 @@ def tstatConfigAutoPage(params) {
 								image: getAppImg("delay_time_icon.png")
 					}
 					section("Restoration Preferences (Optional):") {
-						// TODO can these delays be set to 0? to turn back off?
 						input "${pName}OffTimeout", "enum", title: "Auto Restore after...", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 						if(!settings?."${pName}OffTimeout") { atomicState."${pName}timeOutScheduled" = false }
@@ -9492,14 +9470,12 @@ def tstatConfigAutoPage(params) {
 								image: getAppImg("temp_icon.png")
 					}
 					section("Delay Values:") {
-						// TODO can these delays be set to 0?
 						input name: "extTmpOffDelay", type: "enum", title: "Delay Off (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 						input name: "extTmpOnDelay", type: "enum", title: "Delay Restore (in minutes)", defaultValue: 300, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 					}
 					section("Restoration Preferences (Optional):") {
-						// TODO can these delays be set to 0? to turn back off?
 						input "${pName}OffTimeout", "enum", title: "Auto Restore after (Optional)", defaultValue: 43200, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 						if(!settings?."${pName}OffTimeout") { atomicState."${pName}timeOutScheduled" = false }
@@ -11014,8 +10990,6 @@ def setTstatMode(tstat, mode) {
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
 			else if(mode == "eco") { tstat.eco(); result = true }
-// TODO add if in ECO mode done
-
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode has been set to (${mode.toString().toUpperCase()})", "info", false) }
 			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
 		} else {
@@ -11054,7 +11028,6 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint) {
 	def retVal = false
 	if(tstat) {
 		def hvacMode = tstat?.currentnestThermostatMode.toString()
-// TODO ECO done
 		def curCoolSetpoint = getTstatSetpoint(tstat, "cool")
 		def curHeatSetpoint = getTstatSetpoint(tstat, "heat")
 		def diff = getTemperatureScale() == "C" ? 2.0 : 3.0
@@ -11151,7 +11124,6 @@ def fanModeTrigEnum() {
 	def canCool = atomicState?."${pName}TstatCanCool" ? true : false
 	def canHeat = atomicState?."${pName}TstatCanHeat" ? true : false
 	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
-// TODO add ECO done
 	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco", "any":"Any Mode"]
 	if(!canHeat) {
 		vals = ["cool":"Cool", "eco":"Eco", "any":"Any Mode"]
@@ -11163,7 +11135,6 @@ def fanModeTrigEnum() {
 }
 
 def tModeHvacEnum(canHeat, canCool) {
-// TODO add ECO done
 	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco"]
 	if(!canHeat) {
 		vals = ["cool":"Cool", "eco":"Eco"]
