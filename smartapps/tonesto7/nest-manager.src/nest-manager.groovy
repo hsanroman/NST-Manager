@@ -3964,9 +3964,9 @@ def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback
 def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()		{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
-def getHelpPageUrl()		{ return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help-page.html" }
+def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
 def getReadmePageUrl()		{ return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html" }
-def getAutoHelpPageUrl()	{ return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/Documents/help/nest-automations.html" }
+def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#nest-automations" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
@@ -11178,6 +11178,8 @@ def parseDt(format, dt) {
     return result
 }
 
+def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
+
 ///////////////////////////////////////////////////////////////////////////////
 /******************************************************************************
 |				Application Help and License Info Variables		  			  |
@@ -11223,5 +11225,3 @@ def textLicense() {
 		"See the License for the specific language governing permissions and "+
 		"limitations under the License."
 }
-
-def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
