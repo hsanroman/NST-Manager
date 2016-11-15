@@ -2732,7 +2732,7 @@ def broadcastCheck() {
 
 def helpHandler() {
 	if(atomicState?.appData?.help) {
-		atomicState.showHelp = atomicState?.appData?.help?.showHelp == "false" ? false : true
+		atomicState.showHelp = (atomicState?.appData?.help?.showHelp == false) ? false : true
 	}
 }
 
@@ -3966,7 +3966,7 @@ def getNestApiUrl()		{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
 def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
 def getReadmePageUrl()		{ return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html" }
-def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#nest_automations" }
+def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
@@ -4773,7 +4773,7 @@ def diagPage () {
 			href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
 			href "childAppDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
 			href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-			href "appParamsDataPage", title:"View AppParams Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+			href "appParamsDataPage", title:"View AppData File", description:"Tap to view...", image: getAppImg("view_icon.png")
 		}
 		if(settings?.optInAppAnalytics || settings?.optInSendExceptions) {
 			section("Analytics Data") {
@@ -4783,11 +4783,12 @@ def diagPage () {
 				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", required: false, title:"View Your Installation ID", description:"Tap to view...", image: getAppImg("view_icon.png")
 			}
 		}
-		section("Recent Nest Command") {
+		section("Recent Nest Command Details:") {
 			def cmdDesc = ""
-			cmdDesc += "Last Command Details:"
-			cmdDesc += "\n • DateTime: (${atomicState?.lastCmdSentDt ?: "Nothing found..."})"
-			cmdDesc += "\n • Cmd Sent: (${atomicState?.lastCmdSent ?: "Nothing found..."})"
+			cmdDesc += " • DateTime: "
+			cmdDesc += atomicState?.lastCmdSentDt ? "\n └ (${atomicState?.lastCmdSentDt})" : "(Nothing found...)"
+			cmdDesc += "\n • Cmd Sent: "
+			cmdDesc += atomicState?.lastCmdSent ? "\n └ (${atomicState?.lastCmdSent})" : "(Nothing found...)"
 			cmdDesc += "\n • Cmd Result: (${atomicState?.lastCmdSentStatus ?: "Nothing found..."})"
 
 			cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
@@ -4996,7 +4997,7 @@ def getDeviceMetricCnts() {
 			}
 		}
 	}
-	log.debug "data: ${data}"
+	//log.debug "data: ${data}"
 	return data
 }
 /******************************************************************************
