@@ -36,6 +36,7 @@ metadata {
 		capability "Presence Sensor"
 		capability "Sensor"
 		capability "Refresh"
+		capability "Health Check"
 
 		command "setPresence"
 		command "refresh"
@@ -86,6 +87,18 @@ metadata {
 
 mappings {
 	path("/getHtml") {action: [GET: "getHtml"] }
+}
+
+void installed() {
+	Logger("installed...")
+	// The device refreshes every 5 minutes by default so if we miss 2 refreshes we can consider it offline
+    // Using 12 minutes because in testing, device health team found that there could be "jitter"
+    sendEvent(name: "checkInterval", value: 60 * 12, data: [protocol: "cloud", displayed: false)
+}
+
+def ping() {
+	Logger("ping...")
+	refresh()
 }
 
 def initialize() {

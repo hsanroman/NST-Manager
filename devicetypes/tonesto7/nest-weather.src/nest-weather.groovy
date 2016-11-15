@@ -136,6 +136,18 @@ def getTempColors() {
 	}
 }
 
+void installed() {
+	Logger("installed...")
+	// The device refreshes every 5 minutes by default so if we miss 2 refreshes we can consider it offline
+    // Using 12 minutes because in testing, device health team found that there could be "jitter"
+    sendEvent(name: "checkInterval", value: 60 * 12, data: [protocol: "cloud", displayed: false)
+}
+
+def ping() {
+	Logger("ping...")
+	refresh()
+}
+
 def poll() {
 	Logger("Polling parent...")
 	parent.refresh(this)

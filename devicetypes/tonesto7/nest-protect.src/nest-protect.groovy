@@ -159,10 +159,11 @@ def initialize() {
 	poll()
 }
 
-def installed() {
+void installed() {
 	Logger("installed...")
-	// Notify health check about this device with timeout interval 12 hrs
-	//sendEvent(name: "checkInterval", value: 12*60*60, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID], displayed: false)
+	// The device refreshes every 5 minutes by default so if we miss 2 refreshes we can consider it offline
+    // Using 12 minutes because in testing, device health team found that there could be "jitter"
+    sendEvent(name: "checkInterval", value: 60 * 12, data: [protocol: "cloud", displayed: false)
 }
 
 def ping() {
