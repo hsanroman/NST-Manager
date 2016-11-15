@@ -3966,7 +3966,7 @@ def getNestApiUrl()		{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
 def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
 def getReadmePageUrl()		{ return "https://rawgit.com/tonesto7/nest-manager/${gitBranch()}/README.html" }
-def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#nest-automations" }
+def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#nest_automations" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
