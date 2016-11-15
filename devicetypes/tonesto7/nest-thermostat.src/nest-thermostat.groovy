@@ -295,9 +295,15 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-	// The device refreshes every 5 minutes by default so if we miss 2 refreshes we can consider it offline
-    // Using 12 minutes because in testing, device health team found that there could be "jitter"
-    sendEvent(name: "checkInterval", value: 60 * 12, data: [protocol: "cloud", displayed: false)
+    verifyHC()
+}
+
+void verifyHC() {
+	def val = device.currentValue("checkInterval")
+	def timeOut = state?.hcTimeout.toInteger() ?: 35
+	if(!val || val.toInteger() != timeOut) {
+		sendEvent(name: "checkInterval", value: 60 * timeout, data: [protocol: "cloud"], displayed: false)
+	}
 }
 
 def ping() {
