@@ -143,7 +143,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 5)
+		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 6)
 
 		main "main2"
 		details(["alarmState", "devInfoHtml", "refresh"])
@@ -166,9 +166,10 @@ void installed() {
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout.toInteger() ?: 35
+	def timeOut = state?.hcTimeout ?: 35
 	if(!val || val.toInteger() != timeOut) {
-		sendEvent(name: "checkInterval", value: 60 * timeout, data: [protocol: "cloud"], displayed: false)
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -767,57 +768,28 @@ def getInfoHtml() {
 					  </tr>
 					</tbody>
 			  </table>
-
-			  <p class="centerText">
-				 <button id="myBtn" class="button">More Info</button>
-			  </p>
-			  	<div id="myModal" class="modal">
-				 <div class="modal-content">
-				  <table>
-					<tr>
-					  <th>Firmware Version</th>
-					  <th>Debug</th>
-					  <th>Device Type</th>
-					</tr>
-					<td>v${state?.softwareVer.toString()}</td>
-					<td>${state?.debugStatus}</td>
-					<td>${state?.devTypeVer.toString()}</td>
-				  </table>
-				  <table>
-					<thead>
-					  <th>Nest Last Checked-In</th>
-					  <th>Data Last Received</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-					  </tr>
-					</tbody>
-				  </table>
-				</div>
-			  </div>
-			  <script>
-                    // Get the modal
-                    var modal = document.getElementById('myModal');
-
-                    // Get the button that opens the modal
-                    var btn = document.getElementById("myBtn");
-
-                    // When the user clicks on the button, open the modal
-                    btn.onclick = function() {
-                        modal.style.display = "block";
-                    }
-    				modal.onclick = function() {
-                        modal.style.display = "none";
-                    }
-                    // When the user clicks anywhere outside of the modal, close it
-                    window.onclick = function(event) {
-                        if (event.target == modal) {
-                            modal.style.display = "none";
-                        }
-                    }
-             </script>
+			  <table>
+				<tr>
+				  <th>Firmware Version</th>
+				  <th>Debug</th>
+				  <th>Device Type</th>
+				</tr>
+				<td>v${state?.softwareVer.toString()}</td>
+				<td>${state?.debugStatus}</td>
+				<td>${state?.devTypeVer.toString()}</td>
+			  </table>
+			  <table>
+				<thead>
+				  <th>Nest Last Checked-In</th>
+				  <th>Data Last Received</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+				  </tr>
+				</tbody>
+			  </table>
 			</body>
 		</html>
 		"""

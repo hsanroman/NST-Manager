@@ -181,22 +181,6 @@ metadata {
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", label: 'refresh', action:"refresh.refresh", icon:"st.secondary.refresh-icon"
 		}
-		valueTile("softwareVer", "device.softwareVer", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Firmware:\nv${currentValue}')
-		}
-		valueTile("hasLeaf", "device.hasLeaf", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Leaf:\n${currentValue}')
-		}
-		valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Network Status:\n${currentValue}')
-		}
-		valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
-			state "true", 	label: 'Debug:\n${currentValue}'
-			state "false", 	label: 'Debug:\n${currentValue}'
-		}
-		valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
-		}
 		valueTile("heatingSetpoint", "device.heatingSetpoint", width: 1, height: 1) {
 			state("heatingSetpoint", label:'${currentValue}', unit: "Heat", foregroundColor: "#FFFFFF",
 				backgroundColors: [ [value: 0, color: "#FFFFFF"], [value: 7, color: "#FF3300"], [value: 15, color: "#FF3300"] ])
@@ -215,12 +199,10 @@ metadata {
 			state "default", label:'', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
 			state "", label: ''
 		}
-
-		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 2, width: 3, inactiveLabel: false) {
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, inactiveLabel: false) {
 			state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
 			state "", label: ''
 		}
-
 		standardTile("coolingSetpointUp", "device.coolingSetpoint", width: 1, height: 1,canChangeIcon: false, decoration: "flat") {
 			state "default", label:'', action:"coolingSetpointUp", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_up.png"
 			state "", label: ''
@@ -229,32 +211,16 @@ metadata {
 			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
 			state "", label: ''
 		}
-
-		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 2, width: 3, inactiveLabel: false) {
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, inactiveLabel: false) {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
-
-		valueTile("lastConnection", "device.lastConnection", width: 4, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Nest Checked-In At:\n${currentValue}')
-		}
-		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Data Last Received:\n${currentValue}')
-		}
-		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state "ok", label: "API Status:\nOK"
-			state "issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
-		}
-		valueTile("weatherCond", "device.weatherCond", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state "default", label:'${currentValue}'
-		}
-
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 9, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-				  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "refresh"])
-				  //"coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "heatSliderControl", "coolSliderControl", "refresh"] )
+				 // "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "refresh"])
+				  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "graphHTML", "refresh"] )
 	}
 }
 
@@ -300,9 +266,10 @@ void installed() {
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout.toInteger() ?: 35
+	def timeOut = state?.hcTimeout ?: 35
 	if(!val || val.toInteger() != timeOut) {
-		sendEvent(name: "checkInterval", value: 60 * timeout, data: [protocol: "cloud"], displayed: false)
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -545,6 +512,7 @@ def nestTypeEvent(type) {
 def sunlightCorrectionEnabledEvent(sunEn) {
 	def val = device.currentState("sunlightCorrectionEnabled")?.value
 	def newVal = sunEn.toString() == "true" ? true : false
+	state?.sunCorrectEnabled = newVal
 	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Enabled: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionEnabled', value: newVal, displayed: false)
@@ -554,6 +522,7 @@ def sunlightCorrectionEnabledEvent(sunEn) {
 def sunlightCorrectionActiveEvent(sunAct) {
 	def val = device.currentState("sunlightCorrectionActive")?.value
 	def newVal = sunAct.toString() == "true" ? true : false
+	state?.sunCorrectActive = newVal
 	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Active: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionActive', value: newVal, displayed: false)
@@ -2731,6 +2700,7 @@ def getGraphHTML() {
 		def updateAvail = !state?.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def timeToTarget = device.currentState("timeToTarget").stringValue
+		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
 		def chartHtml = (
 				state?.temperatureTable?.size() > 0 &&
 				state?.operatingStateTable?.size() > 0 &&
@@ -2760,14 +2730,14 @@ def getGraphHTML() {
 
 				<br></br>
 				<table
-				<thead>
-				  <th>Time to Target</th>
-				</thead>
-				<tbody>
-				  <tr>
+				  <tbody>
+					<tr>
+					  <th>Time to Target</th>
+					  <th>Sun Correction</th>
+					</tr>
 					<td>${timeToTarget}</td>
-				  </tr>
-				</tbody>
+					<td>${sunCorrectStr}</td>
+				  </tbody>
 				</table>
 				<table>
 				<col width="40%">
@@ -2786,39 +2756,29 @@ def getGraphHTML() {
 				  </tr>
 				</tbody>
 			  </table>
-
-			  <p class="centerText">
-				<a href="#openModal" class="button">More info</a>
-			  </p>
-
-			  <div id="openModal" class="topModal">
-				<div>
-				  <a href="#close" title="Close" class="close">X</a>
-				  <table>
-					  <tbody>
-					  <tr>
-						<th>Firmware Version</th>
-						<th>Debug</th>
-						<th>Device Type</th>
-					  </tr>
-					  <td>${state?.softwareVer.toString()}</td>
-					  <td>${state?.debugStatus}</td>
-					  <td>${state?.devTypeVer.toString()}</td>
-					</tbody>
-				  </table>
-				  <table>
-					<thead>
-					  <th>Nest Checked-In</th>
-					  <th>Data Last Received</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-					  </tr>
-				  </table>
-				</div>
-			  </div>
+			  <table>
+				  <tbody>
+				  <tr>
+					<th>Firmware Version</th>
+					<th>Debug</th>
+					<th>Device Type</th>
+				  </tr>
+				  <td>${state?.softwareVer.toString()}</td>
+				  <td>${state?.debugStatus}</td>
+				  <td>${state?.devTypeVer.toString()}</td>
+				</tbody>
+			  </table>
+			  <table>
+				<thead>
+				  <th>Nest Checked-In</th>
+				  <th>Data Last Received</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+				  </tr>
+			  </table>
 			</body>
 		</html>
 		"""

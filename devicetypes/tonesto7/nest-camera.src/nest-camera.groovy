@@ -146,7 +146,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 11, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
@@ -170,9 +170,10 @@ void installed() {
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout.toInteger() ?: 35
+	def timeOut = state?.hcTimeout ?: 35
 	if(!val || val.toInteger() != timeOut) {
-		sendEvent(name: "checkInterval", value: 60 * timeout, data: [protocol: "cloud"], displayed: false)
+		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -939,37 +940,28 @@ def getCamHtml() {
 						</tr>
 					  </tbody>
 				</table>
-				<p class="centerText">
-				  <a href="#openModal" class="button">More info</a>
-				</p>
-				<div id="openModal" class="topModal">
-				  ${incInfoBtnTapCnt()}
-				  <div>
-					<a href="#close" title="Close" class="close">X</a>
-					<table>
-					  <tr>
-						<th>Firmware Version</th>
-						<th>Debug</th>
-						<th>Device Type</th>
-					  </tr>
-					  <td>v${state?.softwareVer.toString()}</td>
-					  <td>${state?.debugStatus}</td>
-					  <td>${state?.devTypeVer.toString()}</td>
-					</table>
-					<table>
-					  <thead>
-						<th>Last Online Change</th>
-						<th>Data Last Received</th>
-					  </thead>
-					  <tbody>
-						<tr>
-						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-						</tr>
-					  </tbody>
-					</table>
-				  </div>
-				</div>
+				<table>
+				  <tr>
+					<th>Firmware Version</th>
+					<th>Debug</th>
+					<th>Device Type</th>
+				  </tr>
+				  <td>v${state?.softwareVer.toString()}</td>
+				  <td>${state?.debugStatus}</td>
+				  <td>${state?.devTypeVer.toString()}</td>
+				</table>
+				<table>
+				  <thead>
+					<th>Last Online Change</th>
+					<th>Data Last Received</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+					</tr>
+				  </tbody>
+				</table>
 			</body>
 		</html>
 		"""
