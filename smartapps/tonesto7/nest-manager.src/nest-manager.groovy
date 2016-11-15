@@ -40,17 +40,19 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.1.0" }
-def appVerDate() { "11-16-2016" }
+def appVerDate() { "11-15-2016" }
 def appVerInfo() {
 	def str = ""
 
 	str += "V4.1.0 (November 15th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Added support for all of the lastest Nest Api features like time-to-temp, sunlight correction, and Eco mode."
-	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
-	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable (zone info, automation schedule info, device usage info)"
+	str += "\n • Added: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
+	str += "\n • Added: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
+	str += "\n • Added: Cleaned up thermostat voice reports to sound more natural and added some more detail."
+	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)"
 	str += "\n • Added: Thermostat device graphs updated to display external temps and hvac runtime."
-	str += "\n • Updated: Added filters to the devices diagnostic data page to not show irrelavent data."
+	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
+	str += "\n • Updated: Added more filters to the devices diagnostic data page to increase loading and not show irrelavent data."
 	str += "\n • Updated: Lot's of Bugfixes"
 
 	str += "\n\nV4.0.0 (October 28th, 2016):"
@@ -1440,7 +1442,7 @@ def updateChildData(force = false) {
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
 			def cur = getWData()
 			if(cur) {
-				curWeatherTemp = getTemperatureScale() == "C" ?  Math.round(cur?.current_observation?.temp_c.toDouble()) : Math.round(cur?.current_observation?.temp_f).toInteger()
+				curWeatherTemp = getTemperatureScale() == "C" ?  (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
 
