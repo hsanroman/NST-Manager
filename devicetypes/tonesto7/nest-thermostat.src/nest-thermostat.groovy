@@ -2818,7 +2818,6 @@ def showChartHtml() {
 		heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
 	}
 
-
 	def weathstr1 = "data.addColumn('number', 'ExtTmp');"
 	def weathstr2 = getDataString(7)
 	def weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
@@ -2851,7 +2850,7 @@ def showChartHtml() {
 		weathstr2 = ""
 		weathstr3 = ""
 	}
-
+	//state?.extTempTable = []
 	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
@@ -2867,6 +2866,9 @@ def showChartHtml() {
 			maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
 		//}
 	//}
+
+	//Month Chart Section
+	getMonthUseChartData()
 
 	def data = """
 	<script type="text/javascript">
@@ -2945,14 +2947,68 @@ def showChartHtml() {
 					width: '100%'
 				}
 			};
-			var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+			var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
 			chart.draw(data, options);
 		}
 	  </script>
 	  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-	  <div id="chart_div" style="width: 100%; height: 225px;"></div>
+	  <div id="main_graph" style="width: 100%; height: 225px;"></div>
+
+	  <script type="text/javascript">
+	  google.charts.load('current', {packages: ['corechart']});
+	  google.charts.setOnLoadCallback(drawGraph);
+	  function drawGraph() {
+		  var data = google.visualization.arrayToDataTable([
+			['Operation', 'Minutes this Month'],
+			['Work',     11],
+			['Eat',      2],
+			['Commute',  2],
+			['Watch TV', 2],
+			['Sleep',    7]
+		  ]);
+
+		  var options = {
+			title: 'This Months Activity',
+			is3D: true,
+		  };
+		  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
+		  chart.draw(data, options);
+	  }
+	</script>
+	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage This Month</h4>
+	<div id="month_graph" style="width: 100%; height: 225px;"></div>
+
 	"""
 	return data
+}
+
+def monthUseChartHtml() {
+	def data = """
+    	<script type="text/javascript">
+  		google.charts.load('current', {packages: ['corechart']});
+  		google.charts.setOnLoadCallback(drawGraph);
+  		function drawGraph() {
+			var data = google.visualization.arrayToDataTable([
+	          ['Operation', 'Minutes this Month'],
+	          ['Work',     11],
+	          ['Eat',      2],
+	          ['Commute',  2],
+	          ['Watch TV', 2],
+	          ['Sleep',    7]
+	        ]);
+
+	        var options = {
+	          title: 'This Months Activity',
+			  pieHole: 0.4,
+	          is3D: true,
+	        };
+  			var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
+  			chart.draw(data, options);
+  		}
+  	  </script>
+  	  <div id="month_graph" style="width: 100%; height: 225px;"></div>
+    """
+    return data
 }
 
 def hideChartHtml() {
@@ -2965,6 +3021,27 @@ def hideChartHtml() {
 	</div>
 	"""
 	return data
+}
+
+def getMonthUseChartData() {
+	def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
+	def uData = getMonthsUsage()
+	log.debug "uData: $uData"
+	uData?.each { item ->
+		def type = item?.key
+		def tData = item?.value?.tData
+		def h = tData?.h.toInteger()
+		def m = tData?.m.toInteger()
+		def d = tData?.d.toInteger()
+		def y = tData?.y.toInteger()
+		if(h>0 || m>0 || d>0) {
+			if(type == "heating") 	{ hData = item }
+			if(type == "cooling") 	{ cData = item }
+			if(type == "idle")	  	{ iData = item }
+			//if(type == "fanOn")   	{ f1Data = item }
+			//if(type == "fanAuto")	{ f0Data = item }
+		}
+	}
 }
 
 void updateNestReportData() {
