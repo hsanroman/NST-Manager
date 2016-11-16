@@ -215,7 +215,7 @@ metadata {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 9, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
@@ -2617,7 +2617,7 @@ def addNewData() {
 	state.humidityTable = addValue(humidityTable, hr, mins, currenthumidity)
 	state.coolSetpointTable = addValue(coolSetpointTable, hr, mins, currentcoolSetPoint)
 	state.heatSetpointTable = addValue(heatSetpointTable, hr, mins, currentheatSetPoint)
-	state.extTempTable = addValue(extTempTable, hr, mins, currentExternal)
+	if(!(currentExternal instanceof Map)) { state.extTempTable = addValue(extTempTable, hr, mins, currentExternal) }
 	state.fanModeTable = addValue(fanModeTable, hr, mins, currentfanMode)
 }
 
@@ -2627,7 +2627,7 @@ def addValue(table, hr, mins, val) {
 				def last = table?.last()[2]
 				def secondtolast = table[-2][2]
 				if(val == last && val == secondtolast) {
-						newTable = table?.take(table.size() - 1)
+					newTable = table?.take(table.size() - 1)
 				}
 		}
 		newTable?.add([hr, mins, val])
@@ -2851,6 +2851,7 @@ def showChartHtml() {
 		weathstr3 = ""
 	}
 	//state?.extTempTable = []
+	log.debug "extTempTable: ${state?.extTempTable}"
 	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
@@ -2955,60 +2956,84 @@ def showChartHtml() {
 	  <div id="main_graph" style="width: 100%; height: 225px;"></div>
 
 	  <script type="text/javascript">
-	  google.charts.load('current', {packages: ['corechart']});
-	  google.charts.setOnLoadCallback(drawGraph);
-	  function drawGraph() {
-		  var data = google.visualization.arrayToDataTable([
-			['Operation', 'Minutes this Month'],
-			['Work',     11],
-			['Eat',      2],
-			['Commute',  2],
-			['Watch TV', 2],
-			['Sleep',    7]
-		  ]);
+		  google.charts.load('current', {packages: ['corechart']});
+		  google.charts.setOnLoadCallback(drawGraph);
+		  function drawGraph() {
+			  var data = google.visualization.arrayToDataTable([
+				['Operation', 'Runtime (hh.mm)'],
+				['Heating',  78.39],
+				['Cooling',  0.00],
+				['Idle',  402.14]
+			  ]);
 
-		  var options = {
-			title: 'This Months Activity',
-			is3D: true,
-		  };
-		  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
-		  chart.draw(data, options);
+			  var options = {
+				legend: 'none',
+				pieSliceText: 'label',
+				is3D: true,
+				pieStartAngle: 100,
+				chartArea: {
+					left: '7%',
+					right: '7%',
+					top: '7%',
+					bottom: '7%',
+					height: '85%',
+					width: '85%'
+				}
+			  };
+			  var chart = new google.visualization.PieChart(document.getElementById('today_graph'));
+			  chart.draw(data, options);
 	  }
 	</script>
-	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage This Month</h4>
-	<div id="month_graph" style="width: 100%; height: 225px;"></div>
+
+	  <script type="text/javascript">
+		  google.charts.load('current', {packages: ['corechart']});
+		  google.charts.setOnLoadCallback(drawGraph);
+		  function drawGraph() {
+			  var data = google.visualization.arrayToDataTable([
+				['Operation', 'Runtime (hh.mm)'],
+				['Heating',  78.39],
+				['Cooling',  0.00],
+				['Idle',  402.14]
+			  ]);
+
+			  var options = {
+				legend: 'none',
+				pieSliceText: 'label',
+				is3D: true,
+				pieStartAngle: 100,
+				chartArea: {
+					left: '7%',
+					right: '7%',
+					top: '7%',
+					bottom: '7%',
+					height: '85%',
+					width: '85%'
+				}
+			  };
+			  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
+			  chart.draw(data, options);
+	  }
+	</script>
+	<table>
+	  <col width="50%">
+		<col width="50%">
+		<thead>
+		  <th>Today's Usage</th>
+		  <th>Month's Usage</th>
+		</thead>
+	    <tbody>
+		  <td>
+			<div id="today_graph" style="width: 100%; height: 100%;"></div>
+		  </td>
+		  <td>
+			<div id="month_graph" style="width: 100%; height: 100%;"></div>
+		  </td>
+	    </tbody>
+	</table>
+
 
 	"""
 	return data
-}
-
-def monthUseChartHtml() {
-	def data = """
-    	<script type="text/javascript">
-  		google.charts.load('current', {packages: ['corechart']});
-  		google.charts.setOnLoadCallback(drawGraph);
-  		function drawGraph() {
-			var data = google.visualization.arrayToDataTable([
-	          ['Operation', 'Minutes this Month'],
-	          ['Work',     11],
-	          ['Eat',      2],
-	          ['Commute',  2],
-	          ['Watch TV', 2],
-	          ['Sleep',    7]
-	        ]);
-
-	        var options = {
-	          title: 'This Months Activity',
-			  pieHole: 0.4,
-	          is3D: true,
-	        };
-  			var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
-  			chart.draw(data, options);
-  		}
-  	  </script>
-  	  <div id="month_graph" style="width: 100%; height: 225px;"></div>
-    """
-    return data
 }
 
 def hideChartHtml() {
@@ -3023,11 +3048,14 @@ def hideChartHtml() {
 	return data
 }
 
-def getMonthUseChartData() {
+def getMonthUseChartData(mNum=null) {
+	def today = new Date()
+	def monthNum = mNum ?: today.format("MM", location.timeZone).toInteger()
 	def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
-	def uData = getMonthsUsage()
+	def uData = getMonthsUsage(monthNum)
 	log.debug "uData: $uData"
 	uData?.each { item ->
+		log.debug "item: $item"
 		def type = item?.key
 		def tData = item?.value?.tData
 		def h = tData?.h.toInteger()
