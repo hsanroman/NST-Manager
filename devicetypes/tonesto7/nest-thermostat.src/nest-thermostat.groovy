@@ -2271,12 +2271,22 @@ def updateOperatingHistory(today) {
 	def monthNum = today.format("MM", location.timeZone).toInteger()
 	def yearNum = today.format("YYYY", location.timeZone).toInteger()
 
-	if(hm.currentDay == null) {
-		log.error "hm.currentDay is null"
+	if(hm?.currentDay == null || hm?.currentDay < 1 || hm?.currentDay > 7) {
+		Logger("hm.currentDay is invalid (${hm?.currentDay})", "error")
 		return
 	}
 
-	log.debug "dayNum: ${dayNum} currentDay ${hm.currentDay} | monthNum: ${monthNum} currentMonth ${hm.currentMonth}  | yearNum: ${yearNum} currentYear: ${hm.currentYear}"
+	if(dayNum == null || dayNum < 1 || dayNum > 7) {
+		Logger("dayNum is invalid (${dayNum})", "error")
+		return
+	}
+
+	if(monthNum == null || monthNum < 1 || monthNum > 12) {
+		Logger("monthNum is invalid (${monthNum})", "error")
+		return
+	}
+
+	Logger("dayNum: ${dayNum} currentDay ${hm.currentDay} | monthNum: ${monthNum} currentMonth ${hm.currentMonth}  | yearNum: ${yearNum} currentYear: ${hm.currentYear}")
 
 	if(dayNum != hm.currentDay) {
 		dayChange = true
@@ -2309,21 +2319,21 @@ def updateOperatingHistory(today) {
 		hm.OperatingState_DayWeekago_idle = hm."OperatingState_Day${hm.currentDay}_idle"
 		hm.FanMode_DayWeekago_On = hm."FanMode_Day${hm.currentDay}_On"
 		hm.FanMode_DayWeekago_auto = hm."FanMode_Day${hm.currentDay}_auto"
-		hm."OperatingState_Day${hm.currentDay}_cooling" = 0
-		hm."OperatingState_Day${hm.currentDay}_heating" = 0
-		hm."OperatingState_Day${hm.currentDay}_idle" = 0
-		hm."FanMode_Day${hm.currentDay}_On" = 0
-		hm."FanMode_Day${hm.currentDay}_auto" = 0
+		hm."OperatingState_Day${hm.currentDay}_cooling" = 0L
+		hm."OperatingState_Day${hm.currentDay}_heating" = 0L
+		hm."OperatingState_Day${hm.currentDay}_idle" = 0L
+		hm."FanMode_Day${hm.currentDay}_On" = 0L
+		hm."FanMode_Day${hm.currentDay}_auto" = 0L
 
-		def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0
+		def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_cooling" = t1 + Op_coolingusage
-		t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0
+		t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_heating" = t1 + Op_heatingusage
-		t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0
+		t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_idle" = t1 + Op_idle
-		t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0
+		t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0L
 		hm."FanMode_Month${hm.currentMonth}_On" = t1 + fan_on
-		t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0
+		t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0L
 		hm."FanMode_Month${hm.currentMonth}_auto" = t1 + fan_auto
 
 		if(monthChange) {
@@ -2333,22 +2343,22 @@ def updateOperatingHistory(today) {
 			hm.OperatingState_MonthYearago_idle = hm."OperatingState_Month${hm.currentMonth}_idle"
 			hm.FanMode_MonthYearago_On = hm."FanMode_Month${hm.currentMonth}_On"
 			hm.FanMode_MonthYearago_auto = hm."FanMode_Month${hm.currentMonth}_auto"
-			hm."OperatingState_Month${hm.currentMonth}_cooling" = 0
-			hm."OperatingState_Month${hm.currentMonth}_heating" = 0
-			hm."OperatingState_Month${hm.currentMonth}_idle" = 0
-			hm."FanMode_Month${hm.currentMonth}_On" = 0
-			hm."FanMode_Month${hm.currentMonth}_auto" = 0
+			hm."OperatingState_Month${hm.currentMonth}_cooling" = 0L
+			hm."OperatingState_Month${hm.currentMonth}_heating" = 0L
+			hm."OperatingState_Month${hm.currentMonth}_idle" = 0L
+			hm."FanMode_Month${hm.currentMonth}_On" = 0L
+			hm."FanMode_Month${hm.currentMonth}_auto" = 0L
 		}
 
-		t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_cooling = t1 + Op_coolingusage
-		t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_heating = t1 + Op_heatingusage
-		t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_idle = t1 + Op_idle
-		t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0
+		t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0L
 		hm.FanMode_thisYear_On = t1 + fan_on
-		t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0
+		t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0L
 		hm.FanMode_thisYear_auto = t1 + fan_auto
 
 		if(yearChange) {
@@ -2359,11 +2369,11 @@ def updateOperatingHistory(today) {
 			hm.FanMode_lastYear_On = hm.FanMode_thisYear_On
 			hm.FanMode_lastYear_auto = hm.FanMode_thisYear_auto
 
-			hm.OperatingState_thisYear_cooling = 0
-			hm.OperatingState_thisYear_heating = 0
-			hm.OperatingState_thisYear_idle = O
-			hm.FanMode_thisYear_On = 0
-			hm.FanMode_thisYear_auto = 0
+			hm.OperatingState_thisYear_cooling = 0L
+			hm.OperatingState_thisYear_heating = 0L
+			hm.OperatingState_thisYear_idle = 0L
+			hm.FanMode_thisYear_On = 0L
+			hm.FanMode_thisYear_auto = 0L
 		}
 	}
 	state.historyStoreMap = hm
@@ -2476,11 +2486,11 @@ def getTodaysUsage() {
 def getWeeksUsage() {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def coolVal = 0
-	def heatVal = 0
-	def idleVal = 0
-	def fanOnVal = 0
-	def fanAutoVal = 0
+	def coolVal = 0L
+	def heatVal = 0L
+	def idleVal = 0L
+	def fanOnVal = 0L
+	def fanAutoVal = 0L
 	for(int i = 1; i <= 7; i++) {
 		coolVal = coolVal + hm?."OperatingState_Day${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Day${i}_heating"?.toInteger()
@@ -2500,24 +2510,24 @@ def getWeeksUsage() {
 def getMonthsUsage(monNum) {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def mVal = monNum ?: hm?.currentMonth
+	def mVal = (monNum >= 1 && monNum <= 12) ? monNum : hm?.currentMonth
 	timeMap << ["cooling":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_cooling"), "tSec":hm?."OperatingState_Month${mVal}_cooling"]]
 	timeMap << ["heating":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_heating"), "tSec":hm?."OperatingState_Month${mVal}_heating"]]
 	timeMap << ["idle":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_idle"), "tSec":hm?."OperatingState_Month${mVal}_idle"]]
 	timeMap << ["fanOn":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_On"), "tSec":hm?."FanMode_Month${mVal}_on"]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_auto"), "tSec":hm?."FanMode_Month${mVal}_auto"]]
-	//log.debug "monthsUsage: ${timeMap}"
+	//log.debug "monthsUsage: $mVal ${timeMap}"
 	return timeMap
 }
 
 def getYearsUsage() {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def coolVal = 0
-	def heatVal = 0
-	def idleVal = 0
-	def fanOnVal = 0
-	def fanAutoVal = 0
+	def coolVal = 0L
+	def heatVal = 0L
+	def idleVal = 0L
+	def fanOnVal = 0L
+	def fanAutoVal = 0L
 	for(int i = 1; i <= 12; i++) {
 		coolVal = coolVal + hm?."OperatingState_Month${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Month${i}_heating"?.toInteger()
@@ -2622,16 +2632,22 @@ def addNewData() {
 }
 
 def addValue(table, hr, mins, val) {
+	def newval = null
+	if(val == [:]) {
+		Logger("bad value ${val}", "error");
+	} else {
+		newval = val
+	}
 	def newTable = table
-		if(table?.size() > 2) {
-				def last = table?.last()[2]
-				def secondtolast = table[-2][2]
-				if(val == last && val == secondtolast) {
-					newTable = table?.take(table.size() - 1)
-				}
-		}
-		newTable?.add([hr, mins, val])
-		return newTable
+	if(table?.size() > 2) {
+			def last = table?.last()[2]
+			def secondtolast = table[-2][2]
+			if(newval == last && newval == secondtolast) {
+				newTable = table?.take(table.size() - 1)
+			}
+	}
+	newTable?.add([hr, mins, newval])
+	return newTable
 }
 
 def getIntListAvg(itemList) {
