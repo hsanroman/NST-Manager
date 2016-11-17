@@ -215,7 +215,7 @@ metadata {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 9, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
@@ -2271,12 +2271,22 @@ def updateOperatingHistory(today) {
 	def monthNum = today.format("MM", location.timeZone).toInteger()
 	def yearNum = today.format("YYYY", location.timeZone).toInteger()
 
-	if(hm.currentDay == null) {
-		log.error "hm.currentDay is null"
+	if(hm?.currentDay == null || hm?.currentDay < 1 || hm?.currentDay > 7) {
+		Logger("hm.currentDay is invalid (${hm?.currentDay})", "error")
 		return
 	}
 
-	log.debug "dayNum: ${dayNum} currentDay ${hm.currentDay} | monthNum: ${monthNum} currentMonth ${hm.currentMonth}  | yearNum: ${yearNum} currentYear: ${hm.currentYear}"
+	if(dayNum == null || dayNum < 1 || dayNum > 7) {
+		Logger("dayNum is invalid (${dayNum})", "error")
+		return
+	}
+
+	if(monthNum == null || monthNum < 1 || monthNum > 12) {
+		Logger("monthNum is invalid (${monthNum})", "error")
+		return
+	}
+
+	Logger("dayNum: ${dayNum} currentDay ${hm.currentDay} | monthNum: ${monthNum} currentMonth ${hm.currentMonth}  | yearNum: ${yearNum} currentYear: ${hm.currentYear}")
 
 	if(dayNum != hm.currentDay) {
 		dayChange = true
@@ -2309,21 +2319,21 @@ def updateOperatingHistory(today) {
 		hm.OperatingState_DayWeekago_idle = hm."OperatingState_Day${hm.currentDay}_idle"
 		hm.FanMode_DayWeekago_On = hm."FanMode_Day${hm.currentDay}_On"
 		hm.FanMode_DayWeekago_auto = hm."FanMode_Day${hm.currentDay}_auto"
-		hm."OperatingState_Day${hm.currentDay}_cooling" = 0
-		hm."OperatingState_Day${hm.currentDay}_heating" = 0
-		hm."OperatingState_Day${hm.currentDay}_idle" = 0
-		hm."FanMode_Day${hm.currentDay}_On" = 0
-		hm."FanMode_Day${hm.currentDay}_auto" = 0
+		hm."OperatingState_Day${hm.currentDay}_cooling" = 0L
+		hm."OperatingState_Day${hm.currentDay}_heating" = 0L
+		hm."OperatingState_Day${hm.currentDay}_idle" = 0L
+		hm."FanMode_Day${hm.currentDay}_On" = 0L
+		hm."FanMode_Day${hm.currentDay}_auto" = 0L
 
-		def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0
+		def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_cooling" = t1 + Op_coolingusage
-		t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0
+		t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_heating" = t1 + Op_heatingusage
-		t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0
+		t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_idle" = t1 + Op_idle
-		t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0
+		t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0L
 		hm."FanMode_Month${hm.currentMonth}_On" = t1 + fan_on
-		t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0
+		t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0L
 		hm."FanMode_Month${hm.currentMonth}_auto" = t1 + fan_auto
 
 		if(monthChange) {
@@ -2333,22 +2343,22 @@ def updateOperatingHistory(today) {
 			hm.OperatingState_MonthYearago_idle = hm."OperatingState_Month${hm.currentMonth}_idle"
 			hm.FanMode_MonthYearago_On = hm."FanMode_Month${hm.currentMonth}_On"
 			hm.FanMode_MonthYearago_auto = hm."FanMode_Month${hm.currentMonth}_auto"
-			hm."OperatingState_Month${hm.currentMonth}_cooling" = 0
-			hm."OperatingState_Month${hm.currentMonth}_heating" = 0
-			hm."OperatingState_Month${hm.currentMonth}_idle" = 0
-			hm."FanMode_Month${hm.currentMonth}_On" = 0
-			hm."FanMode_Month${hm.currentMonth}_auto" = 0
+			hm."OperatingState_Month${hm.currentMonth}_cooling" = 0L
+			hm."OperatingState_Month${hm.currentMonth}_heating" = 0L
+			hm."OperatingState_Month${hm.currentMonth}_idle" = 0L
+			hm."FanMode_Month${hm.currentMonth}_On" = 0L
+			hm."FanMode_Month${hm.currentMonth}_auto" = 0L
 		}
 
-		t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_cooling = t1 + Op_coolingusage
-		t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_heating = t1 + Op_heatingusage
-		t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0
+		t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_idle = t1 + Op_idle
-		t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0
+		t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0L
 		hm.FanMode_thisYear_On = t1 + fan_on
-		t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0
+		t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0L
 		hm.FanMode_thisYear_auto = t1 + fan_auto
 
 		if(yearChange) {
@@ -2359,11 +2369,11 @@ def updateOperatingHistory(today) {
 			hm.FanMode_lastYear_On = hm.FanMode_thisYear_On
 			hm.FanMode_lastYear_auto = hm.FanMode_thisYear_auto
 
-			hm.OperatingState_thisYear_cooling = 0
-			hm.OperatingState_thisYear_heating = 0
-			hm.OperatingState_thisYear_idle = O
-			hm.FanMode_thisYear_On = 0
-			hm.FanMode_thisYear_auto = 0
+			hm.OperatingState_thisYear_cooling = 0L
+			hm.OperatingState_thisYear_heating = 0L
+			hm.OperatingState_thisYear_idle = 0L
+			hm.FanMode_thisYear_On = 0L
+			hm.FanMode_thisYear_auto = 0L
 		}
 	}
 	state.historyStoreMap = hm
@@ -2476,11 +2486,11 @@ def getTodaysUsage() {
 def getWeeksUsage() {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def coolVal = 0
-	def heatVal = 0
-	def idleVal = 0
-	def fanOnVal = 0
-	def fanAutoVal = 0
+	def coolVal = 0L
+	def heatVal = 0L
+	def idleVal = 0L
+	def fanOnVal = 0L
+	def fanAutoVal = 0L
 	for(int i = 1; i <= 7; i++) {
 		coolVal = coolVal + hm?."OperatingState_Day${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Day${i}_heating"?.toInteger()
@@ -2500,24 +2510,24 @@ def getWeeksUsage() {
 def getMonthsUsage(monNum) {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def mVal = monNum ?: hm?.currentMonth
+	def mVal = (monNum >= 1 && monNum <= 12) ? monNum : hm?.currentMonth
 	timeMap << ["cooling":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_cooling"), "tSec":hm?."OperatingState_Month${mVal}_cooling"]]
 	timeMap << ["heating":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_heating"), "tSec":hm?."OperatingState_Month${mVal}_heating"]]
 	timeMap << ["idle":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_idle"), "tSec":hm?."OperatingState_Month${mVal}_idle"]]
 	timeMap << ["fanOn":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_On"), "tSec":hm?."FanMode_Month${mVal}_on"]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_auto"), "tSec":hm?."FanMode_Month${mVal}_auto"]]
-	//log.debug "monthsUsage: ${timeMap}"
+	//log.debug "monthsUsage: $mVal ${timeMap}"
 	return timeMap
 }
 
 def getYearsUsage() {
 	def hm = getHistoryStore()
 	def timeMap = [:]
-	def coolVal = 0
-	def heatVal = 0
-	def idleVal = 0
-	def fanOnVal = 0
-	def fanAutoVal = 0
+	def coolVal = 0L
+	def heatVal = 0L
+	def idleVal = 0L
+	def fanOnVal = 0L
+	def fanAutoVal = 0L
 	for(int i = 1; i <= 12; i++) {
 		coolVal = coolVal + hm?."OperatingState_Month${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Month${i}_heating"?.toInteger()
@@ -2617,21 +2627,27 @@ def addNewData() {
 	state.humidityTable = addValue(humidityTable, hr, mins, currenthumidity)
 	state.coolSetpointTable = addValue(coolSetpointTable, hr, mins, currentcoolSetPoint)
 	state.heatSetpointTable = addValue(heatSetpointTable, hr, mins, currentheatSetPoint)
-	state.extTempTable = addValue(extTempTable, hr, mins, currentExternal)
+	if(!(currentExternal instanceof Map)) { state.extTempTable = addValue(extTempTable, hr, mins, currentExternal) }
 	state.fanModeTable = addValue(fanModeTable, hr, mins, currentfanMode)
 }
 
 def addValue(table, hr, mins, val) {
+	def newval = null
+	if(val == [:]) {
+		Logger("bad value ${val}", "error");
+	} else {
+		newval = val
+	}
 	def newTable = table
-		if(table?.size() > 2) {
-				def last = table?.last()[2]
-				def secondtolast = table[-2][2]
-				if(val == last && val == secondtolast) {
-						newTable = table?.take(table.size() - 1)
-				}
-		}
-		newTable?.add([hr, mins, val])
-		return newTable
+	if(table?.size() > 2) {
+			def last = table?.last()[2]
+			def secondtolast = table[-2][2]
+			if(newval == last && newval == secondtolast) {
+				newTable = table?.take(table.size() - 1)
+			}
+	}
+	newTable?.add([hr, mins, newval])
+	return newTable
 }
 
 def getIntListAvg(itemList) {
@@ -2818,7 +2834,6 @@ def showChartHtml() {
 		heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
 	}
 
-
 	def weathstr1 = "data.addColumn('number', 'ExtTmp');"
 	def weathstr2 = getDataString(7)
 	def weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
@@ -2851,7 +2866,8 @@ def showChartHtml() {
 		weathstr2 = ""
 		weathstr3 = ""
 	}
-
+	//state?.extTempTable = []
+	log.debug "extTempTable: ${state?.extTempTable}"
 	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
@@ -2867,6 +2883,9 @@ def showChartHtml() {
 			maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
 		//}
 	//}
+
+	//Month Chart Section
+	getMonthUseChartData()
 
 	def data = """
 	<script type="text/javascript">
@@ -2945,12 +2964,90 @@ def showChartHtml() {
 					width: '100%'
 				}
 			};
-			var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+			var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
 			chart.draw(data, options);
 		}
 	  </script>
 	  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-	  <div id="chart_div" style="width: 100%; height: 225px;"></div>
+	  <div id="main_graph" style="width: 100%; height: 225px;"></div>
+
+	  <script type="text/javascript">
+		  google.charts.load('current', {packages: ['corechart']});
+		  google.charts.setOnLoadCallback(drawGraph);
+		  function drawGraph() {
+			  var data = google.visualization.arrayToDataTable([
+				['Operation', 'Runtime (hh.mm)'],
+				['Heating',  78.39],
+				['Cooling',  0.00],
+				['Idle',  402.14]
+			  ]);
+
+			  var options = {
+				legend: 'none',
+				pieSliceText: 'label',
+				is3D: true,
+				pieStartAngle: 100,
+				chartArea: {
+					left: '7%',
+					right: '7%',
+					top: '7%',
+					bottom: '7%',
+					height: '85%',
+					width: '85%'
+				}
+			  };
+			  var chart = new google.visualization.PieChart(document.getElementById('today_graph'));
+			  chart.draw(data, options);
+	  }
+	</script>
+
+	  <script type="text/javascript">
+		  google.charts.load('current', {packages: ['corechart']});
+		  google.charts.setOnLoadCallback(drawGraph);
+		  function drawGraph() {
+			  var data = google.visualization.arrayToDataTable([
+				['Operation', 'Runtime (hh.mm)'],
+				['Heating',  78.39],
+				['Cooling',  0.00],
+				['Idle',  402.14]
+			  ]);
+
+			  var options = {
+				legend: 'none',
+				pieSliceText: 'label',
+				is3D: true,
+				pieStartAngle: 100,
+				chartArea: {
+					left: '7%',
+					right: '7%',
+					top: '7%',
+					bottom: '7%',
+					height: '85%',
+					width: '85%'
+				}
+			  };
+			  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
+			  chart.draw(data, options);
+	  }
+	</script>
+	<table>
+	  <col width="50%">
+		<col width="50%">
+		<thead>
+		  <th>Today's Usage</th>
+		  <th>Month's Usage</th>
+		</thead>
+	    <tbody>
+		  <td>
+			<div id="today_graph" style="width: 100%; height: 100%;"></div>
+		  </td>
+		  <td>
+			<div id="month_graph" style="width: 100%; height: 100%;"></div>
+		  </td>
+	    </tbody>
+	</table>
+
+
 	"""
 	return data
 }
@@ -2965,6 +3062,30 @@ def hideChartHtml() {
 	</div>
 	"""
 	return data
+}
+
+def getMonthUseChartData(mNum=null) {
+	def today = new Date()
+	def monthNum = mNum ?: today.format("MM", location.timeZone).toInteger()
+	def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
+	def uData = getMonthsUsage(monthNum)
+	log.debug "uData: $uData"
+	uData?.each { item ->
+		log.debug "item: $item"
+		def type = item?.key
+		def tData = item?.value?.tData
+		def h = tData?.h.toInteger()
+		def m = tData?.m.toInteger()
+		def d = tData?.d.toInteger()
+		def y = tData?.y.toInteger()
+		if(h>0 || m>0 || d>0) {
+			if(type == "heating") 	{ hData = item }
+			if(type == "cooling") 	{ cData = item }
+			if(type == "idle")	  	{ iData = item }
+			//if(type == "fanOn")   	{ f1Data = item }
+			//if(type == "fanAuto")	{ f0Data = item }
+		}
+	}
 }
 
 void updateNestReportData() {
