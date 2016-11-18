@@ -2898,8 +2898,19 @@ def showChartHtml() {
 		//}
 	//}
 
+	def uData = getTodaysUsage()
+	log.debug "uData: $uData"
+	def thData = uData.heating.tSec
+	def tcData = uData.cooling.tSec
+	def tiData = uData.idle.tSec
+
 	//Month Chart Section
-	getMonthUseChartData()
+	uData = getMonthsUsage()
+	log.debug "uData: $uData"
+	def mhData = uData.heating.tSec
+	def mcData = uData.cooling.tSec
+	def miData = uData.idle.tSec
+	//getMonthUseChartData()
 
 	def data = """
 	<script type="text/javascript">
@@ -2991,9 +3002,9 @@ def showChartHtml() {
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
 				['Operation', 'Runtime (hh.mm)'],
-				['Heating',  78.39],
-				['Cooling',  0.00],
-				['Idle',  402.14]
+				['Heating',  ${thData}],
+				['Cooling',  ${tcData}],
+				['Idle',  ${tiData}]
 			  ]);
 
 			  var options = {
@@ -3021,9 +3032,9 @@ def showChartHtml() {
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
 				['Operation', 'Runtime (hh.mm)'],
-				['Heating',  78.39],
-				['Cooling',  0.00],
-				['Idle',  402.14]
+				['Heating',  ${mhData}],
+				['Cooling',  ${mcData}],
+				['Idle',  ${miData}]
 			  ]);
 
 			  var options = {
