@@ -63,8 +63,8 @@ metadata {
 		attribute "visibility", "string"
 		attribute "alert", "string"
 		attribute "alertKeys", "string"
-		attribute "sunriseDate", "string"
-		attribute "sunsetDate", "string"
+		//attribute "sunriseDate", "string"
+		//attribute "sunsetDate", "string"
 
 	}
 
@@ -189,7 +189,7 @@ def processEvent() {
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.useMilitaryTime = eventData?.mt ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.nestTimeZone = eventData?.tz ?: null
 			state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
 			debugOnEvent(eventData?.debug ? true : false)
 			apiStatusEvent(eventData?.apiIssues)
