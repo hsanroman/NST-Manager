@@ -277,7 +277,7 @@ def processEvent(data) {
             state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.nestTimeZone = eventData?.tz ?: null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
 			if(!results?.last_connection) { lastCheckinEvent(null) }
