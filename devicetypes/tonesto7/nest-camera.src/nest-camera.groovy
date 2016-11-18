@@ -222,7 +222,7 @@ def processEvent() {
 			state?.useMilitaryTime = eventData?.mt ? true : false
             state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.nestTimeZone = eventData?.tz ?: null
 			isStreamingEvent(results?.is_streaming)
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
 			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
