@@ -1150,6 +1150,7 @@ def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
 		checkIfSwupdated()
+		def meta = false
 		def dev = false
 		def str = false
 		if(force == true) { forcedPoll(type) }
@@ -1177,6 +1178,14 @@ def poll(force = false, type = null) {
 					dev = queueGetApiData("dev")
 				} else {
 					dev = getApiData("dev")
+				}
+			}
+			if(ok2PollMetaData()) {
+				LogAction("Updating Meta Data...(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
+				if(allowAsync) {
+					meta = queueGetApiData("meta")
+				} else {
+					meta = getApiData("meta")
 				}
 			}
 			if(allowAsync) { return }
@@ -1212,6 +1221,10 @@ def forcedPoll(type = null) {
 			LogAction("Forcing Update of Structure Data...", "info", true)
 			getApiData("str")
 		}
+		if(type == "meta" || !type) {
+			LogAction("Forcing Update of Meta Data...", "info", true)
+			getApiData("meta")
+		}
 		atomicState?.lastWebUpdDt = null
 		atomicState?.lastWeatherUpdDt = null
 		atomicState?.lastForecastUpdDt = null
@@ -1235,7 +1248,7 @@ def getApiData(type = null) {
 	def result = false
 	if(!type) { return result }
 
-	def tPath = (type == "str") ? "/structures" : "/devices"
+	def tPath = (type == "str") ? "/structures" : ((type == "dev") ? "/devices" : "/")
 	try {
 		def params = [
 			uri: getNestApiUrl(),
@@ -1277,6 +1290,25 @@ def getApiData(type = null) {
 				}
 			}
 		}
+		else if(type == "meta") {
+			httpGet(params) { resp ->
+				if(resp?.status == 200) {
+					atomicState?.lastMetaDataUpd = getDtNow()
+					atomicState?.needMetaPoll = false
+					LogTrace("API Metadata Resp.Data: ${resp?.data}")
+					apiIssueEvent(false)
+					def nresp = resp?.data?.metadata
+					if(!nresp?.data.equals(atomicState?.metaData) || !atomicState?.metaData) {
+						LogAction("API Meta Data HAS Changed... Updating State data...", "debug", true)
+						atomicState?.metaData = nresp
+						atomicState.needChildUpd = true
+						result = true
+					}
+				} else {
+					LogAction("getApiMetaData - Received a diffent Response than expected: Resp (${resp?.status})", "error", true)
+				}
+			}
+		}
 	}
 	catch(ex) {
 		apiIssueEvent(true)
@@ -1289,6 +1321,7 @@ def getApiData(type = null) {
 			log.error "getApiData (type: $type) Exception:", ex
 			if(type == "str") { atomicState.needStrPoll = true }
 			else if(type == "dev") { atomicState?.needDevPoll = true }
+			else if(type == "meta") { atomicState?.needMetaPoll = true }
 			sendExceptionData(ex, "getApiData")
 		}
 	}
@@ -1301,7 +1334,7 @@ def queueGetApiData(type = null, newUrl = null) {
 	def result = false
 	if(!type) { return result }
 
-	def tPath = (type == "str") ? "/structures" : "/devices"
+	def tPath = (type == "str") ? "/structures" : ((type == "dev") ? "/devices" : "/")
 	try {
 		def theUrl = newUrl ?: getNestApiUrl()
 		def params = [
@@ -1319,6 +1352,11 @@ def queueGetApiData(type = null, newUrl = null) {
 			asynchttp_v1.get(processResponse, params, [ type: "dev"])
 			result = true
 		}
+		else if(type == "meta") {
+			atomicState.qmetaRequested = true
+			asynchttp_v1.get(processResponse, params, [ type: "meta"])
+			result = true
+		}
 	} catch(ex) {
 		log.error "queueGetApiData (type: $type) Exception:", ex
 		sendExceptionData(ex, "queueGetApiData")
@@ -1330,6 +1368,7 @@ def processResponse(resp, data) {
 	LogAction("processResponse(${data?.type})", "info", false)
 	def str = false
 	def dev = false
+	def meta = false
 	def type = data?.type
 
 	try {
@@ -1370,8 +1409,22 @@ def processResponse(resp, data) {
 				}
 				atomicState.qdevRequested = false
 			}
+			if(type == "meta") {
+				atomicState?.lastMetaDataUpd = getDtNow()
+				atomicState?.needMetaPoll = false
+				LogTrace("API Meta Resp.Data: ${resp?.json}")
+				//log.trace "API Meta Resp.Data: ${resp?.json}"
+				def nresp = resp?.json?.metadata
+				if(!nresp?.equals(atomicState?.metaData) || !atomicState?.metaData) {
+					LogAction("API Meta Data HAS Changed... Updating State data...", "debug", true)
+					atomicState?.metaData = nresp
+					atomicState.needChildUpd = true
+					meta = true
+				}
+				atomicState.qmetaRequested = false
+			}
 		} else {
-			def tstr = (type == "str") ? "Structure" : "Device"
+			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 			LogAction("processResponse - Received a different Response than expected for $tstr poll: Resp (${resp?.status})", "error", true)
 			if(resp.hasError()) {
 				log.debug "errorData response: $resp.errorData"
@@ -1381,6 +1434,7 @@ def processResponse(resp, data) {
 			atomicState.needChildUpd = true
 			atomicState.qstrRequested = false
 			atomicState.qdevRequested = false
+			atomicState.qmetaRequested = false
 		}
 		if((atomicState?.qdevRequested == false && atomicState?.qstrRequested == false) && (dev || atomicState?.needChildUpd)) { finishPoll(true, true) }
 
@@ -1389,9 +1443,11 @@ def processResponse(resp, data) {
 		atomicState.needChildUpd = true
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
+		atomicState.qmetaRequested = false
 		log.error "processResponse (type: $type) Exception:", e
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
+		else if(type == "meta") { atomicState?.needMetaPoll = true }
 		sendExceptionData(ex, "processResponse_${type}")
 	}
 }
@@ -1679,7 +1735,7 @@ def updateChildData(force = false) {
 def locationPresence() {
 	if(atomicState?.structData[atomicState?.structures]) {
 		def data = atomicState?.structData[atomicState?.structures]
-		LogAction("Location Presence: ${data?.away}", "debug", false)
+		//LogAction("Location Presence: ${data?.away}", "debug", false)
 		return data?.away.toString()
 	}
 	else { return null }
@@ -1719,6 +1775,15 @@ def apiIssueEvent(issue, cmd = null) {
 	//log.debug "listOut: $list"
 }
 
+def ok2PollMetaData() {
+	if(atomicState?.pollBlocked) { return false }
+	if(atomicState?.needMetaPoll) { return true }
+	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
+	def val = pollTime/3
+	if(val > 60) { val = 50 }
+	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
+}
+
 def ok2PollDevice() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needDevPoll) { return true }
@@ -1743,6 +1808,8 @@ def isPollAllowed() {
 		!atomicState?.clientBlacklisted &&
 		(atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice || atomicState?.cameras)) ? true : false
 }
+
+def getLastMetaPollSec() { return !atomicState?.lastMetaDataUpd ? 100000 : GetTimeDiffSeconds(atomicState?.lastMetaDataUpd, null, "getLastMetaPollSec").toInteger() }
 def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 840 : GetTimeDiffSeconds(atomicState?.lastDevDataUpd, null, "getLastDevicePollSec").toInteger() }
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd, null, "getLastStructPollSec").toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll, null, "getLastForcedPollSec").toInteger() }
