@@ -148,7 +148,7 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData?.tz : null
+			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state?.useMilitaryTime = !eventData?.mt ? false : true
