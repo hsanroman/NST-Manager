@@ -4886,35 +4886,120 @@ def childAppDataPage() {
 		} else {
 			section("") { paragraph "No Child Apps Installed..." }
 		}
+
+		section("Page Options:") {
+			input "childAppDataPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+			if(settings?.childAppDataPageRfsh) {
+				input "childAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: false, submitOnChange: true
+			}
+			paragraph "Changing these will require you to leave the page and come back"
+		}
 	}
 }
 
 def childDevDataPage() {
-	dynamicPage(name: "childDevDataPage", refreshInterval:180, install: false) {
-		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTmpTable", "extTempTableYesterday", "historyStoreMap"]
-		getAllChildDevices().each { dev ->
-			def str = ""
-			section("${dev?.displayName.toString().capitalize()}:") {
-				str += "  ───────STATE DATA──────"
-				def data = dev?.getDeviceStateData()?.findAll { !(it.key in noShow) }
-				data?.sort().each { par ->
-					str += "\n\n• ${par?.key.toString()}: (${par?.value})"
-				}
-				str += "\n\n\n  ────SUPPORTED ATTRIBUTES────"
-				def devData = dev?.supportedAttributes.collect { it as String }
-				devData?.sort().each {
-					str += "\n\n• ${"$it" as String}: (${dev.currentValue("$it")})"
-				}
-				   str += "\n\n\n  ────SUPPORTED COMMANDS────"
-				dev?.supportedCommands?.sort().each { cmd ->
-					str += "\n\n• ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-				}
+	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
+	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
+		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTempTable", "extTempTableYesterday", "historyStoreMap"]
+		def devices = getAllChildDevices()
+		def devMap = [:]
+		//devMap["all"] = "Show All"
+		devices?.each {
+			def devId = it?.deviceNetworkId
+			def devLbl = it?.label
+			def bdni = [devId].join('.')
+			devMap[bdni] = devLbl
+		}
 
-				str += "\n\n\n  ─────DEVICE CAPABILITIES─────"
-				dev?.capabilities?.sort().each { cap ->
-					str += "\n\n• ${cap}"
+		section("Select Device to View:") {
+			input(name: "childDevDataPageDev", title:"Select the Device to show...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:devMap])
+			if(settings?.childDevDataPageDev) {
+				paragraph "Show the following items in the device results:"
+				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
+				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: true, submitOnChange: true
+				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: true, submitOnChange: true
+				input "childDevPageShowCapab", "bool", title: "Capabilities?", defaultValue: true, submitOnChange: true
+			} else {
+				paragraph "Please select a device to view!!!", required: true, state: null
+			}
+		}
+
+		if(settings?.childDevDataPageDev) {
+			devices?.each { dev ->
+				settings?.childDevDataPageDev?.each { selDev ->
+					if(selDev == dev?.deviceNetworkId || selDev == "all") {
+						section("${dev?.displayName.toString().capitalize()}:") {
+							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
+								def str = ""; def cnt = 1
+								def data = dev?.getDeviceStateData()?.findAll { it?.key }
+								data?.sort().each { par ->
+									if(par?.value instanceof Map || par?.value instanceof List) {
+										def cnt2 = 1
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}:"
+										par?.value?.sort()?.each { par2 ->
+											//log.debug "par size: ${par?.size()}"
+											if(par?.value instanceof Map) {
+												//log.debug "Map found...${par?.key}"
+												str += "\n   ├ ${par2?.key.toString()}: (${par2?.value})"
+											}
+											if(par?.value instanceof List) {
+												//log.debug "List found...${par?.key}"
+												str += "\n   ├ ${par2}"
+											}
+											cnt2 = cnt2+1
+										}
+									} else {
+										//log.debug "not a map... ${par?.key}"
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
+									}
+									cnt = cnt+1
+								}
+								//paragraph title: "                              STATE DATA", "${str}"
+								paragraph title: "State Data\n", "${str}"
+							}
+							if(settings?.childDevPageShowAttr == true || settings?.childDevPageShowAttr == null) {
+								def str = ""; def cnt = 1
+								def devData = dev?.supportedAttributes.collect { it as String }
+								devData?.sort().each {
+									str += "${cnt>1 ? "\n\n" : "\n"} • ${"$it" as String}: (${dev.currentValue("$it")})"
+									cnt = cnt+1
+								}
+								//paragraph title: "                 SUPPORTED ATTRIBUTES", "${str}"
+								paragraph title: "Supported Attributes\n", "${str}"
+							}
+							if(settings?.childDevPageShowCmds == true || settings?.childDevPageShowCmds == null) {
+								def str = ""; def cnt = 1
+								dev?.supportedCommands?.sort().each { cmd ->
+									str += "${cnt>1 ? "\n\n" : "\n"} • ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+									cnt = cnt+1
+								}
+								//paragraph title: "                 SUPPORTED COMMANDS", "${str}"
+								paragraph title: "Supported Commands\n", "${str}"
+							}
+							if(settings?.childDevPageShowCapab == true || settings?.childDevPageShowCapab == null) {
+								def str = ""; def cnt = 1
+								dev?.capabilities?.sort().each { cap ->
+									str += "${cnt>1 ? "\n\n" : "\n"} • ${cap}"
+									cnt = cnt+1
+								}
+								//paragraph title: "                 DEVICE CAPABILITIES", "${str}"
+								paragraph title: "Device Capabilities\n", "${str}"
+							}
+						}
+					}
 				}
-				paragraph "${str}"
+			}
+		}
+		section("Page Options:") {
+			input "childDevPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+			if(settings?.childDevPageRfsh) {
+				input "childDevDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 180, submitOnChange: true
+			}
+			paragraph "Changing this may require you to leave the page and come back"
+		}
+		if(settings?.childDevPageShowState) {
+			section() {
+				paragraph title: "Excluded State Items:", "${noShow}"
 			}
 		}
 	}
