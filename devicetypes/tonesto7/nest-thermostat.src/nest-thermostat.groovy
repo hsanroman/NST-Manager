@@ -2375,8 +2375,8 @@ def updateOperatingHistory(today) {
 			hm.FanMode_thisYear_On = 0L
 			hm.FanMode_thisYear_auto = 0L
 		}
+		state.historyStoreMap = hm
 	}
-	state.historyStoreMap = hm
 }
 
 def getSumUsage(table, String strtyp) {
@@ -2508,7 +2508,7 @@ def getWeeksUsage() {
 }
 
 def getMonthsUsage(monNum) {
-	Logger("getMonthsUsage ${monNum}")
+	//Logger("getMonthsUsage ${monNum}")
 	def hm = getHistoryStore()
 	def timeMap = [:]
 	def mVal = (monNum >= 1 && monNum <= 12) ? monNum : hm?.currentMonth
@@ -2555,11 +2555,13 @@ def doSomething() {
 
 def getHistoryStore() {
 	//log.trace "getHistoryStore()..."
-	def hm = state?.historyStoreMap
-	if(hm == null) {
-		log.error "hm is null"
+	def thm = state?.historyStoreMap
+	if(thm == null) {
+		log.error "thm is null"
 		return
 	}
+	def hm = thm.clone()
+
 	def Op_coolingusage = getSumUsage(state.operatingStateTable, "cooling").toInteger()
 	def Op_heatingusage = getSumUsage(state.operatingStateTable, "heating").toInteger()
 	def Op_idle = getSumUsage(state.operatingStateTable, "idle").toInteger()
@@ -2881,7 +2883,7 @@ def showChartHtml() {
 		weathstr3 = ""
 	}
 	//state?.extTempTable = []
-	log.debug "extTempTable: ${state?.extTempTable}"
+	//log.debug "extTempTable: ${state?.extTempTable}"
 	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
@@ -2899,18 +2901,17 @@ def showChartHtml() {
 	//}
 
 	def uData = getTodaysUsage()
-	log.debug "uData: $uData"
+	//log.debug "Today uData: $uData"
 	def thData = uData.heating.tSec
 	def tcData = uData.cooling.tSec
 	def tiData = uData.idle.tSec
 
 	//Month Chart Section
 	uData = getMonthsUsage()
-	log.debug "uData: $uData"
+	//log.debug "Month uData: $uData"
 	def mhData = uData.heating.tSec
 	def mcData = uData.cooling.tSec
 	def miData = uData.idle.tSec
-	//getMonthUseChartData()
 
 	def data = """
 	<script type="text/javascript">
