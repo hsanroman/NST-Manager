@@ -2133,7 +2133,7 @@ void getSomeData(devpoll = false) {
 	//LogAction("getSomeData ${app}", "trace")
 
 // hackery to test getting old data
-	def tryNum = 1
+	def tryNum = 2
 	if (state.eric != tryNum ) {
 		if (devpoll) {
 			runIn( 33, "getSomeData", [overwrite: true])
@@ -2148,18 +2148,24 @@ void getSomeData(devpoll = false) {
 		state.humidityTableYesterday = null
 		state.coolSetpointTableYesterday = null
 		state.heatSetpointTableYesterday = null
+		state.extTempTableYesterday = null
+		state.fanModeTableYesterday = null
 
 		state.temperatureTable = null
 		state.operatingStateTable = null
 		state.humidityTable = null
 		state.coolSetpointTable = null
 		state.heatSetpointTable = null
+		state.extTempTable = null
+		state.fanModeTable = null
 
 		state.remove("temperatureTableYesterday")
 		state.remove("operatingStateTableYesterday")
 		state.remove("humidityTableYesterday")
 		state.remove("coolSetpointTableYesterday")
 		state.remove("heatSetpointTableYesterday")
+		state.remove("extTempTableYesterday")
+		state.remove("fanModeTableYesterday")
 
 		state.remove("today")
 		state.remove("temperatureTable")
@@ -2167,6 +2173,10 @@ void getSomeData(devpoll = false) {
 		state.remove("humidityTable")
 		state.remove("coolSetpointTable")
 		state.remove("heatSetpointTable")
+		state.remove("extTempTable")
+		state.remove("fanModeTable")
+
+		state.remove("historyStoreMap")
 
 		return
 	} else {
