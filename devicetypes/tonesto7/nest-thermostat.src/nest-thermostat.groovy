@@ -2266,7 +2266,7 @@ void getSomeData(devpoll = false) {
 }
 
 def updateOperatingHistory(today) {
-	log.trace "updateOperatingHistory(${today})..."
+	Logger("updateOperatingHistory(${today})...", "trace")
 
 	def dayChange = false
 	def monthChange = false
@@ -2444,7 +2444,7 @@ def getSumUsage(table, String strtyp) {
 }
 
 def initHistoryStore() {
-	log.trace "initHistoryStore()..."
+	Logger("initHistoryStore()...", "trace")
 
 	def historyStoreMap = [:]
 	def today = new Date()
