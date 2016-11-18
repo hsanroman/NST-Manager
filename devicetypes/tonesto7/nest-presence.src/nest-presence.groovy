@@ -96,7 +96,7 @@ void installed() {
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout ?: 35
+	def timeOut = state?.hcTimeout ?: 60
 	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
