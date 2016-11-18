@@ -4901,7 +4901,7 @@ def childAppDataPage() {
 def childDevDataPage() {
 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
-		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather"]//, "extTempTable", "extTempTableYesterday", "historyStoreMap"]
+		def noShow = ["cssData"]//, "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTempTable", "extTempTableYesterday", "historyStoreMap"]
 		def devices = getAllChildDevices()
 		def devMap = [:]
 		//devMap["all"] = "Show All"
@@ -4932,7 +4932,7 @@ def childDevDataPage() {
 						section("${dev?.displayName.toString().capitalize()}:") {
 							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
 								def str = ""; def cnt = 1
-								def data = dev?.getDeviceStateData()?.findAll { it?.key }
+								def data = dev?.getDeviceStateData()?.findAll { !(it?.key in noShow) }
 								data?.sort().each { par ->
 									if(par?.value instanceof Map || par?.value instanceof List) {
 										def cnt2 = 1
