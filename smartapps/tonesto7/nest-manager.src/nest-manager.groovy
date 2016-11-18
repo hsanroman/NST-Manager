@@ -4901,61 +4901,56 @@ def childAppDataPage() {
 def childDevDataPage() {
 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
-		def noShow = ["cssData"]//, "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTempTable", "extTempTableYesterday", "historyStoreMap"]
+		if(!atomicState?.diagStateFilters) { atomicState?.diagStateFilters = [] }
+		def filterItems = []
 		def devices = getAllChildDevices()
-		def devMap = [:]
-		//devMap["all"] = "Show All"
-		devices?.each {
-			def devId = it?.deviceNetworkId
-			def devLbl = it?.label
-			def bdni = [devId].join('.')
-			devMap[bdni] = devLbl
+		section("Device Selection:") {
+			input(name: "childDevDataPageDev", title: "Select Device(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
+			if(!settings?.childDevDataPageDev) { paragraph "Please select a device to view!!!", required: true, state: null }
 		}
-
-		section("Select Device to View:") {
-			input(name: "childDevDataPageDev", title:"Select the Device to show...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:devMap])
-			if(settings?.childDevDataPageDev) {
-				paragraph "Show the following items in the device results:"
-				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
-				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: true, submitOnChange: true
-				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: true, submitOnChange: true
-				input "childDevPageShowCapab", "bool", title: "Capabilities?", defaultValue: true, submitOnChange: true
-			} else {
-				paragraph "Please select a device to view!!!", required: true, state: null
-			}
-		}
-
 		if(settings?.childDevDataPageDev) {
 			devices?.each { dev ->
 				settings?.childDevDataPageDev?.each { selDev ->
-					if(selDev == dev?.deviceNetworkId || selDev == "all") {
+					if(selDev == dev?.deviceNetworkId) {
 						section("${dev?.displayName.toString().capitalize()}:") {
 							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
 								def str = ""; def cnt = 1
-								def data = dev?.getDeviceStateData()?.findAll { !(it?.key in noShow) }
+								def data = dev?.getDeviceStateData()?.findAll { !(it?.key in atomicState?.diagStateFilters) }
 								data?.sort().each { par ->
 									if(par?.value instanceof Map || par?.value instanceof List) {
-										def cnt2 = 1
 										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}:"
-										par?.value?.sort()?.each { par2 ->
-											//log.debug "par size: ${par?.size()}"
-											if(par?.value instanceof Map) {
-												//log.debug "Map found...${par?.key}"
-												str += "\n   ├ ${par2?.key.toString()}: (${par2?.value})"
+										if(par?.value instanceof Map) {
+											def map2 = par?.value
+											def cnt2 = 1
+											map2?.sort()?.each { par2 ->
+												if(par2?.value instanceof Map) { //This handles second level maps
+													def map3 = par2?.value
+													def cnt3 = 1
+													str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
+													map3?.sort()?.each { par3 ->
+														str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
+														cnt3 = cnt3+1
+													}
+													cnt2 = cnt2+1
+												} else {
+													str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
+													cnt2 = cnt2+1
+												}
 											}
-											if(par?.value instanceof List) {
-												//log.debug "List found...${par?.key}"
-												str += "\n   ├ ${par2}"
+										}
+										if(par?.value instanceof List) {
+											def list2 = par?.value?.collect {it}
+											def cnt2 = 1
+											list2?.each { par2 ->
+												str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
+												cnt2 = cnt2+1
 											}
-											cnt2 = cnt2+1
 										}
 									} else {
-										//log.debug "not a map... ${par?.key}"
 										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
 									}
 									cnt = cnt+1
 								}
-								//paragraph title: "                              STATE DATA", "${str}"
 								paragraph title: "State Data\n", "${str}"
 							}
 							if(settings?.childDevPageShowAttr == true || settings?.childDevPageShowAttr == null) {
@@ -4965,7 +4960,6 @@ def childDevDataPage() {
 									str += "${cnt>1 ? "\n\n" : "\n"} • ${"$it" as String}: (${dev.currentValue("$it")})"
 									cnt = cnt+1
 								}
-								//paragraph title: "                 SUPPORTED ATTRIBUTES", "${str}"
 								paragraph title: "Supported Attributes\n", "${str}"
 							}
 							if(settings?.childDevPageShowCmds == true || settings?.childDevPageShowCmds == null) {
@@ -4974,7 +4968,6 @@ def childDevDataPage() {
 									str += "${cnt>1 ? "\n\n" : "\n"} • ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
 									cnt = cnt+1
 								}
-								//paragraph title: "                 SUPPORTED COMMANDS", "${str}"
 								paragraph title: "Supported Commands\n", "${str}"
 							}
 							if(settings?.childDevPageShowCapab == true || settings?.childDevPageShowCapab == null) {
@@ -4983,12 +4976,24 @@ def childDevDataPage() {
 									str += "${cnt>1 ? "\n\n" : "\n"} • ${cap}"
 									cnt = cnt+1
 								}
-								//paragraph title: "                 DEVICE CAPABILITIES", "${str}"
 								paragraph title: "Device Capabilities\n", "${str}"
 							}
 						}
 					}
 				}
+			}
+		}
+		if(settings?.childDevDataPageDev) {
+			section("Data Filters:") {
+				paragraph "Show the following items in the device results:"
+				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
+				if(settings?.childDevPageShowState) {
+					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys(devices)])
+					atomicState?.diagStateFilters = settings?.childDevDataStateFilter ?: []
+				}
+				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: true, submitOnChange: true
+				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: true, submitOnChange: true
+				input "childDevPageShowCapab", "bool", title: "Capabilities?", defaultValue: true, submitOnChange: true
 			}
 		}
 		section("Page Options:") {
@@ -4998,12 +5003,30 @@ def childDevDataPage() {
 			}
 			paragraph "Changing this may require you to leave the page and come back"
 		}
-		if(settings?.childDevPageShowState) {
-			section() {
-				paragraph title: "Excluded State Items:", "${noShow}"
+	}
+}
+
+def getChildStateKeys(devices) {
+	def data = []
+	devices?.each { dev ->
+		def items = dev?.getDeviceStateData().findAll { it }
+		items?.each { item ->
+			if(!data?.contains(item?.key.toString())) {
+				data?.push(item?.key.toString())
 			}
 		}
 	}
+	data = data?.sort()
+	//log.debug "data: $data"
+	return data
+}
+
+def buildDevInputMap() {
+	def devMap = [:]
+	getAllChildDevices()?.each {
+		devMap[[it?.deviceNetworkId].join('.')] = it?.label
+	}
+	return devMap
 }
 
 def feedbackPage() {
