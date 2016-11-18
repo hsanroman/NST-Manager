@@ -812,11 +812,12 @@ def uninstalled() {
 def initialize() {
 	//log.debug "initialize..."
 	if(parent) {
-		runIn(23, "initAutoApp", [overwrite: true])
+		runIn(6, "initAutoApp", [overwrite: true])
 	}
 	else {
 		initWatchdogApp()
-		initManagerApp()
+		runIn(14, "initManagerApp", [overwrite: true])  // need to give time for watchdog updates before we try to delete devices.
+		runIn(34, "initWatchdogApp", [overwrite: true])  // need to have watchdog check if we created devices
 	}
 }
 
@@ -837,7 +838,7 @@ def initManagerApp() {
 	subscriber()
 	setPollingState()
 	if(optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
-	runIn(20, "stateCleanup", [overwrite: true])
+	runIn(50, "stateCleanup", [overwrite: true])
 }
 
 def uninstManagerApp() {
