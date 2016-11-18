@@ -4932,35 +4932,121 @@ def managAppDataPage() {
 }
 
 def childAppDataPage() {
-	dynamicPage(name: "childAppDataPage", refreshInterval:30, install:false) {
-		def apps = getChildApps()
-		if(apps) {
-			apps?.each { ca ->
-				def str = ""
-				section("${ca?.label.toString().capitalize()}:") {
-					str += "   ─────SETTINGS DATA─────"
-					def setData = ca?.getSettingsData()
-					setData?.sort().each { sd ->
-						str += "\n\n• ${sd?.key.toString()}: (${sd?.value})"
+	def rVal = (settings?.childAppPageRfsh && settings?.childAppDataPageDev) ? (settings?.childAppDataRfshVal ? settings?.childAppDataRfshVal.toInteger() : 30) : null
+	dynamicPage(name: "childAppDataPage", refreshInterval:rVal, install:false) {
+		if(!atomicState?.diagAppStateFilters) { atomicState?.diagAppStateFilters = [] }
+		def apps = getAllChildApps()
+		section("Child App Selection:") {
+			input(name: "childAppDataPageApp", title: "Select Child App(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildChildAppInputMap()])
+			if(!settings?.childAppDataPageApp) { paragraph "Please select a child app to view!!!", required: true, state: null }
+		}
+		if(settings?.childAppDataPageApp) {
+			apps?.each { cApp ->
+				settings?.childAppDataPageApp?.each { selApp ->
+					if(selApp == cApp?.getId()) {
+						section("${cApp?.getLabel().toString().capitalize()}:") {
+							if(settings?.childAppPageShowState == true || settings?.childAppPageShowState == null) {
+								def str = ""; def cnt = 1
+								def data = cApp?.getState()?.findAll { !(it?.key in atomicState?.diagAppStateFilters) }
+								data?.sort().each { par ->
+									if(par?.value instanceof Map || par?.value instanceof List) {
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}:"
+										if(par?.value instanceof Map) {
+											def map2 = par?.value
+											def cnt2 = 1
+											map2?.sort()?.each { par2 ->
+												if(par2?.value instanceof Map) { //This handles second level maps
+													def map3 = par2?.value
+													def cnt3 = 1
+													str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
+													map3?.sort()?.each { par3 ->
+														if(par3?.value instanceof Map) { //This handles third level maps
+															log.debug "par3: $par3"
+															def map4 = par3?.value
+															def cnt4 = 1
+															str += "\n   ${cnt2 < map2?.size() ? "│" : "└"}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+															map4?.sort()?.each { par4 ->
+																str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "  "}${cnt4 < map4?.size() ? "├" : "└"} ${par4}"
+																cnt4 = cnt4+1
+															}
+														}
+														if(par3?.value instanceof List) { //This handles third level lists
+															def list3 = par3?.value?.collect {it}
+															def cnt4 = 1
+															//log.debug "cnt2: $cnt2 | map2: ${map2?.size()} || cnt3: $cnt3 | map3: ${map3?.size()}"
+															str += "\n   ${cnt2 < map2?.size() ? "│" : "└"}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+															list3?.each { par4 ->
+																str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "  "}${cnt4 < list3?.size() ? "├" : "└"} ${par4}"
+																cnt4 = cnt4+1
+															}
+														} else {
+															str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
+														}
+														cnt3 = cnt3+1
+													}
+													cnt2 = cnt2+1
+												} else {
+													str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
+													cnt2 = cnt2+1
+												}
+											}
+										}
+										if(par?.value instanceof List) {
+											def list2 = par?.value?.collect {it}
+											def cnt2 = 1
+											list2?.each { par2 ->
+												str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
+												cnt2 = cnt2+1
+											}
+										}
+									} else {
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
+									}
+									cnt = cnt+1
+								}
+								paragraph title: "State Data\n", "${str}"
+							}
+							if(settings?.childAppPageShowSet == true || settings?.childAppPageShowSet == null) {
+								def str = ""; def cnt = 1
+								cApp?.getSettings()?.sort()?.each { par ->
+									if(par?.value instanceof List) {
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}:"
+										def list2 = par?.value?.collect {it}
+										def cnt2 = 1
+										list2?.each { par2 ->
+											str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
+											cnt2 = cnt2+1
+										}
+									} else {
+										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
+									}
+									cnt = cnt+1
+								}
+								paragraph title: "Settings Data\n", "${str}"
+							}
+						}
 					}
-					def appData = ca?.getAppStateData()
-					str += "\n\n\n  ───────STATE DATA──────"
-					appData?.sort().each { par ->
-						str += "\n\n• ${par?.key.toString()}: (${par?.value})"
-					}
-					paragraph "${str}"
 				}
 			}
-		} else {
-			section("") { paragraph "No Child Apps Installed..." }
 		}
+		if(settings?.childAppDataPageApp) {
+			section("Data Filters:") {
+				paragraph "Show the following items in the device results:"
+				input "childAppPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
+				if(settings?.childAppPageShowState) {
+					input(name: "childAppDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("childapp")])
+					atomicState?.diagAppStateFilters = settings?.childAppDataStateFilter ?: []
+				}
+				input "childAppPageShowSet", "bool", title: "Settings Data?", defaultValue: true, submitOnChange: true
 
-		section("Page Options:") {
-			input "childAppDataPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
-			if(settings?.childAppDataPageRfsh) {
-				input "childAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: false, submitOnChange: true
 			}
-			paragraph "Changing these will require you to leave the page and come back"
+		}
+		section("Page Options:") {
+			input "childAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+			if(settings?.childAppPageRfsh) {
+				input "childAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
+			}
+			paragraph "Changing this may require you to leave the page and come back"
 		}
 	}
 }
@@ -4968,8 +5054,7 @@ def childAppDataPage() {
 def childDevDataPage() {
 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
-		if(!atomicState?.diagStateFilters) { atomicState?.diagStateFilters = [] }
-		def filterItems = []
+		if(!atomicState?.diagDevStateFilters) { atomicState?.diagDevStateFilters = [] }
 		def devices = getAllChildDevices()
 		section("Device Selection:") {
 			input(name: "childDevDataPageDev", title: "Select Device(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
@@ -4982,7 +5067,7 @@ def childDevDataPage() {
 						section("${dev?.displayName.toString().capitalize()}:") {
 							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
 								def str = ""; def cnt = 1
-								def data = dev?.getDeviceStateData()?.findAll { !(it?.key in atomicState?.diagStateFilters) }
+								def data = dev?.getState()?.findAll { !(it?.key in atomicState?.diagDevStateFilters) }
 								data?.sort().each { par ->
 									if(par?.value instanceof Map || par?.value instanceof List) {
 										str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}:"
@@ -5055,8 +5140,8 @@ def childDevDataPage() {
 				paragraph "Show the following items in the device results:"
 				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
 				if(settings?.childDevPageShowState) {
-					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys(devices)])
-					atomicState?.diagStateFilters = settings?.childDevDataStateFilter ?: []
+					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("device")])
+					atomicState?.diagDevStateFilters = settings?.childDevDataStateFilter ?: []
 				}
 				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: true, submitOnChange: true
 				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: true, submitOnChange: true
@@ -5073,13 +5158,26 @@ def childDevDataPage() {
 	}
 }
 
-def getChildStateKeys(devices) {
+def getChildStateKeys(type) {
 	def data = []
-	devices?.each { dev ->
-		def items = dev?.getDeviceStateData().findAll { it }
-		items?.each { item ->
-			if(!data?.contains(item?.key.toString())) {
-				data?.push(item?.key.toString())
+	def objs
+	switch (type) {
+		case "device":
+			objs = getAllChildDevices()
+			break
+		case "childapp":
+			objs = getAllChildApps()
+			break
+		default:
+			objs = []
+	}
+	if(objs) {
+		objs?.each { obj ->
+			def	items = obj?.getState().findAll { it }
+			items?.each { item ->
+				if(!data?.contains(item?.key.toString())) {
+					data?.push(item?.key.toString())
+				}
 			}
 		}
 	}
@@ -5094,6 +5192,14 @@ def buildDevInputMap() {
 		devMap[[it?.deviceNetworkId].join('.')] = it?.label
 	}
 	return devMap
+}
+
+def buildChildAppInputMap() {
+	def appMap = [:]
+	getAllChildApps()?.each {
+		appMap[[it?.getId()].join('.')] = it?.getLabel()
+	}
+	return appMap
 }
 
 def feedbackPage() {
