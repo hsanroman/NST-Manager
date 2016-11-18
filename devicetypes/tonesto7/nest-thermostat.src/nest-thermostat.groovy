@@ -322,7 +322,7 @@ def processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.curExtTemp = eventData?.curExtTemp
 			state.useMilitaryTime = eventData?.mt ? true : false
-			state.nestTimeZone = !location?.timeZone ? eventData.tz : null
+			state.nestTimeZone = eventData.tz ?: null
 			debugOnEvent(eventData?.debug ? true : false)
 			tempUnitEvent(getTemperatureScale())
 			if(eventData?.data?.is_locked != null) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
@@ -2256,7 +2256,7 @@ void getSomeData(devpoll = false) {
 }
 
 def updateOperatingHistory(today) {
-	log.trace "updateOperatingHistory()..."
+	log.trace "updateOperatingHistory(${today})..."
 
 	def dayChange = false
 	def monthChange = false
@@ -2508,6 +2508,7 @@ def getWeeksUsage() {
 }
 
 def getMonthsUsage(monNum) {
+	Logger("getMonthsUsage ${monNum}")
 	def hm = getHistoryStore()
 	def timeMap = [:]
 	def mVal = (monNum >= 1 && monNum <= 12) ? monNum : hm?.currentMonth
@@ -2574,26 +2575,26 @@ def getHistoryStore() {
 	hm."FanMode_Day${hm.currentDay}_On" = fan_on
 	hm."FanMode_Day${hm.currentDay}_auto" = fan_auto
 
-	def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0
+	def t1 = hm["OperatingState_Month${hm.currentMonth}_cooling"]?.toInteger() ?: 0L
 	hm."OperatingState_Month${hm.currentMonth}_cooling" = t1 + Op_coolingusage
-	t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0
+	t1 = hm["OperatingState_Month${hm.currentMonth}_heating"]?.toInteger() ?: 0L
 	hm."OperatingState_Month${hm.currentMonth}_heating" = t1 + Op_heatingusage
-	t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0
+	t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0L
 	hm."OperatingState_Month${hm.currentMonth}_idle" = t1 + Op_idle
-	t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0
+	t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0L
 	hm."FanMode_Month${hm.currentMonth}_On" = t1 + fan_on
-	t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0
+	t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0L
 	hm."FanMode_Month${hm.currentMonth}_auto" = t1 + fan_auto
 
-	t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0
+	t1 = hm[OperatingState_thisYear_cooling]?.toInteger() ?: 0L
 	hm.OperatingState_thisYear_cooling = t1 + Op_coolingusage
-	t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0
+	t1 = hm[OperatingState_thisYear_heating]?.toInteger() ?: 0L
 	hm.OperatingState_thisYear_heating = t1 + Op_heatingusage
-	t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0
+	t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0L
 	hm.OperatingState_thisYear_idle = t1 + Op_idle
-	t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0
+	t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0L
 	hm.FanMode_thisYear_On = t1 + fan_on
-	t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0
+	t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0L
 	hm.FanMode_thisYear_auto = t1 + fan_auto
 
 	return hm
@@ -2633,18 +2634,31 @@ def addNewData() {
 
 def addValue(table, hr, mins, val) {
 	def newval = null
-	if(val == [:]) {
+	if(val == [:] || val == null || val == [] || val == "") {
 		Logger("bad value ${val}", "error");
+		return table
 	} else {
 		newval = val
 	}
-	def newTable = table
-	if(table?.size() > 2) {
-			def last = table?.last()[2]
-			def secondtolast = table[-2][2]
-			if(newval == last && newval == secondtolast) {
-				newTable = table?.take(table.size() - 1)
-			}
+
+	def newTable = []
+	table.each() {
+		def t_hr = it[0]
+		def t_mins = it[1]
+		def myval = it[2]
+		//log.debug "${it[0]} ${it[1]} ${it[2]}"
+		if(!(myval == null || myval == [:] || myval == [])) {
+			newTable.add([t_hr, t_mins, myval])
+		}
+	}
+
+	if(newTable?.size() > 2) {
+		def last = newTable?.last()[2]
+		def secondtolast = newTable[-2][2]
+		if(newval == last && newval == secondtolast) {
+			def tempTable = newTable
+			newTable = tempTable?.take(tempTable.size() - 1)
+		}
 	}
 	newTable?.add([hr, mins, newval])
 	return newTable
@@ -2665,8 +2679,8 @@ def getIntListAvg(itemList) {
 
 def secToTimeMap(long seconds) {
 	long sec = seconds % 60
-	long minutes = seconds % 3600 / 60
-	long hours = seconds % 86400 / 3600
+	long minutes = (seconds % 3600) / 60
+	long hours = (seconds % 86400) / 3600
 	long days = seconds / 86400
 	long years = days / 365
 	def res = ["m":minutes, "h":hours, "d":days, "y":years]
