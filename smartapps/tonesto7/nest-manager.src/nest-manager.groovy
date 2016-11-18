@@ -40,11 +40,11 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.1.0" }
-def appVerDate() { "11-15-2016" }
+def appVerDate() { "11-18-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.0 (November 15th, 2016):"
+	str += "V4.1.0 (November 18th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Added: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
 	str += "\n • Added: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
@@ -4900,7 +4900,7 @@ def childAppDataPage() {
 def childDevDataPage() {
 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
-		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather", "extTempTable", "extTempTableYesterday", "historyStoreMap"]
+		def noShow = ["cssData", "eventData", "curAlerts", "curAstronomy", "curForecast", "curWeather"]//, "extTempTable", "extTempTableYesterday", "historyStoreMap"]
 		def devices = getAllChildDevices()
 		def devMap = [:]
 		//devMap["all"] = "Show All"
