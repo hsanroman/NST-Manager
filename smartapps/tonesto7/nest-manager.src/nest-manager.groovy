@@ -4570,6 +4570,7 @@ def uninstallPage() {
 				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 			}
 		}
+		remove("Remove Nest Manager and Devices!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nAll Devices, Automations, and the Manager App will be removed...")
 	}
 }
 
@@ -4873,7 +4874,7 @@ def diagPage () {
 		section("Other Data:") {
 			paragraph "API Token Client Version: ${atomicState?.metaData?.client_version ?: "Not Found"}"
 			paragraph "Nest Manager Client Id:\n${atomicState?.installationId ?: "Not Found"}"
-			paragraph "Token Number:\n${atomicState?.appData?.token?.tokenNum ?: "Not Found"}"
+			paragraph "Token Number: ${atomicState?.appData?.token?.tokenNum ?: "Not Found"}"
 		}
 	}
 }
@@ -5611,6 +5612,7 @@ def mainAutoPage(params) {
 					}
 				}
 			}
+			remove("Remove this Automation!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nThis Automation will be removed completely...")
 		}
 	}
 }
@@ -5824,15 +5826,15 @@ def getAutoIcon(type) {
 }
 
 def automationsInst() {
-	atomicState.isNestModesConfigured = 		isNestModesConfigured() ? true : false
-	atomicState.isSchMotConfigured = 		isSchMotConfigured() ? true : false
-	atomicState.isWatchdogConfigured = 		isWatchdogConfigured() ? true : false
-	atomicState.isFanCtrlConfigured = 		isFanCtrlConfigured() ? true : false
-	atomicState.isTstatSchedConfigured = 		isTstatSchedConfigured() ? true : false
-	atomicState.isExtTmpConfigured = 		isExtTmpConfigured() ? true : false
-	atomicState.isConWatConfigured = 		isConWatConfigured() ? true : false
-	atomicState.isLeakWatConfigured = 		isLeakWatConfigured() ? true : false
-	atomicState.isFanCircConfigured = 		isFanCircConfigured() ? true : false
+	atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
+	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
+	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
+	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
+	atomicState.isTstatSchedConfigured= isTstatSchedConfigured() ? true : false
+	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
+	atomicState.isConWatConfigured = 	isConWatConfigured() ? true : false
+	atomicState.isLeakWatConfigured = 	isLeakWatConfigured() ? true : false
+	atomicState.isFanCircConfigured = 	isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
 }
 
@@ -5848,7 +5850,7 @@ def getAutomationsInstalled() {
 			tmp[aType] = []
 			if(isFanCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
 			if(isFanCircConfigured()) 		{ tmp[aType].push("fanCirc") }
-			if(isTstatSchedConfigured()) 		{ tmp[aType].push("tSched") }
+			if(isTstatSchedConfigured()) 	{ tmp[aType].push("tSched") }
 			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
 			if(isConWatConfigured()) 		{ tmp[aType].push("conWat") }
 			if(isLeakWatConfigured()) 		{ tmp[aType].push("leakWat") }
@@ -6249,6 +6251,7 @@ def watchDogPage() {
 			href "setNotificationPage", title: "Configured Alerts...", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
 					state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
 		}
+		remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nThis Automation will be removed completely...")
 	}
 }
 

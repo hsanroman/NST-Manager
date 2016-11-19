@@ -2892,8 +2892,7 @@ def showChartHtml() {
 		weathstr2 = ""
 		weathstr3 = ""
 	}
-	//state?.extTempTable = []
-	//log.debug "extTempTable: ${state?.extTempTable}"
+
 	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
@@ -2912,16 +2911,19 @@ def showChartHtml() {
 
 	def uData = getTodaysUsage()
 	//log.debug "Today uData: $uData"
-	def thData = uData.heating.tSec
-	def tcData = uData.cooling.tSec
-	def tiData = uData.idle.tSec
+	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
+	log.debug "thData: $thData"
+	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
+	log.debug "tcData: $tcData"
+	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	log.debug "tiData: $tiData"
 
 	//Month Chart Section
 	uData = getMonthsUsage()
 	//log.debug "Month uData: $uData"
-	def mhData = uData.heating.tSec
-	def mcData = uData.cooling.tSec
-	def miData = uData.idle.tSec
+	def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
+	def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
+	def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
 
 	def data = """
 	<script type="text/javascript">
@@ -3012,7 +3014,7 @@ def showChartHtml() {
 		  google.charts.setOnLoadCallback(drawGraph);
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
-				['Operation', 'Runtime (hh.mm)'],
+				['Operation', 'Runtime (Minutes)'],
 				['Heating',  ${thData}],
 				['Cooling',  ${tcData}],
 				['Idle',  ${tiData}]
@@ -3020,9 +3022,10 @@ def showChartHtml() {
 
 			  var options = {
 				legend: 'none',
-				pieSliceText: 'label',
 				is3D: true,
 				pieStartAngle: 100,
+				pieSliceText: 'label',
+				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
 				chartArea: {
 					left: '7%',
 					right: '7%',
@@ -3042,7 +3045,7 @@ def showChartHtml() {
 		  google.charts.setOnLoadCallback(drawGraph);
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
-				['Operation', 'Runtime (hh.mm)'],
+				['Operation', 'Runtime (Minutes)'],
 				['Heating',  ${mhData}],
 				['Cooling',  ${mcData}],
 				['Idle',  ${miData}]
@@ -3050,9 +3053,11 @@ def showChartHtml() {
 
 			  var options = {
 				legend: 'none',
-				pieSliceText: 'label',
+
 				is3D: true,
 				pieStartAngle: 100,
+				pieSliceText: 'label',
+				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
 				chartArea: {
 					left: '7%',
 					right: '7%',
