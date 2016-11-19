@@ -1633,7 +1633,7 @@ def updateChildData(force = false) {
 
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
 
-					if(automationChildApp.getRemoteSenAutomationEnabled()) {
+					if(automationChildApp != null && automationChildApp.getRemoteSenAutomationEnabled()) {
 						def tempC = 0.0
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
@@ -3334,7 +3334,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getvThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
+						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
 						d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -3581,9 +3581,8 @@ def deviceHandlerTest() {
 		def d3 = addChildDevice(app.namespace, getProtectChildName(), "testNestProtect-Install123", null, [label:"Nest Protect:InstallTest"])
 		def d4 = addChildDevice(app.namespace, getWeatherChildName(), "testNestWeather-Install123", null, [label:"Nest Weather:InstallTest"])
 		def d5 = addChildDevice(app.namespace, getCameraChildName(), "testNestCamera-Install123", null, [label:"Nest Camera:InstallTest"])
-		def d6 = addChildDevice(app.namespace, getvThermostatChildName(), "testNestvThermostat-Install123", null, [label:"Nest vThermostat:InstallTest"])
 
-		log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} | d5: ${d5.label} | d6: ${d6.label}"
+		log.debug "d1: ${d1.label} | d2: ${d2.label} | d3: ${d3.label} | d4: ${d4.label} | d5: ${d5.label}"
 		atomicState.devHandlersTested = true
 		removeTestDevs()
 		//runIn(4, "removeTestDevs")
@@ -3603,7 +3602,7 @@ def deviceHandlerTest() {
 
 def removeTestDevs() {
 	try {
-		def names = [ "testNestThermostat-Install123", "testNestPresence-Install123", "testNestProtect-Install123", "testNestWeather-Install123", "testNestCamera-Install123", "testNestvThermostat-Install123" ]
+		def names = [ "testNestThermostat-Install123", "testNestPresence-Install123", "testNestProtect-Install123", "testNestWeather-Install123", "testNestCamera-Install123" ]
 		names?.each { dev ->
 			//log.debug "dev: $dev"
 			def delete = getChildDevices().findAll { it?.deviceNetworkId == dev }
@@ -4027,7 +4026,6 @@ def getProtectChildName()    { return getChildName("Nest Protect") }
 def getPresenceChildName()   { return getChildName("Nest Presence") }
 def getWeatherChildName()    { return getChildName("Nest Weather") }
 def getCameraChildName()     { return getChildName("Nest Camera") }
-def getvThermostatChildName() { return getChildName("Nest Virtual Thermostat") }
 
 def getAutoAppChildName()    { return getChildName("Nest Automations") }
 def getWatchdogAppChildName(){ return getChildName("Nest Location ${location.name} Watchdog") }
