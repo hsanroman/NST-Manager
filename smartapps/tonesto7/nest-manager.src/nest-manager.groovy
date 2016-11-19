@@ -11497,7 +11497,7 @@ def appInfoDesc() 	{
 	def beta = betaMarker() ? "" : ""
 	def str = ""
 	str += "${textAppName()}"
-	str += isAppUpdateAvail() ? "\n• ${textVersion()} (Lastest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
+	str += isAppUpdateAvail() ? "\n• ${textVersion()} (Latest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
 	str += "\n• ${textModified()}"
 	return str
 }
