@@ -3031,18 +3031,18 @@ def showChartHtml() {
 			  ]);
 
 			  var options = {
+				title: 'Todays Usage',
+				labels: 'name',
 				legend: 'none',
 				is3D: true,
 				pieStartAngle: 100,
 				pieSliceText: 'label',
 				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
 				chartArea: {
-					left: '7%',
-					right: '7%',
-					top: '7%',
-					bottom: '7%',
-					height: '85%',
-					width: '85%'
+					left: '15%',
+					right: '15%',
+					top: '25%',
+					bottom: '5%'
 				}
 			  };
 			  var chart = new google.visualization.PieChart(document.getElementById('today_graph'));
@@ -3051,7 +3051,7 @@ def showChartHtml() {
 	</script>
 
 	  <script type="text/javascript">
-		  google.charts.load('current', {packages: ['corechart']});
+		  google.charts.load('upcoming', {packages: ['corechart']});
 		  google.charts.setOnLoadCallback(drawGraph);
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
@@ -3062,38 +3062,37 @@ def showChartHtml() {
 			  ]);
 
 			  var options = {
+				title: 'Months Usage',
+  				labels: 'name',
 				legend: 'none',
-
 				is3D: true,
 				pieStartAngle: 100,
 				pieSliceText: 'label',
 				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
 				chartArea: {
-					left: '7%',
-					right: '7%',
-					top: '7%',
-					bottom: '7%',
-					height: '85%',
-					width: '85%'
+					left: '15%',
+					right: '15%',
+					top: '25%',
+					bottom: '5%'
 				}
 			  };
 			  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
 			  chart.draw(data, options);
 	  }
 	</script>
+	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
 	<table>
 	  <col width="50%">
 		<col width="50%">
 		<thead>
-		  <th>Today's Usage</th>
-		  <th>Month's Usage</th>
+
 		</thead>
 	    <tbody>
 		  <td>
-			<div id="today_graph" style="width: 100%; height: 100%;"></div>
+			<div id="today_graph" style="width: 100%; height: 150px;"></div>
 		  </td>
 		  <td>
-			<div id="month_graph" style="width: 100%; height: 100%;"></div>
+			<div id="month_graph" style="width: 100%; height: 150px;"></div>
 		  </td>
 	    </tbody>
 	</table>
