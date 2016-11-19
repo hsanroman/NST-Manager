@@ -3334,7 +3334,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getvThermostatChildName(), dni.key, null, [label: "${d6Label}"])
+						d6 = addChildDevice(app.namespace, getvThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
 						d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -4845,11 +4845,11 @@ def diagPage () {
 			paragraph "Current State Usage:\n${getStateSizePerc()}% (${getStateSize()} bytes)", required: true, state: (getStateSizePerc() <= 70 ? "complete" : null),
 					image: getAppImg("progress_bar.png")
 		}
-		section("View Apps & Devices Data") {
-			href "managAppDataPage", title:"View Manager Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-			href "childAppDataPage", title:"View Automations Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-			href "childDevDataPage", title:"View Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
-			href "appParamsDataPage", title:"View AppData File", description:"Tap to view...", image: getAppImg("view_icon.png")
+		section("View App & Device Data") {
+			href "managAppDataPage", title:"Manager App Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+			href "childAppDataPage", title:"Automation App Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+			href "childDevDataPage", title:"Device Data", description:"Tap to view...", image: getAppImg("view_icon.png")
+			href "appParamsDataPage", title:"AppData File", description:"Tap to view...", image: getAppImg("view_icon.png")
 		}
 		if(settings?.optInAppAnalytics || settings?.optInSendExceptions) {
 			section("Analytics Data") {
@@ -4870,6 +4870,11 @@ def diagPage () {
 			cmdDesc += "\n\n • Totals Commands Sent: (${!atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt})"
 			paragraph "${cmdDesc}"
 		}
+		section("Other Data:") {
+			paragraph "API Token Client Version: ${atomicState?.metaData?.client_version ?: "Not Found"}"
+			paragraph "Nest Manager Client Id:\n${atomicState?.installationId ?: "Not Found"}"
+			paragraph "Token Number:\n${atomicState?.appData?.token?.tokenNum ?: "Not Found"}"
+		}
 	}
 }
 
@@ -4882,7 +4887,7 @@ def appParamsDataPage() {
 					def cnt = 0
 					sec?.value.each { par ->
 						cnt = cnt+1
-						str += "${(cnt <= 1) ? "" : "\n\n"}• ${par?.key.toString()}: ${par?.value}"
+						str += "${(cnt <= 1) ? "" : "\n\n"} • ${par?.key.toString()}: ${par?.value}"
 					}
 					paragraph "${str}"
 				}
@@ -4900,7 +4905,7 @@ def managAppDataPage() {
 			def data = settings?.findAll { !(it.key in noShow) }
 			   data?.sort().each { item ->
 				cnt = cnt+1
-				str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+				str += "${(cnt <= 1) ? "" : "\n\n"} • ${item?.key.toString()}: (${item?.value})"
 			}
 			paragraph "${str}"
 		}
@@ -4910,7 +4915,7 @@ def managAppDataPage() {
 			def data = state?.findAll { !(it.key in noShow) }
 			data?.sort().each { item ->
 				cnt = cnt+1
-				str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key.toString()}: (${item?.value})"
+				str += "${(cnt <= 1) ? "" : "\n\n"} • ${item?.key.toString()}: (${item?.value})"
 			}
 			paragraph "${str}"
 		}
@@ -4923,7 +4928,7 @@ def managAppDataPage() {
 				def cnt2 = 0
 				item?.value.sort().each { vals ->
 					cnt2 = cnt2+1
-					str += "${(cnt2 <= 1) ? "" : "\n\n"}• ${vals?.key.toString()}: (${vals?.value})"
+					str += "${(cnt2 <= 1) ? "" : "\n\n"} • ${vals?.key.toString()}: (${vals?.value})"
 				}
 			}
 			paragraph "${str}"
