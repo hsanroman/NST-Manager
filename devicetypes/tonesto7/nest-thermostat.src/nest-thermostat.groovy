@@ -25,8 +25,6 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-preferences {  }
-
 def devVer() { return "4.1.0"}
 
 // for the UI
@@ -222,6 +220,9 @@ metadata {
 				 // "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "refresh"])
 				  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "graphHTML", "refresh"] )
 	}
+	preferences {
+		input "virtual", "bool", title: "Virtual Device", description: "Does not change", displayDuringSetup: false
+	}
 }
 
 def getTempColors() {
@@ -261,7 +262,16 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	if(state?.virtual == null) {
+		if(virtual) {                                   // preference passed in
+			Logger("Setting virtual to TRUE")
+			state.virtual = true 
+		} else {
+			Logger("Setting virtual to FALSE")
+			state.virtual = false
+		}
+	}
+	verifyHC()
 }
 
 void verifyHC() {
@@ -316,10 +326,10 @@ def processEvent(data) {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
-			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.curExtTemp = eventData?.curExtTemp
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = eventData.tz ?: null
@@ -3418,8 +3428,7 @@ def getCoolUsageDesc(perc, tmStr, timeType) {
 	return str
 }
 
-private def textDevName()  	{ return "Nest ${virtDevName()}Thermostat${appDevName()}" }
+private def textDevName()  	{ return "Nest Thermostat${appDevName()}" }
 private def appDevType()   	{ return false }
 private def appDevName()   	{ return appDevType() ? " (Dev)" : "" }
-private def virtType()		{ return false }
-private def virtDevName()  	{ return virtType() ? "Virtual " : "" }
+private def virtType()		{ return state?.virtual == true ? true : false }
