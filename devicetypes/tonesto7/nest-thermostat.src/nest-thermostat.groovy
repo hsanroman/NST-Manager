@@ -265,7 +265,7 @@ void installed() {
 	if(state?.virtual == null) {
 		if(virtual) {                                   // preference passed in
 			Logger("Setting virtual to TRUE")
-			state.virtual = true 
+			state.virtual = true
 		} else {
 			Logger("Setting virtual to FALSE")
 			state.virtual = false
@@ -3299,13 +3299,13 @@ def generateUsageText(timeType, timeMap) {
 			def m = tData?.m.toInteger()
 			def d = tData?.d.toInteger()
 			def y = tData?.y.toInteger()
-			if(h>0 || m>0 || d>0) {
+			//if(h>0 || m>0 || d>0) {
 				if(type == "heating") 	{ hData = item }
 				if(type == "cooling") 	{ cData = item }
 				if(type == "idle")	  	{ iData = item }
 				//if(type == "fanOn")   	{ f1Data = item }
 				//if(type == "fanAuto")	{ f0Data = item }
-			}
+			//}
 		}
 		if(hData || cData || iData) {// || f1Data || f0Data) {
 			str += " Based on the devices activity so far today. "

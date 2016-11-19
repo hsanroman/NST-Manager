@@ -40,19 +40,21 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.1.0" }
-def appVerDate() { "11-18-2016" }
+def appVerDate() { "11-19-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.0 (November 18th, 2016):"
+	str += "V4.1.0 (November 19th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Added: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
 	str += "\n • Added: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
 	str += "\n • Added: Cleaned up thermostat voice reports to sound more natural and added some more detail."
 	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)"
 	str += "\n • Added: Thermostat device graphs updated to display external temps and hvac runtime."
+	str += "\n • Added: Added two new pie charts to represent the Today and Month usage."
+	str += "\n • Updated: Virtual Thermostat device now shares the same code as the physical device handler"
 	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
-	str += "\n • Updated: Added more filters to the devices diagnostic data page to increase loading and not show irrelavent data."
+	str += "\n • Updated: Complete update to device and child app diagnostic pages it includes filters to increase loading and not show irrelavent data."
 	str += "\n • Updated: Lot's of Bugfixes"
 
 	str += "\n\nV4.0.0 (October 28th, 2016):"
@@ -1494,6 +1496,7 @@ def updateChildData(force = false) {
 		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
 		def hcTimeout = atomicState?.appData?.healthcheck?.timeout ?: 35
+		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
 
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
@@ -1538,7 +1541,7 @@ def updateChildData(force = false) {
 			}
 			else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
 				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true), "logPrefix":logNamePrefix,
-						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl, "hcTimeout":hcTimeout, "mobileClientType":mobClientType]
+						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType]
 				def oldProtData = atomicState?."oldProtData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldProtData${devId}" = pDataChecksum
@@ -3334,7 +3337,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getvThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
+						d6 = addChildDevice(app.namespace, getvThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:[type:"boolean","virtual":true]])
 						d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -9300,7 +9303,7 @@ def schMotModePage() {
 				if(settings?.schMotRemoteSensor) {
 					def remSenDescStr = ""
 					remSenDescStr += settings?.remSenRuleType ? "Rule-Type: ${getEnumValue(remSenRuleEnum("heatcool"), settings?.remSenRuleType)}" : ""
-					remSenDescStr += settings?.remSenTempDiffDegrees ? ("\n • Threshold: (${settings?.remSenTempDiffDegrees}${tempScaleStr}") : ""
+					remSenDescStr += settings?.remSenTempDiffDegrees ? ("\n • Threshold: (${settings?.remSenTempDiffDegrees}${tempScaleStr})") : ""
 					remSenDescStr += settings?.remSenTstatTempChgVal ? ("\n • Adjust Temp: (${settings?.remSenTstatTempChgVal}${tempScaleStr})") : ""
 
 					def hstr = remSenHeatTempsReq() ? "H: ${settings?.remSenDayHeatTemp ?: 0}${tempScaleStr}" : ""

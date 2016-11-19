@@ -69,6 +69,8 @@
         "count": 4
     },
     "healthcheck": {
-        "timeout": 35
+        "longTimeout": 1200,
+        "timeout": 35,
+
     }
 }
