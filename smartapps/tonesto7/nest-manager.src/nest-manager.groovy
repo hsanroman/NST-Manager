@@ -1693,12 +1693,12 @@ def updateChildData(force = false) {
 					tDataChecksum = atomicState."oldvStatData${devId}"
 					if(force || nforce || (oldTstatData != tDataChecksum)) {
 						atomicState?.vtDevVer = it?.devVer() ?: ""
-						if(!atomicState?.vtDevVer || (versionStr2Int(atomicState?.vtDevVer) >= minDevVersions()?.vthermostat?.val)) {
+						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
 							//log.warn "oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 							it.generateEvent(tData)
 						} else {
-							LogAction("VERSION RESTRICTION: Your vThermostat Device Version (v${atomicState?.vtDevVer}) is lower than the Minimum of (v${minDevVersions()?.vthermostat?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
+							LogAction("VERSION RESTRICTION: Your vThermostat Device Version (v${atomicState?.tDevVer}) is lower than the Minimum of (v${minDevVersions()?.thermostat?.desc}) | Please Update the Device Code to latest version to resume operation!!!", "error", true)
 							return false
 						}
 					}
@@ -2517,7 +2517,7 @@ def appUpdateNotify() {
 		str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
 		str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
 		str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.vthermostat?.ver?.toString()}"
+		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 		str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
 		sendMsg("Info", "Nest Manager Update(s) are Available:${str}...  \n\nPlease visit the IDE to Update your code...")
 		atomicState?.lastUpdMsgDt = getDtNow()
@@ -2900,7 +2900,7 @@ def isTstatUpdateAvail() {
 }
 
 def isvTstatUpdateAvail() {
-	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.vthermostat?.ver, atomicState?.vtDevVer, "vthermostat")) { return true }
+	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "vthermostat")) { return true }
 	return false
 }
 
@@ -4053,7 +4053,7 @@ def latestProtVer()     { return atomicState?.appData?.updater?.versions?.protec
 def latestPresVer()     { return atomicState?.appData?.updater?.versions?.presence ?: "unknown" }
 def latestWeathVer()    { return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
 def latestCamVer()      { return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
-def latestvStatVer()    { return atomicState?.appData?.updater?.versions?.vthermostat ?: "unknown" }
+def latestvStatVer()    { return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
 def getUse24Time()      { return useMilitaryTime ? true : false }
 
 //Returns app State Info
@@ -4181,12 +4181,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":400, "desc":"4.1.0"],
-		"protect":["val":400, "desc":"4.1.0"],
-		"presence":["val":400, "desc":"4.1.0"],
-		"weather":["val":400, "desc":"4.1.0"],
-		"camera":["val":200 , "desc":"2.1.0"],
-		"vthermostat":["val":400, "desc":"4.1.0"]
+		"thermostat":["val":410, "desc":"4.1.0"],
+		"protect":["val":410, "desc":"4.1.0"],
+		"presence":["val":410, "desc":"4.1.0"],
+		"weather":["val":410, "desc":"4.1.0"],
+		"camera":["val":210 , "desc":"2.1.0"],
 	]
 }
 

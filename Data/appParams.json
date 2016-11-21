@@ -46,9 +46,6 @@
             "thermostat": {
                 "ver": "4.1.0"
             },
-            "vthermostat": {
-                "ver": "4.1.0"
-            },
             "protect": {
                 "ver": "4.1.0"
             },
