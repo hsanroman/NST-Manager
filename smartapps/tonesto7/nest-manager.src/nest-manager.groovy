@@ -40,11 +40,14 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.1.0" }
-def appVerDate() { "11-19-2016" }
+def appVerDate() { "11-21-2016" }
 def appVerInfo() {
 	def str = ""
+	str += "V4.1.0 (November 21st, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • Updated: Modified the minimum device version removed some unnecessary code."
 
-	str += "V4.1.0 (November 19th, 2016):"
+	str += "\n\nV4.1.0 (November 19th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Added: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
 	str += "\n • Added: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
