@@ -114,10 +114,10 @@ preferences {
 	//Automation Pages
 	page(name: "selectAutoPage" )
 	page(name: "mainAutoPage")
-	page(name: "remSenTstatFanSwitchPage")
+	//page(name: "remSenTstatFanSwitchPage")
 	page(name: "remSenShowTempsPage")
 	page(name: "nestModePresPage")
-	page(name: "tstatModePage")
+	//page(name: "tstatModePage")
 	page(name: "schMotModePage")
 	page(name: "setDayModeTimePage")
 	page(name: "watchDogPage")
@@ -8303,8 +8303,8 @@ def nestModePresPage() {
 				if(nModeHomeModes && nModeAwayModes) {
 					def str = ""
 					def pLocationPresence = getNestLocPres()
-					str += location?.mode && plocationPresence ? "Location Status:" : ""
-					str += location?.mode ? "\n ├ SmartThings Mode: ${location?.mode}" : ""
+					str += location?.mode || plocationPresence ? "Location Status:" : ""
+					str += location?.mode ? "\n ${plocationPresence ? "├" : "└"} SmartThings Mode: ${location?.mode}" : ""
 					str += plocationPresence ? "\n └ Nest Location: (${plocationPresence == "away" ? "Away" : "Home"})" : ""
 					paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 				}
