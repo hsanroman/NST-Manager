@@ -545,14 +545,15 @@ def timeToTargetEvent(ttt, tttTr) {
 	//log.debug "opIdle: $opIdle"
 	def nVal
 	if(ttt) {
-		nVal = ttt.toString().replaceAll("\\~", "").toInteger()
+		nVal = ttt.toString().replaceAll("\\~", "").toString()
+		nVal = nVal.toString().replaceAll("\\<", "").toInteger()
 	}
 	//log.debug "nVal: $nVal"
 	def trStr
 	if(tttTr) {
 		trStr = tttTr.toString() == "training" ? "\n(Still Training)" : ""
 	}
-	def newVal = ttt ? (nVal == 0 && opIdle ? "System is Idle" : "${nVal} Minutes${trStr}") : "Not Available"
+	def newVal = ttt ? (nVal == 0 || opIdle ? "System is Idle" : "${nVal} Minutes${trStr}") : "Not Available"
 	if(!val.equals(newVal.toString())) {
 		Logger("UPDATED | Time to Target: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'timeToTarget', value: newVal, displayed: false)

@@ -88,7 +88,7 @@ metadata {
 		valueTile("devTypeVer", "device.devTypeVer", width: 2, height: 1, decoration: "flat") {
 			state("default", label: 'Device Type:\nv${currentValue}')
 		}
-		htmlTile(name:"weatherHTML", action: "getWeatherHTML", width: 6, height: 16, whiteList: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"weatherHTML", action: "getWeatherHTML", width: 6, height: 16, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main ("temp2")
 		details ("weatherHTML", "refresh")
@@ -995,20 +995,20 @@ def getSunriseSunset() {
 
 def forecastDay(day) {
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def forecastImageLink = "<a href=\"#${day}\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
-	def forecastTxt = ""
+	def forecastImageLink = "<a class=\"${day}-modal\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
+    def forecastTxt = ""
 
-	def modalHead = "<div id=\"${day}\" class=\"bottomModal\"><div><a href=\"#close\" title=\"Close\" class=\"close\">X</a>"
-	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
-	def forecastImage = "<img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\">"
-
+	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
+    def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
+ 	def forecastImage = "<div class=\"centerText\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></div>"
 	if ( wantMetric() ) {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
 	} else {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}</p>"
 	}
-	def modalClose = "</div> </div>"
-	return  dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
+def modalClose = "' }); }); </script>"
+
+return  dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
 def resetDataTables() {
@@ -1319,85 +1319,85 @@ def getWeatherHTML() {
 			//}
 
 			hData = """
-				<script type="text/javascript">
-				  google.charts.load('current', {packages: ['corechart']});
-				  google.charts.setOnLoadCallback(drawGraph);
-				  function drawGraph() {
-					  var data = new google.visualization.DataTable();
-					  data.addColumn('timeofday', 'time');
-					  data.addColumn('number', 'Temp (Yesterday)');
-					  data.addColumn('number', 'Dew (Yesterday)');
-					  data.addColumn('number', 'Temp (Today)');
-					  data.addColumn('number', 'Dew (Today)');
-					  data.addColumn('number', 'Humidity (Yest)');
-					  data.addColumn('number', 'Humidity (Today)');
-					  data.addRows([
-						  ${getDataString(1)}
-						  ${getDataString(2)}
-						  ${getDataString(3)}
-						  ${getDataString(4)}
-						  ${getDataString(5)}
-						  ${getDataString(6)}
-					  ]);
-					  var options = {
-						  width: '100%',
-						  height: '100%',
-						  animation: {
-							duration: 1500,
-							startup: true
-						  },
-						  hAxis: {
-							  format: 'H:mm',
-							  minValue: [${getStartTime()},0,0],
-							  slantedText: true,
-							  slantedTextAngle: 30
-						  },
-						  series: {
-							  0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-							  1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
-							  2: {targetAxisIndex: 1, color: '#FF0000'},
-							  3: {targetAxisIndex: 1, color: '#004CFF'},
-							  4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
-							  5: {targetAxisIndex: 0, color: '#B8B8B8'}
-						  },
-						  vAxes: {
-							  0: {
-								  title: 'Humidity (%)',
-								  format: 'decimal',
-								  minValue: 0,
-								  maxValue: 100,
-								  textStyle: {color: '#B8B8B8'},
-								  titleTextStyle: {color: '#B8B8B8'}
-							  },
-							  1: {
-								  title: 'Temperature (${tempStr})',
-								  format: 'decimal',
-								  ${minstr}
-								  ${maxstr}
-								  textStyle: {color: '#FF0000'},
-								  titleTextStyle: {color: '#FF0000'}
-							  }
-						  },
-						  legend: {
-							  position: 'bottom',
-							  maxLines: 4,
-							  textStyle: {color: '#000000'}
-						  },
-						  chartArea: {
-							  left: '12%',
-							  right: '18%',
-							  top: '3%',
-							  bottom: '20%',
-							  height: '85%',
-							  width: '100%'
-						  }
-					  };
-					  var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
-					  chart.draw(data, options);
-				  }
-			  </script>
-			  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-			  <div id="chart_div" style="width: 100%; height: 225px;"></div>
+					<script type="text/javascript">
+-				  google.charts.load('current', {packages: ['corechart']});
+-				  google.charts.setOnLoadCallback(drawGraph);
+-				  function drawGraph() {
+-					  var data = new google.visualization.DataTable();
+-					  data.addColumn('timeofday', 'time');
+-					  data.addColumn('number', 'Temp (Yesterday)');
+-					  data.addColumn('number', 'Dew (Yesterday)');
+-					  data.addColumn('number', 'Temp (Today)');
+-					  data.addColumn('number', 'Dew (Today)');
+-					  data.addColumn('number', 'Humidity (Yest)');
+-					  data.addColumn('number', 'Humidity (Today)');
+-					  data.addRows([
+-						  ${getDataString(1)}
+-						  ${getDataString(2)}
+-						  ${getDataString(3)}
+-						  ${getDataString(4)}
+-						  ${getDataString(5)}
+-						  ${getDataString(6)}
+-					  ]);
+-					  var options = {
+-						  width: '100%',
+-						  height: '100%',
+-						  animation: {
+-							duration: 1500,
+-							startup: true
+-						  },
+-						  hAxis: {
+-							  format: 'H:mm',
+-							  minValue: [${getStartTime()},0,0],
+-							  slantedText: true,
+-							  slantedTextAngle: 30
+-						  },
+-						  series: {
+-							  0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+-							  1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
+-							  2: {targetAxisIndex: 1, color: '#FF0000'},
+-							  3: {targetAxisIndex: 1, color: '#004CFF'},
+-							  4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
+-							  5: {targetAxisIndex: 0, color: '#B8B8B8'}
+-						  },
+-						  vAxes: {
+-							  0: {
+-								  title: 'Humidity (%)',
+-								  format: 'decimal',
+-								  minValue: 0,
+-								  maxValue: 100,
+-								  textStyle: {color: '#B8B8B8'},
+-								  titleTextStyle: {color: '#B8B8B8'}
+-							  },
+-							  1: {
+-								  title: 'Temperature (${tempStr})',
+-								  format: 'decimal',
+-								  ${minstr}
+-								  ${maxstr}
+-								  textStyle: {color: '#FF0000'},
+-								  titleTextStyle: {color: '#FF0000'}
+-							  }
+-						  },
+-						  legend: {
+-							  position: 'bottom',
+-							  maxLines: 4,
+-							  textStyle: {color: '#000000'}
+-						  },
+-						  chartArea: {
+-							  left: '12%',
+-							  right: '18%',
+-							  top: '3%',
+-							  bottom: '20%',
+-							  height: '85%',
+-							  width: '100%'
+-						  }
+-					  };
+-					  var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+-					  chart.draw(data, options);
+-				  }
+-			  </script>
+-			  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+-			  <div id="chart_div" style="width: 100%; height: 225px;"></div>
 			"""
 		} else {
 			hData = """
@@ -1409,28 +1409,45 @@ def getWeatherHTML() {
 				</div>
 			"""
 		}
-
 		def mainHtml = """
 		<!DOCTYPE html>
 		<html>
 			<head>
-				<meta charset="utf-8"/>
 				<meta http-equiv="cache-control" content="max-age=0"/>
 				<meta http-equiv="cache-control" content="no-cache"/>
 				<meta http-equiv="expires" content="0"/>
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-				<link rel="icon" href="${getFavIcon()}" type="image/x-icon" />
 			 	<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<script type="text/javascript" src="${getChartJsData()}"></script>
+                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+                <script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+               
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
+                <link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+                <script>vex.defaultOptions.className = 'vex-theme-default'</script>
+                <style>
+                .vex.vex-theme-default .vex-content {
+                	width: 300px;
+                    }
+                </style>
 			</head>
 			<body>
 				  ${clientBl}
 				  ${updateAvail}
 				  <div class="container">
 				  <h4>Current Weather Conditions</h4>
-				  <h3><a href="#openModal">${state?.walert}</a></h3>
+				  <h3><a class=\"alert-modal\">${state?.walert}TEST</a></h3>
+                     <script>
+						\$('.alert-modal').click(function(){
+                     	  vex.dialog.alert({
+                            message: ' ${state?.walertMessage}',
+                            className: 'vex-theme-top' // Overwrites defaultOptions
+                          })
+                        });
+                     </script>
 				  <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
 					  <div class="row">
 						  <div class="six columns">
@@ -1469,13 +1486,6 @@ def getWeatherHTML() {
 						  <div class="centerText offset-by-three six columns">
 							  <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
 							  <b>${state?.curWeather?.current_observation?.observation_time}</b>
-						  </div>
-					  </div>
-					  <div id="openModal" class="topModal">
-						  <div>
-							  <a href="#close" title="Close" class="close">X</a>
-							  <h2>Special Message</h2>
-							  <p>${state?.walertMessage}</p>
 						  </div>
 					  </div>
 					</div>
