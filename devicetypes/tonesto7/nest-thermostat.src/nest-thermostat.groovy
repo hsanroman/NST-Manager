@@ -546,6 +546,7 @@ def timeToTargetEvent(ttt, tttTr) {
 	def nVal
 	if(ttt) {
 		nVal = ttt.toString().replaceAll("\\~", "").toString()
+		nVal = nVal.toString().replaceAll("\\>", "").toString()
 		nVal = nVal.toString().replaceAll("\\<", "").toInteger()
 	}
 	//log.debug "nVal: $nVal"
@@ -2923,11 +2924,11 @@ def showChartHtml() {
 	def uData = getTodaysUsage()
 	//log.debug "Today uData: $uData"
 	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
-	log.debug "thData: $thData"
+	//log.debug "thData: $thData"
 	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	log.debug "tcData: $tcData"
+	//log.debug "tcData: $tcData"
 	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
-	log.debug "tiData: $tiData"
+	//log.debug "tiData: $tiData"
 
 	//Month Chart Section
 	uData = getMonthsUsage()
