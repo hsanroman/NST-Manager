@@ -165,7 +165,7 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	verifyHC()
 }
 
 void verifyHC() {
@@ -219,8 +219,12 @@ def processEvent() {
 			def results = eventData?.data
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
-            state.clientBl = eventData?.clientBl == true ? true : false
+			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
 			isStreamingEvent(results?.is_streaming)
