@@ -328,6 +328,10 @@ def processEvent(data) {
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.curExtTemp = eventData?.curExtTemp
