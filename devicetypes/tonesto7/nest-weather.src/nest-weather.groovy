@@ -72,7 +72,7 @@ metadata {
 
 	tiles(scale: 2) {
 		valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
-			state("default", label:'${currentValue}°',  icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
+			state("default", label:'${currentValue}°', icon:"https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.png",
 					backgroundColors: getTempColors() )
 		}
 		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
@@ -101,7 +101,7 @@ mappings {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	verifyHC()
 }
 
 void verifyHC() {
@@ -186,6 +186,10 @@ def processEvent() {
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.tempUnit = getTemperatureScale()
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.useMilitaryTime = eventData?.mt ? true : false
@@ -213,8 +217,8 @@ def processEvent() {
 	}
 }
 
-def getStateSize()	  { return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSize()	{ return state?.toString().length() }
+def getStateSizePerc()	{ return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -397,7 +401,7 @@ def getWeatherConditions(Map weatData) {
 				def Tc = Math.round(cur?.current_observation?.feelslike_c as Double) as Double
 				state.curWeatherDewPoint_c = estimateDewPoint(hum,Tc)
 				if (state.curWeatherTemp_c < state.curWeatherDewPoint_c) { state.curWeatherDewPoint_c = state.curWeatherTemp_c }
-				state.curWeatherDewPoint_f =  Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
+				state.curWeatherDewPoint_f = Math.round(state.curWeatherDewPoint_c * 9.0/5.0 + 32.0)
 				dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
 				getSomeData(true)
@@ -591,7 +595,7 @@ private estimateDewPoint(double rh,double t) {
 
 	def dp1 = 243.04 * ( Math.log(rh / 100) + ( (17.625 * t) / (243.04 + t) ) ) / (17.625 - Math.log(rh / 100) - ( (17.625 * t) / (243.04 + t) ) )
 	def ave = (dp + dp1)/2
-	//LogAction("dp: ${dp.round(1)}  dp1: ${dp1.round(1)} ave: ${ave.round(1)}")
+	//LogAction("dp: ${dp.round(1)} dp1: ${dp1.round(1)} ave: ${ave.round(1)}")
 	ave = dp1
 	return ave.round(1)
 }
@@ -614,8 +618,10 @@ private estimateLux(weatherIcon) {
 			def lux = 0
 			def twilight = 20 * 60 * 1000 // 20 minutes
 			def now = new Date().time
-			def sunriseDate = (long) state?.sunriseDate.time
-			def sunsetDate = (long) state?.sunsetDate.time
+			if(now == null) { Logger("got null for new Date()") }
+			def sunriseDate = (long) state?.sunriseDate?.time
+			def sunsetDate = (long) state?.sunsetDate?.time
+			if(sunriseDate == null || sunsetDate == null) { Logger("got null for sunriseDate or sunsetDate") }
 			sunriseDate -= twilight
 			sunsetDate += twilight
 			def oneHour = 1000 * 60 * 60
@@ -658,14 +664,14 @@ private estimateLux(weatherIcon) {
 					runIn(5*60, "luxUpdate", [overwrite: true])
 				} else if (beforeSunset < (oneHour*2)) {
 					//LogAction("before dusk", "trace")
-					def newTim =  (beforeSunset - oneHour)/1000 // seconds
+					def newTim = (beforeSunset - oneHour)/1000 // seconds
 					if(newTim > 0 && newTim < 3600) {
 						runIn(newTim, "luxUpdate", [overwrite: true])
 					}
 				}
 			} else {
 				if( (now > (sunriseDate-oneHour)) && now < sunsetDate) {
-					def newTim =  (sunriseDate - now)/1000 // seconds
+					def newTim = (sunriseDate - now)/1000 // seconds
 					if(newTim > 0 && newTim < 3600) {
 						runIn(newTim, "luxUpdate", [overwrite: true])
 					}
@@ -830,7 +836,7 @@ def getCSS(url = null){
 			uri: !url ? cssUrl() : url?.toString(),
 			contentType: 'text/css'
 		]
-		httpGet(params)  { resp ->
+		httpGet(params) { resp ->
 			return resp?.data.text
 		}
 	}
@@ -845,7 +851,7 @@ def getJS(url){
 		uri: url?.toString(),
 		contentType: "text/plain"
 	]
-	httpGet(params)  { resp ->
+	httpGet(params) { resp ->
 		return resp?.data.text
 	}
 }
@@ -996,19 +1002,19 @@ def getSunriseSunset() {
 def forecastDay(day) {
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
 	def forecastImageLink = "<a class=\"${day}-modal\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
-    def forecastTxt = ""
+	def forecastTxt = ""
 
 	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
-    def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
+	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
  	def forecastImage = "<div class=\"centerText\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></div>"
 	if ( wantMetric() ) {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
 	} else {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}</p>"
 	}
-def modalClose = "' }); }); </script>"
+	def modalClose = "' }); }); </script>"
 
-return  dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
+	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
 }
 
 def resetDataTables() {
@@ -1059,7 +1065,8 @@ def getSomeOldData(devpoll = false) {
 		return
 	}
 
-	def startOfToday = timeToday("00:00", location.timeZone)
+	//def startOfToday = timeToday("00:00", location.timeZone)
+	def startOfToday = timeToday("00:00", getTimeZone())
 	def newValues
 	def dataTable = []
 
@@ -1076,7 +1083,8 @@ def getSomeOldData(devpoll = false) {
 
 		dataTable = []
 		dewpointData.reverse().each() {
-			dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			//dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			dataTable.add([it.date.format("H", getTimeZone()),it.date.format("m", getTimeZone()),it.floatValue])
 		}
 		runIn( 80, "getSomeOldData", [overwrite: true])
 		state.dewpointTableYesterday = dataTable
@@ -1095,7 +1103,8 @@ def getSomeOldData(devpoll = false) {
 
 		dataTable = []
 		temperatureData.reverse().each() {
-			dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			//dataTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			dataTable.add([it.date.format("H", getTimeZone()),it.date.format("m", getTimeZone()),it.floatValue])
 		}
 		runIn( 80, "getSomeOldData", [overwrite: true])
 		state.temperatureTableYesterday = dataTable
@@ -1119,7 +1128,8 @@ def getSomeOldData(devpoll = false) {
 		}
 		dewpointTable = []
 		dewpointData.reverse().each() {
-			dewpointTable?.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			//dewpointTable?.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			dewpointTable.add([it.date.format("H", getTimeZone()),it.date.format("m", getTimeZone()),it.floatValue])
 		}
 		runIn( 33, "getSomeOldData", [overwrite: true])
 		state.dewpointTable = dewpointTable
@@ -1138,7 +1148,8 @@ def getSomeOldData(devpoll = false) {
 		temperatureTable = []
 		//temperatureData.reverse().drop(1).each() {
 		temperatureData.reverse().each() {
-			temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			//temperatureTable.add([it.date.format("H", location.timeZone),it.date.format("m", location.timeZone),it.floatValue])
+			temperatureTable.add([it.date.format("H", getTimeZone()),it.date.format("m", getTimeZone()),it.floatValue])
 		}
 		runIn( 30, "getSomeOldData", [overwrite: true])
 		state.temperatureTable = temperatureTable
@@ -1170,7 +1181,8 @@ def getSomeData(devpoll = false) {
 		return
 	}
 
-	def todayDay = new Date().format("dd",location.timeZone)
+	def todayDay = new Date().format("dd",getTimeZone())
+	//def todayDay = new Date().format("dd",location.timeZone)
 
 	if (state?.temperatureTable == null) {
 		//getSomeOldData(devpoll)
@@ -1223,8 +1235,9 @@ def addNewData() {
 
 	// add latest dewpoint & temperature readings for the graph
 	def newDate = new Date()
-        def hr = newDate.format("H", location.timeZone) as Integer
-        def mins = newDate.format("m", location.timeZone) as Integer
+	if(newDate == null) { Logger("got null for new Date()") }
+	def hr = newDate.format("H", location.timeZone) as Integer
+	def mins = newDate.format("m", location.timeZone) as Integer
 	state.temperatureTable = addValue(temperatureTable, hr, mins, currentTemperature)
 	state.dewpointTable = addValue(dewpointTable, hr, mins, currentDewpoint)
 	state?.humidityTable = addValue(humidityTable, hr, mins, currentHumidity)
@@ -1239,7 +1252,7 @@ def addNewData() {
 }
 
 def addValue(table, hr, mins, val) {
-        def newTable = table
+	def newTable = table
 	if(table?.size() > 2) {
 		def last = table?.last()[2]
 		def secondtolast = table[-2][2]
@@ -1320,92 +1333,92 @@ def getWeatherHTML() {
 
 			hData = """
 					<script type="text/javascript">
--				  google.charts.load('current', {packages: ['corechart']});
--				  google.charts.setOnLoadCallback(drawGraph);
--				  function drawGraph() {
--					  var data = new google.visualization.DataTable();
--					  data.addColumn('timeofday', 'time');
--					  data.addColumn('number', 'Temp (Yesterday)');
--					  data.addColumn('number', 'Dew (Yesterday)');
--					  data.addColumn('number', 'Temp (Today)');
--					  data.addColumn('number', 'Dew (Today)');
--					  data.addColumn('number', 'Humidity (Yest)');
--					  data.addColumn('number', 'Humidity (Today)');
--					  data.addRows([
--						  ${getDataString(1)}
--						  ${getDataString(2)}
--						  ${getDataString(3)}
--						  ${getDataString(4)}
--						  ${getDataString(5)}
--						  ${getDataString(6)}
--					  ]);
--					  var options = {
--						  width: '100%',
--						  height: '100%',
--						  animation: {
--							duration: 1500,
--							startup: true
--						  },
--						  hAxis: {
--							  format: 'H:mm',
--							  minValue: [${getStartTime()},0,0],
--							  slantedText: true,
--							  slantedTextAngle: 30
--						  },
--						  series: {
--							  0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
--							  1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
--							  2: {targetAxisIndex: 1, color: '#FF0000'},
--							  3: {targetAxisIndex: 1, color: '#004CFF'},
--							  4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
--							  5: {targetAxisIndex: 0, color: '#B8B8B8'}
--						  },
--						  vAxes: {
--							  0: {
--								  title: 'Humidity (%)',
--								  format: 'decimal',
--								  minValue: 0,
--								  maxValue: 100,
--								  textStyle: {color: '#B8B8B8'},
--								  titleTextStyle: {color: '#B8B8B8'}
--							  },
--							  1: {
--								  title: 'Temperature (${tempStr})',
--								  format: 'decimal',
--								  ${minstr}
--								  ${maxstr}
--								  textStyle: {color: '#FF0000'},
--								  titleTextStyle: {color: '#FF0000'}
--							  }
--						  },
--						  legend: {
--							  position: 'bottom',
--							  maxLines: 4,
--							  textStyle: {color: '#000000'}
--						  },
--						  chartArea: {
--							  left: '12%',
--							  right: '18%',
--							  top: '3%',
--							  bottom: '20%',
--							  height: '85%',
--							  width: '100%'
--						  }
--					  };
--					  var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
--					  chart.draw(data, options);
--				  }
--			  </script>
--			  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
--			  <div id="chart_div" style="width: 100%; height: 225px;"></div>
+				google.charts.load('current', {packages: ['corechart']});
+				google.charts.setOnLoadCallback(drawGraph);
+				function drawGraph() {
+					var data = new google.visualization.DataTable();
+					data.addColumn('timeofday', 'time');
+					data.addColumn('number', 'Temp (Yesterday)');
+					data.addColumn('number', 'Dew (Yesterday)');
+					data.addColumn('number', 'Temp (Today)');
+					data.addColumn('number', 'Dew (Today)');
+					data.addColumn('number', 'Humidity (Yest)');
+					data.addColumn('number', 'Humidity (Today)');
+					data.addRows([
+						${getDataString(1)}
+						${getDataString(2)}
+						${getDataString(3)}
+						${getDataString(4)}
+						${getDataString(5)}
+						${getDataString(6)}
+					]);
+					var options = {
+						width: '100%',
+						height: '100%',
+						animation: {
+							duration: 1500,
+							startup: true
+						},
+						hAxis: {
+							format: 'H:mm',
+							minValue: [${getStartTime()},0,0],
+							slantedText: true,
+							slantedTextAngle: 30
+						},
+						series: {
+							0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+							1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
+							2: {targetAxisIndex: 1, color: '#FF0000'},
+							3: {targetAxisIndex: 1, color: '#004CFF'},
+							4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
+							5: {targetAxisIndex: 0, color: '#B8B8B8'}
+						},
+						vAxes: {
+							0: {
+								title: 'Humidity (%)',
+								format: 'decimal',
+								minValue: 0,
+								maxValue: 100,
+								textStyle: {color: '#B8B8B8'},
+								titleTextStyle: {color: '#B8B8B8'}
+							},
+							1: {
+								title: 'Temperature (${tempStr})',
+								format: 'decimal',
+								${minstr}
+								${maxstr}
+								textStyle: {color: '#FF0000'},
+								titleTextStyle: {color: '#FF0000'}
+							}
+						},
+						legend: {
+							position: 'bottom',
+							maxLines: 4,
+							textStyle: {color: '#000000'}
+						},
+						chartArea: {
+							left: '12%',
+							right: '18%',
+							top: '3%',
+							bottom: '20%',
+							height: '85%',
+							width: '100%'
+						}
+					};
+					var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+					chart.draw(data, options);
+				}
+			</script>
+			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+			<div id="chart_div" style="width: 100%; height: 225px;"></div>
 			"""
 		} else {
 			hData = """
 				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
 				<br></br>
 				<div class="centerText">
-				  <p>Waiting for more data to be collected</p>
-				  <p>This may take at a couple hours</p>
+				<p>Waiting for more data to be collected</p>
+				<p>This may take at a couple hours</p>
 				</div>
 			"""
 		}
@@ -1421,73 +1434,73 @@ def getWeatherHTML() {
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 			 	<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<script type="text/javascript" src="${getChartJsData()}"></script>
-                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
-                <script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-               
+				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
-                <link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-                <script>vex.defaultOptions.className = 'vex-theme-default'</script>
-                <style>
-                .vex.vex-theme-default .vex-content {
-                	width: 300px;
-                    }
-                </style>
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+				<style>
+					.vex.vex-theme-default .vex-content {
+						width: 300px;
+					}
+				</style>
 			</head>
 			<body>
-				  ${clientBl}
-				  ${updateAvail}
-				  <div class="container">
-				  <h4>Current Weather Conditions</h4>
-				  <h3><a class=\"alert-modal\">${state?.walert}TEST</a></h3>
-                     <script>
-						\$('.alert-modal').click(function(){
-                     	  vex.dialog.alert({
-                            message: ' ${state?.walertMessage}',
-                            className: 'vex-theme-top' // Overwrites defaultOptions
-                          })
-                        });
-                     </script>
-				  <h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
-					  <div class="row">
-						  <div class="six columns">
-							  <b>Feels Like:</b> ${getFeelslike()} <br>
-							  <b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
-							  <b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-							  <b>Dew Point: </b>${getDewpoint()}<br>
-							  <b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-							  <b>Visibility:</b> ${getVisibility()} <br>
-							  <b>Lux:</b> ${getLux()}<br>
-							  <b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-							  <b>Wind:</b> ${state?.windStr} <br>
-						  </div>
-						  <div class="six columns">
-							  <img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
-							  <h2>${getTemp()}</h2>
-							  <h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
-						  </div>
-					  </div>
-					  <div class="row topBorder">
-						  <div class="centerText four columns">${forecastDay(0)}</div>
-						  <div class="centerText four columns">${forecastDay(1)}</div>
-						  <div class="centerText four columns">${forecastDay(2)}</div>
-					  </div>
-					  <div class="row">
-						  <div class="centerText four columns">${forecastDay(3)}</div>
-						  <div class="centerText four columns">${forecastDay(4)}</div>
-						  <div class="centerText four columns">${forecastDay(5)}</div>
-					  </div>
-					  <div class="row">
-						  <div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
-						  <div class="centerText four columns">${forecastDay(7)}</div>
-					  </div>
-					  <p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
-					  <div class="row topBorder">
-						  <div class="centerText offset-by-three six columns">
-							  <b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-							  <b>${state?.curWeather?.current_observation?.observation_time}</b>
-						  </div>
-					  </div>
+				${clientBl}
+				${updateAvail}
+				<div class="container">
+				<h4>Current Weather Conditions</h4>
+				<h3><a class=\"alert-modal\">${state?.walert}</a></h3>
+				<script>
+					\$('.alert-modal').click(function(){
+						vex.dialog.alert({
+							message: ' ${state?.walertMessage}',
+							className: 'vex-theme-top' // Overwrites defaultOptions
+						})
+					});
+				</script>
+				<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
+					<div class="row">
+						<div class="six columns">
+							<b>Feels Like:</b> ${getFeelslike()} <br>
+							<b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+							<b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+							<b>Dew Point: </b>${getDewpoint()}<br>
+							<b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+							<b>Visibility:</b> ${getVisibility()} <br>
+							<b>Lux:</b> ${getLux()}<br>
+							<b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+							<b>Wind:</b> ${state?.windStr} <br>
+						</div>
+						<div class="six columns">
+							<img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+							<h2>${getTemp()}</h2>
+							<h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+						</div>
+					</div>
+					<div class="row topBorder">
+						<div class="centerText four columns">${forecastDay(0)}</div>
+						<div class="centerText four columns">${forecastDay(1)}</div>
+						<div class="centerText four columns">${forecastDay(2)}</div>
+					</div>
+					<div class="row">
+						<div class="centerText four columns">${forecastDay(3)}</div>
+						<div class="centerText four columns">${forecastDay(4)}</div>
+						<div class="centerText four columns">${forecastDay(5)}</div>
+					</div>
+					<div class="row">
+						<div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+						<div class="centerText four columns">${forecastDay(7)}</div>
+					</div>
+					<p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
+					<div class="row topBorder">
+						<div class="centerText offset-by-three six columns">
+							<b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
+							<b>${state?.curWeather?.current_observation?.observation_time}</b>
+						</div>
+					</div>
 					</div>
 					<br></br>
 					${hData}
@@ -1503,6 +1516,6 @@ def getWeatherHTML() {
 	}
 }
 
-private def textDevName()  { return "Nest Weather${appDevName()}" }
-private def appDevType()   { return false }
-private def appDevName()   { return appDevType() ? " (Dev)" : "" }
+private def textDevName()	{ return "Nest Weather${appDevName()}" }
+private def appDevType()	{ return false }
+private def appDevName()	{ return appDevType() ? " (Dev)" : "" }
