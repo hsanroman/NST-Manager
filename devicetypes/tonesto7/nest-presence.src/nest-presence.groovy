@@ -91,7 +91,7 @@ mappings {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	verifyHC()
 }
 
 void verifyHC() {
@@ -148,6 +148,10 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
