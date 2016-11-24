@@ -161,7 +161,7 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-    verifyHC()
+	verifyHC()
 }
 
 void verifyHC() {
@@ -273,8 +273,12 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
+			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
-            state.clientBl = eventData?.clientBl == true ? true : false
+			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = eventData?.tz ?: null
