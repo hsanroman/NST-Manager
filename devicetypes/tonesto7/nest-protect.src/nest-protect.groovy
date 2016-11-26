@@ -710,9 +710,26 @@ def getInfoHtml() {
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
-		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
-		def html = """
+		
+        def updateAvail = !state.updateAvailable ? "" : """ 
+        	<script>
+              vex.dialog.alert({
+                message: 'Device Update Available!',
+                className: 'vex-theme-top'
+              })
+			</script>
+        """
+
+        def clientBl = state?.clientBl ? """ 
+              <script>
+                vex.dialog.alert({
+                  unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
+                  className: 'vex-theme-top'
+                })
+			  </script>
+            """ : ""
+        
+        def html = """
 		<!DOCTYPE html>
 		<html>
 			<head>
@@ -722,32 +739,15 @@ def getInfoHtml() {
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+	
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
-				<style>
-                .modal {
-                    display: none; /* Hidden by default */
-                    position: fixed; /* Stay in place */
-                    z-index: 1; /* Sit on top */
-                    left: 0;
-                    top: 0;
-                    width: 100%; /* Full width */
-                    height: 100%; /* Full height */
-                    overflow: auto; /* Enable scroll if needed */
-                    background-color: rgb(0,0,0); /* Fallback color */
-                    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-                }
-                .modal-content {
-                    background-color: #fefefe;
-                    margin: 5% auto;
-                    padding: 20px;
-                    border: 1px solid #888;
-                    width: 80%;
-                }
-              </style>
 			</head>
 			<body>
-			  ${clientBl}
-			  ${updateAvail}
 			  ${testModeHTML}
 			  <div class="row">
 				<div class="offset-by-two four columns centerText">
@@ -793,6 +793,8 @@ def getInfoHtml() {
 				  </tr>
 				</tbody>
 			  </table>
+              ${clientBl}
+			  ${updateAvail}
 			</body>
 		</html>
 		"""
