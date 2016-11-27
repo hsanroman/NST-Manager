@@ -520,7 +520,7 @@ def getPublicVideoId() {
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
 def chgStreaming() {
-	def cur = latestValue("isStreaming").toString()
+	def cur = device.latestValue("isStreaming").stringValue
 	if(cur == "on" || cur == "unavailable" || !cur) {
 		streamingOn(true)
 	} else {
