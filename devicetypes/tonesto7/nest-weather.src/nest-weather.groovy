@@ -925,6 +925,25 @@ def getWeatherIcon() {
 	}
 }
 
+def getWeatCondFromUrl(url) {
+	def nList = url?.toString().split("/")
+	def splList = nList?.last().substring(0, nList?.last().length() - 4).split("_")
+	return splList?.last()
+}
+
+def getWeatherImg(cond) {
+	try {
+		def newCond = getWeatCondFromUrl(cond)
+		log.debug "newCond: ${newCond}"
+		def url = "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
+		return getImgBase64(url, "svg+xml")
+	}
+	catch (ex) {
+		log.error "getWeatherImg Exception:", ex
+		exceptionDataHandler(ex.message, "getWeatherImg")
+	}
+}
+
 def getFavIcon() {
 	try {
 		return getImgBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "ico")
@@ -1001,12 +1020,12 @@ def getSunriseSunset() {
 
 def forecastDay(day) {
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def forecastImageLink = "<a class=\"${day}-modal\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></a><br>"
+	def forecastImageLink = "<a class=\"${day}-modal\"><img src=\"${getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)}\"></a><br>"
 	def forecastTxt = ""
 
 	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
 	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
- 	def forecastImage = "<div class=\"centerText\"><img src=\"${getImgBase64(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url, gif)}\"></div>"
+ 	def forecastImage = "<div class=\"centerText\"><img src=\"${getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)}\"></div>"
 	if ( wantMetric() ) {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
 	} else {
@@ -1440,6 +1459,7 @@ def getWeatherHTML() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/wu-icons-style.css", "text", "css")}" />
 				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<style>
 					.vex.vex-theme-default .vex-content {
@@ -1475,7 +1495,7 @@ def getWeatherHTML() {
 							<b>Wind:</b> ${state?.windStr} <br>
 						</div>
 						<div class="six columns">
-							<img class="offset-by-two eight columns" src="${getWeatherIcon()}"> <br>
+							<img class="offset-by-two eight columns" src="${getWeatherImg(state?.curWeather?.current_observation?.icon_url)}"> <br>
 							<h2>${getTemp()}</h2>
 							<h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
 						</div>

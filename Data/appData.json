@@ -63,7 +63,7 @@
         "allowAsync": true
     },
     "schedule": {
-        "count": 4
+        "count": 8
     },
     "healthcheck": {
         "longTimeout": 120,
