@@ -65,7 +65,7 @@
     "pollMethod": {
         "allowAsync": true
     },
-    "schedule": {
+    "schedules": {
         "count": 8
     },
     "healthcheck": {
