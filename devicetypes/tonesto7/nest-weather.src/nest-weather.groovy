@@ -1019,12 +1019,13 @@ def getSunriseSunset() {
 
 def forecastDay(day) {
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)}" style="width:64px;height:64px;"></a><br>"""
+	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
+	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
 	def forecastTxt = ""
 
 	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
 	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
- 	def forecastImage = """<div class=\"centerText\"><img src="${getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)}" style="width:64px;height:64px;"></div>"""
+ 	def forecastImage = """<div class=\"centerText\"><img src="${foreImgB64}" style="width:64px;height:64px;"></div>"""
 	if ( wantMetric() ) {
 		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
 	} else {
