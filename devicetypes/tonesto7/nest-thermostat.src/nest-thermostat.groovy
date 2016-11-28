@@ -25,7 +25,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.1.0"}
+def devVer() { return "4.1.1"}
 
 // for the UI
 metadata {
@@ -164,6 +164,24 @@ metadata {
 			state("emergency heat", action:"changeMode", nextState: "updating", icon: "st.thermostat.emergency")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
 		}
+
+
+		standardTile("offBtn", "device.off", width:1, height:1, decoration: "flat") {
+			state("default", action: "off", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+		}
+		standardTile("ecoBtn", "device.eco", width:1, height:1, decoration: "flat") {
+			state("default", action: "eco", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
+		}
+		standardTile("heatBtn", "device.heat", width:1, height:1, decoration: "flat") {
+			state("default", action: "heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+		}
+		standardTile("coolBtn", "device.cool", width:1, height:1, decoration: "flat") {
+			state("default", action: "cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+		}
+		standardTile("autoBtn", "device.auto", width:1, height:1, decoration: "flat") {
+			state("default", action: "auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+		}
+
 		standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
 			state("auto", action: "changeFanMode", 	nextState: "updating",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_auto_icon.png")
 			state("on",	action: "changeFanMode",	nextState: "updating", 	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/fan_on_icon.png")
@@ -213,12 +231,16 @@ metadata {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+
+		standardTile("blank", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
+			state "default", label: ''
+		}
+		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 12, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
-		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode", "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp",
-				 // "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "graphHTML", "refresh"])
-				  "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp", "heatSliderControl", "coolSliderControl", "graphHTML", "refresh"] )
+		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
+				  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+				  "heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "refresh"] )
 	}
 	preferences {
 		input "virtual", "bool", title: "Virtual Device", description: "Does not change", displayDuringSetup: false
@@ -2755,8 +2777,8 @@ def getGraphHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
-		
-         def updateAvail = !state.updateAvailable ? "" : """ 
+
+         def updateAvail = !state.updateAvailable ? "" : """
         	<script>
               vex.dialog.alert({
                 message: 'Device Update Available!',
@@ -2765,7 +2787,7 @@ def getGraphHTML() {
 			</script>
         """
 
-        def clientBl = state?.clientBl ? """ 
+        def clientBl = state?.clientBl ? """
                 <script>
                   vex.dialog.alert({
                     unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
@@ -2773,7 +2795,7 @@ def getGraphHTML() {
                   })
 				</script>
             """ : ""
-		
+
         def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
 		def chartHtml = (
@@ -2799,7 +2821,7 @@ def getGraphHTML() {
 
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-	
+
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>

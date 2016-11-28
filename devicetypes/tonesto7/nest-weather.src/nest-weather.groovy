@@ -1459,7 +1459,6 @@ def getWeatherHTML() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/wu-icons-style.css", "text", "css")}" />
 				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<style>
 					.vex.vex-theme-default .vex-content {

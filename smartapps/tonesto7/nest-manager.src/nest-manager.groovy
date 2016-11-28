@@ -236,7 +236,7 @@ def mainPage() {
 			section("Manage your Devices & Location:") {
 				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
-				if(getDevicesHaveChg()) {
+				if(getDevChgDesc()) {
 					paragraph ""
 				}
 			}
@@ -275,7 +275,6 @@ def mainPage() {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
 		}
-		log.debug "devmap: ${getCurDevMap()}"
 	}
 }
 
@@ -841,7 +840,7 @@ def initManagerApp() {
 	atomicState.swVersion = appVersion()
 	if(addRemoveDevices()) { // if we changed devices, reset queues and polling
 		atomicState.cmdQlist = []
-		updateCurDevMap()
+		currentDevMap(true)
 	}
 	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
 		atomicState?.isInstalled = true
@@ -853,33 +852,90 @@ def initManagerApp() {
 }
 
 def getDevicesHaveChg() {
+	if(!atomicState?.currentDevMap) { currentDevMap(true) }
+	def result = getDevChgDesc() ?: null
+	return result
+}
+
+def getDevChgDesc() {
+	return null
+	if(!atomicState?.currentDevMap) { currentDevMap(true) }
+	def chgDevMap = [:]
 	def orig = atomicState?.currentDevMap
-	def cur = getCurDevMap()
-	return !orig || (cur == orig) ? false : true
+	//log.debug "origMap: ${orig}"
+	def cur = currentDevMap()
+	//log.debug "curMap: ${cur}"
+	def oldKeys = orig*.key
+	def newKeys = cur*.key
+
+	def addedKeys = newKeys - oldKeys
+	//log.debug "addedKeys: $addedKeys"
+	def addedValues = cur.findAll { it.key in addedKeys }
+	//log.debug "addedValues: $addedValues"
+	def removedKeys = oldKeys - newKeys
+	//log.debug "removedKeys: $removedKeys"
+	def removedValues = orig.findAll { it.key in removedKeys }
+	log.debug "removedValues: $removedValues"
+
+
+	def commonKeys = newKeys - removedKeys - addedKeys
+	//log.debug "commonKeys: $commonKeys"
+	def changedKeys = commonKeys.findAll { atomicState?.currentDevMap[it] != currentDevMap()[it] }
+	//log.debug "changedKeys: $changedKeys"
+
+	def changedValues = orig.findAll { it.key in changedKeys }
+	log.debug "changedValues: $changedValues"
+
+	def addedDevs = [:]
+	def removedDevs = [:]
+	changedKeys?.each { item ->
+		def rDevs
+		def aDevs
+		//log.debug "chg Item: ${item}"
+		if(atomicState?.currentDevMap[item].value && currentDevMap()[item].value) {
+
+			def oldMap = atomicState?.currentDevMap as Map
+			log.debug "oldMap[$item]: ${oldMap[item].value}"
+			oldMap[item]?.value?.key.each { it1 ->
+				//log.debug "it1: $it1"
+				// currentDevMap[item].each { it2 ->
+				// 	log.debug "it2: $it2"
+				// 	if(!it2.contains(it1)) {
+				// 		rDevs.push(it1)
+				// 	} else if (!it1.contains(it2)) {
+				// 		aDevs.push(it2)
+				// 	}
+				// }
+			}
+			// if(rDevs.size()) { removedDevs << [(item):rDevs] }
+			// if(aDevs.size()) { addedDevs << [(item):aDevs] }
+		}
+		log.debug "aDevs: $aDevs | rDevs: $rDevs"
+	}
+	//mgrVerData = mgrVerList.groupBy().collectEntries { [(it.key) : it.value.size()] }
+	if(removedValues.size() || addedValues.size() || changedValues.size()) {
+		return ""
+	} else { return null }
 }
 
-def updateCurDevMap() {
-	atomicState?.currentDevMap = getCurDevMap()
-}
-
-def getCurDevMap() {
+def currentDevMap(update=false) {
 	def res = [:]
 	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	keys?.each { key ->
 		def items = []
-		def var = (key == "vthermostats") ? atomicState?."${key}" : settings?."${key}"
+		def var = atomicState?."${key}"
 		if(var) {
 			var?.each { item ->
-				if(key == "vthermostats") {
-					items.push(item)
-				} else {
-					items.push(item?.toString())
-				}
-				res << ["${key}":items]
+				items.push(item?.toString())
 			}
+			res << [(key):items?.toString()]
 		}
 	}
-	return res
+	if(update) {
+		atomicState?.currentDevMap = res
+		return ""
+	} else { return res }
+
 }
 
 def uninstManagerApp() {
@@ -1190,6 +1246,7 @@ def checkIfSwupdated() {
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
+		getDevChgDesc()
 		checkIfSwupdated()
 		def meta = false
 		def dev = false
