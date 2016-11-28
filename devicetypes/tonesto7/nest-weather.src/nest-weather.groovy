@@ -934,7 +934,6 @@ def getWeatCondFromUrl(url) {
 def getWeatherImg(cond) {
 	try {
 		def newCond = getWeatCondFromUrl(cond)
-		log.debug "newCond: ${newCond}"
 		def url = "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
 		return getImgBase64(url, "svg+xml")
 	}
