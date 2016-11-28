@@ -39,10 +39,11 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.0" }
-def appVerDate() { "11-21-2016" }
+def appVersion() { "4.1.1" }
+def appVerDate() { "11-27-2016" }
 def appVerInfo() {
 	def str = ""
+
 	str += "V4.1.0 (November 21st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Modified the minimum device version removed some unnecessary code."
@@ -233,8 +234,11 @@ def mainPage() {
 		}
 		if(atomicState?.isInstalled) {
 			section("Manage your Devices & Location:") {
-				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n\nCurrent Devices: ${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
+				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
+				if(getDevicesHaveChg()) {
+					paragraph ""
+				}
 			}
 		}
 		if(!atomicState?.isInstalled) {
@@ -271,6 +275,7 @@ def mainPage() {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
 		}
+		log.debug "devmap: ${getCurDevMap()}"
 	}
 }
 
@@ -836,6 +841,7 @@ def initManagerApp() {
 	atomicState.swVersion = appVersion()
 	if(addRemoveDevices()) { // if we changed devices, reset queues and polling
 		atomicState.cmdQlist = []
+		updateCurDevMap()
 	}
 	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
 		atomicState?.isInstalled = true
@@ -844,6 +850,36 @@ def initManagerApp() {
 	setPollingState()
 	if(optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
 	runIn(50, "stateCleanup", [overwrite: true])
+}
+
+def getDevicesHaveChg() {
+	def orig = atomicState?.currentDevMap
+	def cur = getCurDevMap()
+	return !orig || (cur == orig) ? false : true
+}
+
+def updateCurDevMap() {
+	atomicState?.currentDevMap = getCurDevMap()
+}
+
+def getCurDevMap() {
+	def res = [:]
+	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
+	keys?.each { key ->
+		def items = []
+		def var = (key == "vthermostats") ? atomicState?."${key}" : settings?."${key}"
+		if(var) {
+			var?.each { item ->
+				if(key == "vthermostats") {
+					items.push(item)
+				} else {
+					items.push(item?.toString())
+				}
+				res << ["${key}":items]
+			}
+		}
+	}
+	return res
 }
 
 def uninstManagerApp() {
@@ -4474,10 +4510,16 @@ def devCustomizePageDesc() {
 }
 
 def getDevicesDesc() {
+	def pDev = settings?.thermostats || settings?.protects || settings?.cameras
+	def vDev = settings?.vthermostats || settings?.presDevice || settings?.weatherDevice
 	def str = ""
+	str += pDev ? "\nPhysical Devices:" : ""
 	str += settings?.thermostats ? "\n • [${settings?.thermostats?.size()}] Thermostat${(settings?.thermostats?.size() > 1) ? "s" : ""}" : ""
 	str += settings?.protects ? "\n • [${settings?.protects?.size()}] Protect${(settings?.protects?.size() > 1) ? "s" : ""}" : ""
 	str += settings?.cameras ? "\n • [${settings?.cameras?.size()}] Camera${(settings?.cameras?.size() > 1) ? "s" : ""}" : ""
+
+	str += vDev ? "${pDev ? "\n" : ""}\nVirtual Devices:" : ""
+	str += atomicState?.vthermostats ? "\n • [${atomicStateatomicState?.vthermostats?.size()}] Virtual Thermostat${(atomicState?.vthermostats?.size() > 1) ? "s" : ""}" : ""
 	str += settings?.presDevice ? "\n • [1] Presence Device" : ""
 	str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
 	str += (!settings?.thermostats && !settings?.protects && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected..." : ""
