@@ -39,8 +39,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.1" }
-def appVerDate() { "11-27-2016" }
+def appVersion() { "4.1.2" }
+def appVerDate() { "11-29-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -220,6 +220,7 @@ def authPage() {
 
 def mainPage() {
 	//log.trace "mainPage"
+	def devChangedDesc = getDevChgDesc()
 	def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
 	return dynamicPage(name: "mainPage", title: "", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
 		section("") {
@@ -236,8 +237,15 @@ def mainPage() {
 			section("Manage your Devices & Location:") {
 				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
-				if(getDevChgDesc()) {
-					paragraph ""
+			}
+			if(devChangedDesc) {
+				section("Pending Device Changes") {
+					if(devChangedDesc.added) {
+						paragraph title: "Devices to Install", devChangedDesc?.added, state: "complete"
+					}
+					if(devChangedDesc.removed) {
+						paragraph title: "Devices to Remove", devChangedDesc?.removed, required: true, state: null
+					}
 				}
 			}
 		}
@@ -840,7 +848,6 @@ def initManagerApp() {
 	atomicState.swVersion = appVersion()
 	if(addRemoveDevices()) { // if we changed devices, reset queues and polling
 		atomicState.cmdQlist = []
-		currentDevMap(true)
 	}
 	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
 		atomicState?.isInstalled = true
@@ -851,91 +858,116 @@ def initManagerApp() {
 	runIn(50, "stateCleanup", [overwrite: true])
 }
 
-def getDevicesHaveChg() {
+def getDevChgDesc() {
 	if(!atomicState?.currentDevMap) { currentDevMap(true) }
-	def result = getDevChgDesc() ?: null
-	return result
+	// log.debug "orig: ${atomicState?.currentDevMap?.instDevicesMap}"
+	// log.debug "cur: ${currentDevMap()?.instDevicesMap}"
+	def added = [:]
+	def deleted = [:]
+	def result = compareDevMap(atomicState?.currentDevMap?.instDevicesMap, currentDevMap()?.instDevicesMap, added, deleted)
+	log.debug "result: $result"
+	def resStr = [:]
+	def opts = ["added", "removed"]
+	def str = ""
+	opts?.each { t ->
+		if(result?."${t}"?.size()) {
+			def cnt = 1
+			result?."${t}"?.each {
+				switch(it?.key) {
+					case "presDevice":
+						str += it?.key ? "${cnt==1 ? "\n" : ""} • Presence Device" : ""
+						break
+					case "weatherDevice":
+						str += it?.key ? "${cnt==1 ? "\n" : ""} • Weather Device" : ""
+						break
+					default:
+						str += it?.key ? "${cnt>1 ? "\n" : ""}${it?.key?.toString().capitalize()}:" : ""
+						if(it?.value?.size()) {
+							it?.value?.each { val ->
+								str += val ? "\n • $val" : ""
+							}
+						}
+						break
+				}
+				cnt = cnt+1
+			}
+			//log.debug "str: $str"
+			resStr?."${t}" = str
+		}
+	}
+	return resStr?.size() ? resStr : null
 }
 
-def getDevChgDesc() {
-	return null
-	if(!atomicState?.currentDevMap) { currentDevMap(true) }
-	def chgDevMap = [:]
-	def orig = atomicState?.currentDevMap
-	//log.debug "origMap: ${orig}"
-	def cur = currentDevMap()
-	//log.debug "curMap: ${cur}"
-	def oldKeys = orig*.key
-	def newKeys = cur*.key
-
-	def addedKeys = newKeys - oldKeys
-	//log.debug "addedKeys: $addedKeys"
-	def addedValues = cur.findAll { it.key in addedKeys }
-	//log.debug "addedValues: $addedValues"
-	def removedKeys = oldKeys - newKeys
-	//log.debug "removedKeys: $removedKeys"
-	def removedValues = orig.findAll { it.key in removedKeys }
-	log.debug "removedValues: $removedValues"
-
-
-	def commonKeys = newKeys - removedKeys - addedKeys
-	//log.debug "commonKeys: $commonKeys"
-	def changedKeys = commonKeys.findAll { atomicState?.currentDevMap[it] != currentDevMap()[it] }
-	//log.debug "changedKeys: $changedKeys"
-
-	def changedValues = orig.findAll { it.key in changedKeys }
-	log.debug "changedValues: $changedValues"
-
-	def addedDevs = [:]
-	def removedDevs = [:]
-	changedKeys?.each { item ->
-		def rDevs
-		def aDevs
-		//log.debug "chg Item: ${item}"
-		if(atomicState?.currentDevMap[item].value && currentDevMap()[item].value) {
-
-			def oldMap = atomicState?.currentDevMap as Map
-			log.debug "oldMap[$item]: ${oldMap[item].value}"
-			oldMap[item]?.value?.key.each { it1 ->
-				//log.debug "it1: $it1"
-				// currentDevMap[item].each { it2 ->
-				// 	log.debug "it2: $it2"
-				// 	if(!it2.contains(it1)) {
-				// 		rDevs.push(it1)
-				// 	} else if (!it1.contains(it2)) {
-				// 		aDevs.push(it2)
-				// 	}
-				// }
+def compareDevMap(map1, map2, added, deleted, lastkey=null) {
+	//log.trace "compareDevMap(map1, map2, $added, $deleted, $lastkey)"
+	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
+	for(m1 in map1) {
+		def keyVal = m1?.key.toString()
+		def m1Key = map1?."${keyVal}"
+		def m2Key = map2?."${keyVal}"
+		if ((m1Key != null) && (m2Key == null)) {
+			log.debug "Map1 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M1Key: $m1Key | M2Key: $m2Key | M1Data: $m1"
+			def val = lastkey ?: keyVal
+			if(val in keys) {
+				if(deleted[val] == null) { deleted[val] = [] } //if the key is in valid them create the map entry
+				deleted[val].push(m1Key)
+				log.debug "($val) Device Deleted: ${m1Key}"
 			}
-			// if(rDevs.size()) { removedDevs << [(item):rDevs] }
-			// if(aDevs.size()) { addedDevs << [(item):aDevs] }
+		} else {
+			if ((m1Key instanceof Map) && (m2Key instanceof Map)) {
+				compareDevMap(m1Key, m2Key, added, deleted, keyVal)
+			}
 		}
-		log.debug "aDevs: $aDevs | rDevs: $rDevs"
 	}
-	//mgrVerData = mgrVerList.groupBy().collectEntries { [(it.key) : it.value.size()] }
-	if(removedValues.size() || addedValues.size() || changedValues.size()) {
-		return ""
-	} else { return null }
+	for(m2 in map2) {
+		def keyVal = m2?.key.toString()
+		def m1Key = map1?."${keyVal}"
+		def m2Key = map2?."${keyVal}"
+		if ((m2Key != null) && (m1Key == null)) {
+			log.debug "Map2 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M2Key: $m2Key | M1Key: $m1Key | M2Data: $m2"
+			def val = lastkey ?: m2Key
+			if(val in keys) {
+				if(added[val] == null) { added[val] = [] }
+				added[val].push(m2Key)
+				log.debug "($val) Device Added: ${m2Key}"
+			}
+		}
+	}
+	return ["added":added, "removed":deleted]
 }
 
 def currentDevMap(update=false) {
 	def res = [:]
 	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	keys?.each { key ->
-		def items = []
+		def items = [:]
 		def var = atomicState?."${key}"
 		if(var) {
+			if(res[key] == null) { res[key] = [:] }
 			var?.each { item ->
-				items.push(item?.toString())
+				if(key == "presDevice") {
+					def val = [(getNestPresId().toString()):getNestPresLabel().toString()]
+					res[key] << val
+					//log.debug "val: ${val}"
+				}
+				else if(key == "weatherDevice") {
+					def val = [(getNestWeatherId().toString()):getNestWeatherLabel().toString()]
+					res[key] << val
+					//log.debug "val: ${val}"
+				} else {
+					if(item?.key) {
+						res[key] << [(item?.key):item?.value]
+					}
+				}
 			}
-			res << [(key):items?.toString()]
 		}
 	}
+	res = ["instDevicesMap":res]
+	//log.debug "res: ${res}"
 	if(update) {
 		atomicState?.currentDevMap = res
-		return ""
 	} else { return res }
-
+	return ""
 }
 
 def uninstManagerApp() {
@@ -3479,6 +3511,7 @@ def addRemoveDevices(uninst = null) {
 			delete.each { deleteChildDevice(it.deviceNetworkId) }
 		}
 		retVal = true
+		currentDevMap(true)
 	} catch (ex) {
 		if(ex instanceof physicalgraph.exception.ConflictException) {
 			def msg = "Error: Can't Delete App because Devices are still in use in other Apps, Routines, or Rules.  Please double check before trying again."
