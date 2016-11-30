@@ -76,6 +76,7 @@ preferences {
 	page(name: "authPage")
 	page(name: "mainPage")
 	page(name: "deviceSelectPage")
+	page(name: "deviceChgsPage")
 	page(name: "reviewSetupPage")
 	page(name: "voiceRprtPrefPage")
 	page(name: "changeLogPage")
@@ -220,7 +221,6 @@ def authPage() {
 
 def mainPage() {
 	//log.trace "mainPage"
-	def devChangedDesc = getDevChgDesc()
 	def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
 	return dynamicPage(name: "mainPage", title: "", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
 		section("") {
@@ -238,16 +238,8 @@ def mainPage() {
 				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
-			if(devChangedDesc) {
-				section("Pending Device Changes") {
-					if(devChangedDesc.added) {
-						paragraph title: "Devices to Install", devChangedDesc?.added, state: "complete"
-					}
-					if(devChangedDesc.removed) {
-						paragraph title: "Devices to Remove", devChangedDesc?.removed, required: true, state: null
-					}
-				}
-			}
+
+			getDevChgDesc()
 		}
 		if(!atomicState?.isInstalled) {
 			devicesPage()
@@ -860,42 +852,47 @@ def initManagerApp() {
 
 def getDevChgDesc() {
 	if(!atomicState?.currentDevMap) { currentDevMap(true) }
-	// log.debug "orig: ${atomicState?.currentDevMap?.instDevicesMap}"
-	// log.debug "cur: ${currentDevMap()?.instDevicesMap}"
 	def added = [:]
 	def deleted = [:]
 	def result = compareDevMap(atomicState?.currentDevMap?.instDevicesMap, currentDevMap()?.instDevicesMap, added, deleted)
-	log.debug "result: $result"
-	def resStr = [:]
+	def res = []
 	def opts = ["added", "removed"]
-	def str = ""
+	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	opts?.each { t ->
+		def str = ""
 		if(result?."${t}"?.size()) {
 			def cnt = 1
 			result?."${t}"?.each {
-				switch(it?.key) {
-					case "presDevice":
-						str += it?.key ? "${cnt==1 ? "\n" : ""} • Presence Device" : ""
-						break
-					case "weatherDevice":
-						str += it?.key ? "${cnt==1 ? "\n" : ""} • Weather Device" : ""
-						break
-					default:
-						str += it?.key ? "${cnt>1 ? "\n" : ""}${it?.key?.toString().capitalize()}:" : ""
-						if(it?.value?.size()) {
-							it?.value?.each { val ->
-								str += val ? "\n • $val" : ""
-							}
+				if(it?.key in ["presDevice", "weatherDevice"]) {
+					str += it?.key ? "${cnt>1 ? "\n" : ""}Virtual Devices" : ""
+					if(it?.key == "presDevice") {
+						str += it?.key ? "\n • Presence Device" : ""
+					} else {
+						str += it?.key ? "\n • Weather Device" : ""
+					}
+				} else {
+					str += it?.key ? "${cnt>1 ? "\n\n" : ""}${it?.key?.toString().capitalize()}:" : ""
+					if(it?.value?.size()) {
+						it?.value?.each { val ->
+							str += val ? "\n • $val" : ""
 						}
-						break
+					}
 				}
 				cnt = cnt+1
 			}
 			//log.debug "str: $str"
-			resStr?."${t}" = str
+			if(str != "") {
+				res += section("Pending Device Changes:") {
+							if(t == "added") {
+								paragraph title: "Installing...", str, state: "complete"
+							} else if(t=="removed") {
+								paragraph title: "Removing...", str, required: true, state: null
+							}
+						}
+			}
 		}
 	}
-	return resStr?.size() ? resStr : null
+	return disp?.size() ? disp : null
 }
 
 def compareDevMap(map1, map2, added, deleted, lastkey=null) {
@@ -906,12 +903,12 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 		def m1Key = map1?."${keyVal}"
 		def m2Key = map2?."${keyVal}"
 		if ((m1Key != null) && (m2Key == null)) {
-			log.debug "Map1 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M1Key: $m1Key | M2Key: $m2Key | M1Data: $m1"
+			//log.debug "Map1 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M1Key: $m1Key | M2Key: $m2Key | M1Data: $m1"
 			def val = lastkey ?: keyVal
 			if(val in keys) {
 				if(deleted[val] == null) { deleted[val] = [] } //if the key is in valid them create the map entry
 				deleted[val].push(m1Key)
-				log.debug "($val) Device Deleted: ${m1Key}"
+				//log.debug "($val) Device Deleted: ${m1Key}"
 			}
 		} else {
 			if ((m1Key instanceof Map) && (m2Key instanceof Map)) {
@@ -924,12 +921,12 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 		def m1Key = map1?."${keyVal}"
 		def m2Key = map2?."${keyVal}"
 		if ((m2Key != null) && (m1Key == null)) {
-			log.debug "Map2 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M2Key: $m2Key | M1Key: $m1Key | M2Data: $m2"
+			//log.debug "Map2 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M2Key: $m2Key | M1Key: $m1Key | M2Data: $m2"
 			def val = lastkey ?: m2Key
 			if(val in keys) {
 				if(added[val] == null) { added[val] = [] }
 				added[val].push(m2Key)
-				log.debug "($val) Device Added: ${m2Key}"
+				//log.debug "($val) Device Added: ${m2Key}"
 			}
 		}
 	}
