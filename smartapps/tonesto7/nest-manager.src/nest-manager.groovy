@@ -76,7 +76,6 @@ preferences {
 	page(name: "authPage")
 	page(name: "mainPage")
 	page(name: "deviceSelectPage")
-	page(name: "deviceChgsPage")
 	page(name: "reviewSetupPage")
 	page(name: "voiceRprtPrefPage")
 	page(name: "changeLogPage")
@@ -145,6 +144,9 @@ mappings {
 	}
 }
 
+/******************************************************************************
+|					Application Pages						  |
+*******************************************************************************/
 //This Page is used to load either parent or child app interface code
 def startPage() {
 	if(parent) {
@@ -159,9 +161,10 @@ def startPage() {
 def authPage() {
 	//log.trace "authPage()"
 	getAccessToken()
+	initAppMetricStore()
+	//log.debug "metricStore: ${atomicState?.usageMetricsStore}"
 	def preReqOk = preReqCheck()
 	deviceHandlerTest()
-
 	if(!atomicState?.accessToken || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk))) {
 		return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall: false) {
 			section ("Status Page:") {
@@ -238,7 +241,6 @@ def mainPage() {
 				def devDesc = getDevicesDesc() ? "Nest Location: (${locationPresence().toString().capitalize()})\n${getDevicesDesc()}\n\nTap to Modify..." : "Tap to Configure..."
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
-
 			getDevChgDesc()
 		}
 		if(!atomicState?.isInstalled) {
@@ -275,6 +277,7 @@ def mainPage() {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
 		}
+		//incMainLoadCnt()
 	}
 }
 
@@ -330,6 +333,7 @@ def devicesPage() {
 			atomicState.weatherDevice = settings?.weatherDevice ?: null
 		}
 	}
+	incDevLocLoadCnt()
 }
 
 def deviceSelectPage() {
@@ -433,6 +437,7 @@ def prefsPage() {
 		section("Customize the Label of the App:") {
 			label title:"Application Label (optional)", required:false
 		}
+		incPrefLoadCnt()
 	}
 }
 
@@ -474,6 +479,7 @@ def automationsPage() {
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to call the Update() action on each automation.\nTap to Begin...", image: getAppImg("reset_icon.png")
 			}
 		}
+		incAutoLoadCnt()
 	}
 }
 
@@ -509,6 +515,7 @@ def automationSchedulePage() {
 				}
 			}
 		}
+		incViewAutoSchedLoadCnt()
 	}
 }
 
@@ -546,6 +553,7 @@ def automationStatisticsPage() {
 				}
 			}
 		}
+		incViewAutoStatLoadCnt()
 	}
 }
 
@@ -646,6 +654,7 @@ def automationGlobalPrefsPage() {
 				}
 			}
 		}
+		incAutoGlobPrefLoadCnt()
 	}
 }
 
@@ -701,6 +710,7 @@ def voiceRprtPrefPage() {
 			input ("vRprtIncUsageInfo", "bool", title: "Current Usage Info?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("usage_icon.png"))
 		}
 	}
+	incVrprtPrefLoadCnt()
 }
 
 def getVoiceRprtPrefs() {
@@ -711,6 +721,377 @@ def getVoiceRprtPrefs() {
 		"vRprtZone":(settings?.vRprtIncZoneInfo == false ? false : true),
 		"vRprtUsage":(settings?.vRprtIncUsageInfo == false ? false : true)
 	]
+}
+
+
+def pollPrefPage() {
+	dynamicPage(name: "pollPrefPage", install: false) {
+		section("") {
+			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
+		}
+		section("Device Polling:") {
+			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
+					submitOnChange: true)
+		}
+		section("Location Polling:") {
+			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
+					submitOnChange: true)
+		}
+		if(atomicState?.weatherDevice) {
+			section("Weather Polling:") {
+				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()],
+						submitOnChange: true)
+			}
+		}
+		section("Wait Values:") {
+			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
+					submitOnChange: true)
+		}
+		incPollPrefLoadCnt()
+	}
+}
+
+def getPollingConfDesc() {
+	def pollValDesc = (!pollValue || pollValue == 180) ? "" : " (Custom)"
+	def pollStrValDesc = (!pollStrValue || pollStrValue == 180) ? "" : " (Custom)"
+	def pollWeatherValDesc = (!pollWeatherValue || pollWeatherValue == 900) ? "" : " (Custom)"
+	def pollWaitValDesc = (!pollWaitVal || pollWaitVal == 10) ? "" : " (Custom)"
+	def pStr = ""
+	pStr += "Polling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
+	pStr += "\n • Device: (${getInputEnumLabel(pollValue?:180, pollValEnum())})"
+	pStr += "\n • Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})"
+	pStr += atomicState?.weatherDevice ? "\n • Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})" : ""
+	pStr += "\n • Forced Poll Refresh Limit:\n    └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
+	return ((pollValDesc || pollStrValDesc || pollWEatherValDesc || pollWaitValDesc) ? pStr : "")
+}
+
+def notifPrefPage() {
+	dynamicPage(name: "notifPrefPage", install: false) {
+		def sectDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
+		section(sectDesc) {
+			if(!location.contactBookEnabled) {
+				input(name: "usePush", type: "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
+			} else {
+				input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
+					input ("phone", "phone", title: "Phone Number to send SMS to...", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
+				}
+			}
+		}
+
+		if(settings?.recipients || settings?.phone || settings?.usePush) {
+			if(settings?.recipients && !atomicState?.pushTested) {
+				sendMsg("Info", "Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}")
+				atomicState.pushTested = true
+			} else { atomicState.pushTested = true }
+
+			section(title: "Time Restrictions") {
+				href "setNotificationTimePage", title: "Silence Notifications...", description: (getNotifSchedDesc() ?: "Tap to configure..."), params: [pName: ""], state: (getNotifSchedDesc() ? "complete" : null),
+					image: getAppImg("quiet_time_icon.png")
+			}
+			section("Missed Poll Notification:") {
+				input (name: "sendMissedPollMsg", type: "bool", title: "Send Missed Poll Messages?", defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png"))
+				if(sendMissedPollMsg == null || sendMissedPollMsg) {
+					def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
+					input (name: "misPollNotifyWaitVal", type: "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
+					if(misPollNotifyWaitVal) {
+						atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
+						if(misPollNotifyWaitVal.toInteger() == 1000000) {
+							input (name: "misPollNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 900, submitOnChange: true)
+							if(misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
+						}
+					} else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
+
+					def misPollNotifyMsgWaitValDesc = !misPollNotifyMsgWaitVal ? "Default: 1 Hour" : misPollNotifyMsgWaitVal
+					input (name: "misPollNotifyMsgWaitVal", type: "enum", title: "Delay before sending again?", required: false, defaultValue: 3600, metadata: [values:notifValEnum()], submitOnChange: true)
+					if(misPollNotifyMsgWaitVal) {
+						atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
+						if(misPollNotifyMsgWaitVal.toInteger() == 1000000) {
+							input (name: "misPollNotifyMsgWaitValCust", type: "number", title: "Custom Msg Wait Value in Seconds", range: "60..86400", required: false, defaultValue: 3600, submitOnChange: true)
+							if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
+						}
+					} else { atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
+				}
+			}
+			section("App and Device Updates:") {
+				input (name: "sendAppUpdateMsg", type: "bool", title: "Send for Updates...", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png"))
+				if(sendMissedPollMsg == null || sendAppUpdateMsg) {
+					def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
+					input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
+					if(updNotifyWaitVal) {
+						atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+						if(updNotifyWaitVal.toInteger() == 1000000) {
+							input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
+							if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
+						}
+					} else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
+				}
+			}
+		} else { atomicState.pushTested = false }
+		incNotifPrefLoadCnt()
+	}
+}
+
+// Parent only method
+def getNotifSchedDesc() {
+	def sun = getSunriseAndSunset()
+	//def schedInverted = settings?.DmtInvert
+	def startInput = settings?.qStartInput
+	def startTime = settings?.qStartTime
+	def stopInput = settings?.qStopInput
+	def stopTime = settings?.qStopTime
+	def dayInput = settings?.quietDays
+	def modeInput = settings?.quietModes
+	def notifDesc = ""
+	def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
+	def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
+	notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
+	def days = getInputToStringDesc(dayInput)
+	def modes = getInputToStringDesc(modeInput)
+	notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""} • Silent Day${isPluralString(dayInput)}: ${days}" : ""
+	notifDesc += modes ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl || days) ? "\n" : ""} • Silent Mode${isPluralString(modeInput)}: ${modes}" : ""
+	return (notifDesc != "") ? "${notifDesc}" : null
+}
+
+// Parent only method
+def setNotificationTimePage() {
+	dynamicPage(name: "setNotificationTimePage", title: "Prevent Notifications\nDuring these Days, Times or Modes", uninstall: false) {
+		def timeReq = (settings["qStartTime"] || settings["qStopTime"]) ? true : false
+		section() {
+			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("start_time_icon.png")
+			if(settings["qStartInput"] == "A specific time") {
+				input "qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
+			}
+			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("stop_time_icon.png")
+			if(settings?."qStopInput" == "A specific time") {
+				input "qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
+			}
+			input "quietDays", "enum", title: "Only on these days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"), options: timeDayOfWeekOptions()
+			input "quietModes", "mode", title: "When these Modes are Active", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
+		}
+	}
+}
+
+def getAppNotifConfDesc() {
+	def str = ""
+	str += pushStatus() ? "Notifications:" : ""
+	str += (pushStatus() && settings?.recipients) ? "\n • Contacts: (${settings?.recipients?.size()})" : ""
+	str += (pushStatus() && settings?.usePush) ? "\n • Push Messages: Enabled" : ""
+	str += (pushStatus() && sms) ? "\n • SMS: (${sms?.size()})" : ""
+	str += (pushStatus() && settings?.phone) ? "\n • SMS: (${settings?.phone?.size()})" : ""
+	str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
+	return pushStatus() ? "${str}" : null
+}
+
+def devPrefPage() {
+	dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
+		if(settings?.thermostats || settings?.protects || settings?.presDevice || settings?.weatherDevice) {
+			section("Device Name Customization:") {
+				def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\n\nTap to Modify..." : "Tap to Configure..."
+				href "devNamePage", title: "Device Names...", description: devDesc, state:(atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : "", image: getAppImg("device_name_icon.png")
+			}
+		}
+		if(atomicState?.thermostats) {
+			section("Thermostat Devices:") {
+				input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay", required: false, defaultValue: 4, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("temp_icon.png"))
+				paragraph "The options below will allow you to disable voice report access from voice apps like Ask Alexa"
+				input ("disableVoiceZoneRprt", "bool", title: "Disable Thermostat Zone Voice Reports?", description: "This will return the current thermostat automations zone information details.",
+						required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png"))
+				input ("disableVoiceUsageRprt", "bool", title: "Disable Thermostat Usage Voice Reports?", description: "This will return the thermostats elapsed runtime details.",
+ 						required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png"))
+				atomicState.needChildUpd = true
+			}
+		}
+		if(atomicState?.protects) {
+			section("Protect Devices:") {
+				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
+				atomicState.needChildUpd = true
+			}
+		}
+		if(atomicState?.vThermostats) {
+			section("Virtual Thermostat Devices:") {
+				paragraph "Nothing to Show!!!"
+			}
+		}
+		if(atomicState?.presDevice) {
+			section("Presence Device:") {
+				paragraph "Nothing to Show!!!"
+			}
+		}
+		if(atomicState?.weatherDevice) {
+			section("Weather Device:") {
+				href "custWeatherPage", title: "Customize Weather Location?", description: (getWeatherConfDesc() ? "${getWeatherConfDesc()}\n\nTap to Modify..." : ""), state: (getWeatherConfDesc() ? "complete":""), image: getAppImg("weather_icon_grey.png")
+				input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
+			}
+		}
+		incDevCustLoadCnt()
+	}
+}
+
+def custWeatherPage() {
+	dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
+		section("Set Custom Weather Location") {
+			def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
+			href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
+					description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
+			def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+			input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: defZip, submitOnChange: true,
+					image: getAppImg("weather_icon_grey.png"))
+			paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+			atomicState.lastWeatherUpdDt = 0
+			atomicState?.lastForecastUpdDt = 0
+		}
+	}
+}
+
+def getWeatherConfDesc() {
+	def str = ""
+	def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+	str += custLocStr ? " • Weather Location: (${custLocStr})" : " • Default Weather Location: (${defZip})"
+	return (str != "") ? "${str}" : null
+}
+
+def devCustomizePageDesc() {
+	def tempChgWaitValDesc = (!tempChgWaitVal || tempChgWaitVal == 4) ? "" : tempChgWaitVal
+	def wstr = weathAlertNotif  ? "Enabled" : "Disabled"
+	def str = "Device Customizations:"
+	str += "\n • Man. Temp Change Delay:\n    └ (${getInputEnumLabel(tempChgWaitVal ?: 4, waitValEnum())})"
+	str += "\n${getWeatherConfDesc()}"
+	str += "\n • Weather Alerts: (${wstr})"
+	return ((tempChgWaitValDesc || custLocStr || weathAlertNotif) ? str : "")
+}
+
+def getDevicesDesc() {
+	def pDev = settings?.thermostats || settings?.protects || settings?.cameras
+	def vDev = settings?.vthermostats || settings?.presDevice || settings?.weatherDevice
+	def str = ""
+	str += pDev ? "\nPhysical Devices:" : ""
+	str += settings?.thermostats ? "\n • [${settings?.thermostats?.size()}] Thermostat${(settings?.thermostats?.size() > 1) ? "s" : ""}" : ""
+	str += settings?.protects ? "\n • [${settings?.protects?.size()}] Protect${(settings?.protects?.size() > 1) ? "s" : ""}" : ""
+	str += settings?.cameras ? "\n • [${settings?.cameras?.size()}] Camera${(settings?.cameras?.size() > 1) ? "s" : ""}" : ""
+
+	str += vDev ? "${pDev ? "\n" : ""}\nVirtual Devices:" : ""
+	str += atomicState?.vthermostats ? "\n • [${atomicStateatomicState?.vthermostats?.size()}] Virtual Thermostat${(atomicState?.vthermostats?.size() > 1) ? "s" : ""}" : ""
+	str += settings?.presDevice ? "\n • [1] Presence Device" : ""
+	str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
+	str += (!settings?.thermostats && !settings?.protects && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected..." : ""
+	return (str != "") ? str : null
+}
+
+def debugPrefPage() {
+	dynamicPage(name: "debugPrefPage", install: false) {
+		section ("Application Logs") {
+			input (name: "appDebug", type: "bool", title: "Show Nest Manager App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+			if(appDebug) {
+				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
+				LogAction("Debug Logs are Enabled...", "info", false)
+			}
+			else { LogAction("Debug Logs are Disabled...", "info", false) }
+		}
+		section ("Child Device Logs") {
+			input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+			if(childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
+			else { LogAction("Device Debug Logs are Disabled...", "info", false) }
+		}
+		atomicState.needChildUpd = true
+		incLogPrefLoadCnt()
+	}
+}
+
+def getAppDebugDesc() {
+	def str = ""
+	str += isAppDebug() ? "App Debug: (${debugStatus()})${advAppDebug ? "(Trace)" : ""}" : ""
+	str += isChildDebug() ? "${isAppDebug() ? "\n" : ""}Device Debug: (${deviceDebugStatus()})" : ""
+	return (str != "") ? "${str}" : null
+}
+
+def infoPage () {
+	dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
+		section("About this App:") {
+			paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+		}
+		section("Help, Instructions, and Feedback:") {
+			href url: getReadmePageUrl(), style:"embedded", required:false, title:"Readme File",
+				description:"View the Projects Readme File...", state: "complete", image: getAppImg("readme_icon.png")
+			href url: getHelpPageUrl(), style:"embedded", required:false, title:"Help Pages",
+				description:"View the Help and Instructions Page...", state: "complete", image: getAppImg("help_icon.png")
+			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+		}
+		section("Donations:") {
+			href url: textDonateLink(), style:"external", required: false, title:"Donations",
+				description:"Tap to Open in Mobile Browser...", state: "complete", image: getAppImg("donate_icon.png")
+		}
+		section("Created by:") {
+			paragraph "Anthony S. (@tonesto7)", state: "complete"
+		}
+		section("Collaborators:") {
+			paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)", state: "complete"
+		}
+		section("App Revision History:") {
+			href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("change_log_icon.png")
+		}
+		if(atomicState?.installationId) {
+			section("InstallationID:") {
+				paragraph "InstallationID:\n${atomicState?.installationId}"
+			}
+		}
+		section("Licensing Info:") {
+			paragraph "${textCopyright()}\n${textLicense()}"
+		}
+		incInfoLoadCnt()
+	}
+}
+
+def changeLogPage () {
+	dynamicPage(name: "changeLogPage", title: "View Change Info", install: false) {
+		section("App Revision History:") {
+			paragraph appVerInfo()
+		}
+		incChgLogLoadCnt()
+	}
+}
+
+def uninstallPage() {
+	dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
+		section("") {
+			if(parent) {
+				paragraph "This will uninstall the ${app?.label} Automation!!!"
+			} else {
+				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
+			}
+		}
+		remove("Remove Nest Manager and Devices!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nAll Devices, Automations, and the Manager App will be removed...")
+	}
+}
+
+/******************************************************************************
+*					  NEST LOGIN PAGES		  	  		  *
+*******************************************************************************/
+def nestLoginPrefPage () {
+	if(!atomicState?.authToken) {
+		return authPage()
+	} else {
+		return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
+			section("Authorization Info:") {
+				paragraph "Token Created:\n• ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
+				paragraph "Token Expires:\n• ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
+				paragraph "Last Connection:\n• ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
+			}
+			section("Nest Login Preferences:") {
+				href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", required: true, state: null, image: getAppImg("reset_icon.png")
+			}
+		}
+	}
+	incNestLoginLoadCnt()
+}
+
+def nestTokenResetPage() {
+	return dynamicPage(name: "nestTokenResetPage", install: false) {
+		section ("Resetting Nest Token...") {
+			revokeNestToken()
+			atomicState.authToken = null
+			paragraph "Token has been reset...\nPress Done to return to Login page..."
+		}
+	}
 }
 
 def setMyLockId(val) {
@@ -2972,7 +3353,42 @@ def getAskAlexaQueueEnabled() {
 	if(!parent) { return (atomicState?.appData?.aaPrefs?.enAaMsgQueue == true) ? true : false }
 }
 
+def initAppMetricStore() {
+	log.trace "initAppMetricStore()..."
+	def items = ["mainLoadCnt", "devLocLoadCnt", "diagLoadCnt", "prefLoadCnt", "autoLoadCnt", "protTestLoadCnt", "helpLoadCnt", "infoLoadCnt", "chgLogLoadCnt", "nestLoginLoadCnt", "pollPrefLoadCnt", "devCustLoadCnt",
+		"vRprtPrefLoadCnt", "notifPrefLoadCnt", "logPrefLoadCnt", "viewAutoSchedLoadCnt", "viewAutoStatLoadCnt", "autoGlobPrefLoadCnt"]
+	if(!atomicState?.usageMetricsStore) { atomicState?.usageMetricsStore = [:] }
+	items?.each {
+		if(!atomicState?.usageMetricsStore[it]) {
+			atomicState?.usageMetricsStore[it] = 0
+			log.debug "${it}: " + atomicState?.usageMetricsStore[it]
+		}
+	}
+}
+def incMetricCntVal(item) {
+	def val = atomicState?.usageMetricsStore?."$item" ?: 0
+	log.debug "${item}: ${val}"
+	atomicState?.usageMetricsStore?."$item" = val+1
+}
 
+def incMainLoadCnt() { incMetricCntVal("mainLoadCnt") }
+def incDevLocLoadCnt() { incMetricCntVal("devLocLoadCnt") }
+def incDiagLoadCnt() { incMetricCntVal("diagLoadCnt") }
+def incPrefLoadCnt() { incMetricCntVal("prefLoadCnt") }
+def incInfoLoadCnt() { incMetricCntVal("infoLoadCnt") }
+def incChgLogLoadCnt() { incMetricCntVal("chgLogLoadCnt") }
+def incAutoLoadCnt() { incMetricCntVal("autoLoadCnt") }
+def incProtTestLoadCnt() { incMetricCntVal("protTestLoadCnt") }
+def incHelpLoadCnt() { incMetricCntVal("helpLoadCnt") }
+def incNestLoginLoadCnt() { incMetricCntVal("nestLoginLoadCnt") }
+def incPollPrefLoadCnt() { incMetricCntVal("pollPrefLoadCnt") }
+def incDevCustLoadCnt() { incMetricCntVal("devCustLoadCnt") }
+def incVrprtPrefLoadCnt() { incMetricCntVal("vRprtPrefLoadCnt") }
+def incNotifPrefLoadCnt() { incMetricCntVal("notifPrefLoadCnt") }
+def incLogPrefLoadCnt() { incMetricCntVal("logPrefLoadCnt") }
+def incViewAutoSchedLoadCnt() { incMetricCntVal("viewAutoSchedLoadCnt") }
+def incViewAutoStatLoadCnt() { incMetricCntVal("viewAutoStatLoadCnt") }
+def incAutoGlobPrefLoadCnt() { incMetricCntVal("autoGlobPrefLoadCnt") }
 
 def isCodeUpdateAvailable(newVer, curVer, type) {
 	def result = false
@@ -4360,259 +4776,6 @@ def getInputEnumLabel(inputName, enumName) {
 	return result
 }
 
-/******************************************************************************
-|					Application Pages						  |
-*******************************************************************************/
-def pollPrefPage() {
-	dynamicPage(name: "pollPrefPage", install: false) {
-		section("") {
-			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
-		}
-		section("Device Polling:") {
-			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
-					submitOnChange: true)
-		}
-		section("Location Polling:") {
-			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()],
-					submitOnChange: true)
-		}
-		if(atomicState?.weatherDevice) {
-			section("Weather Polling:") {
-				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()],
-						submitOnChange: true)
-			}
-		}
-		section("Wait Values:") {
-			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()],
-					submitOnChange: true)
-		}
-	}
-}
-
-def getPollingConfDesc() {
-	def pollValDesc = (!pollValue || pollValue == 180) ? "" : " (Custom)"
-	def pollStrValDesc = (!pollStrValue || pollStrValue == 180) ? "" : " (Custom)"
-	def pollWeatherValDesc = (!pollWeatherValue || pollWeatherValue == 900) ? "" : " (Custom)"
-	def pollWaitValDesc = (!pollWaitVal || pollWaitVal == 10) ? "" : " (Custom)"
-	def pStr = ""
-	pStr += "Polling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
-	pStr += "\n • Device: (${getInputEnumLabel(pollValue?:180, pollValEnum())})"
-	pStr += "\n • Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})"
-	pStr += atomicState?.weatherDevice ? "\n • Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})" : ""
-	pStr += "\n • Forced Poll Refresh Limit:\n    └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
-	return ((pollValDesc || pollStrValDesc || pollWEatherValDesc || pollWaitValDesc) ? pStr : "")
-}
-
-def notifPrefPage() {
-	dynamicPage(name: "notifPrefPage", install: false) {
-		def sectDesc = !location.contactBookEnabled ? "Enable push notifications below..." : "Select People or Devices to Receive Notifications..."
-		section(sectDesc) {
-			if(!location.contactBookEnabled) {
-				input(name: "usePush", type: "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
-			} else {
-				input(name: "recipients", type: "contact", title: "Send notifications to", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-					input ("phone", "phone", title: "Phone Number to send SMS to...", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
-				}
-			}
-		}
-
-		if(settings?.recipients || settings?.phone || settings?.usePush) {
-			if(settings?.recipients && !atomicState?.pushTested) {
-				sendMsg("Info", "Push Notification Test Successful... Notifications have been Enabled for ${textAppName()}")
-				atomicState.pushTested = true
-			} else { atomicState.pushTested = true }
-
-			section(title: "Time Restrictions") {
-				href "setNotificationTimePage", title: "Silence Notifications...", description: (getNotifSchedDesc() ?: "Tap to configure..."), params: [pName: ""], state: (getNotifSchedDesc() ? "complete" : null),
-					image: getAppImg("quiet_time_icon.png")
-			}
-			section("Missed Poll Notification:") {
-				input (name: "sendMissedPollMsg", type: "bool", title: "Send Missed Poll Messages?", defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png"))
-				if(sendMissedPollMsg == null || sendMissedPollMsg) {
-					def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
-					input (name: "misPollNotifyWaitVal", type: "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(misPollNotifyWaitVal) {
-						atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
-						if(misPollNotifyWaitVal.toInteger() == 1000000) {
-							input (name: "misPollNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 900, submitOnChange: true)
-							if(misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = misPollNotifyWaitValCust ? misPollNotifyWaitValCust.toInteger() : 900 }
-						}
-					} else { atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger() }
-
-					def misPollNotifyMsgWaitValDesc = !misPollNotifyMsgWaitVal ? "Default: 1 Hour" : misPollNotifyMsgWaitVal
-					input (name: "misPollNotifyMsgWaitVal", type: "enum", title: "Delay before sending again?", required: false, defaultValue: 3600, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(misPollNotifyMsgWaitVal) {
-						atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
-						if(misPollNotifyMsgWaitVal.toInteger() == 1000000) {
-							input (name: "misPollNotifyMsgWaitValCust", type: "number", title: "Custom Msg Wait Value in Seconds", range: "60..86400", required: false, defaultValue: 3600, submitOnChange: true)
-							if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = misPollNotifyMsgWaitValCust ? misPollNotifyMsgWaitValCust.toInteger() : 3600 }
-						}
-					} else { atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger() }
-				}
-			}
-			section("App and Device Updates:") {
-				input (name: "sendAppUpdateMsg", type: "bool", title: "Send for Updates...", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png"))
-				if(sendMissedPollMsg == null || sendAppUpdateMsg) {
-					def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
-					input (name: "updNotifyWaitVal", type: "enum", title: "Send reminders every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(updNotifyWaitVal) {
-						atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
-						if(updNotifyWaitVal.toInteger() == 1000000) {
-							input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
-							if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
-						}
-					} else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
-				}
-			}
-		} else { atomicState.pushTested = false }
-	}
-}
-
-// Parent only method
-def getNotifSchedDesc() {
-	def sun = getSunriseAndSunset()
-	//def schedInverted = settings?.DmtInvert
-	def startInput = settings?.qStartInput
-	def startTime = settings?.qStartTime
-	def stopInput = settings?.qStopInput
-	def stopTime = settings?.qStopTime
-	def dayInput = settings?.quietDays
-	def modeInput = settings?.quietModes
-	def notifDesc = ""
-	def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
-	def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
-	notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
-	def days = getInputToStringDesc(dayInput)
-	def modes = getInputToStringDesc(modeInput)
-	notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""} • Silent Day${isPluralString(dayInput)}: ${days}" : ""
-	notifDesc += modes ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl || days) ? "\n" : ""} • Silent Mode${isPluralString(modeInput)}: ${modes}" : ""
-	return (notifDesc != "") ? "${notifDesc}" : null
-}
-
-// Parent only method
-def setNotificationTimePage() {
-	dynamicPage(name: "setNotificationTimePage", title: "Prevent Notifications\nDuring these Days, Times or Modes", uninstall: false) {
-		def timeReq = (settings["qStartTime"] || settings["qStopTime"]) ? true : false
-		section() {
-			input "qStartInput", "enum", title: "Starting at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("start_time_icon.png")
-			if(settings["qStartInput"] == "A specific time") {
-				input "qStartTime", "time", title: "Start time", required: timeReq, image: getAppImg("start_time_icon.png")
-			}
-			input "qStopInput", "enum", title: "Stopping at", options: ["A specific time", "Sunrise", "Sunset"], defaultValue: null, submitOnChange: true, required: false, image: getAppImg("stop_time_icon.png")
-			if(settings?."qStopInput" == "A specific time") {
-				input "qStopTime", "time", title: "Stop time", required: timeReq, image: getAppImg("stop_time_icon.png")
-			}
-			input "quietDays", "enum", title: "Only on these days of the week", multiple: true, required: false, image: getAppImg("day_calendar_icon.png"), options: timeDayOfWeekOptions()
-			input "quietModes", "mode", title: "When these Modes are Active", multiple: true, submitOnChange: true, required: false, image: getAppImg("mode_icon.png")
-		}
-	}
-}
-
-def getAppNotifConfDesc() {
-	def str = ""
-	str += pushStatus() ? "Notifications:" : ""
-	str += (pushStatus() && settings?.recipients) ? "\n • Contacts: (${settings?.recipients?.size()})" : ""
-	str += (pushStatus() && settings?.usePush) ? "\n • Push Messages: Enabled" : ""
-	str += (pushStatus() && sms) ? "\n • SMS: (${sms?.size()})" : ""
-	str += (pushStatus() && settings?.phone) ? "\n • SMS: (${settings?.phone?.size()})" : ""
-	str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
-	return pushStatus() ? "${str}" : null
-}
-
-def devPrefPage() {
-	dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
-		if(settings?.thermostats || settings?.protects || settings?.presDevice || settings?.weatherDevice) {
-			section("Device Name Customization:") {
-				def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set...\n\nTap to Modify..." : "Tap to Configure..."
-				href "devNamePage", title: "Device Names...", description: devDesc, state:(atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : "", image: getAppImg("device_name_icon.png")
-			}
-		}
-		if(atomicState?.thermostats) {
-			section("Thermostat Devices:") {
-				input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay", required: false, defaultValue: 4, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("temp_icon.png"))
-				paragraph "The options below will allow you to disable voice report access from voice apps like Ask Alexa"
-				input ("disableVoiceZoneRprt", "bool", title: "Disable Thermostat Zone Voice Reports?", description: "This will return the current thermostat automations zone information details.",
-						required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png"))
-				input ("disableVoiceUsageRprt", "bool", title: "Disable Thermostat Usage Voice Reports?", description: "This will return the thermostats elapsed runtime details.",
- 						required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png"))
-				atomicState.needChildUpd = true
-			}
-		}
-		if(atomicState?.protects) {
-			section("Protect Devices:") {
-				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
-				atomicState.needChildUpd = true
-			}
-		}
-		if(atomicState?.vThermostats) {
-			section("Virtual Thermostat Devices:") {
-				paragraph "Nothing to Show!!!"
-			}
-		}
-		if(atomicState?.presDevice) {
-			section("Presence Device:") {
-				paragraph "Nothing to Show!!!"
-			}
-		}
-		if(atomicState?.weatherDevice) {
-			section("Weather Device:") {
-				href "custWeatherPage", title: "Customize Weather Location?", description: (getWeatherConfDesc() ? "${getWeatherConfDesc()}\n\nTap to Modify..." : ""), state: (getWeatherConfDesc() ? "complete":""), image: getAppImg("weather_icon_grey.png")
-				input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
-			}
-		}
-	}
-}
-
-def custWeatherPage() {
-	dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
-		section("Set Custom Weather Location") {
-			def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
-			href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
-					description: "Lookup Weather Station ID...", image: getAppImg("search_icon.png")
-			def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-			input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: defZip, submitOnChange: true,
-					image: getAppImg("weather_icon_grey.png"))
-			paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
-			atomicState.lastWeatherUpdDt = 0
-			atomicState?.lastForecastUpdDt = 0
-		}
-	}
-}
-
-def getWeatherConfDesc() {
-	def str = ""
-	def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-	str += custLocStr ? " • Weather Location: (${custLocStr})" : " • Default Weather Location: (${defZip})"
-	return (str != "") ? "${str}" : null
-}
-
-def devCustomizePageDesc() {
-	def tempChgWaitValDesc = (!tempChgWaitVal || tempChgWaitVal == 4) ? "" : tempChgWaitVal
-	def wstr = weathAlertNotif  ? "Enabled" : "Disabled"
-	def str = "Device Customizations:"
-	str += "\n • Man. Temp Change Delay:\n    └ (${getInputEnumLabel(tempChgWaitVal ?: 4, waitValEnum())})"
-	str += "\n${getWeatherConfDesc()}"
-	str += "\n • Weather Alerts: (${wstr})"
-	return ((tempChgWaitValDesc || custLocStr || weathAlertNotif) ? str : "")
-}
-
-def getDevicesDesc() {
-	def pDev = settings?.thermostats || settings?.protects || settings?.cameras
-	def vDev = settings?.vthermostats || settings?.presDevice || settings?.weatherDevice
-	def str = ""
-	str += pDev ? "\nPhysical Devices:" : ""
-	str += settings?.thermostats ? "\n • [${settings?.thermostats?.size()}] Thermostat${(settings?.thermostats?.size() > 1) ? "s" : ""}" : ""
-	str += settings?.protects ? "\n • [${settings?.protects?.size()}] Protect${(settings?.protects?.size() > 1) ? "s" : ""}" : ""
-	str += settings?.cameras ? "\n • [${settings?.cameras?.size()}] Camera${(settings?.cameras?.size() > 1) ? "s" : ""}" : ""
-
-	str += vDev ? "${pDev ? "\n" : ""}\nVirtual Devices:" : ""
-	str += atomicState?.vthermostats ? "\n • [${atomicStateatomicState?.vthermostats?.size()}] Virtual Thermostat${(atomicState?.vthermostats?.size() > 1) ? "s" : ""}" : ""
-	str += settings?.presDevice ? "\n • [1] Presence Device" : ""
-	str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
-	str += (!settings?.thermostats && !settings?.protects && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected..." : ""
-	return (str != "") ? str : null
-}
-
 def b64Action(String str, dec=false) {
 	if (str) {
 		if(dec) {
@@ -4623,122 +4786,8 @@ def b64Action(String str, dec=false) {
 	}
 }
 
-def debugPrefPage() {
-	dynamicPage(name: "debugPrefPage", install: false) {
-		section ("Application Logs") {
-			input (name: "appDebug", type: "bool", title: "Show Nest Manager App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
-			if(appDebug) {
-				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
-				LogAction("Debug Logs are Enabled...", "info", false)
-			}
-			else { LogAction("Debug Logs are Disabled...", "info", false) }
-		}
-		section ("Child Device Logs") {
-			input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
-			if(childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
-			else { LogAction("Device Debug Logs are Disabled...", "info", false) }
-		}
-		atomicState.needChildUpd = true
-	}
-}
-
-def getAppDebugDesc() {
-	def str = ""
-	str += isAppDebug() ? "App Debug: (${debugStatus()})${advAppDebug ? "(Trace)" : ""}" : ""
-	str += isChildDebug() ? "${isAppDebug() ? "\n" : ""}Device Debug: (${deviceDebugStatus()})" : ""
-	return (str != "") ? "${str}" : null
-}
-
-def infoPage () {
-	dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
-		section("About this App:") {
-			paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
-		}
-		section("Help, Instructions, and Feedback:") {
-			href url: getReadmePageUrl(), style:"embedded", required:false, title:"Readme File",
-				description:"View the Projects Readme File...", state: "complete", image: getAppImg("readme_icon.png")
-			href url: getHelpPageUrl(), style:"embedded", required:false, title:"Help Pages",
-				description:"View the Help and Instructions Page...", state: "complete", image: getAppImg("help_icon.png")
-			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
-		}
-		section("Donations:") {
-			href url: textDonateLink(), style:"external", required: false, title:"Donations",
-				description:"Tap to Open in Mobile Browser...", state: "complete", image: getAppImg("donate_icon.png")
-		}
-		section("Created by:") {
-			paragraph "Anthony S. (@tonesto7)", state: "complete"
-		}
-		section("Collaborators:") {
-			paragraph "Ben W. (@desertblade)\nEric S. (@E_Sch)", state: "complete"
-		}
-		section("App Revision History:") {
-			href "changeLogPage", title: "View App Change Log Info", description: "Tap to View...", image: getAppImg("change_log_icon.png")
-		}
-		if(atomicState?.installationId) {
-			section("InstallationID:") {
-				paragraph "InstallationID:\n${atomicState?.installationId}"
-			}
-		}
-		section("Licensing Info:") {
-			paragraph "${textCopyright()}\n${textLicense()}"
-		}
-	}
-}
-
-def changeLogPage () {
-	dynamicPage(name: "changeLogPage", title: "View Change Info", install: false) {
-		section("App Revision History:") {
-			paragraph appVerInfo()
-		}
-	}
-}
-
-def uninstallPage() {
-	dynamicPage(name: "uninstallPage", title: "Uninstall", uninstall: true) {
-		section("") {
-			if(parent) {
-				paragraph "This will uninstall the ${app?.label} Automation!!!"
-			} else {
-				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
-			}
-		}
-		remove("Remove Nest Manager and Devices!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nAll Devices, Automations, and the Manager App will be removed...")
-	}
-}
-
 /******************************************************************************
-*					  NEST LOGIN PAGES		  	  		  *
-*******************************************************************************/
-def nestLoginPrefPage () {
-	if(!atomicState?.authToken) {
-		return authPage()
-	} else {
-		return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
-			section("Authorization Info:") {
-				paragraph "Token Created:\n• ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
-				paragraph "Token Expires:\n• ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
-				paragraph "Last Connection:\n• ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
-			}
-			section("Nest Login Preferences:") {
-				href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", required: true, state: null, image: getAppImg("reset_icon.png")
-			}
-		}
-	}
-}
-
-def nestTokenResetPage() {
-	return dynamicPage(name: "nestTokenResetPage", install: false) {
-		section ("Resetting Nest Token...") {
-			revokeNestToken()
-			atomicState.authToken = null
-			paragraph "Token has been reset...\nPress Done to return to Login page..."
-		}
-	}
-}
-
-
-/******************************************************************************
-*					  NEST API INFO PAGES		  	  		  *
+*					 	DIAGNOSTIC & NEST API INFO PAGES		  	  		  *
 *******************************************************************************/
 
 def nestInfoPage () {
