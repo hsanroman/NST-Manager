@@ -162,7 +162,6 @@ def authPage() {
 	//log.trace "authPage()"
 	getAccessToken()
 	initAppMetricStore()
-	//log.debug "metricStore: ${atomicState?.usageMetricsStore}"
 	def preReqOk = preReqCheck()
 	deviceHandlerTest()
 	if(!atomicState?.accessToken || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk))) {
@@ -277,7 +276,7 @@ def mainPage() {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
 		}
-		//incMainLoadCnt()
+		incMainLoadCnt()
 	}
 }
 
@@ -3357,18 +3356,14 @@ def initAppMetricStore() {
 	log.trace "initAppMetricStore()..."
 	def items = ["mainLoadCnt", "devLocLoadCnt", "diagLoadCnt", "prefLoadCnt", "autoLoadCnt", "protTestLoadCnt", "helpLoadCnt", "infoLoadCnt", "chgLogLoadCnt", "nestLoginLoadCnt", "pollPrefLoadCnt", "devCustLoadCnt",
 		"vRprtPrefLoadCnt", "notifPrefLoadCnt", "logPrefLoadCnt", "viewAutoSchedLoadCnt", "viewAutoStatLoadCnt", "autoGlobPrefLoadCnt"]
-	if(!atomicState?.usageMetricsStore) { atomicState?.usageMetricsStore = [:] }
-	items?.each {
-		if(!atomicState?.usageMetricsStore[it]) {
-			atomicState?.usageMetricsStore[it] = 0
-			log.debug "${it}: " + atomicState?.usageMetricsStore[it]
-		}
-	}
+	def data = atomicState?.usageMetricsStore ?: [:]
+	items?.each { if(!data[it]) { data[it] = 0 } }
+	atomicState?.usageMetricsStore = data
 }
 def incMetricCntVal(item) {
-	def val = atomicState?.usageMetricsStore?."$item" ?: 0
-	log.debug "${item}: ${val}"
-	atomicState?.usageMetricsStore?."$item" = val+1
+	def data = atomicState?.usageMetricsStore
+	data[item] = data[item]+1 ?: 1
+	atomicState?.usageMetricsStore = data
 }
 
 def incMainLoadCnt() { incMetricCntVal("mainLoadCnt") }
@@ -5502,9 +5497,10 @@ def createInstallDataJson() {
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def devUseMetCnt = getDeviceMetricCnts()
+		def appUseMetCnt = atomicState?.usageMetricsStore
 		def data = [
 			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
-			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
+			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
 		]
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
 		return resultJson
