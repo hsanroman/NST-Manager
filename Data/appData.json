@@ -67,7 +67,6 @@
     },
     "healthcheck": {
         "longTimeout": 120,
-        "timeout": 35,
-
+        "timeout": 35
     }
 }
