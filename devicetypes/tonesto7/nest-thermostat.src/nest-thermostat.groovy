@@ -25,7 +25,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.1.1"}
+def devVer() { return "4.1.2"}
 
 // for the UI
 metadata {
@@ -3295,6 +3295,7 @@ def getMetricCntData() {
 
 def getExtTempVoiceDesc() {
 	def str = ""
+	if(state?.voiceReportPrefs?.vRprtExtWeat != true || state?.voiceReportPrefs?.vRprtExtWeat == null) { return str }
 	def extTmp = !(state?.curExtTemp == null || state?.curExtTemp == [:]) ? state?.curExtTemp.toDouble() : null
 	if(extTmp) {
 		str += "Looking Outside the current external temp is "
