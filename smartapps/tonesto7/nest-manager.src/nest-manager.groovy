@@ -1145,9 +1145,13 @@ def uninstallPage() {
 	}
 }
 
+def getDevOpt() {
+	appSettings?.devOpt = "true" ? true : false
+}
+
 def devPageFooter(var, eTime) {
 	def res = []
-	if(appSettings?.devOpt == "true") {
+	if(getDevOpt()) {
 		res += 	section() {
 					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
 				}
