@@ -40,12 +40,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.4" }
-def appVerDate() { "12-1-2016" }
+def appVersion() { "4.1.6" }
+def appVerDate() { "12-2-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.4 (December 1st, 2016):"
+	str += "V4.1.6 (December 2nd, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Will update this later."
 
@@ -55,21 +55,20 @@ def appVerInfo() {
 
 	str += "\n\nV4.1.0 (November 19th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Added: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
-	str += "\n • Added: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
-	str += "\n • Added: Cleaned up thermostat voice reports to sound more natural and added some more detail."
-	str += "\n • Added: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)"
-	str += "\n • Added: Thermostat device graphs updated to display external temps and hvac runtime."
-	str += "\n • Added: Added two new pie charts to represent the Today and Month usage."
-	str += "\n • Updated: Virtual Thermostat device now shares the same code as the physical device handler"
-	str += "\n • Updated: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
-	str += "\n • Updated: Complete update to device and child app diagnostic pages it includes filters to increase loading and not show irrelavent data."
-	str += "\n • Updated: Lot's of Bugfixes"
+	str += "\n • ADDED: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
+	str += "\n • ADDED: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
+	str += "\n • ADDED: Cleaned up thermostat voice reports to sound more natural and added some more detail."
+	str += "\n • ADDED: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)"
+	str += "\n • ADDED: Thermostat device graphs updated to display external temps and hvac runtime."
+	str += "\n • ADDED: Added two new pie charts to represent the Today and Month usage."
+	str += "\n • UPDATED: Virtual Thermostat device now shares the same code as the physical device handler"
+	str += "\n • UPDATED: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
+	str += "\n • UPDATED: Complete update to device and child app diagnostic pages it includes filters to increase loading and not show irrelavent data."
+	str += "\n • UPDATED: Lot's of Bugfixes"
 
 	str += "\n\nV4.0.0 (October 28th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • V4.0.0 Release"
-
 	return str
 }
 
@@ -276,6 +275,7 @@ def mainPage() {
 			}
 			section("View Change Logs, Donate, License Info, and Leave Feedback:") {
 				href "infoPage", title: "Help, Info, and More", description: "", image: getAppImg("info.png")
+				href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
 			}
 			if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
 				section("View App and Device Data, and Perform Device Tests:") {
@@ -544,28 +544,28 @@ def automationsPage() {
 	}
 }
 
-def restoreAutomationsPage() {
-	def backupData = getAutomationBackupData()
-	dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
-		section("Available Automations") {
-			if(backupData) {
-				paragraph "Automation Apps Backed Up: (${backupData?.size()})"
-				href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData],
-					state: null, image: getAppImg("reset_icon.png")
-			}
-		}
-	}
-}
-
-def automationRestorePage() {
-	def backupData = getAutomationBackupData()
-	dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
-		section("Restoring Automations:") {
-			paragraph "Restoring Automations..."
-			automationRestore(backupData)
-		}
-	}
-}
+// def restoreAutomationsPage() {
+// 	def backupData = getAutomationBackupData()
+// 	dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
+// 		section("Available Automations") {
+// 			if(backupData) {
+// 				paragraph "Automation Apps Backed Up: (${backupData?.size()})"
+// 				href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData],
+// 					state: null, image: getAppImg("reset_icon.png")
+// 			}
+// 		}
+// 	}
+// }
+//
+// def automationRestorePage() {
+// 	def backupData = getAutomationBackupData()
+// 	dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
+// 		section("Restoring Automations:") {
+// 			paragraph "Restoring Automations..."
+// 			automationRestore(backupData)
+// 		}
+// 	}
+// }
 
 def automationSchedulePage() {
 	def execTime = now()
@@ -1123,6 +1123,13 @@ def infoPage () {
 	}
 }
 
+def formatDt2(tm) {
+	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def tf = new SimpleDateFormat(formatVal)
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	return tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", tm.toString()))
+}
+
 def remoteDiagPage () {
 	def execTime = now()
 	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", install: false) {
@@ -1130,26 +1137,24 @@ def remoteDiagPage () {
 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 			def tf = new SimpleDateFormat(formatVal)
 			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-			paragraph title: "How will this work?", "Once enabled your this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
+			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
 			paragraph "This will automatically turn itself off and remove all remote data collected after 12hours"
-			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
+			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
 			if(atomicState?.remDiagLogDataStore?.size()) {
 				paragraph "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
 				if(atomicState?.remDiagDataSentDt) {
-					paragraph "Last Send Data to DB:\n${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.remDiagDataSentDt))}"
+					paragraph "Last Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)}"
 				}
 			}
 			if(atomicState?.installationId) {
-				paragraph "Provide this Id to the Developer so he can identify your data."
-				paragraph "InstallationID:\n${atomicState?.installationId}"
+				paragraph title: "Provide this ID to the Developer", "InstallationID:\n${atomicState?.installationId}"
 			}
-
 		}
 		if(settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = true }
-			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = now() }
+			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
-			atomicState?.enRemDiagLogging = false
+			if(atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = false }
 			if(atomicState?.remDiagLogDataStore?.size()) {
 				removeRemDiagData()
 				atomicState?.remDiagLogDataStore = null
@@ -1157,13 +1162,42 @@ def remoteDiagPage () {
 				atomicState?.remDiagDataSentDt = null
 			}
 		}
+		LogAction("remoteDiagPage test", "info", true)
 		//incChgLogLoadCnt()
 		//devPageFooter("chgLogLoadCnt", execTime)
 	}
 }
 
+def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
+	log.trace "saveLogtoRemDiagStore($msg, $type, $logSrcType)"
+	if(getStateSizePerc() >= 90) {
+		log.warn "suspending remoteDiag log storage because state size has reached 90% full."
+		return
+	}
+	def data = atomicState?.remDiagLogDataStore ?: []
+
+	if(data?.size() > 50 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
+	def item
+	item = ["dt":getDtNow().toString(), "type":type, "logSrc":(logSrcType ?: "Not Set"), "msg":msg]
+	//log.debug "item: ${item}"
+	data << item
+	atomicState?.remDiagLogDataStore = data
+	//log.debug "data: $data"
+}
+
+def sendRemDiagData() {
+	def data = atomicState?.remDiagLogDataStore
+	// log.debug "data is (${getObjType(data)}) | Data: $data"
+	if(data?.size()) {
+		def cnt = 1
+		def json = new groovy.json.JsonOutput().toJson(data)
+		//log.debug "json: ${json}"
+		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")
+	}
+}
+
 def getLastRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getLastRemDiagActSec").toInteger() }
-def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
+def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage () {
 	def execTime = now()
@@ -1820,13 +1854,13 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
-	if(atomicState?.enRemDiagLogging && getLastRemDiagActSec() > 43200) {
-		atomicState?.enRemDiagLogging = false
-		atomicState?.remDiagLogDataStore = null
-		atomicState?.remDiagLogActivatedDt = null
-		atomicState?.remDiagDataSentDt = null
-		removeRemDiagData()
-	}
+	// if(atomicState?.enRemDiagLogging && getLastRemDiagActSec() > 43200) {
+	// 	atomicState?.enRemDiagLogging = false
+	// 	atomicState?.remDiagLogDataStore = null
+	// 	atomicState?.remDiagLogActivatedDt = null
+	// 	atomicState?.remDiagDataSentDt = null
+	// 	removeRemDiagData()
+	// }
 }
 
 def forcedPoll(type = null) {
@@ -4513,17 +4547,13 @@ def LogTrace(msg) {
 	if(trOn) { Logger(msg, "trace") }
 }
 
-def LogAction(msg, type="debug", showAlways=false) {
+def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
 	if(showAlways) { Logger(msg, type) }
 	else if(isDbg && !showAlways) { Logger(msg, type) }
-	if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
-		if(!atomicState?.remDiagLogDataStore) { atomicState?.remDiagLogDataStore = [:] }
-		saveLogtoRemDiagStore(msg, type, now(), )
-	}
 }
 
-def Logger(msg, type) {
+def Logger(msg, type, logSrc=null) {
 	if(msg && type) {
 		def labelstr = ""
 		/* Todo:  This may not update the child apps after being Modified */
@@ -4551,34 +4581,16 @@ def Logger(msg, type) {
 				log.debug "${labelstr}${msg}"
 				break
 		}
+		if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
+			if(atomicState?.remDiagLogDataStore == null) { atomicState?.remDiagLogDataStore = [:] }
+			//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
+			saveLogtoRemDiagStore(msg, type, logSrc)
+		}
 	}
 	else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
 }
 
-void saveLogtoRemDiagStore(msg, lType, dt, cType="") {
-	def data = atomicState?.remDiagLogDataStore ?: [:]
-	log.debug "data: $data"
-	if(data?.size() > 50 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
-	def val = ["msg":msg, "type":lType, "dt":dt, "ctype":cType]
-	if(!data?.contains(val)) {
-		data << val
-		log.debug "dataAfter: $data"
-	}
-	
-	atomicState?.remDiagLogDataStore = data
-}
 
-def sendRemDiagData() {
-	def data = atomicState?.remDiagLogDataStore
-	if(data?.size()) {
-		def resultJson = new groovy.json.JsonOutput().toJson(data)
-		if(sendFirebaseData(results, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")) {
-			atomicState?.remDiagDataSentDt = now()
-			data = [:]
-		}
-		atomicState?.remDiagLogDataStore = data
-	}
-}
 
 def setStateVar(frc = false) {
 	//log.trace "setStateVar..."
@@ -4699,6 +4711,7 @@ def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
 def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
 def getIssuePageUrl()		{ return "https://github.com/tonesto7/nest-manager/issues" }
+def slackMsgWebHookUrl()	{ return "https://hooks.slack.com/services/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" }
 def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
@@ -4752,7 +4765,7 @@ def formatDt(dt) {
 def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogAction("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})", "warn", false)
 	if((strtDate && !stpDate) || (strtDate && stpDate)) {
-		if(strtDate?.contains("dtNow")) { return 10000 }
+		//if(strtDate?.contains("dtNow")) { return 10000 }
 		def now = new Date()
 		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
 		def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
@@ -4928,135 +4941,135 @@ def nestInfoPage () {
 				}
 			}
 		}
-		section("View All API Data Received from Nest:") {
-			if(atomicState?.structures) {
-				href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
-			}
-			if(atomicState?.thermostats) {
-				href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
-			}
-			if(atomicState?.protects) {
-				href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
-			}
-			if(atomicState?.cameras) {
-				href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
-			}
-			if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
-				paragraph "There is nothing to show here...", image: getAppImg("instruct_icon.png")
-			}
-		}
+		// section("View All API Data Received from Nest:") {
+		// 	if(atomicState?.structures) {
+		// 		href "structInfoPage", title: "Nest Location(s) Info...", description: "Tap to view...", image: getAppImg("nest_structure_icon.png")
+		// 	}
+		// 	if(atomicState?.thermostats) {
+		// 		href "tstatInfoPage", title: "Nest Thermostat(s) Info...", description: "Tap to view...", image: getAppImg("nest_like.png")
+		// 	}
+		// 	if(atomicState?.protects) {
+		// 		href "protInfoPage", title: "Nest Protect(s) Info...", description: "Tap to view...", image: getAppImg("protect_icon.png")
+		// 	}
+		// 	if(atomicState?.cameras) {
+		// 		href "camInfoPage", title: "Nest Camera(s) Info...", description: "Tap to view...", image: getAppImg("camera_icon.png")
+		// 	}
+		// 	if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
+		// 		paragraph "There is nothing to show here...", image: getAppImg("instruct_icon.png")
+		// 	}
+		// }
 		section("Diagnostics") {
 			href "diagPage", title: "View Diagnostic Info...", description: null, image: getAppImg("diag_icon.png")
 		}
 	}
 }
 
-def structInfoPage () {
-	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
-		section("") {
-			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
-		}
-		atomicState?.structData?.each { struc ->
-			if(struc?.key == atomicState?.structures) {
-				def str = ""
-				def cnt = 0
-				section("Location Name: ${struc?.value?.name}") {
-					def data = struc?.value.findAll { !(it.key in noShow) }
-					data?.sort().each { item ->
-						cnt = cnt+1
-						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-					}
-					paragraph "${str}"
-				}
-			}
-		}
-	}
-}
-
-def tstatInfoPage () {
-	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
-		}
-		atomicState?.thermostats?.sort().each { tstat ->
-			def str = ""
-			def cnt = 0
-			section("Thermostat Name: ${tstat?.value}") {
-				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					cnt = cnt+1
-					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-				}
-				paragraph "${str}"
-			}
-		}
-	}
-}
-
-def protInfoPage () {
-	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
-		}
-		atomicState?.protects.sort().each { prot ->
-			def str = ""
-			def cnt = 0
-			section("Protect Name: ${prot?.value}") {
-				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					cnt = cnt+1
-					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-				}
-				paragraph "${str}"
-			}
-		}
-	}
-}
-
-def camInfoPage () {
-	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
-		}
-		atomicState?.cameras.sort().each { cam ->
-			def str = ""
-			def evtStr = ""
-			def cnt = 0
-			def cnt2 = 0
-			section("Camera Name: ${cam?.value}") {
-				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					if(item?.key != "last_event") {
-						if(item?.key in ["app_url", "web_url"]) {
-							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to View in Mobile Browser...", state: "complete"
-						} else {
-							cnt = cnt+1
-							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-						}
-					} else {
-						item?.value?.sort().each { item2 ->
-							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
-								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to View in Mobile Browser...", state: "complete"
-							}
-							else {
-								cnt2 = cnt2+1
-								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
-							}
-						}
-					}
-				}
-				paragraph "${str}"
-				if(evtStr != "") {
-					paragraph "Last Event Data:\n\n${evtStr}"
-				}
-			}
-		}
-	}
-}
+// def structInfoPage () {
+// 	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
+// 		section("") {
+// 			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
+// 		}
+// 		atomicState?.structData?.each { struc ->
+// 			if(struc?.key == atomicState?.structures) {
+// 				def str = ""
+// 				def cnt = 0
+// 				section("Location Name: ${struc?.value?.name}") {
+// 					def data = struc?.value.findAll { !(it.key in noShow) }
+// 					data?.sort().each { item ->
+// 						cnt = cnt+1
+// 						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 					}
+// 					paragraph "${str}"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+//
+// def tstatInfoPage () {
+// 	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
+// 		}
+// 		atomicState?.thermostats?.sort().each { tstat ->
+// 			def str = ""
+// 			def cnt = 0
+// 			section("Thermostat Name: ${tstat?.value}") {
+// 				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					cnt = cnt+1
+// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 				}
+// 				paragraph "${str}"
+// 			}
+// 		}
+// 	}
+// }
+//
+// def protInfoPage () {
+// 	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
+// 		}
+// 		atomicState?.protects.sort().each { prot ->
+// 			def str = ""
+// 			def cnt = 0
+// 			section("Protect Name: ${prot?.value}") {
+// 				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					cnt = cnt+1
+// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 				}
+// 				paragraph "${str}"
+// 			}
+// 		}
+// 	}
+// }
+//
+// def camInfoPage () {
+// 	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
+// 		}
+// 		atomicState?.cameras.sort().each { cam ->
+// 			def str = ""
+// 			def evtStr = ""
+// 			def cnt = 0
+// 			def cnt2 = 0
+// 			section("Camera Name: ${cam?.value}") {
+// 				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					if(item?.key != "last_event") {
+// 						if(item?.key in ["app_url", "web_url"]) {
+// 							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to View in Mobile Browser...", state: "complete"
+// 						} else {
+// 							cnt = cnt+1
+// 							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 						}
+// 					} else {
+// 						item?.value?.sort().each { item2 ->
+// 							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
+// 								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to View in Mobile Browser...", state: "complete"
+// 							}
+// 							else {
+// 								cnt2 = cnt2+1
+// 								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
+// 							}
+// 						}
+// 					}
+// 				}
+// 				paragraph "${str}"
+// 				if(evtStr != "") {
+// 					paragraph "Last Event Data:\n\n${evtStr}"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 def alarmTestPage () {
 	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
@@ -5548,149 +5561,149 @@ def sendFeedbackPage() {
 	NOTE: Keep this for furture backup/restore reference
 	setSettings(theSettingNameHer: [type: "capability.contactSensor", value: settingValueToSet])
 */
-def createManagerBackupDataJson() {
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
-	def setData = [:]
-	sData?.sort().each { item ->
-		setData[item?.key] = item?.value
-	}
-	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
-	def stateData = [:]
-	stData?.sort().each { item ->
-		stateData[item?.key] = item?.value
-	}
-	def result = ["settingsData":setData.toString(), "stateData":stateData.toString(), "backupDt":getDtNow()]
-	def resultJson = new groovy.json.JsonOutput().toJson(result)
-	return resultJson
-}
+// def createManagerBackupDataJson() {
+// 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+// 	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+// 	def setData = [:]
+// 	sData?.sort().each { item ->
+// 		setData[item?.key] = item?.value
+// 	}
+// 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+// 	def stateData = [:]
+// 	stData?.sort().each { item ->
+// 		stateData[item?.key] = item?.value
+// 	}
+// 	def result = ["settingsData":setData.toString(), "stateData":stateData.toString(), "backupDt":getDtNow()]
+// 	def resultJson = new groovy.json.JsonOutput().toJson(result)
+// 	return resultJson
+// }
+//
+// def backupConfigToFirebase() {
+// 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+// 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+// 	def stateData = [:]
+// 	stData?.sort().each { item ->
+// 		stateData[item?.key] = item?.value
+// 	}
+// 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+// 	def settingsData = [:]
+//
+// 	setData?.sort().each { item ->
+// 		settingsData[item?.key] = item?.value
+// 	}
+// 	if(stateData) {
+// 		//settingsData["stateData"] = stateData.toString()
+// 		settingsData["automationTypeFlag"] = getAutoType().toString()
+// 		settingsData["backedUpData"] = true
+// 	}
+// 	def result = ["${app?.id}":["appLabel":app?.label, "settingsData":settingsData.toString(), "backupDt":getDtNow()]]
+// 	def resultJson = new groovy.json.JsonOutput().toJson(result)
+// 	return parent?.sendAutomationBackupData(resultJson)
+// }
+//
+// def sendManagerBackupData() {
+// 	try {
+// 		return sendFirebaseData(createManagerBackupDataJson(), "backupData/clients/${atomicState?.installationId}/managerAppData.json")
+// 	} catch (ex) {
+// 		LogAction("sendManagerBackupData Exception: ${ex}", "error", true)
+// 	}
+// }
+//
+// def removeManagerBackupData() {
+// 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/managerAppData.json")
+// }
+//
+// def sendAutomationBackupData(data) {
+// 	try {
+// 		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
+// 	} catch (ex) {
+// 		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
+// 	}
+// }
 
-def backupConfigToFirebase() {
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
-	def stateData = [:]
-	stData?.sort().each { item ->
-		stateData[item?.key] = item?.value
-	}
-	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
-	def settingsData = [:]
-
-	setData?.sort().each { item ->
-		settingsData[item?.key] = item?.value
-	}
-	if(stateData) {
-		//settingsData["stateData"] = stateData.toString()
-		settingsData["automationTypeFlag"] = getAutoType().toString()
-		settingsData["backedUpData"] = true
-	}
-	def result = ["${app?.id}":["appLabel":app?.label, "settingsData":settingsData.toString(), "backupDt":getDtNow()]]
-	def resultJson = new groovy.json.JsonOutput().toJson(result)
-	return parent?.sendAutomationBackupData(resultJson)
-}
-
-def sendManagerBackupData() {
-	try {
-		return sendFirebaseData(createManagerBackupDataJson(), "backupData/clients/${atomicState?.installationId}/managerAppData.json")
-	} catch (ex) {
-		LogAction("sendManagerBackupData Exception: ${ex}", "error", true)
-	}
-}
-
-def removeManagerBackupData() {
-	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/managerAppData.json")
-}
-
-def sendAutomationBackupData(data) {
-	try {
-		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
-	} catch (ex) {
-		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
-	}
-}
-
-def removeAutomationBackupData(childId) {
-	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
-}
+// def removeAutomationBackupData(childId) {
+// 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
+// }
 
 def removeRemDiagData(childId) {
 	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json")
 }
 
-def backupPage() {
-	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-		section("") {
-			href "backupSendDataPage", title: "Send Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to Backup...",
-					state: (atomicState?.lastBackupDt ? "complete" : null), image: getAppImg("backup_icon.png")
-			href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
-		}
-	}
-}
-
-def backupSendDataPage() {
-	return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
-		section("") {
-			paragraph "Sending Backup Data to Firebase..."
-			if(parent) {
-				if(backupConfigToFirebase()) {
-					atomicState?.lastBackupDt = getDtNow()
-					paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
-				}
-			}
-		}
-	}
-}
-def backupRemoveDataPage() {
-	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-		section("") {
-			paragraph "Removing Backed Up App Data from Firebase..."
-			if(parent) {
-				if(backupConfigToFirebase()) {
-					paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
-				}
-			}
-		}
-	}
-}
-
-def automationRestore(data) {
-	if(data) {
-		data?.each { bApp ->
-			def appLbl = bApp?.value?.appLabel.toString()
-			//log.debug "Automation AppId: ${bApp?.key}"
-			//log.debug "bAppData: ${stringToMap(bApp?.value.settingsData.toString())}"
-
-			def setData = stringToMap(bApp?.value?.settingsData?.toString())
-
-			log.debug "settingsData: $setData"
-
-			log.debug "Restoring: ($appLbl) Automation Settings...."
-			addChildApp(textNamespace(), appName(), appLbl, [settings:setData])
-		}
-	}
-}
-
-def getAutomationBackupData() {
-	def clientId = atomicState?.installationId
-	def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${clientId}/automationApps.json", contentType: 'application/json' ]
-	try {
-		httpGet(params) { resp ->
-			if(resp.data) {
-				//log.debug "resp: ${resp.data}"
-				//atomicState?.lastClientDataUpdDt = getDtNow()
-				return resp.data
-			}
-			return null
-		}
-	}
-	catch (ex) {
-		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			   //log.warn  "clientData.json file not found..."
-		} else {
-			LogAction("getAutomationBackupData Exception: ${ex}", "error", true)
-		}
-		return null
-	}
-}
+// def backupPage() {
+// 	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
+// 		section("") {
+// 			href "backupSendDataPage", title: "Send Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to Backup...",
+// 					state: (atomicState?.lastBackupDt ? "complete" : null), image: getAppImg("backup_icon.png")
+// 			href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
+// 		}
+// 	}
+// }
+//
+// def backupSendDataPage() {
+// 	return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
+// 		section("") {
+// 			paragraph "Sending Backup Data to Firebase..."
+// 			if(parent) {
+// 				if(backupConfigToFirebase()) {
+// 					atomicState?.lastBackupDt = getDtNow()
+// 					paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+// def backupRemoveDataPage() {
+// 	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
+// 		section("") {
+// 			paragraph "Removing Backed Up App Data from Firebase..."
+// 			if(parent) {
+// 				if(backupConfigToFirebase()) {
+// 					paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+//
+// def automationRestore(data) {
+// 	if(data) {
+// 		data?.each { bApp ->
+// 			def appLbl = bApp?.value?.appLabel.toString()
+// 			//log.debug "Automation AppId: ${bApp?.key}"
+// 			//log.debug "bAppData: ${stringToMap(bApp?.value.settingsData.toString())}"
+//
+// 			def setData = stringToMap(bApp?.value?.settingsData?.toString())
+//
+// 			log.debug "settingsData: $setData"
+//
+// 			log.debug "Restoring: ($appLbl) Automation Settings...."
+// 			addChildApp(textNamespace(), appName(), appLbl, [settings:setData])
+// 		}
+// 	}
+// }
+//
+// def getAutomationBackupData() {
+// 	def clientId = atomicState?.installationId
+// 	def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${clientId}/automationApps.json", contentType: 'application/json' ]
+// 	try {
+// 		httpGet(params) { resp ->
+// 			if(resp.data) {
+// 				//log.debug "resp: ${resp.data}"
+// 				//atomicState?.lastClientDataUpdDt = getDtNow()
+// 				return resp.data
+// 			}
+// 			return null
+// 		}
+// 	}
+// 	catch (ex) {
+// 		if(ex instanceof groovyx.net.http.HttpResponseException) {
+// 			   //log.warn  "clientData.json file not found..."
+// 		} else {
+// 			LogAction("getAutomationBackupData Exception: ${ex}", "error", true)
+// 		}
+// 		return null
+// 	}
+// }
 
 def getDeviceMetricCnts() {
 	def data = [:]
@@ -5854,7 +5867,7 @@ def sendFirebaseData(data, pathVal, cmdType=null, type=null) {
 		metstr = "async"
 	}
 	if(allowAsync) {
-		return queueFirebaseData(data, pathVal, cmdType, type) 
+		return queueFirebaseData(data, pathVal, cmdType, type)
 	} else {
 		return syncSendFirebaseData(data, pathVal, cmdType, type)
 	}
@@ -5891,6 +5904,10 @@ def processFirebaseResponse(resp, data) {
 		if(resp?.status == 200) {
 			LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 			atomicState?.lastAnalyticUpdDt = getDtNow()
+			if(typeDesc == "Remote Diag Logs") {
+				atomicState?.remDiagDataSentDt = getDtNow()
+				atomicState?.remDiagLogDataStore = []
+			}
 			result = true
 		}
 		else if(resp?.status == 400) {
@@ -9248,11 +9265,9 @@ def getCurrentSchedule() {
 }
 
 private checkRestriction(cnt) {
-//	LogAction("checkRestriction:( $cnt )...", "trace", false)
+	//	LogAction("checkRestriction:( $cnt )...", "trace", false)
 	def sLbl = "schMot_${cnt}_"
-
 	def restriction
-
 	def act = settings["${sLbl}SchedActive"]
 	if(act) {
 		def apprestrict = atomicState?."sched${cnt}restrictions"
@@ -10928,17 +10943,6 @@ def setNotificationPage(params) {
 				}
 			}
 		}
-
-/*
-this is a parent only method today
-
-		if(showSched && settings["${pName}NotificationsOn"]) {
-			section(title: "Time Restrictions") {
-				href "setNotificationTimePage", title: "Silence Notifications...", description: (getNotifSchedDesc(pName) ?: "Tap to configure..."), params: [pName: "${pName}"],
-					state: (getNotifSchedDesc(pName) ? "complete" : null), image: getAppImg("quiet_time_icon.png")
-			}
-		}
-*/
 		if(allowSpeech && settings?."${pName}NotificationsOn") {
 			section("Voice Notification Preferences:") {
 				input "${pName}AllowSpeechNotif", "bool", title: "Enable Voice Notifications?", description: "Media players, Speech Devices, or Ask Alexa", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? true : false), submitOnChange: true, image: getAppImg("speech_icon.png")
@@ -11013,95 +11017,27 @@ this is a parent only method today
 				}
 			}
 		}
-		//if(pName in ["conWat", "leakWat", "extTmp", "watchDog"] && settings["${pName}NotificationsOn"] && (settings["${pName}AllowSpeechNotif"] || settings["${pName}AllowAlarmNotif"])) {
 		if(pName in ["conWat", "leakWat", "extTmp", "watchDog"] && settings["${pName}NotificationsOn"] && settings["${pName}AllowAlarmNotif"] && settings["${pName}AlarmDevices"]) {
 			section("Notification Alert Options (1):") {
 				input "${pName}_Alert_1_Delay", "enum", title: "First Alert Delay (in minutes)", defaultValue: null, required: true, submitOnChange: true, metadata: [values:longTimeSecEnum()],
 						image: getAppImg("alert_icon2.png")
 				if(settings?."${pName}_Alert_1_Delay") {
-/*
-TODO These are not in use.   They could only be used in alarming, but the other data needed is not available
-
-					if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
-						input "${pName}_Alert_1_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-						if(settings["${pName}_Alert_1_Send_Push"]) {
-							input "${pName}_Alert_1_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-							if(settings["${pName}_Alert_1_Send_Custom_Push"]) {
-								input "${pName}_Alert_1_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
-							}
-						}
+					input "${pName}_Alert_1_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: null, submitOnChange: true, required: true, image: getAppImg("alarm_icon.png")
+					if(settings?."${pName}_Alert_1_AlarmType") {
+						input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 10, required: true, submitOnChange: true,
+								image: getAppImg("delay_time_icon.png")
 					}
-					if(settings?."${pName}AllowSpeechNotif") {
-						input "${pName}_Alert_1_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-						if(settings?."${pName}_Alert_1_Use_Speech") {
-							input "${pName}_Alert_1_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-							if(settings["${pName}_Alert_1_Send_Custom_Speech"]) {
-								input "${pName}_Alert_1_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
-							}
-						}
-					}
-					if(settings?."${pName}AllowAlarmNotif") {
-*/
-						//input "${pName}_Alert_1_Use_Alarm", "bool", title: "Use Alarm Device", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
-						//if(settings?."${pName}_Alert_1_Use_Alarm" && settings?."${pName}AlarmDevices") {
-							input "${pName}_Alert_1_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: null, submitOnChange: true, required: true, image: getAppImg("alarm_icon.png")
-							if(settings?."${pName}_Alert_1_AlarmType") {
-								input "${pName}_Alert_1_Alarm_Runtime", "enum", title: "Turn off Alarm After (in seconds)?", metadata: [values:shortTimeEnum()], defaultValue: 10, required: true, submitOnChange: true,
-										image: getAppImg("delay_time_icon.png")
-							}
-						//}
-/*
-					}
-					if(settings["${pName}_Alert_1_Send_Custom_Speech"] || settings["${pName}_Alert_1_Send_Custom_Push"]) {
-						if(pName in ["leakWat", "conWat", "extTmp"]) {
-							getNotifVariables(pName)
-						}
-					}
-*/
 				}
 			}
 			if(settings["${pName}_Alert_1_Delay"]) {
 				section("Notification Alert Options (2):") {
 					input "${pName}_Alert_2_Delay", "enum", title: "Second Alert Delay (in minutes)", defaultValue: null, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true, image: getAppImg("alert_icon2.png")
 					if(settings?."${pName}_Alert_2_Delay") {
-/*
-TODO These are not in use.   They could only be used in alarming, but the other data needed is not available
-						if(settings?."${pName}NotificationsOn" && (settings["${pName}UsePush"] || settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"])) {
-							input "${pName}_Alert_2_Send_Push", "bool", title: "Send Push Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-							if(settings["${pName}_Alert_2_Send_Push"]) {
-								input "${pName}_Alert_2_Send_Custom_Push", "bool", title: "Custom Push Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png")
-								if(settings["${pName}_Alert_2_Send_Custom_Push"]) {
-									input "${pName}_Alert_2_CustomPushMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
-								}
-							}
+						input "${pName}_Alert_2_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: null, submitOnChange: true, required: true, image: getAppImg("alarm_icon.png")
+						if(settings?."${pName}_Alert_2_AlarmType") {
+							input "${pName}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 10, required: true, submitOnChange: true,
+									image: getAppImg("delay_time_icon.png")
 						}
-						if(settings?."${pName}AllowSpeechNotif") {
-							input "${pName}_Alert_2_Use_Speech", "bool", title: "Send Voice Notification?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-							if(settings?."${pName}_Alert_2_Use_Speech") {
-								input "${pName}_Alert_2_Send_Custom_Speech", "bool", title: "Custom Speech Message?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-								if(settings["${pName}_Alert_2_Send_Custom_Speech"]) {
-									input "${pName}_Alert_2_CustomSpeechMessage", "text", title: "Push Message to Send?", required: false, defaultValue: atomicState?."${pName}OffVoiceMsg" , submitOnChange: true, image: getAppImg("speech_icon.png")
-								}
-							}
-						}
-						if(settings?."${pName}AllowAlarmNotif") {
-*/
-							//input "${pName}_Alert_2_Use_Alarm", "bool", title: "Use Alarm Device?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("alarm_icon.png")
-							//if(settings?."${pName}_Alert_2_Use_Alarm" && settings?."${pName}AlarmDevices") {
-								input "${pName}_Alert_2_AlarmType", "enum", title: "Alarm Type to use?", metadata: [values:alarmActionsEnum()], defaultValue: null, submitOnChange: true, required: true, image: getAppImg("alarm_icon.png")
-								if(settings?."${pName}_Alert_2_AlarmType") {
-									input "${pName}_Alert_2_Alarm_Runtime", "enum", title: "Turn off Alarm After (in minutes)?", metadata: [values:shortTimeEnum()], defaultValue: 10, required: true, submitOnChange: true,
-											image: getAppImg("delay_time_icon.png")
-								}
-							//}
-/*
-						}
-						if(settings["${pName}_Alert_2_Send_Custom_Speech"] || settings["${pName}_Alert_2_Send_Custom_Push"]) {
-							if(pName in ["leakWat", "conWat", "extTmp"]) {
-								getNotifVariables(pName)
-							}
-						}
-*/
 					}
 				}
 			}
