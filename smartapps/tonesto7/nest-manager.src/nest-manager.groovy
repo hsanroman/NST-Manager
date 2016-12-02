@@ -108,6 +108,7 @@ preferences {
 	page(name: "nestLoginPrefPage")
 	page(name: "nestTokenResetPage")
 	page(name: "uninstallPage")
+	page(name: "remoteDiagPage")
 	page(name: "custWeatherPage")
 	page(name: "automationsPage")
 	page(name: "automationKickStartPage")
@@ -432,7 +433,7 @@ def prefsPage() {
 		showDevSharePrefs()
 
 		section("Manage Your Nest Login:") {
-			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to configure...", image: getAppImg("login_icon.png")
+			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view...", image: getAppImg("login_icon.png")
 		}
 		if(appSettings?.devOpt == "true") {
 			section("Backup Data (Experimental):") {
@@ -1097,6 +1098,7 @@ def infoPage () {
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View|Report Issues",
 				 description:"Tap to open in browser...", state: "complete", image: getAppImg("issue_icon.png")
 			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
 		}
 		section("Credits:") {
 			paragraph title: "Creator:", "Anthony S. (@tonesto7)", state: "complete"
@@ -1120,6 +1122,48 @@ def infoPage () {
 		devPageFooter("infoLoadCnt", execTime)
 	}
 }
+
+def remoteDiagPage () {
+	def execTime = now()
+	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", install: false) {
+		section() {
+			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+			def tf = new SimpleDateFormat(formatVal)
+			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+			paragraph title: "How will this work?", "Once enabled your this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
+			paragraph "This will automatically turn itself off and remove all remote data collected after 12hours"
+			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
+			if(atomicState?.remDiagLogDataStore?.size()) {
+				paragraph "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
+				if(atomicState?.remDiagDataSentDt) {
+					paragraph "Last Send Data to DB:\n${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.remDiagDataSentDt))}"
+				}
+			}
+			if(atomicState?.installationId) {
+				paragraph "Provide this Id to the Developer so he can identify your data."
+				paragraph "InstallationID:\n${atomicState?.installationId}"
+			}
+
+		}
+		if(settings?.enRemDiagLogging) {
+			if(!atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = true }
+			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = now() }
+		} else {
+			atomicState?.enRemDiagLogging = false
+			if(atomicState?.remDiagLogDataStore?.size()) {
+				removeRemDiagData()
+				atomicState?.remDiagLogDataStore = null
+				atomicState?.remDiagLogActivatedDt = null
+				atomicState?.remDiagDataSentDt = null
+			}
+		}
+		//incChgLogLoadCnt()
+		//devPageFooter("chgLogLoadCnt", execTime)
+	}
+}
+
+def getLastRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getLastRemDiagActSec").toInteger() }
+def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage () {
 	def execTime = now()
@@ -1439,13 +1483,16 @@ def nestLoginPrefPage () {
 		return authPage()
 	} else {
 		return dynamicPage(name: "nestLoginPrefPage", nextPage: atomicState?.authToken ? "" : "authPage", install: false) {
-			section("Authorization Info:") {
-				paragraph "Token Created:\n• ${atomicState?.tokenCreatedDt.toString() ?: "Not Found..."}"
-				paragraph "Token Expires:\n• ${atomicState?.tokenExpires ? "Never" : "Not Found..."}"
-				paragraph "Last Connection:\n• ${atomicState.lastDevDataUpd ? atomicState?.lastDevDataUpd.toString() : ""}"
+			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+			def tf = new SimpleDateFormat(formatVal)
+			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+			section() {
+				paragraph title: "Authorization Info:", "Authorization Date:\n• ${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.tokenCreatedDt))}", state: "complete"
+				paragraph "Last Nest Connection:\n• ${tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState.lastDevDataUpd))}"
 			}
-			section("Nest Login Preferences:") {
+			section("Revoke Authorization Reset:") {
 				href "nestTokenResetPage", title: "Log Out and Reset your Nest Token", description: "Tap to Reset the Token...", required: true, state: null, image: getAppImg("reset_icon.png")
+
 			}
 		}
 	}
@@ -1773,6 +1820,13 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
+	if(atomicState?.enRemDiagLogging && getLastRemDiagActSec() > 43200) {
+		atomicState?.enRemDiagLogging = false
+		atomicState?.remDiagLogDataStore = null
+		atomicState?.remDiagLogActivatedDt = null
+		atomicState?.remDiagDataSentDt = null
+		removeRemDiagData()
+	}
 }
 
 def forcedPoll(type = null) {
@@ -4459,10 +4513,14 @@ def LogTrace(msg) {
 	if(trOn) { Logger(msg, "trace") }
 }
 
-def LogAction(msg, type = "debug", showAlways = false) {
+def LogAction(msg, type="debug", showAlways=false) {
 	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
 	if(showAlways) { Logger(msg, type) }
 	else if(isDbg && !showAlways) { Logger(msg, type) }
+	if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
+		if(!atomicState?.remDiagLogDataStore) { atomicState?.remDiagLogDataStore = [:] }
+		saveLogtoRemDiagStore(msg, type, now(), )
+	}
 }
 
 def Logger(msg, type) {
@@ -4495,6 +4553,31 @@ def Logger(msg, type) {
 		}
 	}
 	else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
+}
+
+void saveLogtoRemDiagStore(msg, lType, dt, cType="") {
+	def data = atomicState?.remDiagLogDataStore ?: [:]
+	log.debug "data: $data"
+	if(data?.size() > 50 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
+	def val = ["msg":msg, "type":lType, "dt":dt, "ctype":cType]
+	if(!data?.contains(val)) {
+		data << val
+		log.debug "dataAfter: $data"
+	}
+	
+	atomicState?.remDiagLogDataStore = data
+}
+
+def sendRemDiagData() {
+	def data = atomicState?.remDiagLogDataStore
+	if(data?.size()) {
+		def resultJson = new groovy.json.JsonOutput().toJson(data)
+		if(sendFirebaseData(results, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")) {
+			atomicState?.remDiagDataSentDt = now()
+			data = [:]
+		}
+		atomicState?.remDiagLogDataStore = data
+	}
 }
 
 def setStateVar(frc = false) {
@@ -5529,6 +5612,10 @@ def removeAutomationBackupData(childId) {
 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
 }
 
+def removeRemDiagData(childId) {
+	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json")
+}
+
 def backupPage() {
 	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
 		section("") {
@@ -5698,6 +5785,9 @@ def removeInstallData() {
 	}
 }
 
+def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: "errorData" }
+def getDbRemDiagPath() { return atomicState?.appData?.database?.remoteDiagPath ?: "remoteDiagLogs" }
+
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 	if(atomicState?.appData?.database?.disableExceptions == true) {
 	  return
@@ -5722,7 +5812,7 @@ def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 				exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
 			}
 			def results = new groovy.json.JsonOutput().toJson(exData)
-			sendFirebaseData(results, "errorData/${appType}/${methodName}.json", "post", "Exception")
+			sendFirebaseData(results, "${getDbExceptPath()}/${appType}/${methodName}.json", "post", "Exception")
 		}
 	}
 }
@@ -5740,7 +5830,7 @@ def sendChildExceptionData(devType, devVer, ex, methodName) {
 	if(settings?.optInSendExceptions) {
 		def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
 		def results = new groovy.json.JsonOutput().toJson(exData)
-		sendFirebaseData(results, "errorData/${devType}/${methodName}.json", "post", "Exception")
+		sendFirebaseData(results, "${getDbExceptPath()}/${devType}/${methodName}.json", "post", "Exception")
 	}
 }
 
