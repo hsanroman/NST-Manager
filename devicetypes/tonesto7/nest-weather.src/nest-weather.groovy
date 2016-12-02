@@ -376,7 +376,7 @@ def wantMetric() { return (state?.tempUnit == "C") }
 
 def getWeatherConditions(Map weatData) {
 	try {
-		if(!weatData.current_observation) {
+		if(!weatData?.current_observation) {
 			Logger("There is an Issue getting the weather condition data", "warn")
 			return
 		} else {
