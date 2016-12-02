@@ -26,9 +26,6 @@
             "thermostat": {
                 "ver": "4.1.0"
             },
-            "vthermostat": {
-                "ver": "4.1.0"
-            },
             "protect": {
                 "ver": "4.1.0"
             },
@@ -50,7 +47,10 @@
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
     "database": {
-        "disableExceptions": true
+        "allowRemoteDiag": true,
+        "disableExceptions": true,
+        "exceptionPath": "exceptionData",
+        "remoteDiagPath": "remoteDiagLogs"
     },
     "aaPrefs": {
         "enAaMsgQueue": true
@@ -70,7 +70,6 @@
     },
     "healthcheck": {
         "longTimeout": 120,
-        "timeout": 35,
-
+        "timeout": 35
     }
 }
