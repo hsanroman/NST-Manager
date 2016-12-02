@@ -5949,6 +5949,10 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 			if(respData?.status == 200) {
 				LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 				atomicState?.lastAnalyticUpdDt = getDtNow()
+				if(typeDesc == "Remote Diag Logs") {
+					atomicState?.remDiagDataSentDt = getDtNow()
+					atomicState?.remDiagLogDataStore = []
+				}
 				result = true
 			}
 			else if(respData?.status == 400) {
