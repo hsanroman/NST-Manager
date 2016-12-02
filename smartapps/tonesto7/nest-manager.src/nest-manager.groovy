@@ -1347,12 +1347,12 @@ def getDevChgDesc() {
 			//log.debug "str: $str"
 			if(str != "") {
 				res += section("Pending Device Changes:") {
-							if(t == "added") {
-								paragraph title: "Installing...", str, state: "complete"
-							} else if(t=="removed") {
-								paragraph title: "Removing...", str, required: true, state: null
-							}
-						}
+					if(t == "added") {
+						paragraph title: "Installing...", str, state: "complete"
+					} else if(t=="removed") {
+						paragraph title: "Removing...", str, required: true, state: null
+					}
+				}
 			}
 		}
 	}
@@ -1718,7 +1718,7 @@ def checkIfSwupdated() {
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
-		getDevChgDesc()
+		//getDevChgDesc()
 		checkIfSwupdated()
 		def meta = false
 		def dev = false
@@ -5700,15 +5700,15 @@ def removeInstallData() {
 
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 	if(atomicState?.appData?.database?.disableExceptions == true) {
-	  return
+		return
 	} else {
 		def exCnt = 0
 		def exString
-		if(ex instanceof java.lang.NullPointerException) {// || ex instanceof java.lang.SecurityException) {
+		if(ex instanceof java.lang.NullPointerException || ex instanceof java.lang.SecurityException) {
 			//LogAction("sendExceptionData: NullPointerException was caught successfully...", "info", true)
 			return
 		} else {
-			exString = ex.message.toString()
+			exString = ex?.message?.toString()
 			//log.debug "sendExceptionData: Exception Message (${exString})"
 		}
 		exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
@@ -5756,8 +5756,74 @@ def sendFeedbackData(msg) {
 
 def sendFirebaseData(data, pathVal, cmdType=null, type=null) {
 	LogAction("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
-	def json = new groovy.json.JsonOutput().prettyPrint(data)
+
+	def allowAsync = false
+	def metstr = "sync"
+	if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
+		allowAsync = true
+		metstr = "async"
+	}
+	if(allowAsync) {
+		return queueFirebaseData(data, pathVal, cmdType, type) 
+	} else {
+		return syncSendFirebaseData(data, pathVal, cmdType, type)
+	}
+}
+
+def queueFirebaseData(data, pathVal, cmdType=null, type=null) {
+	LogAction("queueFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
 	def result = false
+	def json = new groovy.json.JsonOutput().prettyPrint(data)
+	def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
+	def typeDesc = type ? "${type}" : "Data"
+	try {
+		atomicState.qFirebaseRequested = true
+		if(!cmdType || cmdType == "put") {
+			asynchttp_v1.put(processFirebaseResponse, params, [ type: "${typeDesc}"])
+			result = true
+		} else if (cmdType == "post") {
+			asynchttp_v1.post(processFirebaseResponse, params, [ type: "${typeDesc}"])
+			result = true
+		} else { LogAction("queueFirebaseData UNKNOWN cmdType: ${cmdType}", warn, true) }
+
+	} catch(ex) {
+                log.error "queueFirebaseData (type: $typeDesc) Exception:", ex
+                sendExceptionData(ex, "queueFirebaseData")
+        }
+	return result
+}
+
+def processFirebaseResponse(resp, data) {
+	LogAction("processFirebaseResponse(${data?.type})", "info", false)
+	def result = false
+	def typeDesc = data?.type
+	try {
+		if(resp?.status == 200) {
+			LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
+			atomicState?.lastAnalyticUpdDt = getDtNow()
+			result = true
+		}
+		else if(resp?.status == 400) {
+			LogAction("sendFirebaseData: 'Bad Request' Exception: ${resp?.status}", "error", true)
+		}
+		else {
+			LogAction("sendFirebaseData: 'Unexpected' Response: ${resp?.status}", "warn", true)
+		}
+		if(resp.hasError()) {
+			log.debug "errorData response: $resp.errorData"
+			log.debug "errorMessage response: $resp.errorMessage"
+		}
+	} catch(ex) {
+                log.error "processFirebaseResponse (type: $typeDesc) Exception:", ex
+                sendExceptionData(ex, "processFirebaseResponse")
+        }
+	atomicState.qFirebaseRequested = false
+}
+
+def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
+	LogAction("syncSendFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	def result = false
+	def json = new groovy.json.JsonOutput().prettyPrint(data)
 	def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
 	def typeDesc = type ? "${type}" : "Data"
 	def respData
@@ -5766,15 +5832,14 @@ def sendFirebaseData(data, pathVal, cmdType=null, type=null) {
 			httpPutJson(params) { resp ->
 				respData = resp
 			}
-		}
-		else if (cmdType == "post") {
+		} else if (cmdType == "post") {
 			httpPostJson(params) { resp ->
 				respData = resp
 			}
 		}
 		if(respData) {
 			//log.debug "respData: ${respData}"
-			if( respData?.status == 200) {
+			if(respData?.status == 200) {
 				LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 				atomicState?.lastAnalyticUpdDt = getDtNow()
 				result = true
