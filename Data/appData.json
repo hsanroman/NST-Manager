@@ -47,7 +47,10 @@
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
     "database": {
-        "disableExceptions": true
+        "allowRemoteDiag": true,
+        "disableExceptions": false,
+        "exceptionPath": "exceptionData",
+        "remoteDiagPath": "remoteDiagLogs"
     },
     "aaPrefs": {
         "enAaMsgQueue": true
