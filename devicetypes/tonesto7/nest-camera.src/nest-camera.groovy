@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.1.0" }
+def devVer() { return "2.1.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -519,7 +519,7 @@ def getPublicVideoId() {
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
-def chgStreaming() {
+void chgStreaming() {
 	def cur = device.latestValue("isStreaming").stringValue
 	if(cur == "on" || cur == "unavailable" || !cur) {
 		streamingOff(true)
@@ -528,7 +528,7 @@ def chgStreaming() {
 	}
 }
 
-def streamingOn(manChg=false) {
+void streamingOn(manChg=false) {
 	try {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
@@ -543,7 +543,7 @@ def streamingOn(manChg=false) {
 	}
 }
 
-def streamingOff(manChg=false) {
+void streamingOff(manChg=false) {
 	try {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
@@ -557,15 +557,15 @@ def streamingOff(manChg=false) {
 	}
 }
 
-def on() {
+void on() {
 	streamingOn()
 }
 
-def off() {
+void off() {
 	streamingOff()
 }
 
-def take() {
+void take() {
 	try {
 		def img = getImgBase64(state?.snapshot_url,'jpeg')
 		//log.debug "img: $img"
