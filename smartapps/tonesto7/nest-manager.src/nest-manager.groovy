@@ -1155,7 +1155,7 @@ def remoteDiagPage () {
 			}
 		}
 
-		if(settings?.enRemDiagLogging) {
+		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = true }
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
@@ -1189,6 +1189,9 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	//log.debug "item: ${item}"
 	data << item
 	atomicState?.remDiagLogDataStore = data
+	if(atomicState?.remDiagLogDataStore?.size() > 10 || getLastRemDiagSentSec() > 600) { 
+		sendRemDiagData()
+	}
 	//log.debug "data: $data"
 }
 
@@ -1200,6 +1203,8 @@ def sendRemDiagData() {
 		def json
 		json = new groovy.json.JsonOutput().toJson(data)
 		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}/.json", "post", "Remote Diag Logs")
+		atomicState?.remDiagDataSentDt = getDtNow()
+		atomicState?.remDiagLogDataStore = []
 	}
 }
 
@@ -1863,14 +1868,11 @@ def finishPoll(str, dev) {
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
 	if(atomicState?.enRemDiagLogging) {
-		if(atomicState?.remDiagLogDataStore) {
-			if(atomicState?.remDiagLogDataStore?.size() > 10 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
-			if(getRemDiagActSec() > 43200) {
-				log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
-				atomicState?.enRemDiagLogging = false
-				atomicState?.enRemDiagSendToSlack = false
-				clearRemDiagData()
-			}
+		if(getRemDiagActSec() > (3600 * 12)) {
+			log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
+			atomicState?.enRemDiagLogging = false
+			atomicState?.enRemDiagSendToSlack = false
+			clearRemDiagData()
 		}
 	}
 }
@@ -4621,7 +4623,7 @@ def Logger(msg, type, logSrc=null) {
 				break
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
-			if(atomicState?.remDiagLogDataStore == null) { atomicState?.remDiagLogDataStore = [:] }
+			if(atomicState?.remDiagLogDataStore == null) { atomicState?.remDiagLogDataStore = [] }
 			//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
 			saveLogtoRemDiagStore(msg, type, logSrc)
 		}
@@ -6337,6 +6339,7 @@ def initAutoApp() {
 	state.remove("schedule{2}TimeActive")
 	state.remove("schedule{3}TimeActive")
 	state.remove("schedule{4}TimeActive")
+	state.remove("lastaway")
 }
 
 def uninstAutomationApp() {
@@ -6914,6 +6917,10 @@ def watchDogCheck() {
 						watchDogAlarmActions(d1.displayName, dni, "temp")
 						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
 					} else {
+
+// This is allowing for warning if Nest has problem of system coming out of ECO while away
+// TODO this should have a UI control to turn on / off, as it is "legal" for someone to set a home out of "ECO" while away.
+
 						def nestModeAway = (getNestLocPres() == "home") ? false : true
 						if(nestModeAway) {
 							def curMode = d1?.currentnestThermostatMode?.toString()
@@ -7203,18 +7210,12 @@ private remSenCheck() {
 		def execTime = now()
 		//atomicState?.lastEvalDt = getDtNow()
 
-		def home = false
-		def away = false
-		if(remSenTstat && getTstatPresence(remSenTstat) == "present") { home = true }
-		else { away = true }
-
 		def noGoDesc = ""
-		if( !settings?.remSensorDay || !remSenTstat || !home) {
+		if( !settings?.remSensorDay || !remSenTstat) {
 			noGoDesc += !settings?.remSensorDay ? "Missing Required Sensor Selections..." : ""
 			noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
-			noGoDesc += !home ? "Ignoring because thermostat is in away mode." : ""
 			LogAction("Remote Sensor NOT Evaluating...Evaluation Status: ${noGoDesc}", "warn", true)
-		} else if(home) {
+		} else {
 			//log.info "remSenCheck:  Evaluating Event..."
 
 			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode.toString() : null
@@ -7257,6 +7258,9 @@ private remSenCheck() {
 			LogAction("remSenCheck: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)
 			LogAction("remSenCheck: Desired Temps - Heat: ${reqSenHeatSetPoint} | Cool: ${reqSenCoolSetPoint}", "info", false)
 			LogAction("remSenCheck: Threshold Temp: ${threshold} | Change Temp Increments: ${tempChangeVal}", "info", false)
+
+// This does not use mode filters, as the automation could have a bunch of settings in place, and suddenly stopping
+// is indeterminate as to what settings to leave or change
 
 			def modeOk = true
 			if(!modeOk || !getRemSenModeOk()) {
@@ -7418,9 +7422,10 @@ private remSenCheck() {
 				}
 			}
 		}
+/*
 		else {
 			//
-			// if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan will be off (or set back) with away mode.
+			// if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan may be off (or set back) with away mode. (depends on user's home/away assist settings in Nest)
 			// if thermostats were not all Nest, then non Nest units could still be on for AC/HEAT or FAN...
 			// current presumption in this implementation is:
 			//      they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.   (They could be mirrored from primary)
@@ -7428,6 +7433,7 @@ private remSenCheck() {
 			//
 			LogAction("Remote Sensor: Skipping Evaluation... Thermostat is set to away...", "info", true)
 		}
+*/
 		storeExecutionHistory((now() - execTime), "remSenCheck")
 	} catch (ex) {
 		log.error "remSenCheck Exception:", ex
@@ -7886,13 +7892,9 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def tstatsMir = schMotTstatMir
 
 	def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
-	def home = false
-	def away = false
-	if(tstat && getTstatPresence(tstat) == "present") { home = true }
-	else { away = true }
 
 	def returnToAuto = false
-	if(away || hvacMode in ["off", "eco"]) { returnToAuto = true }
+	if(hvacMode in ["off", "eco"]) { returnToAuto = true }
 
 	def curOperState = tstat?.currentThermostatOperatingState.toString()
 	def curFanMode = tstat?.currentThermostatFanMode.toString()
@@ -7907,7 +7909,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	}
 	def fanTempOk = getCirculateFanTempOk(curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
 
-	if(home && hvacMode in ["heat", "auto", "cool"] && fanTempOk && !fanOn && !returnToAuto) {
+	if(hvacMode in ["heat", "auto", "cool"] && fanTempOk && !fanOn && !returnToAuto) {
 		def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
 		def timeSinceLastOffOk = (getLastRemSenFanOffDtSec() > waitTimeVal) ? true : false
 		if(!timeSinceLastOffOk) {
@@ -8124,14 +8126,17 @@ def extTmpTempOk() {
 
 		def str = "enough different (${tempDiff})"
 
+/*
+		def modeEco = (curMode in ["eco"]) ? true : false
 		def home = false
 		def away = false
 		if(extTmpTstat && getTstatPresence(extTmpTstat) == "present") { home = true }
 		else { away = true }
-		if(away) {
+		if(away && modeEco) {			// we won't pull system out of ECO mode if we are away
 			retval = false
-			str = "Nest is away"
+			str = "Nest is away AND in ECO mode"
 		}
+*/
 
 		if(!getSafetyTempsOk(extTmpTstat)) {
 			retval = false
@@ -8215,17 +8220,13 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
+			def modeEco = (curMode in ["eco"]) ? true : false
 			def safetyOk = getSafetyTempsOk(extTmpTstat)
 			def schedOk = extTmpScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
-
-			def home = false
-			def away = false
-			if(extTmpTstat && getTstatPresence(extTmpTstat) == "present") { home = true }
-			else { away = true }
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 			if(!modeOff && atomicState.extTmpTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
@@ -8237,26 +8238,26 @@ def extTmpTempCheck(cTimeOut = false) {
 				unschedTimeoutRestore(pName)
 			}
 
-			def lastaway = atomicState?."${pName}lastaway"  // when we state change that could change desired Temp ensure delays happen before off can happen again
-			atomicState?."${pName}lastaway" = home
+			def mylastMode = atomicState?."${pName}lastMode"  // when we state change that could change desired Temp ensure delays happen before off can happen again
+			atomicState?."${pName}lastMode" = curMode
 
 			def lastDesired = atomicState?.extTmpLastDesiredTemp   // this catches scheduled temp or hvac mode changes
 			def desiredTemp = getDesiredTemp(curMode)
 			if(desiredTemp) { atomicState?.extTmpLastDesiredTemp =  desiredTemp }
 
-			if(!modeOff && ( (home && lastaway != home) || (desiredTemp && desiredTemp != lastDesired)) ) { atomicState.extTmpChgWhileOnDt = getDtNow() }
+			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) { atomicState.extTmpChgWhileOnDt = getDtNow() }
 
 			def okToRestore = (modeOff && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
 			def tempWithinThreshold = extTmpTempOk()
 
-			if(!tempWithinThreshold || timeOut || !safetyOk || away) {
+			if(!tempWithinThreshold || timeOut || !safetyOk || !schedOk) {
 				if(allowAlarm) { alarmEvtSchedCleanup(extTmpPrefix()) }
 				def rmsg = ""
 				if(okToRestore) {
 					if(getExtTmpWhileOffDtSec() >= (getExtTmpOnDelayVal() - 5) || timeOut || !safetyOk) {
 						def lastMode = null
 						if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
-						if(lastMode && (lastMode != curMode || timeOut || !safetyOk)) {
+						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(extTmpTstat, lastMode)) {
 								storeLastAction("Restored Mode ($lastMode)", getDtNow())
@@ -8266,7 +8267,6 @@ def extTmpTempCheck(cTimeOut = false) {
 								atomicState.extTmpChgWhileOnDt = getDtNow()
 								atomicState."${pName}timeOutOn" = false
 								unschedTimeoutRestore(pName)
-								modeOff = false
 
 								if(extTmpTstatMir) {
 									if(setMultipleTstatMode(extTmpTstatMir, lastMode)) {
@@ -8279,10 +8279,10 @@ def extTmpTempCheck(cTimeOut = false) {
 								if(!safetyOk) {
 									rmsg += "because External Temp Safefy Temps have been reached..."
 									needAlarm = true
+								} else if(!schedOk) {
+									rmsg += "because the schedule does not allow automation control..."
 								} else if(timeOut) {
 									rmsg += "because the (${getEnumValue(longTimeSecEnum(), extTmpOffTimeout)}) Timeout has been reached..."
-								} else if(away) {
-									rmsg += "because of AWAY Nest mode..."
 								} else {
 									rmsg += "because External Temp has been above the Threshold for (${getEnumValue(longTimeSecEnum(), extTmpOnDelay)})..."
 								}
@@ -8333,7 +8333,7 @@ def extTmpTempCheck(cTimeOut = false) {
 				}
 			}
 
-			if(tempWithinThreshold && !timeOut && safetyOk && schedOk && home) {
+			if(tempWithinThreshold && !timeOut && safetyOk && schedOk && !modeEco) {
 				def rmsg = ""
 				if(!modeOff) {
 					if(getExtTmpWhileOnDtSec() >= (getExtTmpOffDelayVal() - 2)) {
@@ -8347,6 +8347,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							atomicState.extTmpChgWhileOffDt = getDtNow()
 							scheduleTimeoutRestore(pName)
 							modeOff = true
+							modeEco = true
 							rmsg = "${extTmpTstat.label} has been turned 'ECO' because External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})!!!"
 							if(extTmpTstatMir) {
 								setMultipleTstatMode(extTmpTstatMir, "eco") {
@@ -8371,7 +8372,7 @@ def extTmpTempCheck(cTimeOut = false) {
 				   LogAction("extTmpTempCheck: | Skipping because Exterior temperatures in range and '${extTmpTstat?.label}' mode is already 'OFF or ECO'", "info", true)
 				}
 			} else {
-				if(!home) { LogAction("extTmpTempCheck: Skipping because of AWAY Nest mode...", "info", true) }
+				if(modeEco) { LogAction("extTmpTempCheck: Skipping because in ECO mode...", "info", true) }
 				else if(!schedOk) { LogAction("extTmpTempCheck: Skipping because of Schedule Restrictions...", "info", true) }
 				else if(!safetyOk) { LogAction("extTmpTempCheck: Skipping because of Safety Temps Exceeded...", "info", true) }
 				else if(timeOut) { LogAction("extTmpTempCheck: Skipping because of active timeout...", "info", true) }
@@ -8447,7 +8448,8 @@ def conWatContactDesc() {
 		str += "Contact Status:"
 		settings?.conWatContacts?.each { dev ->
 			cnt = cnt+1
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${dev?.currentContact?.toString().capitalize()})"
+			def val = dev?.currentContact ? dev?.currentContact.toString().capitalize() : "Not Set"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
 		}
 		return str
 	}
@@ -8494,6 +8496,7 @@ def conWatCheck(cTimeOut = false) {
 			if(cTimeOut) { atomicState."${pName}timeOutOn" = true }
 			def timeOut = atomicState."${pName}timeOutOn" ?: false
 			def curMode = conWatTstat ? conWatTstat?.currentnestThermostatMode.toString() : null
+			def modeEco = (curMode in ["eco"]) ? true : false
 			def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
 			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
@@ -8503,11 +8506,6 @@ def conWatCheck(cTimeOut = false) {
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
-
-			def home = false
-			def away = false
-			if(conWatTstat && getTstatPresence(conWatTstat) == "present") { home = true }
-			else { away = true }
 
 			//log.debug "curMode: $curMode | modeOff: $modeOff | conWatRestoreOnClose: $conWatRestoreOnClose | lastMode: $lastMode"
 			//log.debug "conWatTstatOffRequested: ${atomicState?.conWatTstatOffRequested} | getConWatCloseDtSec(): ${getConWatCloseDtSec()}"
@@ -8523,21 +8521,21 @@ def conWatCheck(cTimeOut = false) {
 				unschedTimeoutRestore(pName)
 			}
 
-			def lastaway = atomicState?."${pName}lastaway"  // when we state change from away to home, ensure delays happen before off can happen again
-			if(!modeOff && (home && lastaway != home)) { atomicState?.conWatOpenDt = getDtNow() }
-			atomicState?."${pName}lastaway" = home
+			def mylastMode = atomicState?."${pName}lastMode"  // when we state change modes, ensure delays happen before off can happen again
+			atomicState?."${pName}lastMode" = curMode
+			if(!modeOff && (mylastMode != curMode)) { atomicState?.conWatOpenDt = getDtNow() }
 
 			def okToRestore = (modeOff && atomicState?.conWatTstatOffRequested) ? true : false
 			def contactsOk = getConWatContactsOk()
 
-			if(contactsOk || timeOut || !safetyOk || away) {
+			if(contactsOk || timeOut || !safetyOk || !schedOk) {
 				if(allowAlarm) { alarmEvtSchedCleanup(conWatPrefix()) }
 				def rmsg = ""
 				if(okToRestore) {
 					if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
 						def lastMode = null
 						if(atomicState?.conWatRestoreMode) { lastMode = atomicState?.conWatRestoreMode }
-						if(lastMode && (lastMode != curMode || timeOut || !safetyOk)) {
+						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(conWatTstat, lastMode)) {
 								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow())
@@ -8561,8 +8559,8 @@ def conWatCheck(cTimeOut = false) {
 									needAlarm = true
 								} else if(timeOut) {
 									rmsg += "because the (${getEnumValue(longTimeSecEnum(), conWatOffTimeout)}) Timeout has been reached..."
-								} else if(away) {
-									rmsg += "because of AWAY Nest mode..."
+								} else if(!schedOk) {
+									rmsg += "because of Schedule restrictions..."
 								} else {
 									rmsg += "because ALL contacts have been 'Closed' again for (${getEnumValue(longTimeSecEnum(), conWatOnDelay)})..."
 								}
@@ -8612,7 +8610,7 @@ def conWatCheck(cTimeOut = false) {
 				}
 			}
 
-			if(!contactsOk && safetyOk && !timeOut && schedOk && home) {
+			if(!contactsOk && safetyOk && !timeOut && schedOk && !modeEco) {
 				def rmsg = ""
 				if(!modeOff) {
 					if((getConWatOpenDtSec() >= (getConWatOffDelayVal() - 2)) && (getConWatRestoreDelayBetweenDtSec() >= (getConWatRestoreDelayBetweenVal() - 2))) {
@@ -8655,10 +8653,10 @@ def conWatCheck(cTimeOut = false) {
 						}
 					}
 				} else {
-					LogAction("conWatCheck: | Skipping ECO change because '${conWatTstat?.label}' mode is already 'OFF'", "info", true)
+					LogAction("conWatCheck: | Skipping ECO change because '${conWatTstat?.label}' mode is '${curMode}'", "info", true)
 				}
 			} else {
-				if(!home) { LogAction("conWatCheck: Skipping because of AWAY Nest mode...", "info", true) }
+				if(modeEco) { LogAction("conWatCheck: Skipping because in ECO mode...", "info", true) }
 				else if(!schedOk) { LogAction("conWatCheck: Skipping because of Schedule Restrictions...", "info", true) }
 				else if(!safetyOk) { LogAction("conWatCheck: Skipping because of Safety Temps Exceeded...", "warn", true) }
 				else if(timeOut) { LogAction("conWatCheck: Skipping because of active timeout...", "info", true) }
@@ -9231,7 +9229,6 @@ def getNestLocPres() {
 |		SCHEDULE, MODE, or MOTION CHANGES ADJUST THERMOSTAT SETPOINTS			|
 |		(AND THERMOSTAT MODE) AUTOMATION CODE									|
 *********************************************************************************/
-def tModePrefix() { return "tMode" }
 
 def getTstatAutoDevId() {
 	if(settings?.schMotTstat) { return settings?.schMotTstat.deviceNetworkId.toString() }
@@ -9678,13 +9675,19 @@ def setTstatTempCheck() {
 		// Presumes: That all thermostats in an automation are in the same Nest structure, so that all react to home/away changes
 	*/
 	try {
-		def tstat = settings?.schMotTstat
-		def tstatMir = settings?.schMotTstatMir
 
 		if(atomicState?.disableAutomation) { return }
 		def execTime = now()
 
-		def away = (getNestLocPres() == "home") ? false : true
+		def tstat = settings?.schMotTstat
+		def tstatMir = settings?.schMotTstatMir
+
+		def pName = schMotPrefix()
+
+		def curMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
+
+		def lastMode = atomicState?."${pName}lastMode"
+		def samemode = lastMode == curMode ? true : false
 
 		def mySched = getCurrentSchedule()
 		def noSched = (mySched == null) ? true : false
@@ -9692,7 +9695,7 @@ def setTstatTempCheck() {
 		def previousSched = atomicState?.lastSched
 		def samesched = previousSched == mySched ? true : false
 
-		if((!samesched || away ) && previousSched) {                    // schedule change - set old schedule to not use motion
+		if((!samesched || !samemode) && previousSched) {                    // schedule change - set old schedule to not use motion
 			if(atomicState?."motion${previousSched}UseMotionSettings") {
 				LogAction("setTstatTempCheck: Disabled Use of Motion Settings for previous schedule ${previousSched}", "info", true)
 			}
@@ -9700,18 +9703,14 @@ def setTstatTempCheck() {
 			atomicState?."motion${previousSched}LastisBtwn" = false
 		}
 
-		if(!samesched || away ) {                    // schedule change, clear out overrides
+		if(!samesched || !samemode ) {                    // schedule change, clear out overrides
 			disableOverrideTemps()
 		}
 
 		LogAction("setTstatTempCheck: [Current Schedule: ($mySched) | Previous Schedule: (${previousSched}) | No Schedule: ($noSched)]", "trace", false)
 
-		if(noSched || away) {
-			if(away) {
-				LogAction("setTstatTempCheck: Skipping check because [Nest is set AWAY]", "info", true)
-				mySched = null
-			}
-			else { LogAction("setTstatTempCheck: Skipping check because [No matching Schedule]", "info", true) }
+		if(noSched) {
+			LogAction("setTstatTempCheck: Skipping check because [No matching Schedule]", "info", true)
 		} else {
 			def isBtwn = checkOnMotion(mySched)
 			def previousBtwn = atomicState?."motion${mySched}LastisBtwn"
@@ -9752,24 +9751,25 @@ def setTstatTempCheck() {
 				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
 
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
-				def tstatHvacMode = tstat?.currentnestThermostatMode?.toString()
-				if(newHvacMode && (newHvacMode.toString() != tstatHvacMode)) {
+				if(newHvacMode && (newHvacMode.toString() != curMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode)) {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow())
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
 				}
 
+				curMode = tstat?.currentnestThermostatMode?.toString()
+
 				// if remote sensor is on, let it handle temp changes (above took care of a mode change)
 				if(settings?.schMotRemoteSensor && isRemSenConfigured()) {
-					 atomicState.lastSched = mySched
-					 storeExecutionHistory((now() - execTime), "setTstatTempCheck")
-					 return
+					atomicState.lastSched = mySched
+					atomicState?."${pName}lastMode" = curMode
+					storeExecutionHistory((now() - execTime), "setTstatTempCheck")
+					return
 				 }
 
-				def curMode = tstat?.currentnestThermostatMode?.toString()
 				def isModeOff = (curMode in ["off","eco"]) ? true : false
-				tstatHvacMode = curMode
+				def tstatHvacMode = curMode
 
 				def heatTemp = null
 				def coolTemp = null
@@ -9805,6 +9805,7 @@ def setTstatTempCheck() {
 			}
 		}
 		atomicState.lastSched = mySched
+		atomicState?."${pName}lastMode" = curMode
 		storeExecutionHistory((now() - execTime), "setTstatTempCheck")
 	} catch (ex) {
 		log.error "setTstatTempCheck Exception:", ex
