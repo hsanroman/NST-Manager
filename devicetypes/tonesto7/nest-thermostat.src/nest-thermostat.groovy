@@ -72,7 +72,6 @@ metadata {
 		attribute "targetTemp", "string"
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
-		attribute "nestPresence", "string"
 		attribute "apiStatus", "string"
 		attribute "hasLeaf", "string"
 		attribute "debugOn", "string"
