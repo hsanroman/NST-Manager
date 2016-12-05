@@ -4053,7 +4053,7 @@ def latestProtVer()     { return atomicState?.appData?.updater?.versions?.protec
 def latestPresVer()     { return atomicState?.appData?.updater?.versions?.presence ?: "unknown" }
 def latestWeathVer()    { return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
 def latestCamVer()      { return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
-def latestvStatVer()    { return atomicState?.appData?.updater?.versions?.vthermostat ?: "unknown" }
+def latestvStatVer()    { return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
 def getUse24Time()      { return useMilitaryTime ? true : false }
 
 //Returns app State Info
