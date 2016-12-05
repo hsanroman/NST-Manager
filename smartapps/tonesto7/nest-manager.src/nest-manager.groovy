@@ -1132,7 +1132,7 @@ def formatDt2(tm) {
 
 def remoteDiagPage () {
 	def execTime = now()
-	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", install: false) {
+	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
 		section() {
 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 			def tf = new SimpleDateFormat(formatVal)
@@ -1140,36 +1140,30 @@ def remoteDiagPage () {
 			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
 			paragraph "This will automatically turn itself off and remove all remote data collected after 12hours"
 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
-			if(settings?.enRemDiagLogging) {
-				input (name: "enRemDiagSendToSlack", type: "bool", title: "Send to Slack Channel?", required: false, defaultValue: (atomicState?.enRemDiagSendToSlack ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
-			}
-			if(atomicState?.remDiagLogDataStore?.size()) {
-				paragraph "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
-				if(atomicState?.remDiagDataSentDt) {
-					paragraph "Last Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)}"
-				}
-			}
+		}
+		section() {
 			if(atomicState?.installationId) {
-				paragraph title: "Provide this ID to the Developer", "${atomicState?.installationId}"
+				paragraph title: "Provide this ID to the Developer", "${atomicState?.installationId}", required: true, state: null
 			}
 		}
+		section() {
+			if(atomicState?.remDiagLogDataStore?.size() >= 0) {
+				def str = ""
+				str += "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
+				if(atomicState?.remDiagDataSentDt) { str += "\n\nLast Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)} (${getLastRemDiagSentSec()} sec)" }
+				paragraph str, state: "complete"
+			}
+		}
+
 		if(settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = true }
-			if(!atomicState?.enRemDiagSendToSlack == settings?.enRemDiagSendToSlack) {
-				atomicState?.enRemDiagSendToSlack = settings?.enRemDiagSendToSlack ?: false
-				clearRemDiagData()
-			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
 			if(atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = false }
-			if(atomicState?.enRemDiagSendToSlack) { atomicState?.enRemDiagSendToSlack = false }
-			if(atomicState?.remDiagLogDataStore?.size()) {
-				clearRemDiagData()
-			}
+			if(atomicState?.remDiagLogDataStore?.size()) { clearRemDiagData() }
 		}
-//		LogAction("remoteDiagPage test", "info", true)
-		//incChgLogLoadCnt()
-		//devPageFooter("chgLogLoadCnt", execTime)
+		incRemDiagLoadCnt()
+		devPageFooter("remDiagLoadCnt", execTime)
 	}
 }
 
@@ -1184,15 +1178,14 @@ def clearRemDiagData() {
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	//log.trace "saveLogtoRemDiagStore($msg, $type, $logSrcType)"
 	if(getStateSizePerc() >= 90) {
-		log.warn "suspending remoteDiag log storage because state size has reached 90% full."
+		log.warn "saveLogtoRemDiagStore: remoteDiag log storage is suspended because state size has reached 90% of the maximum allowed space. Something must be wrong because the data should have been sent."
 		return
 	}
 	def data = atomicState?.remDiagLogDataStore ?: []
 	log.debug "Size: ${data?.size()} | DtSec ${getLastRemDiagSentSec()}"
-	if(data?.size() > 10 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
 
 	def item
-	item = ["dt":getDtNow().toString(), "type":type, "logSrc":(logSrcType ?: "Not Set"), "msg":msg]
+	item = ["DateTime":getDtNow().toString(), "LogType":type, "LogSrc":(logSrcType ?: "Not Set"), "Message":msg]
 	//log.debug "item: ${item}"
 	data << item
 	atomicState?.remDiagLogDataStore = data
@@ -1205,16 +1198,8 @@ def sendRemDiagData() {
 	if(data?.size()) {
 		def cnt = 1
 		def json
-		if(atomicState?.enRemDiagSendToSlack) {
-			def res = [:]
-			res << ["username":atomicState?.installationId?.toString()]
-			res << ["text":data?.toString()]
-			json = new groovy.json.JsonOutput().toJson(res)
-			//sendDataToSlack(json, "", "post", "Remote Diag Logs")
-		} else {
-			json = new groovy.json.JsonOutput().toJson(data)
-			sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")
-		}
+		json = new groovy.json.JsonOutput().toJson(data)
+		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}/.json", "post", "Remote Diag Logs")
 	}
 }
 
@@ -1571,6 +1556,7 @@ def nestTokenResetPage() {
 def installed() {
 	log.debug "Installed with settings: ${settings}"
 	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
+	sendInstallSlackNotif()
 	initialize()
 	sendNotificationEvent("${textAppName()} has been installed...")
 }
@@ -1876,9 +1862,16 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
-	if(atomicState?.enRemDiagLogging && getRemDiagActSec() > 43200) {
-		log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
-		clearRemDiagData()
+	if(atomicState?.enRemDiagLogging) {
+		if(atomicState?.remDiagLogDataStore) {
+			if(atomicState?.remDiagLogDataStore?.size() > 10 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
+			if(getRemDiagActSec() > 43200) {
+				log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
+				atomicState?.enRemDiagLogging = false
+				atomicState?.enRemDiagSendToSlack = false
+				clearRemDiagData()
+			}
+		}
 	}
 }
 
@@ -3514,7 +3507,7 @@ def getAskAlexaQueueEnabled() {
 }
 
 def initAppMetricStore() {
-	def items = ["mainLoadCnt", "devLocLoadCnt", "diagLoadCnt", "prefLoadCnt", "autoLoadCnt", "protTestLoadCnt", "helpLoadCnt", "infoLoadCnt", "chgLogLoadCnt", "nestLoginLoadCnt", "pollPrefLoadCnt", "devCustLoadCnt",
+	def items = ["mainLoadCnt", "devLocLoadCnt", "diagLoadCnt", "remDiagLoadCnt", "prefLoadCnt", "autoLoadCnt", "protTestLoadCnt", "helpLoadCnt", "infoLoadCnt", "chgLogLoadCnt", "nestLoginLoadCnt", "pollPrefLoadCnt", "devCustLoadCnt",
 		"vRprtPrefLoadCnt", "notifPrefLoadCnt", "logPrefLoadCnt", "viewAutoSchedLoadCnt", "viewAutoStatLoadCnt", "autoGlobPrefLoadCnt", "devCustNameLoadCnt", "custWeathLoadCnt"]
 	def data = atomicState?.usageMetricsStore ?: [:]
 	items?.each { if(!data[it]) { data[it] = 0 } }
@@ -3529,6 +3522,7 @@ def incMetricCntVal(item) {
 def incMainLoadCnt() { incMetricCntVal("mainLoadCnt") }
 def incDevLocLoadCnt() { incMetricCntVal("devLocLoadCnt") }
 def incDiagLoadCnt() { incMetricCntVal("diagLoadCnt") }
+def incRemDiagLoadCnt() { incMetricCntVal("remDiagLoadCnt") }
 def incPrefLoadCnt() { incMetricCntVal("prefLoadCnt") }
 def incInfoLoadCnt() { incMetricCntVal("infoLoadCnt") }
 def incChgLogLoadCnt() { incMetricCntVal("chgLogLoadCnt") }
@@ -5798,7 +5792,7 @@ def createInstallDataJson() {
 		def automations = !atomicState?.installedAutomations ? "No Automations Installed" : atomicState?.installedAutomations
 		def tz = getTimeZone()?.ID?.toString()
 		def apiCmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
-		def cltType = !mobileClientType ? "Not Configured" : mobileClientType?.toString()
+		def cltType = !settings?.mobileClientType ? "Not Configured" : settings?.mobileClientType?.toString()
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def devUseMetCnt = getDeviceMetricCnts()
@@ -5841,6 +5835,23 @@ def removeInstallData() {
 	if(settings?.optInAppAnalytics) {
 		return removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
 	}
+}
+
+def sendInstallSlackNotif() {
+	def cltType = !settings?.mobileClientType ? "Not Configured" : settings?.mobileClientType?.toString()
+	def str = ""
+	str += "New Client Installed:"
+	str += "\n • DateTime: ${getDtNow()}"
+	str += "\n • App Version: v${appVersion()}"
+	str += "\n • TimeZone: ${getTimeZone()?.ID?.toString()}"
+	str += "\n • Mobile Client: ${cltType}"
+	def res = [:]
+	res << ["username":"New User Notification"]
+	res << ["icon_emoji":":spock-hand:"]
+	res << ["channel": "#new_clients"]
+	res << ["text":str]
+	def json = new groovy.json.JsonOutput().toJson(res)
+	sendDataToSlack(json, "", "post", "New Client Slack Notif")
 }
 
 def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: "errorData" }
@@ -5989,11 +6000,6 @@ def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
 			//log.debug "respData: ${respData}"
 			if(respData?.status == 200) {
 				LogAction("sendDataToSlack: ${typeDesc} Data Sent Successfully!!!", "info", true)
-				atomicState?.lastAnalyticUpdDt = getDtNow()
-				if(typeDesc == "Remote Diag Logs") {
-					atomicState?.remDiagDataSentDt = getDtNow()
-					atomicState?.remDiagLogDataStore = []
-				}
 				result = true
 			}
 			else if(respData?.status == 400) {
@@ -8713,7 +8719,8 @@ def leakWatSensorsDesc() {
 		str += "Leak Sensors:"
 		settings?.leakWatSensors?.each { dev ->
 			cnt = cnt+1
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${dev?.currentWater?.toString().capitalize()}"
+			def val = dev?.currentWater ? dev?.currentWater.toString().capitalize() : "Not Set"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
 		}
 		return str
 	}
