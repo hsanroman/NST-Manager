@@ -4824,7 +4824,7 @@ def getObjType(obj) {
 	if(obj instanceof String) {return "String"}
 	else if(obj instanceof Map) {return "Map"}
 	else if(obj instanceof List) {return "List"}
-	else if(obj instanceof ArrayList) {return "ArratList"}
+	else if(obj instanceof ArrayList) {return "ArrayList"}
 	else if(obj instanceof Integer) {return "Integer"}
 	else if(obj instanceof Long) {return "Long"}
 	else if(obj instanceof Boolean) {return "Boolean"}
