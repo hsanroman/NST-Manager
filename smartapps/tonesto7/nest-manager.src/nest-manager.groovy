@@ -40,12 +40,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.7" }
-def appVerDate() { "12-2-2016" }
+def appVersion() { "4.1.8" }
+def appVerDate() { "12-5-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.6 (December 2nd, 2016):"
+	str += "V4.1.8 (December 5th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Will update this later."
 
@@ -1140,6 +1140,9 @@ def remoteDiagPage () {
 			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
 			paragraph "This will automatically turn itself off and remove all remote data collected after 12hours"
 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
+			if(settings?.enRemDiagLogging) {
+				input (name: "enRemDiagSendToSlack", type: "bool", title: "Send to Slack Channel?", required: false, defaultValue: (atomicState?.enRemDiagSendToSlack ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
+			}
 			if(atomicState?.remDiagLogDataStore?.size()) {
 				paragraph "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
 				if(atomicState?.remDiagDataSentDt) {
@@ -1147,36 +1150,47 @@ def remoteDiagPage () {
 				}
 			}
 			if(atomicState?.installationId) {
-				paragraph title: "Provide this ID to the Developer", "InstallationID:\n${atomicState?.installationId}"
+				paragraph title: "Provide this ID to the Developer", "${atomicState?.installationId}"
 			}
 		}
 		if(settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = true }
+			if(!atomicState?.enRemDiagSendToSlack == settings?.enRemDiagSendToSlack) {
+				atomicState?.enRemDiagSendToSlack = settings?.enRemDiagSendToSlack ?: false
+				clearRemDiagData()
+			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
 			if(atomicState?.enRemDiagLogging) { atomicState?.enRemDiagLogging = false }
+			if(atomicState?.enRemDiagSendToSlack) { atomicState?.enRemDiagSendToSlack = false }
 			if(atomicState?.remDiagLogDataStore?.size()) {
-				removeRemDiagData()
-				atomicState?.remDiagLogDataStore = null
-				atomicState?.remDiagLogActivatedDt = null
-				atomicState?.remDiagDataSentDt = null
+				clearRemDiagData()
 			}
 		}
-		LogAction("remoteDiagPage test", "info", true)
+//		LogAction("remoteDiagPage test", "info", true)
 		//incChgLogLoadCnt()
 		//devPageFooter("chgLogLoadCnt", execTime)
 	}
 }
 
+def clearRemDiagData() {
+	if(!settings?.enRemDiagSendToSlack) { removeRemDiagData() }
+	atomicState?.remDiagLogDataStore = null
+	atomicState?.remDiagLogActivatedDt = null
+	atomicState?.remDiagDataSentDt = null
+	log.debug "cleared Remote Diagnostic data from Local store and remote database"
+}
+
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
-	log.trace "saveLogtoRemDiagStore($msg, $type, $logSrcType)"
+	//log.trace "saveLogtoRemDiagStore($msg, $type, $logSrcType)"
 	if(getStateSizePerc() >= 90) {
 		log.warn "suspending remoteDiag log storage because state size has reached 90% full."
 		return
 	}
 	def data = atomicState?.remDiagLogDataStore ?: []
+	log.debug "Size: ${data?.size()} | DtSec ${getLastRemDiagSentSec()}"
+	if(data?.size() > 10 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
 
-	if(data?.size() > 50 || getLastRemDiagSentSec() > 600) { sendRemDiagData() }
 	def item
 	item = ["dt":getDtNow().toString(), "type":type, "logSrc":(logSrcType ?: "Not Set"), "msg":msg]
 	//log.debug "item: ${item}"
@@ -1190,13 +1204,21 @@ def sendRemDiagData() {
 	// log.debug "data is (${getObjType(data)}) | Data: $data"
 	if(data?.size()) {
 		def cnt = 1
-		def json = new groovy.json.JsonOutput().toJson(data)
-		//log.debug "json: ${json}"
-		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")
+		def json
+		if(atomicState?.enRemDiagSendToSlack) {
+			def res = [:]
+			res << ["username":atomicState?.installationId?.toString()]
+			res << ["text":data?.toString()]
+			json = new groovy.json.JsonOutput().toJson(res)
+			//sendDataToSlack(json, "", "post", "Remote Diag Logs")
+		} else {
+			json = new groovy.json.JsonOutput().toJson(data)
+			sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.installationId}.json", "post", "Remote Diag Logs")
+		}
 	}
 }
 
-def getLastRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getLastRemDiagActSec").toInteger() }
+def getRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getRemDiagActSec").toInteger() }
 def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage () {
@@ -1854,13 +1876,10 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
-	// if(atomicState?.enRemDiagLogging && getLastRemDiagActSec() > 43200) {
-	// 	atomicState?.enRemDiagLogging = false
-	// 	atomicState?.remDiagLogDataStore = null
-	// 	atomicState?.remDiagLogActivatedDt = null
-	// 	atomicState?.remDiagDataSentDt = null
-	// 	removeRemDiagData()
-	// }
+	if(atomicState?.enRemDiagLogging && getRemDiagActSec() > 43200) {
+		log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
+		clearRemDiagData()
+	}
 }
 
 def forcedPoll(type = null) {
@@ -5916,9 +5935,9 @@ def queueFirebaseData(data, pathVal, cmdType=null, type=null) {
 		} else { LogAction("queueFirebaseData UNKNOWN cmdType: ${cmdType}", warn, true) }
 
 	} catch(ex) {
-                log.error "queueFirebaseData (type: $typeDesc) Exception:", ex
-                sendExceptionData(ex, "queueFirebaseData")
-        }
+		log.error "queueFirebaseData (type: $typeDesc) Exception:", ex
+		sendExceptionData(ex, "queueFirebaseData")
+	}
 	return result
 }
 
@@ -5947,10 +5966,52 @@ def processFirebaseResponse(resp, data) {
 			log.debug "errorMessage response: $resp.errorMessage"
 		}
 	} catch(ex) {
-                log.error "processFirebaseResponse (type: $typeDesc) Exception:", ex
-                sendExceptionData(ex, "processFirebaseResponse")
-        }
+		log.error "processFirebaseResponse (type: $typeDesc) Exception:", ex
+		sendExceptionData(ex, "processFirebaseResponse")
+	}
 	atomicState.qFirebaseRequested = false
+}
+
+def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
+	LogAction("sendDataToSlack(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	def result = false
+	def json = new groovy.json.JsonOutput().prettyPrint(data)
+	def params = [ uri: "${slackMsgWebHookUrl()}", body: json.toString() ]
+	def typeDesc = type ? "${type}" : "Data"
+	def respData
+	try {
+		if(!cmdType || cmdType == "post") {
+			httpPostJson(params) { resp ->
+				respData = resp
+			}
+		}
+		if(respData) {
+			//log.debug "respData: ${respData}"
+			if(respData?.status == 200) {
+				LogAction("sendDataToSlack: ${typeDesc} Data Sent Successfully!!!", "info", true)
+				atomicState?.lastAnalyticUpdDt = getDtNow()
+				if(typeDesc == "Remote Diag Logs") {
+					atomicState?.remDiagDataSentDt = getDtNow()
+					atomicState?.remDiagLogDataStore = []
+				}
+				result = true
+			}
+			else if(respData?.status == 400) {
+				LogAction("sendDataToSlack: 'Bad Request' Exception: ${respData?.status}", "error", true)
+			}
+			else {
+				LogAction("sendDataToSlack: 'Unexpected' Response: ${respData?.status}", "warn", true)
+			}
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			LogAction("sendDataToSlack: 'HttpResponseException' Exception: ${ex.message}", "error", true)
+		}
+		else { log.error "sendDataToSlack: ([$data, $pathVal, $cmdType, $type]) Exception:", ex }
+		sendExceptionData(ex, "sendDataToSlack")
+	}
+	return result
 }
 
 def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
