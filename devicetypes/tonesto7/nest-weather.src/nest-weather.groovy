@@ -316,11 +316,13 @@ def humidityEvent(humidity) {
 }
 
 def illuminanceEvent(illum) {
-	def cur = device.currentState("illuminance")?.value.toString()
-	if(!cur.equals(illum.toString())) {
-		Logger("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
-		sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
-	} else { LogAction("Illuminance is (${illum}) | Original State: (${cur})") }
+	if(illum != null) {
+		def cur = device.currentState("illuminance")?.value.toString()
+		if(!cur.equals(illum.toString())) {
+			Logger("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
+			sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
+		} else { LogAction("Illuminance is (${illum}) | Original State: (${cur})") }
+	}
 }
 
 def dewpointEvent(Double tempVal) {
@@ -528,6 +530,14 @@ def getWeatherAlerts(weatData) {
 					def newAlerts = false
 					alerts.each {alert ->
 						if (!oldKeys.contains(alert.type + alert.date_epoch)) {
+							if(alert?.description == null) {
+								Logger("null alert.description")
+								return true
+							}
+							if(alert?.message == null) {
+								Logger("null alert.message")
+								return true
+							}
 							def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
 							sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
 							newAlerts = true
@@ -608,12 +618,11 @@ def luxUpdate() {
 private estimateLux(weatherIcon) {
 	//LogAction("estimateLux ( ${weatherIcon} )", "trace")
 	try {
-		//LogAction("state.sunriseDate: ${state.sunriseDate} state.sunriseDate.time: ${state.sunriseDate.time}")
-		//LogAction("state.sunsetDate: ${state.sunsetDate} state.sunsetDate.time: ${state.sunsetDate.time}")
-
-		if(!state?.sunriseDate?.time || !state?.sunsetDate?.time) {
-			LogAction("estimateLux: Weather Data missing...", "warn")
-			return
+		if(!weatherIcon || !state?.sunriseDate || !state?.sunsetDate || !state?.sunriseDate?.time || !state?.sunsetDate?.time) {
+			Logger("estimateLux: Weather Data missing...", "warn")
+			Logger("state.sunriseDate: ${state?.sunriseDate} state.sunriseDate.time: ${state?.sunriseDate?.time}")
+			Logger("state.sunsetDate: ${state?.sunsetDate} state.sunsetDate.time: ${state?.sunsetDate?.time}")
+			return null
 		} else {
 			def lux = 0
 			def twilight = 20 * 60 * 1000 // 20 minutes
@@ -687,6 +696,7 @@ private estimateLux(weatherIcon) {
 		log.error "estimateLux Exception:", ex
 		parent?.sendChildExceptionData("weather", devVer(), ex, "estimateLux")
 	}
+	return null
 }
 
 def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
@@ -990,6 +1000,7 @@ def getSunriseSunset() {
 	// Sunrise / sunset
 	try {
 		def a = state?.curAstronomy?.moon_phase
+		if(state.curWeather?.current_observation?.local_tz_offset == null || a == null) { Logger("observation issue") ; return }
 		def today = localDate("GMT${state.curWeather?.current_observation?.local_tz_offset}")
 
 		def ltf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
