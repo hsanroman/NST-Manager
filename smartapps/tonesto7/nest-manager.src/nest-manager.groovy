@@ -40,7 +40,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.8" }
+def appVersion() { "4.1.9" }
 def appVerDate() { "12-5-2016" }
 def appVerInfo() {
 	def str = ""
@@ -80,6 +80,7 @@ preferences {
 	page(name: "authPage")
 	page(name: "mainPage")
 	page(name: "deviceSelectPage")
+	page(name: "donationPage")
 	page(name: "reviewSetupPage")
 	page(name: "voiceRprtPrefPage")
 	page(name: "changeLogPage")
@@ -226,6 +227,7 @@ def authPage() {
 			}
 		}
 	}
+	else if(!showDonationOk()) { return donationPage() }
 	else { return mainPage() }
 }
 
@@ -288,6 +290,27 @@ def mainPage() {
 		}
 		incMainLoadCnt()
 		devPageFooter("mainLoadCnt", execTime)
+	}
+}
+
+def donationPage() {
+	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
+		section("") {
+			def str = ""
+			str += "We hate to interupt but it has been 30 days since you installed SmartApp.  This page is a one time reminder that we accept donation but do not require them. "
+			str += "We are only reminding you this once because we have spent 1000's of hours working on new features for this application and devices in our spare time.  "
+			str += "If you have already donated please ignore and thank you very much!!!"
+
+			str += "\n\nThanks again for using Nest Manager"
+			paragraph title: "Donation Reminder", str, required: true, state: null
+			href url: textDonateLink(), style:"external", required: false, title:"Donations",
+				description:"Tap to open in browser...", state: "complete", image: getAppImg("donate_icon.png")
+			href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
+			paragraph "This is only a one time reminder and will not be shown again...", state: "complete"
+		}
+		def iData = atomicState?.installData
+		iData["shownDonation"] = true
+		atomicState?.installData = iData
 	}
 }
 
@@ -1182,17 +1205,13 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 		return
 	}
 	def data = atomicState?.remDiagLogDataStore ?: []
-	log.debug "Size: ${data?.size()} | DtSec ${getLastRemDiagSentSec()}"
-
-	def item
-	item = ["DateTime":getDtNow().toString(), "LogType":type, "LogSrc":(logSrcType ?: "Not Set"), "Message":msg]
-	//log.debug "item: ${item}"
+	//log.debug "Size: ${data?.size()} | DtSec ${getLastRemDiagSentSec()}"
+	def item = ["DateTime":getDtNow().toString(), "LogType":type, "LogSrc":(logSrcType ?: "Not Set"), "Message":msg]
 	data << item
 	atomicState?.remDiagLogDataStore = data
-	if(atomicState?.remDiagLogDataStore?.size() > 10 || getLastRemDiagSentSec() > 600) { 
+	if(atomicState?.remDiagLogDataStore?.size() > 10 || getLastRemDiagSentSec() > 600) {
 		sendRemDiagData()
 	}
-	//log.debug "data: $data"
 }
 
 def sendRemDiagData() {
@@ -1560,7 +1579,7 @@ def nestTokenResetPage() {
  ******************************************************************************/
 def installed() {
 	log.debug "Installed with settings: ${settings}"
-	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
+	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true]
 	sendInstallSlackNotif()
 	initialize()
 	sendNotificationEvent("${textAppName()} has been installed...")
@@ -1871,7 +1890,6 @@ def finishPoll(str, dev) {
 		if(getRemDiagActSec() > (3600 * 12)) {
 			log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
 			atomicState?.enRemDiagLogging = false
-			atomicState?.enRemDiagSendToSlack = false
 			clearRemDiagData()
 		}
 	}
@@ -4326,6 +4344,7 @@ def removeTestDevs() {
 def preReqCheck() {
 	//log.trace "preReqCheckTest()"
 	generateInstallId()
+	if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 	if(!location?.timeZone || !location?.zipCode) {
 		atomicState.preReqTested = false
 		LogAction("SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE...", "warn", true)
@@ -4784,6 +4803,36 @@ def getLocationModes() {
 	return result
 }
 
+def showDonationOk() {
+	return (!atomicState?.installData?.shownDonation && getDaysSinceInstall() >= 30) ? true : false
+}
+
+def showFeedbackOk() {
+	return (!atomicState?.installData?.shownFeedback && getDaysSinceInstall() >= 7) ? true : false
+}
+
+def getDaysSinceInstall() {
+	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.installData.dt)
+	def stop = new Date()
+	if(start && stop) {
+		return (stop - start)
+	}
+	return 0
+}
+
+def getObjType(obj) {
+	if(obj instanceof String) {return "String"}
+	else if(obj instanceof Map) {return "Map"}
+	else if(obj instanceof List) {return "List"}
+	else if(obj instanceof Integer) {return "Integer"}
+	else if(obj instanceof Long) {return "Long"}
+	else if(obj instanceof Boolean) {return "Boolean"}
+	else if(obj instanceof Float) {return "Float"}
+	else { return "unknown"}
+}
+
+def preStrObj() { [1:"•", 2:"│", 3:"├", 4:"└", 5:"    "] }
+
 def getShowHelp() { return atomicState?.showHelp == false ? false : true }
 
 def getTimeZone() {
@@ -5211,9 +5260,9 @@ def diagPage () {
 		}
 		section("View App & Device Data") {
 			href "managAppDataPage", title:"Manager App Data", description:"Tap to view...", image: getAppImg("nest_manager.png")
-			href "childAppDataPage", title:"Automation App Data", description:"Tap to view...", image: getAppImg("automation_icon.png")
-			href "childDevDataPage", title:"Device Data", description:"Tap to view...", image: getAppImg("thermostat_icon.png")
-			href "appParamsDataPage", title:"AppData File", description:"Tap to view...", image: getAppImg("view_icon.png")
+			//href "childAppDataPage", title:"Automation App Data", description:"Tap to view...", image: getAppImg("automation_icon.png")
+			//href "childDevDataPage", title:"Device Data", description:"Tap to view...", image: getAppImg("thermostat_icon.png")
+			//href "appParamsDataPage", title:"AppData File", description:"Tap to view...", image: getAppImg("view_icon.png")
 		}
 		if(settings?.optInAppAnalytics || settings?.optInSendExceptions) {
 			section("Analytics Data") {
@@ -5278,144 +5327,131 @@ def managAppDataPage() {
 	}
 }
 
-def childAppDataPage() {
-	def rVal = (settings?.childAppPageRfsh && settings?.childAppDataPageDev) ? (settings?.childAppDataRfshVal ? settings?.childAppDataRfshVal.toInteger() : 30) : null
-	dynamicPage(name: "childAppDataPage", refreshInterval:rVal, install:false) {
-		if(!atomicState?.diagChildAppStateFilters) { atomicState?.diagChildAppStateFilters = ["diagChildAppStateFilters"] }
-		def apps = getAllChildApps()
-		section("Child App Selection:") {
-			input(name: "childAppDataPageApp", title: "Select Child App(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildChildAppInputMap()])
-			if(!settings?.childAppDataPageApp) { paragraph "Please select a child app to view!!!", required: true, state: null }
-		}
-		if(settings?.childAppDataPageApp) {
-			apps?.each { cApp ->
-				settings?.childAppDataPageApp?.each { selApp ->
-					if(selApp == cApp?.getId()) {
-						section("${cApp?.getLabel().toString().capitalize()}:") {
-							if(settings?.childAppPageShowState == true || settings?.childAppPageShowState == null) {
-								def data = cApp?.getState()?.findAll { !(it?.key in atomicState?.diagChildAppStateFilters) }
-								paragraph title: "State Data", "${getMapDescStr(data)}"
-							}
-							if(settings?.childAppPageShowSet == true || settings?.childAppPageShowSet == null) {
-								paragraph title: "Settings Data", "${getMapDescStr(cApp?.getSettings())}"
-							}
-							if(settings?.childAppPageShowMeta == true || settings?.childAppPageShowMeta == null) {
-								paragraph title: "MetaData", "${getMapDescStr(cApp?.getMetadata())}"
-							}
-						}
-					}
-				}
-			}
-		}
-		if(settings?.childAppDataPageApp) {
-			section("Data Filters:") {
-				paragraph "Show the following items in the device results:"
-				input "childAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
-				if(settings?.childAppPageShowState) {
-					input(name: "childAppDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("childapp")])
-					atomicState?.diagChildAppStateFilters = settings?.childAppDataStateFilter ?: []
-				}
-				input "childAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
-				input "childAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
-			}
-		}
-		section("Page Options:") {
-			input "childAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
-			if(settings?.childAppPageRfsh) {
-				input "childAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
-			}
-			paragraph "Changing this may require you to leave the page and come back"
-		}
-	}
-}
+// def childAppDataPage() {
+// 	def rVal = (settings?.childAppPageRfsh && settings?.childAppDataPageDev) ? (settings?.childAppDataRfshVal ? settings?.childAppDataRfshVal.toInteger() : 30) : null
+// 	dynamicPage(name: "childAppDataPage", refreshInterval:rVal, install:false) {
+// 		if(!atomicState?.diagChildAppStateFilters) { atomicState?.diagChildAppStateFilters = ["diagChildAppStateFilters"] }
+// 		def apps = getAllChildApps()
+// 		section("Child App Selection:") {
+// 			input(name: "childAppDataPageApp", title: "Select Child App(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildChildAppInputMap()])
+// 			if(!settings?.childAppDataPageApp) { paragraph "Please select a child app to view!!!", required: true, state: null }
+// 		}
+// 		if(settings?.childAppDataPageApp) {
+// 			apps?.each { cApp ->
+// 				settings?.childAppDataPageApp?.each { selApp ->
+// 					if(selApp == cApp?.getId()) {
+// 						section("${cApp?.getLabel().toString().capitalize()}:") {
+// 							if(settings?.childAppPageShowState == true || settings?.childAppPageShowState == null) {
+// 								def data = cApp?.getState()?.findAll { !(it?.key in atomicState?.diagChildAppStateFilters) }
+// 								paragraph title: "State Data", "${getMapDescStr(data)}"
+// 							}
+// 							if(settings?.childAppPageShowSet == true || settings?.childAppPageShowSet == null) {
+// 								paragraph title: "Settings Data", "${getMapDescStr(cApp?.getSettings())}"
+// 							}
+// 							if(settings?.childAppPageShowMeta == true || settings?.childAppPageShowMeta == null) {
+// 								paragraph title: "MetaData", "${getMapDescStr(cApp?.getMetadata())}"
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 		if(settings?.childAppDataPageApp) {
+// 			section("Data Filters:") {
+// 				paragraph "Show the following items in the device results:"
+// 				input "childAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
+// 				if(settings?.childAppPageShowState) {
+// 					input(name: "childAppDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("childapp")])
+// 					atomicState?.diagChildAppStateFilters = settings?.childAppDataStateFilter ?: []
+// 				}
+// 				input "childAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
+// 				input "childAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
+// 			}
+// 		}
+// 		section("Page Options:") {
+// 			input "childAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+// 			if(settings?.childAppPageRfsh) {
+// 				input "childAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
+// 			}
+// 			paragraph "Changing this may require you to leave the page and come back"
+// 		}
+// 	}
+// }
 
-def childDevDataPage() {
-	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
-	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
-		if(!atomicState?.diagDevStateFilters) { atomicState?.diagDevStateFilters = ["diagDevStateFilters"] }
-		def devices = getAllChildDevices()
-		section("Device Selection:") {
-			input(name: "childDevDataPageDev", title: "Select Device(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
-			if(!settings?.childDevDataPageDev) { paragraph "Please select a device to view!!!", required: true, state: null }
-		}
-		if(settings?.childDevDataPageDev) {
-			devices?.each { dev ->
-				settings?.childDevDataPageDev?.each { selDev ->
-					if(selDev == dev?.deviceNetworkId) {
-						section("${dev?.displayName.toString().capitalize()}:") {
-							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
-								paragraph title: "State Data", "${getMapDescStr(dev?.getState(), atomicState?.diagDevStateFilters)}"
-							}
-							if(settings?.childDevPageShowAttr == true || settings?.childDevPageShowAttr == null) {
-								def str = ""; def cnt = 1
-								def devData = dev?.supportedAttributes.collect { it as String }
-								devData?.sort().each {
-									str += "${cnt>1 ? "\n\n" : "\n"} • ${"$it" as String}: (${dev.currentValue("$it")})"
-									cnt = cnt+1
-								}
-								paragraph title: "Supported Attributes\n", "${str}"
-							}
-							if(settings?.childDevPageShowCmds == true || settings?.childDevPageShowCmds == null) {
-								def str = ""; def cnt = 1
-								dev?.supportedCommands?.sort()?.each { cmd ->
-									str += "${cnt>1 ? "\n\n" : "\n"} • ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
-									cnt = cnt+1
-								}
-								paragraph title: "Supported Commands", "${str}"
-							}
-							if(settings?.childDevPageShowCapab == true || settings?.childDevPageShowCapab == null) {
-								def data = dev?.capabilities?.sort()?.collect {it as String}
-								paragraph title: "Device Capabilities", "${getMapDescStr(data)}"
-							}
-						}
-					}
-				}
-			}
-		}
-		if(settings?.childDevDataPageDev) {
-			section("Data Filters:") {
-				paragraph "Show the following items in the device results:"
-				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
-				if(settings?.childDevPageShowState) {
-					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("device")])
-					atomicState?.diagDevStateFilters = settings?.childDevDataStateFilter ?: []
-				}
-				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: false, submitOnChange: true
-				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: false, submitOnChange: true
-				input "childDevPageShowCapab", "bool", title: "Capabilities?", defaultValue: false, submitOnChange: true
-			}
-		}
-		section("Page Options:") {
-			input "childDevPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
-			if(settings?.childDevPageRfsh) {
-				input "childDevDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 180, submitOnChange: true
-			}
-			paragraph "Changing this may require you to leave the page and come back"
-		}
-	}
-}
+// def childDevDataPage() {
+// 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
+// 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
+// 		if(!atomicState?.diagDevStateFilters) { atomicState?.diagDevStateFilters = ["diagDevStateFilters"] }
+// 		def devices = getAllChildDevices()
+// 		section("Device Selection:") {
+// 			input(name: "childDevDataPageDev", title: "Select Device(s) to View...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
+// 			if(!settings?.childDevDataPageDev) { paragraph "Please select a device to view!!!", required: true, state: null }
+// 		}
+// 		if(settings?.childDevDataPageDev) {
+// 			devices?.each { dev ->
+// 				settings?.childDevDataPageDev?.each { selDev ->
+// 					if(selDev == dev?.deviceNetworkId) {
+// 						section("${dev?.displayName.toString().capitalize()}:") {
+// 							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
+// 								paragraph title: "State Data", "${getMapDescStr(dev?.getState(), atomicState?.diagDevStateFilters)}"
+// 							}
+// 							if(settings?.childDevPageShowAttr == true || settings?.childDevPageShowAttr == null) {
+// 								def str = ""; def cnt = 1
+// 								def devData = dev?.supportedAttributes.collect { it as String }
+// 								devData?.sort().each {
+// 									str += "${cnt>1 ? "\n\n" : "\n"} • ${"$it" as String}: (${dev.currentValue("$it")})"
+// 									cnt = cnt+1
+// 								}
+// 								paragraph title: "Supported Attributes\n", "${str}"
+// 							}
+// 							if(settings?.childDevPageShowCmds == true || settings?.childDevPageShowCmds == null) {
+// 								def str = ""; def cnt = 1
+// 								dev?.supportedCommands?.sort()?.each { cmd ->
+// 									str += "${cnt>1 ? "\n\n" : "\n"} • ${cmd.name}(${!cmd?.arguments ? "" : cmd?.arguments.toString().toLowerCase().replaceAll("\\[|\\]", "")})"
+// 									cnt = cnt+1
+// 								}
+// 								paragraph title: "Supported Commands", "${str}"
+// 							}
+// 							if(settings?.childDevPageShowCapab == true || settings?.childDevPageShowCapab == null) {
+// 								def data = dev?.capabilities?.sort()?.collect {it as String}
+// 								paragraph title: "Device Capabilities", "${getMapDescStr(data)}"
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 		if(settings?.childDevDataPageDev) {
+// 			section("Data Filters:") {
+// 				paragraph "Show the following items in the device results:"
+// 				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
+// 				if(settings?.childDevPageShowState) {
+// 					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore...", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("device")])
+// 					atomicState?.diagDevStateFilters = settings?.childDevDataStateFilter ?: []
+// 				}
+// 				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: false, submitOnChange: true
+// 				input "childDevPageShowCmds", "bool", title: "Commands?", defaultValue: false, submitOnChange: true
+// 				input "childDevPageShowCapab", "bool", title: "Capabilities?", defaultValue: false, submitOnChange: true
+// 			}
+// 		}
+// 		section("Page Options:") {
+// 			input "childDevPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+// 			if(settings?.childDevPageRfsh) {
+// 				input "childDevDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 180, submitOnChange: true
+// 			}
+// 			paragraph "Changing this may require you to leave the page and come back"
+// 		}
+// 	}
+// }
 
-def getObjType(obj) {
-	if(obj instanceof String) {return "String"}
-	else if(obj instanceof Map) {return "Map"}
-	else if(obj instanceof List) {return "List"}
-	else if(obj instanceof Integer) {return "Integer"}
-	else if(obj instanceof Long) {return "Long"}
-	else if(obj instanceof Boolean) {return "Boolean"}
-	else if(obj instanceof Float) {return "Float"}
-	else { return "unknown"}
-}
-
-def appParamsDataPage() {
-	dynamicPage(name: "appParamsDataPage", refreshInterval: 0, install: false) {
-		section() {
-			def data = atomicState?.appData
-			paragraph title: "AppData Contents", "${getMapDescStr(data)}"
-		}
-	}
-}
-
-def preStrObj() { [1:"•", 2:"│", 3:"├", 4:"└", 5:"    "] }
+// def appParamsDataPage() {
+// 	dynamicPage(name: "appParamsDataPage", refreshInterval: 0, install: false) {
+// 		section() {
+// 			def data = atomicState?.appData
+// 			paragraph title: "AppData Contents", "${getMapDescStr(data)}"
+// 		}
+// 	}
+// }
 
 def getMapDescStr(data) {
 	def str = ""
