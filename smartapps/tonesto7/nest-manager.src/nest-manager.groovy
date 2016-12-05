@@ -40,7 +40,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.6" }
+def appVersion() { "4.1.7" }
 def appVerDate() { "12-2-2016" }
 def appVerInfo() {
 	def str = ""
@@ -2806,6 +2806,30 @@ private setLastCmdSentSeconds(qnum, val) {
 	atomicState.lastCmdSentDt = val
 }
 
+def storeLastCmdData(cmd, qnum) {
+	if(cmd) {
+		def newVal = ["qnum":qnum, "obj":cmd[2], "value":cmd[3], "date":getDtNow()]
+
+		def list = atomicState?.cmdDetailHistory ?: []
+		def listSize = 30
+		if(list?.size() < listSize) {
+			list.push(newVal)
+		}
+		else if(list?.size() > listSize) {
+			def nSz = (list?.size()-listSize) + 1
+			def nList = list?.drop(nSz)
+			nList?.push(newVal)
+			list = nList
+		}
+		else if(list?.size() == listSize) {
+			def nList = list?.drop(1)
+			nList?.push(newVal)
+			list = nList
+		}
+		if(list) { atomicState?.cmdDetailHistory = list }
+	}
+}
+
 void workQueue() {
 	//log.trace "workQueue..."
 	def cmdDelay = getChildWaitVal()
@@ -2855,6 +2879,8 @@ void workQueue() {
 				def cmdres
 
 				if(getLastCmdSentSeconds(qnum) > 3600) { setRecentSendCmd(qnum, 3) } // if nothing sent in last hour, reset 3 command limit
+
+				storeLastCmdData(cmd, qnum)
 
 				if(cmd[1] == "poll") {
 					atomicState.needStrPoll = true
@@ -6231,7 +6257,7 @@ def initAutoApp() {
 	scheduler()
 	app.updateLabel(getAutoTypeLabel())
 	atomicState?.lastAutomationSchedDt = null
-	watchDogAutomation()
+	heartbeatAutomation()
 	//if(settings["backedUpData"] && atomicState?.restoreCompleted) { }
 
 	state.remove("motionnullLastisBtwn")
@@ -6522,6 +6548,7 @@ def subscribeToEvents() {
 				cnt += 1
 			}
 			subscribe(schMotTstat, "thermostatMode", automationTstatModeEvt)
+			subscribe(schMotTstat, "nestThermostatMode", automationNestTstatModeEvt)
 			subscribe(schMotTstat, "thermostatOperatingState", automationTstatOperEvt)
 			subscribe(schMotTstat, "temperature", automationTstatTempEvt)
 			subscribe(schMotTstat, "presence", automationPresenceEvt)
@@ -6548,6 +6575,10 @@ def subscribeToEvents() {
 					// temperature is for DEBUG
 					subscribe(d1, "temperature", automationTstatTempEvt)
 					subscribe(d1, "safetyTempExceeded", automationSafetyTempEvt)
+					subscribe(d1, "nestThermostatMode", automationNestTstatModeEvt)
+					subscribe(d1, "thermostatMode", automationTstatModeEvt)
+					subscribe(d1, "presence", automationPresenceEvt)
+					subscribe(location, "mode", automationSTModeEvt, [filterEvents: false])
 				}
 				return d1
 			}
@@ -6569,15 +6600,15 @@ def scheduler() {
 	def autoType = getAutoType()
 	if(autoType == "schMot" && atomicState?.scheduleSchedActiveCount && atomicState?.scheduleTimersActive) {
 		LogAction("${autoType} scheduled using Cron (${random_int} ${random_dint}/5 * * * ?)", "info", true)
-		schedule("${random_int} ${random_dint}/5 * * * ?", watchDogAutomation)
+		schedule("${random_int} ${random_dint}/5 * * * ?", heartbeatAutomation)
 	} else {
 		LogAction("${autoType} scheduled using Cron (${random_int} ${random_dint}/30 * * * ?)", "info", true)
-		schedule("${random_int} ${random_dint}/30 * * * ?", watchDogAutomation)
+		schedule("${random_int} ${random_dint}/30 * * * ?", heartbeatAutomation)
 	}
 }
 
-def watchDogAutomation() {
-	LogAction("Heartbeat: watchDogAutomation()...", "trace", false)
+def heartbeatAutomation() {
+	LogAction("Heartbeat: heartbeatAutomation()...", "trace", false)
 	def autoType = getAutoType()
 	def val = 900
 	if(autoType == "schMot") {
@@ -6659,6 +6690,19 @@ def automationTempSenEvt(evt) {
 
 def automationTstatTempEvt(evt) {
 	LogAction("Event | Thermostat Temp: ${evt?.displayName} - Temperature is (${evt?.value}°${getTemperatureScale()})", "trace", true)
+	if(atomicState?.disableAutomation) { return }
+	else {
+		scheduleAutomationEval()
+		storeLastEventData(evt)
+	}
+}
+
+def automationNestTstatModeEvt(evt) {
+	LogAction("Event | Nest Thermostat Mode: ${evt?.displayName} - Mode is (${evt?.value.toString().toUpperCase()}) ${evt?.name} ", "trace", true)
+	doTheEvent(evt)
+}
+
+def doTheEvent(evt) {
 	if(atomicState?.disableAutomation) { return }
 	else {
 		scheduleAutomationEval()
@@ -6802,6 +6846,16 @@ def watchDogCheck() {
 					if(exceeded == "true") {
 						watchDogAlarmActions(d1.displayName, dni, "temp")
 						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
+					} else {
+						def nestModeAway = (getNestLocPres() == "home") ? false : true
+						if(nestModeAway) {
+							def curMode = d1?.currentnestThermostatMode?.toString()
+							if(!(curMode in ["eco"])) {
+								watchDogAlarmActions(d1.displayName, dni, "eco")
+								def pres = d1?.currentPresence?.toString()
+								LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} is away and thermostat is not in ECO (${curMode}) (${pres})", "trace", true)
+							}
+						}
 					}
 					return d1
 				}
@@ -6823,6 +6877,10 @@ def watchDogAlarmActions(dev, dni, actType) {
 		case "temp":
 			evtNotifMsg = "Safety Temp has been exceeded on ${dev}."
 			evtVoiceMsg = "Safety Temp has been exceeded on ${dev}."
+			break
+		case "eco":
+			evtNotifMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
+			evtVoiceMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
 			break
 	}
 	if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
