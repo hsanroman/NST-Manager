@@ -100,6 +100,7 @@ metadata {
 		attribute "nestType", "string"
 		attribute "pauseUpdates", "string"
 		attribute "nestReportData", "string"
+		attribute "previousthermostatMode", "string"
 	}
 
 	simulator {
@@ -238,8 +239,8 @@ metadata {
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
-				  "heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
-				  "heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "refresh"] )
+				"heatingSetpointDown", "heatingSetpoint", "heatingSetpointUp", "coolingSetpointDown", "coolingSetpoint", "coolingSetpointUp",
+				"heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "refresh"] )
 	}
 	preferences {
 		input "virtual", "bool", title: "Virtual Device", description: "Does not change", displayDuringSetup: false
@@ -365,6 +366,7 @@ def processEvent(data) {
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
+			hvacPreviousModeEvent(eventData?.data?.previous_hvac_mode.toString())
 			hasLeafEvent(eventData?.data?.has_leaf)
 			humidityEvent(eventData?.data?.humidity.toString())
 			operatingStateEvent(eventData?.data?.hvac_state.toString())
@@ -386,7 +388,7 @@ def processEvent(data) {
 			if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
 			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
 			state.voiceReportPrefs = eventData?.vReportPrefs
-			def hvacMode = state?.hvac_mode
+			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
 				case "C":
@@ -397,26 +399,36 @@ def processEvent(data) {
 
 					if (hvacMode == "cool") {
 						coolingSetpoint = targetTemp
-						//clearHeatingSetpoint()
 					}
 					else if (hvacMode == "heat") {
 						heatingSetpoint = targetTemp
-						//clearCoolingSetpoint()
 					}
 					else if (hvacMode == "auto") {
 						coolingSetpoint = Math.round(eventData?.data?.target_temperature_high_c.toDouble())
 						heatingSetpoint = Math.round(eventData?.data?.target_temperature_low_c.toDouble())
 					}
-					if(!state?.present || state?.nestHvac_mode == "eco") {
+					if(hvacMode == "eco") {
 						if(eventData?.data?.eco_temperature_high_c) { coolingSetpoint = eventData?.data?.eco_temperature_high_c.toDouble() }
 						else if(eventData?.data?.away_temperature_high_c) { coolingSetpoint = eventData?.data?.away_temperature_high_c.toDouble() }
 						if(eventData?.data?.eco_temperature_low_c) { heatingSetpoint = eventData?.data?.eco_temperature_low_c.toDouble() }
 						else if(eventData?.data?.away_temperature_low_c) { heatingSetpoint = eventData?.data?.away_temperature_low_c.toDouble() }
 					}
 					temperatureEvent(temp)
-					thermostatSetpointEvent(targetTemp)
-					coolingSetpointEvent(coolingSetpoint)
-					heatingSetpointEvent(heatingSetpoint)
+					if(hvacMode in ["cool", "heat"]) {
+						thermostatSetpointEvent(targetTemp)
+					} else {
+						sendEvent(name:'thermostatSetpoint', value: "",  descriptionText: "Clear Thermostat Setpoint" , display: false, displayed: true)
+					}
+					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
+						coolingSetpointEvent(coolingSetpoint)
+					} else {
+						clearCoolingSetpoint()
+					}
+					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
+						heatingSetpointEvent(heatingSetpoint)
+					} else {
+						clearHeatingSetpoint()
+					}
 					if(eventData?.data?.locked_temp_min_c && eventData?.data?.locked_temp_max_c) { lockedTempEvent(eventData?.data?.locked_temp_min_c, eventData?.data?.locked_temp_max_c) }
 					break
 
@@ -428,26 +440,36 @@ def processEvent(data) {
 
 					if (hvacMode == "cool") {
 						coolingSetpoint = targetTemp
-						//clearHeatingSetpoint()
 					}
 					else if (hvacMode == "heat") {
 						heatingSetpoint = targetTemp
-						//clearCoolingSetpoint()
 					}
 					else if (hvacMode == "auto") {
 						coolingSetpoint = eventData?.data?.target_temperature_high_f
 						heatingSetpoint = eventData?.data?.target_temperature_low_f
 					}
-					if (!state?.present || state?.nestHvac_mode == "eco") {
+					else if (hvacMode == "eco") {
 						if(eventData?.data?.eco_temperature_high_f) { coolingSetpoint = eventData?.data?.eco_temperature_high_f }
 						else if(eventData?.data?.away_temperature_high_f) { coolingSetpoint = eventData?.data?.away_temperature_high_f }
 						if(eventData?.data?.eco_temperature_low_f)  { heatingSetpoint = eventData?.data?.eco_temperature_low_f }
 						else if(eventData?.data?.away_temperature_low_f)  { heatingSetpoint = eventData?.data?.away_temperature_low_f }
 					}
 					temperatureEvent(temp)
-					thermostatSetpointEvent(targetTemp)
-					coolingSetpointEvent(coolingSetpoint)
-					heatingSetpointEvent(heatingSetpoint)
+					if(hvacMode in ["cool", "heat"]) {
+						thermostatSetpointEvent(targetTemp)
+					} else {
+						sendEvent(name:'thermostatSetpoint', value: "",  descriptionText: "Clear Thermostat Setpoint" , display: false, displayed: true)
+					}
+					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
+						coolingSetpointEvent(coolingSetpoint)
+					} else {
+						clearCoolingSetpoint()
+					}
+					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
+						heatingSetpointEvent(heatingSetpoint)
+					} else {
+						clearHeatingSetpoint()
+					}
 					if(eventData?.data?.locked_temp_min_f && eventData?.data?.locked_temp_max_f) { lockedTempEvent(eventData?.data?.locked_temp_min_f, eventData?.data?.locked_temp_max_f) }
 					break
 
@@ -766,6 +788,16 @@ def hvacModeEvent(mode) {
 	} else { LogAction("NEST Hvac Mode is (${newMode}) | Original State: (${oldnestmode})") }
 }
 
+def hvacPreviousModeEvent(mode) {
+	def hvacMode = !state?.previous_hvac_mode ? device.currentState("previousthermostatMode")?.value.toString() : state.previous_hvac_mode
+	def newMode = (mode == "heat-cool") ? "auto" : mode
+	state?.previous_hvac_mode = newMode
+	if(!hvacMode.equals(newMode)) {
+		Logger("UPDATED | Hvac Previous Mode is (${newMode.toString().capitalize()}) | Original State: (${hvacMode.toString().capitalize()})")
+		sendEvent(name: "previousthermostatMode", value: newMode, descriptionText: "HVAC Previous mode is ${newMode} mode", displayed: true, isStateChange: true)
+	} else { LogAction("Hvac Previous Mode is (${newMode}) | Original State: (${hvacMode})") }
+}
+
 def fanModeEvent(fanActive) {
 	def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
 	def fanMode = device.currentState("thermostatFanMode")?.value
@@ -927,12 +959,10 @@ def isEmergencyHeat(val) {
 
 def clearHeatingSetpoint() {
 	sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true )
-	state?.heating_setpoint = ""
 }
 
 def clearCoolingSetpoint() {
 	sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true)
-	state?.cooling_setpoint = ""
 }
 
 def getCoolTemp() {
@@ -1106,7 +1136,6 @@ void levelUpDown(tempVal, chgType = null) {
 					thermostatSetpointEvent(targetVal)
 					heatingSetpointEvent(targetVal)
 					if (!chgType) { chgType = "" }
-//						runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
 					scheduleChangeSetpoint()
 					break
 				case "cool":
@@ -1115,7 +1144,6 @@ void levelUpDown(tempVal, chgType = null) {
 					thermostatSetpointEvent(targetVal)
 					coolingSetpointEvent(targetVal)
 					if (!chgType) { chgType = "" }
-//						runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
 					scheduleChangeSetpoint()
 					break
 				case "auto":
@@ -1125,14 +1153,12 @@ void levelUpDown(tempVal, chgType = null) {
 								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								if (state?.oldCool == null) { state.oldCool = curCoolpoint}
 								coolingSetpointEvent(targetVal)
-//									runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
 								scheduleChangeSetpoint()
 								break
 							case "heat":
 								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
 								heatingSetpointEvent(targetVal)
-//									runIn( getTempWaitVal(), "changeSetpoint", [data: [temp:targetVal, mode:chgType], overwrite: true] )
 								scheduleChangeSetpoint()
 								break
 							default:
@@ -1147,7 +1173,7 @@ void levelUpDown(tempVal, chgType = null) {
 					break
 			}
 		}
-	} else { Logger("levelUpDown: Cannot adjust temperature due to presence: ${state?.present} or hvacMode ${hvacMode}") }
+	} else { Logger("levelUpDown: Cannot adjust temperature due to hvacMode ${hvacMode}") }
 }
 
 def scheduleChangeSetpoint() {
@@ -1188,7 +1214,8 @@ def GetTimeDiffSeconds(lastDate) {
 def canChangeTemp() {
 	//LogAction("canChangeTemp()...", "trace")
 	def curPres = getNestPresence()
-	if (curPres == "home" && state?.nestHvac_mode != "eco") {
+	//if (curPres == "home" && state?.nestHvac_mode != "eco") {
+	if(state?.nestHvac_mode != "eco") {
 		def hvacMode = getHvacMode()
 		switch (hvacMode) {
 			case "heat":
@@ -1211,9 +1238,6 @@ void changeSetpoint() {
 	//LogAction("changeSetpoint()... ($val)", "trace")
 	try {
 		if ( canChangeTemp() ) {
-
-//			def temp = val?.temp?.value.toDouble()
-//			def md = !val?.mode?.value ? null : val?.mode?.value
 
 			def md
 			def hvacMode = getHvacMode()
@@ -1299,7 +1323,7 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 		def result = false
 
 		LogAction("Heat Temp Received: ${reqtemp} (${tempUnit})")
-		if (state?.present && canHeat && state?.nestHvac_mode != "eco") {
+		if(canHeat && state?.nestHvac_mode != "eco") {
 			switch (tempUnit) {
 				case "C":
 					temp = Math.round(reqtemp.round(1) * 2) / 2.0f
@@ -1369,7 +1393,7 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 		def result = false
 
 		LogAction("Cool Temp Received: ${reqtemp} (${tempUnit})")
-		if (state?.present && canCool && state?.nestHvac_mode != "eco") {
+		if(canCool && state?.nestHvac_mode != "eco") {
 			switch (tempUnit) {
 				case "C":
 					temp = Math.round(reqtemp.round(1) * 2) / 2.0f
@@ -2776,8 +2800,8 @@ def getGraphHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
-
-         def updateAvail = !state.updateAvailable ? "" : """
+		
+		def updateAvail = !state.updateAvailable ? "" : """
         	<script>
               vex.dialog.alert({
                 message: 'Device Update Available!',
@@ -2786,7 +2810,7 @@ def getGraphHTML() {
 			</script>
         """
 
-        def clientBl = state?.clientBl ? """
+		def clientBl = state?.clientBl ? """
                 <script>
                   vex.dialog.alert({
                     unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
@@ -2794,8 +2818,8 @@ def getGraphHTML() {
                   })
 				</script>
             """ : ""
-
-        def timeToTarget = device.currentState("timeToTarget").stringValue
+		
+		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
 		def chartHtml = (
 				state?.temperatureTable?.size() > 0 &&
@@ -2815,12 +2839,12 @@ def getGraphHTML() {
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
 
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-
+	
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>
@@ -2877,7 +2901,7 @@ def getGraphHTML() {
 					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
 				  </tr>
 			  </table>
-              ${clientBl}
+			  ${clientBl}
 			  ${updateAvail}
 			</body>
 		</html>
