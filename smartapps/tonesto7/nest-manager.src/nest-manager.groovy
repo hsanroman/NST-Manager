@@ -1089,7 +1089,7 @@ def debugPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "debugPrefPage", install: false) {
 		section ("Application Logs") {
-			input (name: "appDebug", type: "bool", title: "Show Manager Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+			input (name: "appDebug", type: "bool", title: "Show Nest Manager Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(appDebug) {
 				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
 				LogAction("Debug Logs are Enabled...", "info", false)
@@ -1163,7 +1163,7 @@ def remoteDiagPage () {
 			def tf = new SimpleDateFormat(formatVal)
 			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
-			paragraph "This will automatically turn itself off and remove all remote data collected after 12hours"
+			paragraph "This will automatically turn itself off and remove all remote data collected after 2 hours"
 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
@@ -1211,7 +1211,7 @@ def clearRemDiagData() {
 	atomicState?.remDiagLogActivatedDt = null
 	atomicState?.remDiagDataSentDt = null
 	atomicState?.remDiagLogSentCnt = null
-	log.debug "Successfully cleared Remote Diagnostic data from Local storage and Remote Database..."
+	LogAction("Successfully cleared Remote Diagnostic data from Local storage and Remote Database...", "info", true)
 }
 
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
@@ -1228,6 +1228,13 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 		sendRemDiagData()
 		atomicState?.remDiagDataSentDt = getDtNow()
 		atomicState?.remDiagLogDataStore = []
+	}
+	if(atomicState?.enRemDiagLogging) {
+		if(getRemDiagActSec() > (3600 * 2)) {
+			log.debug "Remote Diagnostics have been disabled because it has been active for the last 2 hours"
+			atomicState?.enRemDiagLogging = false
+			clearRemDiagData()
+		}
 	}
 }
 
@@ -1912,13 +1919,6 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
-	if(atomicState?.enRemDiagLogging) {
-		if(getRemDiagActSec() > (3600 * 12)) {
-			log.debug "Remote Diagnostics have been disabled because it has been active for the last 12 hours"
-			atomicState?.enRemDiagLogging = false
-			clearRemDiagData()
-		}
-	}
 }
 
 def forcedPoll(type = null) {
@@ -2545,7 +2545,7 @@ def setStructureAway(child, value, virtual=false) {
 				if(val) {
 					pChild.away()
 				} else {
-					pChild.home()
+					pChild.present()
 				}
 			} else { LogAction("setStructureAway - CANNOT Set Thermostat${pdevId} Presence to: (${val}) with child ${pChild}", "warn", true) }
 		}
@@ -4633,15 +4633,16 @@ def clientSecret() {
 /************************************************************************************************
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
-def LogTrace(msg) {
+def LogTrace(msg, logSrc=null) {
 	def trOn = advAppDebug ? true : false
-	if(trOn) { Logger(msg, "trace") }
+	if(trOn) { Logger(msg, "trace", logSrc) }
 }
 
 def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
-	if(showAlways) { Logger(msg, type) }
-	else if(isDbg && !showAlways) { Logger(msg, type) }
+	def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
+	if(showAlways) { Logger(msg, type, theLogSrc) }
+	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
 }
 
 def Logger(msg, type, logSrc=null) {
@@ -4673,12 +4674,11 @@ def Logger(msg, type, logSrc=null) {
 				break
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
-			if(atomicState?.remDiagLogDataStore == null) { atomicState?.remDiagLogDataStore = [:] }
 			//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
-			saveLogtoRemDiagStore(msg, type, logSrc)
+			if(!parent) { saveLogtoRemDiagStore(msg, type, logSrc) }
 		}
 	}
-	else { log.error "Logger Error - type: ${type} | msg: ${msg}" }
+	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg}" }
 }
 
 
@@ -6277,7 +6277,7 @@ def mainAutoPage(params) {
 					}
 					atomicState.disableAutomation = disableAutomationreq
 				}
-				input ("showDebug", "bool", title: "Debug Option", description: "Show App Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 				atomicState?.showDebug = showDebug
 			}
 			if(appSettings?.devOpt == "true" && autoType != "watchDog") {
@@ -10549,7 +10549,7 @@ def tstatConfigAutoPage(params) {
 }
 
 def scheduleConfigPage(params) {
-	LogTrace("scheduleConfigPage... ($params)")
+	//LogTrace("scheduleConfigPage... ($params)")
 	def sData = params?.sData
 	if(params?.sData) {
 		atomicState.tempSchPageData = params
@@ -10592,7 +10592,7 @@ def scheduleConfigPage(params) {
 }
 
 def schMotSchedulePage(params) {
-	LogTrace("schMotSchedulePage($params)")
+	//LogTrace("schMotSchedulePage($params)")
 	def sNum = params?.sNum
 	if(params?.sNum) {
 		atomicState.tempMotSchPageData = params
