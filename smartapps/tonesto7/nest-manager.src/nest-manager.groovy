@@ -1248,7 +1248,7 @@ def sendRemDiagData() {
 		json = new groovy.json.JsonOutput().toJson(data)
 		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
 
-		def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt+data?.size()
+		def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
 		atomicState?.remDiagLogSentCnt = lsCnt
 	}
 }
@@ -6077,7 +6077,6 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 			//log.debug "respData: ${respData}"
 			if(respData?.status == 200) {
 				LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
-				atomicState?.lastAnalyticUpdDt = getDtNow()
 				if(typeDesc.toString() == "Remote Diag Logs") {
 
 				} else {
@@ -10006,7 +10005,6 @@ def schMotModePage() {
 					input (name: "schMotOperateFan", type: "bool", title: "${titStr}?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("fan_control_icon.png"))
 					if(settings?.schMotOperateFan) {
 						def fanCtrlDescStr = ""
-						//fanCtrlDescStr += (atomicState?.schMotTstatHasFan) ? "\n • Current Fan Mode: (${schMotTstat?.currentThermostatFanMode.toString().capitalize()})" : ""
 						fanCtrlDescStr += getFanSwitchDesc() ? "${getFanSwitchDesc()}" : ""
 						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to Modify..." : null
 						href "tstatConfigAutoPage", title: "Fan Control Config...", description: fanCtrlDesc ?: "Not Configured...", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
@@ -10041,13 +10039,11 @@ def schMotModePage() {
 						//remote sensor/Day
 						def dayModeDesc = ""
 						dayModeDesc += settings?.remSensorDay ? "\n\nDefault Sensor${settings?.remSensorDay?.size() > 1 ? "s" : ""}:" : ""
-						//dayModeDesc += settings?.remSensorDay ? "\n ${settings.remSensorDay}" : ""
 						def rCnt = settings?.remSensorDay?.size()
 						settings?.remSensorDay?.each { t ->
 							dayModeDesc += "\n ├ ${t?.label}: ${(t?.label.length() > 10) ? "\n │ └ " : ""}(${getDeviceTemp(t)}${tempScaleStr})"
 						}
 						dayModeDesc += settings?.remSensorDay ? "\n └ Temp${(settings?.remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings?.remSensorDay)}${tempScaleStr})" : ""
-						//dayModeDesc += settings?.remSensorDay ? "\n • Temp${(settings?.remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings?.remSensorDay)}${tempScaleStr})" : ""
 						remSenDescStr += settings?.remSensorDay ? "${dayModeDesc}" : ""
 
 						def remSenDesc = isRemSenConfigured() ? "${remSenDescStr}\n\nTap to Modify..." : null
