@@ -1170,6 +1170,7 @@ def remoteDiagPage () {
 			chkRemDiagClientId()
 			if(!atomicState?.enRemDiagLogging) {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
+				clearRemDiagData()
 				atomicState?.enRemDiagLogging = true
 			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
@@ -1178,7 +1179,7 @@ def remoteDiagPage () {
 				LogAction("Remote Diagnostic Logs have been deactivated...", "info", true)
 				atomicState?.enRemDiagLogging = false
 			}
-			if(atomicState?.remDiagLogDataStore?.size()) { clearRemDiagData() }
+			atomicState?.remDiagLogActivatedDt = null   // require toggle off then on again to force back on after timeout
 		}
 		section() {
 			if(atomicState?.enRemDiagLogging) {
@@ -1208,7 +1209,7 @@ def clearRemDiagData() {
 		if(removeRemDiagData()) { atomicState?.remDiagClientId = null }
 	}
 	atomicState?.remDiagLogDataStore = null
-	atomicState?.remDiagLogActivatedDt = null
+	//atomicState?.remDiagLogActivatedDt = null   // NOT done to have force off then on to re-enable
 	atomicState?.remDiagDataSentDt = null
 	atomicState?.remDiagLogSentCnt = null
 	LogAction("Successfully cleared Remote Diagnostic data from Local storage and Remote Database...", "info", true)
@@ -4654,29 +4655,30 @@ def Logger(msg, type, logSrc=null) {
 			atomicState?.debugAppendAppName = (parent ? parent?.settings?.debugAppendAppName : settings?.debugAppendAppName) ? true : false
 		}
 		if(atomicState?.debugAppendAppName) { labelstr = "${app.label} | " }
+		def themsg = "${labelstr}${msg}"
 		switch(type) {
 			case "debug":
-				log.debug "${labelstr}${msg}"
+				log.debug "${themsg}"
 				break
 			case "info":
-				log.info "${labelstr}${msg}"
+				log.info "${themsg}"
 				break
 			case "trace":
-				log.trace "${labelstr}${msg}"
+				log.trace "${themsg}"
 				break
 			case "error":
-				log.error "${labelstr}${msg}"
+				log.error "${themsg}"
 				break
 			case "warn":
-				log.warn "${labelstr}${msg}"
+				log.warn "${themsg}"
 				break
 			default:
-				log.debug "${labelstr}${msg}"
+				log.debug "${themsg}"
 				break
 		}
 		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
-		if(!parent) { saveLogtoRemDiagStore(msg, type, logSrc) } 
-		else { parent.saveLogtoRemDiagStore(msg, type, logSrc) } 
+		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) } 
+		else { parent.saveLogtoRemDiagStore(themsg, type, logSrc) } 
 	}
 	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg}" }
 }
