@@ -5610,61 +5610,61 @@ def buildChildAppInputMap() {
 	return appMap
 }
 
-def feedbackPage() {
-	def fbData = atomicState?.lastFeedbackData
-	def fbNoDup = (settings?.feedbackMsg && fbData?.lastMsg == settings?.feedbackMsg) ? false : true
-	def fbLenOk = (settings?.feedbackMsg && settings?.feedbackMsg?.toString().length() > 20) ? true : false
-	def msgOk = (settings?.feedbackMsg && fbLenOk && fbNoDup) ? true : false
-	//log.debug "msgOk: ($msgOk) | [fbNoDup: $fbNoDup, fbLenOk: $fbLenOk]"
-	dynamicPage(name: "feedbackPage", install: false, nextPage: (msgOk ? "sendFeedbackPage" : ""), uninstall: false) {
-		section {
-			paragraph "Submit your feedback to the developer"
-			input "feedbackMsg", "text", title: "Enter your Feedback here...", submitOnChange: true, defaultValue: null
-			if (settings?.feedbackMsg != null || settings?.feedbackMsg != "") {
-				if (!fbLenOk) {
-					paragraph "The current feedback message is too short!!!.\n\n(minimum 20 Char.)...", required: true, state: null
-				}
-				if (!fbNoDup) {
-					paragraph "You've already sent the same feedback on (${fbData?.lastMsgDt}).\n\nPlease edit before trying again...", required: true, state: null
-				}
-			}
-		}
-		if (fbData) {
-			section {
-				paragraph "You Last Sent Feedback on:\n${fbData?.lastMsgDt}\nFor App Version: ${fbData?.lastAppVer}"
-			}
-		}
-		if (msgOk) {
-			section {
-				paragraph "Tap Next to Send...", state: "complete"
-			}
-		}
-	}
-}
-
-def sendFeedbackPage() {
-	dynamicPage(name: "sendFeedbackPage", install: false, nextPage: "mainPage", uninstall: false) {
-		def fbData = atomicState?.lastFeedbackData
-		section("Feedback Status:") {
-			if (settings?.feedbackMsg) {
-				def ok2send = true
-				if (fbData) {
-					if (fbData?.lastMsg == settings?.feedbackMsg) {
-						ok2send = false
-						paragraph "SKIPPING...\nYou've already sent the same feedback on (${fbData?.lastMsgDt}).\n\nPlease go back and edit before trying again...", required: true, state: null
-					}
-				}
-				if(ok2send) {
-					atomicState?.feedbackPending = true
-					runIn(5, "sendFeedbackData", [overwrite: true])
-					paragraph "Your feedback has been queued and will be submitted shortly...", title: "Thank You", state: "complete"
-				}
-			} else {
-				paragraph "It appears that your are missing feedback text on the previous page...", required: true, state: null
-			}
-		}
-	}
-}
+// def feedbackPage() {
+// 	def fbData = atomicState?.lastFeedbackData
+// 	def fbNoDup = (settings?.feedbackMsg && fbData?.lastMsg == settings?.feedbackMsg) ? false : true
+// 	def fbLenOk = (settings?.feedbackMsg && settings?.feedbackMsg?.toString().length() > 20) ? true : false
+// 	def msgOk = (settings?.feedbackMsg && fbLenOk && fbNoDup) ? true : false
+// 	//log.debug "msgOk: ($msgOk) | [fbNoDup: $fbNoDup, fbLenOk: $fbLenOk]"
+// 	dynamicPage(name: "feedbackPage", install: false, nextPage: (msgOk ? "sendFeedbackPage" : ""), uninstall: false) {
+// 		section {
+// 			paragraph "Submit your feedback to the developer"
+// 			input "feedbackMsg", "text", title: "Enter your Feedback here...", submitOnChange: true, defaultValue: null
+// 			if (settings?.feedbackMsg != null || settings?.feedbackMsg != "") {
+// 				if (!fbLenOk) {
+// 					paragraph "The current feedback message is too short!!!.\n\n(minimum 20 Char.)...", required: true, state: null
+// 				}
+// 				if (!fbNoDup) {
+// 					paragraph "You've already sent the same feedback on (${fbData?.lastMsgDt}).\n\nPlease edit before trying again...", required: true, state: null
+// 				}
+// 			}
+// 		}
+// 		if (fbData) {
+// 			section {
+// 				paragraph "You Last Sent Feedback on:\n${fbData?.lastMsgDt}\nFor App Version: ${fbData?.lastAppVer}"
+// 			}
+// 		}
+// 		if (msgOk) {
+// 			section {
+// 				paragraph "Tap Next to Send...", state: "complete"
+// 			}
+// 		}
+// 	}
+// }
+//
+// def sendFeedbackPage() {
+// 	dynamicPage(name: "sendFeedbackPage", install: false, nextPage: "mainPage", uninstall: false) {
+// 		def fbData = atomicState?.lastFeedbackData
+// 		section("Feedback Status:") {
+// 			if (settings?.feedbackMsg) {
+// 				def ok2send = true
+// 				if (fbData) {
+// 					if (fbData?.lastMsg == settings?.feedbackMsg) {
+// 						ok2send = false
+// 						paragraph "SKIPPING...\nYou've already sent the same feedback on (${fbData?.lastMsgDt}).\n\nPlease go back and edit before trying again...", required: true, state: null
+// 					}
+// 				}
+// 				if(ok2send) {
+// 					atomicState?.feedbackPending = true
+// 					runIn(5, "sendFeedbackData", [overwrite: true])
+// 					paragraph "Your feedback has been queued and will be submitted shortly...", title: "Thank You", state: "complete"
+// 				}
+// 			} else {
+// 				paragraph "It appears that your are missing feedback text on the previous page...", required: true, state: null
+// 			}
+// 		}
+// 	}
+// }
 
 /*
 	NOTE: Keep this for furture backup/restore reference
