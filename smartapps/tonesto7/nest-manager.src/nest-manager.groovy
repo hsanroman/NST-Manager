@@ -1188,7 +1188,7 @@ def remoteDiagPage () {
 			if(atomicState?.remDiagLogDataStore?.size() >= 0) {
 				def str = ""
 				str += "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
-				if(atomicState?.remDiagDataSentDt) { str += "\n\nLast Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)} (${getLastRemDiagSentSec()} sec ago)" }
+				if(atomicState?.remDiagDataSentDt) { str += "\n\nLast Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)} | (${getLastRemDiagSentSec()} sec ago)" }
 				if(atomicState?.remDiagLogSentCnt) { str += "\n\nLogs sent to DB: (${atomicState?.remDiagLogSentCnt})" }
 				paragraph str, state: "complete"
 			}
@@ -1223,7 +1223,7 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
 	data << item
 	atomicState?.remDiagLogDataStore = data
-	if(atomicState?.remDiagLogDataStore?.size() > 5 || getLastRemDiagSentSec() > 600) {
+	if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600) {
 		sendRemDiagData()
 		atomicState?.remDiagDataSentDt = getDtNow()
 		atomicState?.remDiagLogDataStore = []
@@ -1246,6 +1246,9 @@ def sendRemDiagData() {
 		def json
 		json = new groovy.json.JsonOutput().toJson(data)
 		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
+		
+		def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt+data?.size()
+		atomicState?.remDiagLogSentCnt = lsCnt
 	}
 }
 
@@ -6024,10 +6027,7 @@ def processFirebaseResponse(resp, data) {
 		if(resp?.status == 200) {
 			LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 			if(typeDesc?.toString() == "Remote Diag Logs") {
-				def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt
-				log.debug "lsCnt: $lsCnt"
-				lsCnt = lsCnt+1
-				atomicState?.remDiagLogSentCnt = lsCnt
+
 			} else {
 				atomicState?.lastAnalyticUpdDt = getDtNow()
 			}
@@ -6073,10 +6073,7 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 				LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 				atomicState?.lastAnalyticUpdDt = getDtNow()
 				if(typeDesc.toString() == "Remote Diag Logs") {
-					def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt
-					log.debug "lsCnt: $lsCnt"
-					lsCnt = lsCnt+1
-					atomicState?.remDiagLogSentCnt = lsCnt
+
 				} else {
 					atomicState?.lastAnalyticUpdDt = getDtNow()
 				}
@@ -6096,6 +6093,43 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 		}
 		else { log.error "sendFirebaseData: ([$data, $pathVal, $cmdType, $type]) Exception:", ex }
 		sendExceptionData(ex, "sendFirebaseData")
+	}
+	return result
+}
+
+def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
+	LogAction("sendDataToSlack(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	def result = false
+	def json = new groovy.json.JsonOutput().prettyPrint(data)
+	def params = [ uri: "${slackMsgWebHookUrl()}", body: json.toString() ]
+	def typeDesc = type ? "${type}" : "Data"
+	def respData
+	try {
+		if(!cmdType || cmdType == "post") {
+			httpPostJson(params) { resp ->
+				respData = resp
+			}
+		}
+		if(respData) {
+			//log.debug "respData: ${respData}"
+			if(respData?.status == 200) {
+				LogAction("sendDataToSlack: ${typeDesc} Data Sent Successfully!!!", "info", true)
+				result = true
+			}
+			else if(respData?.status == 400) {
+				LogAction("sendDataToSlack: 'Bad Request' Exception: ${respData?.status}", "error", true)
+			}
+			else {
+				LogAction("sendDataToSlack: 'Unexpected' Response: ${respData?.status}", "warn", true)
+			}
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			LogAction("sendDataToSlack: 'HttpResponseException' Exception: ${ex.message}", "error", true)
+		}
+		else { log.error "sendDataToSlack: ([$data, $pathVal, $cmdType, $type]) Exception:", ex }
+		sendExceptionData(ex, "sendDataToSlack")
 	}
 	return result
 }
