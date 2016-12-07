@@ -25,7 +25,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.1.2"}
+def devVer() { return "4.1.3"}
 
 // for the UI
 metadata {
@@ -135,7 +135,7 @@ metadata {
 				attributeState("cool", label:'${name}')
 				attributeState("auto", label:'${name}')
 				attributeState("eco", label:'${name}')
-				attributeState("emergency Heat", label:'${name}')
+				attributeState("emergency heat", label:'${name}')
 			}
 			tileAttribute("device.heatingSetpoint", key: "HEATING_SETPOINT") {
 				attributeState("default", label:'${currentValue}')
@@ -349,6 +349,7 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
@@ -1776,6 +1777,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(msg, logType, "thermostat dth")
 	}
 }
 
