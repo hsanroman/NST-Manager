@@ -1224,6 +1224,8 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	atomicState?.remDiagLogDataStore = data
 	if(atomicState?.remDiagLogDataStore?.size() > 5 || getLastRemDiagSentSec() > 600) {
 		sendRemDiagData()
+		atomicState?.remDiagDataSentDt = getDtNow()
+		atomicState?.remDiagLogDataStore = []
 	}
 }
 
@@ -6020,10 +6022,13 @@ def processFirebaseResponse(resp, data) {
 	try {
 		if(resp?.status == 200) {
 			LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
-			atomicState?.lastAnalyticUpdDt = getDtNow()
 			if(typeDesc?.toString() == "Remote Diag Logs") {
-				atomicState?.remDiagDataSentDt = getDtNow()
-				atomicState?.remDiagLogDataStore = []
+				def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt
+				log.debug "lsCnt: $lsCnt"
+				lsCnt = lsCnt+1
+				atomicState?.remDiagLogSentCnt = lsCnt
+			} else {
+				atomicState?.lastAnalyticUpdDt = getDtNow()
 			}
 			result = true
 		}
@@ -6067,12 +6072,12 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 				LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
 				atomicState?.lastAnalyticUpdDt = getDtNow()
 				if(typeDesc.toString() == "Remote Diag Logs") {
-					atomicState?.remDiagDataSentDt = getDtNow()
-					atomicState?.remDiagLogDataStore = []
 					def lsCnt = !atomicState?.remDiagLogSentCnt ? 0 : atomicState?.remDiagLogSentCnt
 					log.debug "lsCnt: $lsCnt"
 					lsCnt = lsCnt+1
 					atomicState?.remDiagLogSentCnt = lsCnt
+				} else {
+					atomicState?.lastAnalyticUpdDt = getDtNow()
 				}
 				result = true
 			}
