@@ -1237,6 +1237,12 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 		if(getRemDiagActSec() > (3600 * 2)) {
 			log.debug "Remote Diagnostics have been disabled because it has been active for the last 2 hours"
 			atomicState?.enRemDiagLogging = false
+			def cApps = getChildApps()
+			if(cApps) {
+				cApps?.sort()?.each { chld ->
+					chld?.update()
+				}
+			}
 			clearRemDiagData()
 		}
 	}
@@ -4678,7 +4684,15 @@ def Logger(msg, type, logSrc=null) {
 		}
 		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
 		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) } 
-		else { parent.saveLogtoRemDiagStore(themsg, type, logSrc) } 
+		else {
+			if(atomicState?.enRemDiagLogging == null) {
+				atomicState?.enRemDiagLogging = parent?.atomicState?.enRemDiagLogging
+				log.debug "set enRemDiagLogging to ${atomicState?.enRemDiagLogging}"
+			}
+			if(atomicState?.enRemDiagLogging) {
+				parent.saveLogtoRemDiagStore(themsg, type, logSrc)
+			} 
+		} 
 	}
 	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg}" }
 }
@@ -6414,6 +6428,7 @@ def initAutoApp() {
 	state.remove("schedule{4}TimeActive")
 	state.remove("lastaway")
 	state.remove("debugAppendAppName")   // cause Automations to re-check with parent for value
+	state.remove("enRemDiagLogging")   // cause Automations to re-check with parent for value after updated is called
 }
 
 def uninstAutomationApp() {
