@@ -1779,7 +1779,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(msg, logType, "thermostat dth")
+		parent.saveLogtoRemDiagStore(smsg, logType, "thermostat dth")
 	}
 }
 
