@@ -40,14 +40,15 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.9" }
-def appVerDate() { "12-5-2016" }
+def appVersion() { "4.1.10" }
+def appVerDate() { "12-7-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.8 (December 5th, 2016):"
+	str += "V4.1.10 (December 7th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Will update this later."
+	str += "\n • Added: Toggle to allow disabling the Watchdog Nest Home|Away Mode is Away and not in Eco notification."
 
 	str += "\n\nV4.1.0 (November 21st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -6914,11 +6915,13 @@ def watchDogPage() {
 			def pageDesc = getNotifConfigDesc(pName)
 			href "setNotificationPage", title: "Configured Alerts...", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
 					state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
+			if(pageDesc) {
+				input "watDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?",  required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_on_icon.png")
+			}
 		}
 		remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nThis Automation will be removed completely...")
 	}
 }
-
 
 def automationSafetyTempEvt(evt) {
 	LogAction("Event | Thermostat Safety Temp Exceeded: '${evt.displayName}' (${evt.value})", "trace", true)
@@ -6984,8 +6987,10 @@ def watchDogAlarmActions(dev, dni, actType) {
 			evtVoiceMsg = "Safety Temp has been exceeded on ${dev}."
 			break
 		case "eco":
-			evtNotifMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
-			evtVoiceMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
+			if(settings["watDogNotifMissedEco"] == null || settings["watDogNotifMissedEco"] == true) {
+				evtNotifMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
+				evtVoiceMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
+			} else {return}
 			break
 	}
 	if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
@@ -10592,7 +10597,6 @@ def editSchedule(schedData) {
 	def sectStr = schedData?.secData?.schName ? (act ? "Enabled" : "Disabled") : "Tap to Enable"
 	def titleStr = "Schedule ${schedData?.secData?.scd} (${sectStr})"
 
-
 	section(title: "${titleStr}                                                            ", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
 		input "${sLbl}SchedActive", "bool", title: "Schedule Enabled", description: (cnt == 1 && !settings?."${sLbl}SchedActive" ? "Enable to Edit Schedule..." : null), required: true,
 				defaultValue: false, submitOnChange: true, image: getAppImg("${actIcon}_icon.png")
@@ -11144,9 +11148,8 @@ def setNotificationPage(params) {
 									break
 							}
 
-
 							input "${pName}SpeechOnRestore", "bool", title: "Speak when restoring HVAC on (${desc})?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("speech_icon.png")
-	// TODO There are more messages and errors than ON / OFF
+							// TODO There are more messages and errors than ON / OFF
 							input "${pName}UseCustomSpeechNotifMsg", "bool", title: "Customize Notitification Message?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
 								image: getAppImg("speech_icon.png")
 							if(settings["${pName}UseCustomSpeechNotifMsg"]) {
@@ -11269,13 +11272,21 @@ def getNotifConfigDesc(pName) {
 def getVoiceNotifConfigDesc(pName) {
 	def str = ""
 	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
-		def speaks = getInputToStringDesc(settings?."${pName}SpeechDevices", true)
-		def medias = getInputToStringDesc(settings?."${pName}SpeechMediaPlayer", true)
+		def speaks = settings?."${pName}SpeechDevices"
+		def medias = settings?."${pName}SpeechMediaPlayer"
 		str += settings["${pName}SendToAskAlexaQueue"] ? "\n • Send to Ask Alexa: (True)" : ""
-		str += speaks ? "\n • Speech Devices:${speaks.size() > 1 ? "\n" : ""}${speaks}" : ""
-		str += medias ? "\n • Media Players:${medias.size() > 1 ? "" : ""}${medias}" : ""
-		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n    ├ Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
-		str += (medias && settings?."${pName}SpeechAllowResume") ? "\n    └ Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
+		str += speaks ? "\n • Speech Devices:" : ""
+		if(speaks) {
+			def cnt = 1
+			speaks?.each { str += it ? "\n ${cnt < speaks.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
+		}
+		str += medias ? "${speaks ? "\n\n" : "\n"} • Media Players:" : ""
+		if(medias) {
+			def cnt = 1
+			medias?.each { str += it ? "\n│${cnt < medias.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
+		}
+		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n├ Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
+		str += (medias && settings?."${pName}SpeechAllowResume") ? "\n└ Resume: (${settings?."${pName}SpeechAllowResume".toString().capitalize()})" : ""
 		str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n • Custom Message: (${settings?."${pName}UseCustomSpeechNotifMsg".toString().capitalize()})" : ""
 	}
 	return (str != "") ? "${str}" : null
