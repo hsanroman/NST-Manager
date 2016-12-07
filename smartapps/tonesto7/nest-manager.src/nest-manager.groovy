@@ -1216,18 +1216,21 @@ def clearRemDiagData() {
 
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	//log.trace "saveLogtoRemDiagStore($msg, $type, $logSrcType)"
-	if(getStateSizePerc() >= 90) {
-		log.warn "saveLogtoRemDiagStore: remoteDiag log storage is suspended because state size has reached 90% of the maximum allowed space. Something must be wrong because the data should have been sent."
-		return
-	}
-	def data = atomicState?.remDiagLogDataStore ?: []
-	def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
-	data << item
-	atomicState?.remDiagLogDataStore = data
-	if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600) {
-		sendRemDiagData()
-		atomicState?.remDiagDataSentDt = getDtNow()
-		atomicState?.remDiagLogDataStore = []
+	if(parent) { return }
+	if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
+		if(getStateSizePerc() >= 90) {
+			log.warn "saveLogtoRemDiagStore: remoteDiag log storage is suspended because state size has reached 90% of the maximum allowed space. Something must be wrong because the data should have been sent."
+			return
+		}
+		def data = atomicState?.remDiagLogDataStore ?: []
+		def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
+		data << item
+		atomicState?.remDiagLogDataStore = data
+		if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600) {
+			sendRemDiagData()
+			atomicState?.remDiagDataSentDt = getDtNow()
+			atomicState?.remDiagLogDataStore = []
+		}
 	}
 	if(atomicState?.enRemDiagLogging) {
 		if(getRemDiagActSec() > (3600 * 2)) {
@@ -2185,6 +2188,7 @@ def updateChildData(force = false) {
 		def useMt = !useMilitaryTime ? false : true
 		def dbg = !childDebug ? false : true
 		def logNamePrefix = settings?.debugAppendAppName == true ? true : false
+		def remDiag = (atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) ? true: false
 		def nestTz = getNestTimeZone()?.toString()
 		def api = !apiIssues() ? false : true
 		def htmlInfo = getHtmlInfo()
@@ -2215,7 +2219,7 @@ def updateChildData(force = false) {
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTimeout, "mobileClientType":mobClientType ]
+						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag ]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -4260,11 +4264,9 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 		LogAction("addRemoveVthermostat Error: Cannot find thermostat device child", "error", true)
 		if(tval) { return false }  // if deleting (false), let it try to proceed
 	} else {
-		//TODO check that this is a physical thermostat
 		tstat = d1
 		tStatPhys = tstat?.currentNestType == "physical" ? true : false
 		if(!tStatPhys && tval) { LogAction("addRemoveVthermostat Error: Creating a virtual thermostat on a virtual thermostat device child", "error", true) }
-
 	}
 
 	def devId = "v${odevId}"
@@ -4648,7 +4650,6 @@ def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 def Logger(msg, type, logSrc=null) {
 	if(msg && type) {
 		def labelstr = ""
-		/* Todo:  This may not update the child apps after being Modified */
 		if(!atomicState?.debugAppendAppName) {
 			atomicState?.debugAppendAppName = (parent ? parent?.settings?.debugAppendAppName : settings?.debugAppendAppName) ? true : false
 		}
@@ -4673,10 +4674,9 @@ def Logger(msg, type, logSrc=null) {
 				log.debug "${labelstr}${msg}"
 				break
 		}
-		if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
-			//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
-			if(!parent) { saveLogtoRemDiagStore(msg, type, logSrc) }
-		}
+		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
+		if(!parent) { saveLogtoRemDiagStore(msg, type, logSrc) } 
+		else { parent.saveLogtoRemDiagStore(msg, type, logSrc) } 
 	}
 	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg}" }
 }
@@ -6411,6 +6411,7 @@ def initAutoApp() {
 	state.remove("schedule{3}TimeActive")
 	state.remove("schedule{4}TimeActive")
 	state.remove("lastaway")
+	state.remove("debugAppendAppName")   // cause Automations to re-check with parent for value
 }
 
 def uninstAutomationApp() {
@@ -8189,7 +8190,6 @@ def extTmpTempOk() {
 		def canCool = atomicState?.schMotTstatCanCool
 
 		def modeAuto = ((curMode == "auto") || (curMode == "eco" && canHeat && canCool)) ? true : false
-// TODO add if in ECO mode done
 
 		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
