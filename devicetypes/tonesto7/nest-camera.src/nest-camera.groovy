@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.1.1" }
+def devVer() { return "2.1.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -219,6 +219,7 @@ def processEvent() {
 			def results = eventData?.data
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -623,6 +624,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "camera dth")
 	}
 }
 
