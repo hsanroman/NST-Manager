@@ -626,7 +626,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "camera dth")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Camera DTH")
 	}
 }
 

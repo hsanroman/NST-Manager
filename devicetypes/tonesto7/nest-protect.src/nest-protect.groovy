@@ -536,7 +536,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "protect dth")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Protect DTH")
 	}
 }
 
@@ -714,8 +714,8 @@ def getInfoHtml() {
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
-		
-        def updateAvail = !state.updateAvailable ? "" : """ 
+
+        def updateAvail = !state.updateAvailable ? "" : """
         	<script>
               vex.dialog.alert({
                 message: 'Device Update Available!',
@@ -724,7 +724,7 @@ def getInfoHtml() {
 			</script>
         """
 
-        def clientBl = state?.clientBl ? """ 
+        def clientBl = state?.clientBl ? """
               <script>
                 vex.dialog.alert({
                   unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
@@ -732,7 +732,7 @@ def getInfoHtml() {
                 })
 			  </script>
             """ : ""
-        
+
         def html = """
 		<!DOCTYPE html>
 		<html>
@@ -748,7 +748,7 @@ def getInfoHtml() {
 
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-	
+
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 			</head>
 			<body>

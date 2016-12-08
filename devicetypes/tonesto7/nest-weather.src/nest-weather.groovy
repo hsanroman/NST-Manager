@@ -758,7 +758,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "weather dth")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Weather DTH")
 	}
 }
 

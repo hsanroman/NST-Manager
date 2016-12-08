@@ -350,7 +350,7 @@ void Logger(msg, logType = "debug") {
 			break
 	}
 	if(state?.enRemDiagLogging) {
-		parent.saveLogtoRemDiagStore(smsg, logType, "presence dth")
+		parent.saveLogtoRemDiagStore(smsg, logType, "Presence DTH")
 	}
 }
 
