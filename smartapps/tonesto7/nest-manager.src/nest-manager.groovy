@@ -1205,9 +1205,9 @@ void chkRemDiagClientId() {
 	if(!atomicState?.remDiagClientId) { atomicState?.remDiagClientId = genRandId(8)	}
 }
 
-def clearRemDiagData() {
-	if(!settings?.enRemDiagLogging) {
-		if(removeRemDiagData()) { atomicState?.remDiagClientId = null }
+def clearRemDiagData(force=false) {
+	if(!settings?.enRemDiagLogging || force) {
+		if(atomicState?.remDiagClientId && removeRemDiagData()) { atomicState?.remDiagClientId = null }
 	}
 	atomicState?.remDiagLogDataStore = null
 	//atomicState?.remDiagLogActivatedDt = null   // NOT done to have force off then on to re-enable
@@ -1228,7 +1228,7 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 		def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
 		data << item
 		atomicState?.remDiagLogDataStore = data
-		if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600) {
+		if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
 			sendRemDiagData()
 			atomicState?.remDiagDataSentDt = getDtNow()
 			atomicState?.remDiagLogDataStore = []
@@ -1690,6 +1690,7 @@ def uninstManagerApp() {
 					atomicState?.installationId = null
 				}
 			}
+			clearRemDiagData(true)
 			//Revokes Smartthings endpoint token...
 			revokeAccessToken()
 			//Revokes Nest Auth Token
@@ -6160,7 +6161,7 @@ def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
 }
 
 def removeFirebaseData(pathVal) {
-	log.trace "removeFirebaseData(${pathVal}"
+	log.trace "removeFirebaseData(${pathVal})"
 	def result = true
 	try {
 		httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
