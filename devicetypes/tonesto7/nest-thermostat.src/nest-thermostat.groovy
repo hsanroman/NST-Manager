@@ -25,7 +25,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.1.3"}
+def devVer() { return "4.1.4"}
 
 // for the UI
 metadata {
@@ -235,7 +235,7 @@ metadata {
 		standardTile("blank", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "default", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 12, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
@@ -588,6 +588,7 @@ def sunlightCorrectionActiveEvent(sunAct) {
 }
 
 def timeToTargetEvent(ttt, tttTr) {
+	log.debug "timeToTargetEvent($ttt, $tttTr)"
 	def val = device.currentState("timeToTarget")?.stringValue
 	def opIdle = device.currentState("thermostatOperatingState").stringValue == "idle" ? true : false
 	//log.debug "opIdle: $opIdle"
@@ -2596,6 +2597,35 @@ def getMonthsUsage(monNum) {
 	return timeMap
 }
 
+def getLast3MonthsUsageMap() {
+	def hm = getHistoryStore()
+	def timeMap = [:]
+	def cnt = 1
+	def mVal = (int) hm?.currentMonth
+	if(mVal) {
+		for(int i=1; i<=3; i++) {
+			def newMap = [:]
+			def mName = getMonthNumToStr(mVal)
+			//log.debug "$mName Usage - Idle: (${hm?."OperatingState_Month${mVal}_idle"}) | Heat: (${hm?."OperatingState_Month${mVal}_heating"}) | Cool: (${hm?."OperatingState_Month${mVal}_cooling"})"
+			newMap << ["cooling":["tSec":(hm?."OperatingState_Month${mVal}_cooling" ?: 0L), "iNum":cnt, "mName":mName]]
+			newMap << ["heating":["tSec":(hm?."OperatingState_Month${mVal}_heating" ?: 0L), "iNum":cnt, "mName":mName]]
+			newMap << ["idle":["tSec":(hm?."OperatingState_Month${mVal}_idle" ?: 0L), "iNum":cnt, "mName":mName]]
+			newMap << ["fanOn":["tSec":(hm?."FanMode_Month${mVal}_On" ?: 0L), "iNum":cnt, "mName":mName]]
+			newMap << ["fanAuto":["tSec":(hm?."FanMode_Month${mVal}_auto" ?: 0L), "iNum":cnt, "mName":mName]]
+			timeMap << [(mVal):newMap]
+			mVal = ((mVal==1) ? 12 : mVal-1)
+			cnt = cnt+1
+		}
+	}
+	return timeMap
+}
+
+def getMonthNumToStr(val) {
+	def mons = [1:"Jan", 2:"Feb", 3:"Mar", 4:"Apr", 5:"May", 6:"June", 7:"July", 8:"Aug", 9:"Sept", 10:"Oct", 11:"Nov", 12:"Dec"]
+	def res = mons?.find { key, value -> key.toInteger() == val?.toInteger() }
+	return res ? res?.value : "unknown"
+}
+
 def getYearsUsage() {
 	def hm = getHistoryStore()
 	def timeMap = [:]
@@ -2755,11 +2785,11 @@ def getIntListAvg(itemList) {
 }
 
 def secToTimeMap(long seconds) {
-	long sec = seconds % 60
-	long minutes = (seconds % 3600) / 60
-	long hours = (seconds % 86400) / 3600
-	long days = seconds / 86400
-	long years = days / 365
+	long sec = (seconds % 60) ?: 0L
+	long minutes = ((seconds % 3600) / 60) ?: 0L
+	long hours = ((seconds % 86400) / 3600) ?: 0L
+	long days = (seconds / 86400) ?: 0L
+	long years = (days / 365) ?: 0L
 	def res = ["m":minutes, "h":hours, "d":days, "y":years]
 	return res
 }
@@ -2853,8 +2883,6 @@ def getGraphHTML() {
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>
 			<body>
-				${chartHtml}
-				<br></br>
 				<table
 				  <tbody>
 					<tr>
@@ -2865,6 +2893,8 @@ def getGraphHTML() {
 					<td>${sunCorrectStr}</td>
 				  </tbody>
 				</table>
+				<table>
+					${chartHtml}
 				<table>
 				<col width="40%">
 				<col width="20%">
@@ -2966,20 +2996,18 @@ def showChartHtml() {
 		weathstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
 
-	if (!state?.can_heat) {
+	if(!state?.can_heat) {
 		heatstr1 = ""
 		heatstr2 = ""
 		heatstr3 = ""
 		weathstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
 
-	if (!has_weather) {
+	if(!has_weather) {
 		weathstr1 = ""
 		weathstr2 = ""
 		weathstr3 = ""
 	}
-
-	//LogAction("has_weather: ${has_weather},  weathstr1: ${weathstr1}  weathstr3: ${weathstr3}")
 
 	def minval = getMinTemp()
 	def minstr = "minValue: ${minval},"
@@ -2988,34 +3016,58 @@ def showChartHtml() {
 	def maxstr = "maxValue: ${maxval},"
 
 	def differ = maxval - minval
-	//if (differ > (maxval/4) || differ < (wantMetric() ? 7:15) ) {
-		minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
-		//if (differ < (wantMetric() ? 7:15) ) {
-			maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
-		//}
-	//}
+	minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
+	maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
 
 	def uData = getTodaysUsage()
-	//log.debug "Today uData: $uData"
 	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
-	//log.debug "thData: $thData"
 	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	//log.debug "tcData: $tcData"
 	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
-	//log.debug "tiData: $tiData"
+	def tfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
+	def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
 	//Month Chart Section
 	uData = getMonthsUsage()
-	//log.debug "Month uData: $uData"
 	def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
 	def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
 	def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
+	def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
+
+	//Last 3 Months and Today Section
+	def grpUseData = getLast3MonthsUsageMap()
+	def m1Data = []
+	def m2Data = []
+	def m3Data = []
+	grpUseData?.each { mon ->
+		def data = mon?.value
+		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def mName = getMonthNumToStr(mon?.key)
+		//log.debug "$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool)"
+		def iNum = 1
+		if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
+		else if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
+		else if(data?.cooling?.iNum == 1) { iNum = data?.cooling?.iNum.toInteger() }
+
+		if(iNum == 1) { m1Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
+		if(iNum == 2) { m2Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
+		if(iNum == 3) { m3Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
+	}
+	def mUseHeadStr = "['Month','Heat','Cool','Idle','Fan On','Fan Auto']"
+
+	def tdData = ["'Today'", thData, tcData, tiData, tfoData, tfaData]
 
 	def data = """
 	<script type="text/javascript">
 		google.charts.load('current', {packages: ['corechart']});
-		google.charts.setOnLoadCallback(drawGraph);
-		function drawGraph() {
+		google.charts.setOnLoadCallback(drawHistoryGraph);
+		google.charts.setOnLoadCallback(drawUseGraph);
+
+		function drawHistoryGraph() {
 			var data = new google.visualization.DataTable();
 			data.addColumn('timeofday', 'time');
 			data.addColumn('number', 'Temp (Y)');
@@ -3083,97 +3135,76 @@ def showChartHtml() {
 					left: '12%',
 					right: '18%',
 					top: '3%',
-					bottom: '20%',
-					height: '85%',
+					bottom: '27%',
+					height: '80%',
 					width: '100%'
 				}
 			};
 			var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
 			chart.draw(data, options);
 		}
+
+		function drawUseGraph() {
+			var data = google.visualization.arrayToDataTable([
+			  ${mUseHeadStr},
+			  ${tdData?.size() ? "${tdData}," : ""}
+			  ${m3Data?.size() ? "${m3Data}${(m2Data?.size() || m1Data?.size() || tdData?.size()) ? "," : ""}" : ""}
+			  ${m2Data?.size() ? "${m2Data}${(m1Data?.size() || tdData?.size())  ? "," : ""}" : ""}
+			  ${m1Data?.size() ? "${m1Data}" : ""}
+			]);
+
+			  var view = new google.visualization.DataView(data);
+			  view.setColumns([0,
+			    1,
+			    {  // heat column
+			      calc: "stringify",
+			      sourceColumn: 1,
+			      type: "string",
+			      role: "annotation"
+			    },
+			    2, // cool column
+			    {
+			      calc: "stringify",
+			      sourceColumn: 2,
+			      type: "string",
+			      role: "annotation"
+			    },
+			    3, // idle column
+			    {
+			      calc: "stringify",
+			      sourceColumn: 3,
+			      type: "string",
+			      role: "annotation"
+			    }
+			  ]);
+			  var options = {
+			    vAxis: {
+			      title: 'Hours'
+			    },
+			    seriesType: 'bars',
+			    colors: ['#FF9900', '#0099FF', 'gray'],
+			    chartArea: {
+			      left: '15%',
+			      right: '18%',
+			      top: '10%',
+			      bottom: '10%'
+			    }
+			  };
+
+			  var columnWrapper = new google.visualization.ChartWrapper({
+			    chartType: 'ComboChart',
+			    containerId: 'use_graph',
+			    dataTable: view,
+			    options: options
+			  });
+			  columnWrapper.draw()
+		}
 	  </script>
 	  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-	  <div id="main_graph" style="width: 100%; height: 225px;"></div>
+	  <div id="main_graph" style="width: 100%; height: 260px;"></div>
 
-	  <script type="text/javascript">
-		  google.charts.load('current', {packages: ['corechart']});
-		  google.charts.setOnLoadCallback(drawGraph);
-		  function drawGraph() {
-			  var data = google.visualization.arrayToDataTable([
-				['Operation', 'Runtime (Minutes)'],
-				['Heating',  ${thData}],
-				['Cooling',  ${tcData}],
-				['Idle',  ${tiData}]
-			  ]);
-
-			  var options = {
-				title: 'Todays Usage',
-				labels: 'name',
-				legend: 'none',
-				is3D: true,
-				pieStartAngle: 100,
-				pieSliceText: 'label',
-				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
-				chartArea: {
-					left: '15%',
-					right: '15%',
-					top: '25%',
-					bottom: '5%'
-				}
-			  };
-			  var chart = new google.visualization.PieChart(document.getElementById('today_graph'));
-			  chart.draw(data, options);
-	  }
-	</script>
-
-	  <script type="text/javascript">
-		  google.charts.load('upcoming', {packages: ['corechart']});
-		  google.charts.setOnLoadCallback(drawGraph);
-		  function drawGraph() {
-			  var data = google.visualization.arrayToDataTable([
-				['Operation', 'Runtime (Minutes)'],
-				['Heating',  ${mhData}],
-				['Cooling',  ${mcData}],
-				['Idle',  ${miData}]
-			  ]);
-
-			  var options = {
-				title: 'Months Usage',
-  				labels: 'name',
-				legend: 'none',
-				is3D: true,
-				pieStartAngle: 100,
-				pieSliceText: 'label',
-				slices: [{color: '#FF3300'}, {color: '#0099FF'}, {color: 'gray'}],
-				chartArea: {
-					left: '15%',
-					right: '15%',
-					top: '25%',
-					bottom: '5%'
-				}
-			  };
-			  var chart = new google.visualization.PieChart(document.getElementById('month_graph'));
-			  chart.draw(data, options);
-	  }
-	</script>
-	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
-	<table>
-	  <col width="50%">
-		<col width="50%">
-		<thead>
-
-		</thead>
-	    <tbody>
-		  <td>
-			<div id="today_graph" style="width: 100%; height: 150px;"></div>
-		  </td>
-		  <td>
-			<div id="month_graph" style="width: 100%; height: 150px;"></div>
-		  </td>
-	    </tbody>
-	</table>
-
-
+	   <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
+	   <div id="use_graph" style="width: 100%; height: 275px;"></div>
 	"""
 	return data
 }
