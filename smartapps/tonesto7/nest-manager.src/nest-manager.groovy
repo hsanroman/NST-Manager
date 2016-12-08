@@ -4687,6 +4687,9 @@ def Logger(msg, type, logSrc=null) {
 		else {
 			if(atomicState?.enRemDiagLogging == null) {
 				atomicState?.enRemDiagLogging = parent?.state?.enRemDiagLogging
+				if(atomicState?.enRemDiagLogging == null) {
+					atomicState?.enRemDiagLogging = false
+				}
 				log.debug "set enRemDiagLogging to ${atomicState?.enRemDiagLogging}"
 			}
 			if(atomicState?.enRemDiagLogging) {
