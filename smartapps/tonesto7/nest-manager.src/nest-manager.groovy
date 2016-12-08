@@ -1168,16 +1168,17 @@ def remoteDiagPage () {
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
 			chkRemDiagClientId()
-			if(!atomicState?.enRemDiagLogging) {
+			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
 				atomicState?.enRemDiagLogging = true
 			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
-			if(atomicState?.enRemDiagLogging) {
+			if(atomicState?.enRemDiagLogging || !settings?.enRemDiagLogging) {
 				LogAction("Remote Diagnostic Logs have been deactivated...", "info", true)
 				atomicState?.enRemDiagLogging = false
+				clearRemDiagData()
 			}
 			atomicState?.remDiagLogActivatedDt = null   // require toggle off then on again to force back on after timeout
 		}
