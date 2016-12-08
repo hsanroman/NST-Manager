@@ -6161,7 +6161,7 @@ def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
 }
 
 def removeFirebaseData(pathVal) {
-	log.trace "removeFirebaseData(${pathVal}"
+	log.trace "removeFirebaseData(${pathVal})"
 	def result = true
 	try {
 		httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
