@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.1.0" }
+def devVer() { return "4.1.1" }
 
 // for the UI
 metadata {
@@ -148,6 +148,7 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -347,6 +348,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "presence dth")
 	}
 }
 
