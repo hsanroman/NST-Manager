@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.1.0" }
+def devVer() { return "4.1.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -273,6 +273,8 @@ def processEvent(data) {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			def results = eventData?.data
+			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -280,7 +282,6 @@ def processEvent(data) {
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
-			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.nestTimeZone = eventData?.tz ?: null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
@@ -533,6 +534,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "protect dth")
 	}
 }
 
