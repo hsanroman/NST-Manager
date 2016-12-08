@@ -25,7 +25,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.1.0"}
+def devVer() { return "4.1.1"}
 
 // for the UI
 metadata {
@@ -3007,8 +3007,8 @@ def showChartHtml() {
 					left: '12%',
 					right: '18%',
 					top: '3%',
-					bottom: '20%',
-					height: '85%',
+					bottom: '27%',
+					height: '80%',
 					width: '100%'
 				}
 			};
@@ -3051,7 +3051,7 @@ def showChartHtml() {
 	</script>
 
 	  <script type="text/javascript">
-		  google.charts.load('upcoming', {packages: ['corechart']});
+		  google.charts.load('current', {packages: ['corechart']});
 		  google.charts.setOnLoadCallback(drawGraph);
 		  function drawGraph() {
 			  var data = google.visualization.arrayToDataTable([
@@ -3096,8 +3096,6 @@ def showChartHtml() {
 		  </td>
 	    </tbody>
 	</table>
-
-
 	"""
 	return data
 }
