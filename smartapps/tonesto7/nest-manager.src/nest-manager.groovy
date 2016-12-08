@@ -4686,7 +4686,7 @@ def Logger(msg, type, logSrc=null) {
 		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) } 
 		else {
 			if(atomicState?.enRemDiagLogging == null) {
-				atomicState?.enRemDiagLogging = parent?.atomicState?.enRemDiagLogging
+				atomicState?.enRemDiagLogging = parent?.state?.enRemDiagLogging
 				log.debug "set enRemDiagLogging to ${atomicState?.enRemDiagLogging}"
 			}
 			if(atomicState?.enRemDiagLogging) {
@@ -6044,7 +6044,7 @@ def processFirebaseResponse(resp, data) {
 	LogAction("processFirebaseResponse(${data?.type})", "info", false)
 	def result = false
 	def typeDesc = data?.type
-	log.debug "type: ${typeDesc}"
+	//log.debug "type: ${typeDesc}"
 	try {
 		if(resp?.status == 200) {
 			LogAction("sendFirebaseData: ${typeDesc} Data Sent Successfully!!!", "info", true)
