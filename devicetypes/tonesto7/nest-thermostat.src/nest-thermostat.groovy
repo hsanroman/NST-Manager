@@ -3022,17 +3022,17 @@ def showChartHtml() {
 	def uData = getTodaysUsage()
 	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
 	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	//def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
 	def tfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
-	def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
+	//def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
 	//Month Chart Section
-	uData = getMonthsUsage()
-	def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
-	def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
-	def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
-	def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
+	// uData = getMonthsUsage()
+	// def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
+	// def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
+	// def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	// def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
+	// def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
 	//Last 3 Months and Today Section
 	def grpUseData = getLast3MonthsUsageMap()
@@ -3043,23 +3043,24 @@ def showChartHtml() {
 		def data = mon?.value
 		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
+		//def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
+		//def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def mName = getMonthNumToStr(mon?.key)
 		//log.debug "$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool)"
 		def iNum = 1
-		if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
-		else if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
+		//if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
+		if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
 		else if(data?.cooling?.iNum == 1) { iNum = data?.cooling?.iNum.toInteger() }
+		else if(data?.fanOn?.iNum == 1) { iNum = data?.fanOn?.iNum.toInteger() }
 
-		if(iNum == 1) { m1Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
-		if(iNum == 2) { m2Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
-		if(iNum == 3) { m3Data = ["'${mName}'", heat, cool, idle, fanOn, fanAuto] }
+		if(iNum == 1) { m1Data = ["'${mName}'", heat, cool, fanOn] }
+		if(iNum == 2) { m2Data = ["'${mName}'", heat, cool, fanOn] }
+		if(iNum == 3) { m3Data = ["'${mName}'", heat, cool, fanOn] }
 	}
-	def mUseHeadStr = "['Month','Heat','Cool','Idle','Fan On','Fan Auto']"
+	def mUseHeadStr = "['Month','Heat','Cool','FanOn']"
 
-	def tdData = ["'Today'", thData, tcData, tiData, tfoData, tfaData]
+	def tdData = ["'Today'", thData, tcData, tfoData]
 
 	def data = """
 	<script type="text/javascript">
@@ -3169,7 +3170,7 @@ def showChartHtml() {
 			      type: "string",
 			      role: "annotation"
 			    },
-			    3, // idle column
+			    3, // Fan On column
 			    {
 			      calc: "stringify",
 			      sourceColumn: 3,
@@ -3182,10 +3183,10 @@ def showChartHtml() {
 			      title: 'Hours'
 			    },
 			    seriesType: 'bars',
-			    colors: ['#FF9900', '#0099FF', 'gray'],
+			    colors: ['#FF9900', '#0066FF', '#884ae5'],
 			    chartArea: {
 			      left: '15%',
-			      right: '18%',
+			      right: '20%',
 			      top: '10%',
 			      bottom: '10%'
 			    }
