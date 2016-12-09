@@ -173,7 +173,7 @@ def generateEvent(Map eventData) {
 	runIn(12, "processEvent", [overwrite: true] )
 }
 
-def processEvent() {
+void processEvent() {
 	if(state?.swVersion != devVer()) {
 		installed()
 		state.swVersion = devVer()
@@ -210,7 +210,7 @@ def processEvent() {
 			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
-		return null
+		//return null
 	}
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
