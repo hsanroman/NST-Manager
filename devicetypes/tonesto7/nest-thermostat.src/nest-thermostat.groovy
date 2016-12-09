@@ -2606,7 +2606,7 @@ def getLast3MonthsUsageMap() {
 		for(int i=1; i<=3; i++) {
 			def newMap = [:]
 			def mName = getMonthNumToStr(mVal)
-			//log.debug "$mName Usage - Idle: (${hm?."OperatingState_Month${mVal}_idle"}) | Heat: (${hm?."OperatingState_Month${mVal}_heating"}) | Cool: (${hm?."OperatingState_Month${mVal}_cooling"})"
+			log.debug "$mName Usage - Idle: (${hm?."OperatingState_Month${mVal}_idle"}) | Heat: (${hm?."OperatingState_Month${mVal}_heating"}) | Cool: (${hm?."OperatingState_Month${mVal}_cooling"})"
 			newMap << ["cooling":["tSec":(hm?."OperatingState_Month${mVal}_cooling" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["heating":["tSec":(hm?."OperatingState_Month${mVal}_heating" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["idle":["tSec":(hm?."OperatingState_Month${mVal}_idle" ?: 0L), "iNum":cnt, "mName":mName]]
@@ -2833,8 +2833,10 @@ def getMaxTemp() {
 def getGraphHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
+		def canHeat = state?.can_heat == true ? true : false
+		def canCool = state?.can_cool == true ? true : false
+		def hasFan = state?.has_fan == true ? true : false
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
-
 		def updateAvail = !state.updateAvailable ? "" : """
         	<script>
               vex.dialog.alert({
@@ -2953,7 +2955,9 @@ def showChartHtml() {
 	if ( wantMetric() ) {
 		tempStr = "°C"
 	}
-
+	def canHeat = state?.can_heat == true ? true : false
+	def canCool = state?.can_cool == true ? true : false
+	def hasFan = state?.has_fan == true ? true : false
 	def has_weather = false
 	def commastr = ""
 	if( !(state?.curExtTemp == null || state?.curExtTemp == [:])) { has_weather = true; commastr = "," }
@@ -2961,7 +2965,7 @@ def showChartHtml() {
 	def coolstr1
 	def coolstr2
 	def coolstr3
-	if(state?.can_cool) {
+	if(canCool) {
 		coolstr1 = "data.addColumn('number', 'CoolSP');"
 		coolstr2 =  getDataString(5)
 		coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1},"
@@ -2970,7 +2974,7 @@ def showChartHtml() {
 	def heatstr1
 	def heatstr2
 	def heatstr3
-	if(state?.can_heat) {
+	if(canHeat) {
 		heatstr1 = "data.addColumn('number', 'HeatSP');"
 		heatstr2 = getDataString(6)
 		heatstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}"
@@ -2985,18 +2989,18 @@ def showChartHtml() {
 		weathstr3 = "6: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
 
-	if (state?.can_cool && !state?.can_heat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}${commastr}" }
+	if (canCool && !canHeat) { coolstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#85AAFF', lineWidth: 1}${commastr}" }
 
-	if (!state?.can_cool && state?.can_heat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}" }
+	if (!canCool && canHeat) { heatstr3 = "4: {targetAxisIndex: 1, type: 'line', color: '#FF4900', lineWidth: 1}${commastr}" }
 
-	if (!state?.can_cool) {
+	if (!canCool) {
 		coolstr1 = ""
 		coolstr2 = ""
 		coolstr3 = ""
 		weathstr3 = "5: {targetAxisIndex: 1, type: 'line', color: '#000000', lineWidth: 1}"
 	}
 
-	if(!state?.can_heat) {
+	if(!canHeat) {
 		heatstr1 = ""
 		heatstr2 = ""
 		heatstr3 = ""
@@ -3022,18 +3026,23 @@ def showChartHtml() {
 	def uData = getTodaysUsage()
 	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
 	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	//def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
 	def tfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
-	//def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
+	def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
 	//Month Chart Section
-	// uData = getMonthsUsage()
-	// def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
-	// def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
-	// def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
-	// def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
-	// def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
+	uData = getMonthsUsage()
+	def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
+	def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
+	def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
+	def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
+	def useTabListSize = 0
+	if(canHeat) { useTabListSize = useTabListSize+1 }
+	if(canCool) { useTabListSize = useTabListSize+1 }
+	if(hasFan) { useTabListSize = useTabListSize+1 }
+	def lStr = ""
 	//Last 3 Months and Today Section
 	def grpUseData = getLast3MonthsUsageMap()
 	def m1Data = []
@@ -3043,24 +3052,49 @@ def showChartHtml() {
 		def data = mon?.value
 		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0
-		//def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0
-		//def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
 		def mName = getMonthNumToStr(mon?.key)
-		//log.debug "$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool)"
+		lStr += "\n$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool) | FanOn: ($fanOn) | FanAuto: ($fanAuto)"
 		def iNum = 1
-		//if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
-		if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
+		if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
+		else if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
 		else if(data?.cooling?.iNum == 1) { iNum = data?.cooling?.iNum.toInteger() }
 		else if(data?.fanOn?.iNum == 1) { iNum = data?.fanOn?.iNum.toInteger() }
 
-		if(iNum == 1) { m1Data = ["'${mName}'", heat, cool, fanOn] }
-		if(iNum == 2) { m2Data = ["'${mName}'", heat, cool, fanOn] }
-		if(iNum == 3) { m3Data = ["'${mName}'", heat, cool, fanOn] }
+		if(iNum == 1) {
+			m1Data.push("'$mName'")
+			if(canHeat) { m1Data.push("${heat}") }
+			if(canCool) { m1Data.push("${cool}") }
+			if(hasFan) { m1Data.push("${fanOn}") }
+	 	}
+		if(iNum == 2) {
+			m2Data.push("'$mName'")
+			if(canHeat) { m2Data.push("${heat}") }
+			if(canCool) { m2Data.push("${cool}") }
+			if(hasFan) { m2Data.push("${fanOn}") }
+		}
+		if(iNum == 3) {
+			m3Data.push("'$mName'")
+			if(canHeat) { m3Data.push("${heat}") }
+			if(canCool) { m3Data.push("${cool}") }
+			if(hasFan) { m3Data.push("${fanOn}") }
+		}
 	}
-	def mUseHeadStr = "['Month','Heat','Cool','FanOn']"
+	lStr += "\nToday's Usage - Idle: ($tiData) | Heat: ($thData) | Cool: ($tcData) | FanOn: ($tfoData) | FanAuto: ($tfaData)"
+	def mUseHeadStr = ["'Month'"]
+	if(canHeat) { mUseHeadStr.push("'Heat'") }
+	if(canCool) { mUseHeadStr.push("'Cool'") }
+	if(hasFan) { mUseHeadStr.push("'FanOn'") }
 
-	def tdData = ["'Today'", thData, tcData, tfoData]
+	def tdData = ["'Today'"]
+	if(canHeat) { tdData.push("${thData}") }
+	if(canCool) { tdData.push("${tcData}") }
+	if(hasFan) { tdData.push("${tfoData}") }
+	lStr += "\nToday Data List: $tdData\n\n"
+
+	//log.debug lStr
 
 	def data = """
 	<script type="text/javascript">
@@ -3155,28 +3189,11 @@ def showChartHtml() {
 			]);
 
 			  var view = new google.visualization.DataView(data);
-			  view.setColumns([0,
-			    1,
-			    {  // heat column
-			      calc: "stringify",
-			      sourceColumn: 1,
-			      type: "string",
-			      role: "annotation"
-			    },
-			    2, // cool column
-			    {
-			      calc: "stringify",
-			      sourceColumn: 2,
-			      type: "string",
-			      role: "annotation"
-			    },
-			    3, // Fan On column
-			    {
-			      calc: "stringify",
-			      sourceColumn: 3,
-			      type: "string",
-			      role: "annotation"
-			    }
+			  view.setColumns([
+				${(useTabListSize >= 1) ? "0," : ""}
+			    ${(useTabListSize >= 1) ? "1, { calc: 'stringify', sourceColumn: 1, type: 'string', role: 'annotation' }${(useTabListSize > 1) ? "," : ""} // Heat Column": ""}
+			    ${(useTabListSize > 1) ? "2, { calc: 'stringify', sourceColumn: 2, type: 'string', role: 'annotation' }${(useTabListSize > 2) ? "," : ""} // Cool column" : ""}
+			    ${(useTabListSize > 2) ? "3, { calc: 'stringify', sourceColumn: 3, type: 'string', role: 'annotation' } // FanOn Column" : ""}
 			  ]);
 			  var options = {
 			    vAxis: {
