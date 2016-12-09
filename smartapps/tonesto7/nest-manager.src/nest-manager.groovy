@@ -7015,7 +7015,6 @@ def watchDogCheck() {
 					} else {
 
 // This is allowing for warning if Nest has problem of system coming out of ECO while away
-// TODO this should have a UI control to turn on / off, as it is "legal" for someone to set a home out of "ECO" while away.
 
 						def nestModeAway = (getNestLocPres() == "home") ? false : true
 						if(nestModeAway) {
@@ -8572,11 +8571,9 @@ def getConWatRestoreDelayBetweenVal() { return !settings?.conWatRestoreDelayBetw
 def conWatCheck(cTimeOut = false) {
 	//log.trace "conWatCheck..."
 	//
-	// Should consider not turning thermostat off, as much as setting it more toward away settings?
 	// There should be monitoring of actual temps for min and max warnings given on/off automations
 	//
 	// Should have some check for stuck contacts
-	// if we cannot save/restore settings, don't bother turning things off
 	//
 	def pName = conWatPrefix()
 
@@ -9996,7 +9993,7 @@ def schMotModePage() {
 		if(settings?.schMotTstat && !dupTstat) {
 			updateScheduleStateMap()
 			section {
-				paragraph "The options below allow you to configure your thermostat with automations that will help you save energy and keep your home feeling more comfortable", title: "Choose Automations:", required: false
+				paragraph "The options below allow you to configure your thermostat with automations that will help you save energy and keep your home comfortable", title: "Choose Automations:", required: false
 			}
 
 			section("Schedule Automation:") {
