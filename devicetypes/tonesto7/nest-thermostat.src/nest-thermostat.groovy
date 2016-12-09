@@ -588,7 +588,7 @@ def sunlightCorrectionActiveEvent(sunAct) {
 }
 
 def timeToTargetEvent(ttt, tttTr) {
-	log.debug "timeToTargetEvent($ttt, $tttTr)"
+	//log.debug "timeToTargetEvent($ttt, $tttTr)"
 	def val = device.currentState("timeToTarget")?.stringValue
 	def opIdle = device.currentState("thermostatOperatingState").stringValue == "idle" ? true : false
 	//log.debug "opIdle: $opIdle"
