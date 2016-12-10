@@ -63,9 +63,6 @@ metadata {
 		attribute "visibility", "string"
 		attribute "alert", "string"
 		attribute "alertKeys", "string"
-		//attribute "sunriseDate", "string"
-		//attribute "sunsetDate", "string"
-
 	}
 
 	simulator { }
@@ -92,6 +89,10 @@ metadata {
 
 		main ("temp2")
 		details ("weatherHTML", "refresh")
+	}
+	preferences {
+		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
+		input "resetAllData", "bool", title: "Reset All Stored Event Data", description: "", displayDuringSetup: false
 	}
 }
 

@@ -244,6 +244,8 @@ metadata {
 	}
 	preferences {
 		input "virtual", "bool", title: "Virtual Device", description: "Does not change", displayDuringSetup: false
+		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
+		input "resetAllData", "bool", title: "Reset All Stored Event Data", description: "", displayDuringSetup: false
 	}
 }
 
@@ -293,6 +295,7 @@ void installed() {
 			state.virtual = false
 		}
 	}
+	state.isInstalled = true
 	verifyHC()
 }
 
