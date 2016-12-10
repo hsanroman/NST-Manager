@@ -2767,8 +2767,8 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal]
 
 			if(cmdQueue?.contains(cmdData)) {
-				LogAction("Command Exists in queue... Skipping...", "warn", true)
-				if(childDev) { childDev?.log("Command Exists in queue ${qnum}... Skipping...", "warn") }
+				LogAction("Command Exists in queue ${qnum}... Skipping...", "warn", true)
+				//if(childDev) { childDev?.log("Command Exists in queue ${qnum}... Skipping...", "warn") }
 				schedNextWorkQ(childId)
 			} else {
 				LogAction("Adding Command to Queue ${qnum}: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
