@@ -280,6 +280,39 @@ mappings {
 	path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
 }
 
+void checkStateClear() {
+	//Logger("checkStateClear...")
+	def before = getStateSizePerc()
+	if(!state?.resetAllData && resetAllData) {
+		Logger("checkStateClear...Clearing ALL")
+		def data = getState()?.findAll { !(it?.key in ["eric", "virtual"]) }
+		data.each { item ->
+			state.remove(item?.key.toString())
+		}
+		state.resetAllData = true
+		state.resetHistoryOnly = true
+		Logger("Device State Data: before: $before  after: ${getStateSizePerc()}")
+	} else if(state?.resetAllData && !resetAllData) {
+		Logger("checkStateClear...resetting ALL toggle")
+		state.resetAllData = false
+	}
+	if(!state?.resetHistoryOnly && resetHistoryOnly) {
+		Logger("checkStateClear...Clearing HISTORY")
+		def data = getState()?.findAll {
+			(it?.key in ["today", "temperatureTable", "operatingStateTable", "humidityTable", "historyStoreMap", "temperatureTableYesterday", "operatingStateTableYesterday", "humidityTableYesterday"])
+		}
+		data.each { item ->
+			state.remove(item?.key.toString())
+		}
+		state.resetHistoryOnly = true
+		Logger("Device State Data: before: $before  after: ${getStateSizePerc()}")
+	} else if(state?.resetHistoryOnly && !resetHistoryOnly) {
+		Logger("checkStateClear...resetting HISTORY toggle")
+		state.resetHistoryOnly = false
+	}
+	//LogAction("Device State Data: ${getState()}")
+}
+
 def initialize() {
 	Logger("initialize")
 }
@@ -287,7 +320,7 @@ def initialize() {
 void installed() {
 	Logger("installed...")
 	if(state?.virtual == null) {
-		if(virtual) {                                   // preference passed in
+		if(virtual) {				   // preference passed in
 			Logger("Setting virtual to TRUE")
 			state.virtual = true
 		} else {
@@ -302,7 +335,7 @@ void installed() {
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = state?.hcTimeout ?: 35
-	if(!val || val.toInteger() != timeOut) {
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
@@ -336,34 +369,37 @@ def generateEvent(Map eventData) {
 	runIn(8, "processEvent", [overwrite: true, data: eventDR] )
 }
 
-def processEvent(data) {
-	if(state?.swVersion != devVer()) {
-		installed()
-		state.swVersion = devVer()
-	}
+void processEvent(data) {
 	def pauseUpd = !device.currentValue("pauseUpdates") ? false : device.currentValue("pauseUpdates").value
 	if(pauseUpd == "true") { LogAction("pausing", "warn"); return }
 
 	def eventData = data?.evt
-	state.remove("eventData")
+	checkStateClear()
 
 	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			debugOnEvent(eventData?.debug ? true : false)
+			deviceVerEvent(eventData?.latestVer.toString())
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
 			}
+			if(state?.swVersion != devVer()) {
+				installed()
+				state.swVersion = devVer()
+			}
+			state?.childWaitVal = eventData?.childWaitVal.toInteger()
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.curExtTemp = eventData?.curExtTemp
-			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = eventData.tz ?: null
-			debugOnEvent(eventData?.debug ? true : false)
 			tempUnitEvent(getTemperatureScale())
 			if(eventData?.data?.is_locked != null) { tempLockOnEvent(eventData?.data?.is_locked.toString() == "true" ? true : false) }
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
@@ -377,21 +413,18 @@ def processEvent(data) {
 			fanModeEvent(eventData?.data?.fan_timer_active.toString())
 			if(!eventData?.data?.last_connection) { lastCheckinEvent(null) }
 			else { lastCheckinEvent(eventData?.data?.last_connection) }
-
 			sunlightCorrectionEnabledEvent(eventData?.data?.sunlight_correction_enabled)
 			sunlightCorrectionActiveEvent(eventData?.data?.sunlight_correction_active)
 			timeToTargetEvent(eventData?.data?.time_to_target, eventData?.data?.time_to_target_training)
 			softwareVerEvent(eventData?.data?.software_version.toString())
 			onlineStatusEvent(eventData?.data?.is_online.toString())
-			deviceVerEvent(eventData?.latestVer.toString())
 			apiStatusEvent(eventData?.apiIssues)
-			state?.childWaitVal = eventData?.childWaitVal.toInteger()
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
 			if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
 			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
 			state.voiceReportPrefs = eventData?.vReportPrefs
+
 			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
