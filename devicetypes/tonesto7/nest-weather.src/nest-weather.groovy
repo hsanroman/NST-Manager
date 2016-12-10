@@ -100,6 +100,39 @@ mappings {
 	path("/getWeatherHTML") {action: [GET: "getWeatherHTML"]}
 }
 
+void checkStateClear() {
+	//Logger("checkStateClear...")
+	def before = getStateSizePerc()
+	if(!state?.resetAllData && resetAllData) {
+		Logger("checkStateClear...Clearing ALL")
+		def data = getState()?.findAll { !(it?.key in ["eric"]) }
+		data.each { item ->
+			state.remove(item?.key.toString())
+		}
+		state.resetAllData = true
+		state.resetHistoryOnly = true
+		Logger("Device State Data: before: $before  after: ${getStateSizePerc()}")
+	} else if(state?.resetAllData && !resetAllData) {
+		Logger("checkStateClear...resetting ALL toggle")
+		state.resetAllData = false
+	}
+	if(!state?.resetHistoryOnly && resetHistoryOnly) {
+		Logger("checkStateClear...Clearing HISTORY")
+		def data = getState()?.findAll {
+			(it?.key in ["today", "temperatureTable", "dewpointTable", "humidityTable", "temperatureTableYesterday", "dewpointTableYesterday", "humidityTableYesterday"])
+		}
+		data.each { item ->
+			state.remove(item?.key.toString())
+		}
+		state.resetHistoryOnly = true
+		Logger("Device State Data: before: $before  after: ${getStateSizePerc()}")
+	} else if(state?.resetHistoryOnly && !resetHistoryOnly) {
+		Logger("checkStateClear...resetting HISTORY toggle")
+		state.resetHistoryOnly = false
+	}
+	//LogAction("Device State Data: ${getState()}")
+}
+
 void installed() {
 	Logger("installed...")
 	verifyHC()
@@ -108,7 +141,7 @@ void installed() {
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = state?.hcTimeout ?: 60
-	if(!val || val.toInteger() != timeOut) {
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
@@ -175,39 +208,47 @@ def generateEvent(Map eventData) {
 }
 
 void processEvent() {
-	if(state?.swVersion != devVer()) {
-		installed()
-		state.swVersion = devVer()
-	}
 	def eventData = state?.eventData
 	state.eventData = null
-	//LogAction("processEvent Parsing data ${eventData}", "trace")
+	checkStateClear()
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			debugOnEvent(eventData?.debug ? true : false)
+			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
+
+			//LogAction("processEvent Parsing data ${eventData}", "trace")
+
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
 			}
+			if(state?.swVersion != devVer()) {
+				installed()
+				state.swVersion = devVer()
+			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
-			state.useMilitaryTime = eventData?.mt ? true : false
 			state.nestTimeZone = eventData?.tz ?: null
 			state.weatherAlertNotify = !eventData?.weathAlertNotif ? false : true
-			debugOnEvent(eventData?.debug ? true : false)
 			apiStatusEvent(eventData?.apiIssues)
-			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
-			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 
+			if(state?.curWeather == null) {
+				def curWeather = eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null
+				if(curWeather == null ) {
+					Logger("There is an Issue getting the weather condition data", "warn")
+				} else { state.curWeather = curWeather }
+			}
 			getWeatherAstronomy(eventData?.data?.weatAstronomy?.sun_phase ? eventData?.data?.weatAstronomy : null)
+			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
-			//resetDataTables()
 			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
@@ -276,7 +317,7 @@ def deviceVerEvent(ver) {
 
 def debugOnEvent(debug) {
 	def val = device.currentState("debugOn")?.value
-	def dVal = debug ? "On" : "Off"
+	def dVal = debug ? "on" : "off"
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
 	if(!val.equals(dVal)) {
@@ -515,8 +556,13 @@ def getWeatherAlerts(weatData) {
 				def oldKeys = device.currentState("alertKeys")?.jsonValue
 				//LogAction("${device.displayName}: oldKeys: $oldKeys")
 
+				if(state?.walert == null) {
+					state.walert = ""
+					state.walertMessage = null
+				}
+
 				def noneString = ""
-				if (!newKeys && oldKeys == null) {
+				if (newkeys == [] && (oldKeys == null || oldKeys == [])) {
 					sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
 					sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
 					state.walert = noneString
@@ -1050,14 +1096,6 @@ def forecastDay(day) {
 	def modalClose = "' }); }); </script>"
 
 	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
-}
-
-def resetDataTables() {
-	LogAction("Resetting Data Tables...", "warn")
-	state.temperatureTable = null
-	state.temperatureTableYesterday = null
-	state.dewpointTable = null
-	state.dewpointTableYesterday = null
 }
 
 String getDataString(Integer seriesIndex) {
