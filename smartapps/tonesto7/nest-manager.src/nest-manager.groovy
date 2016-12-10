@@ -40,8 +40,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.11" }
-def appVerDate() { "12-7-2016" }
+def appVersion() { "4.1.12" }
+def appVerDate() { "12-9-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -4689,7 +4689,7 @@ def Logger(msg, type, logSrc=null) {
 				break
 		}
 		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
-		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) } 
+		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) }
 		else {
 			if(atomicState?.enRemDiagLogging == null) {
 				atomicState?.enRemDiagLogging = parent?.state?.enRemDiagLogging
@@ -4700,8 +4700,8 @@ def Logger(msg, type, logSrc=null) {
 			}
 			if(atomicState?.enRemDiagLogging) {
 				parent.saveLogtoRemDiagStore(themsg, type, logSrc)
-			} 
-		} 
+			}
+		}
 	}
 	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg} | logSrc: ${logSrc}" }
 }
@@ -10682,7 +10682,7 @@ def editSchedule(schedData) {
 	def actIcon = act ? "active" : "inactive"
 	def sectStr = schedData?.secData?.schName ? (act ? "Enabled" : "Disabled") : "Tap to Enable"
 	def titleStr = "Schedule ${schedData?.secData?.scd} (${sectStr})"
-	section(title: "${titleStr}                                                            ", hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
+	section(title: "${titleStr}                                                            ") {//, hideable:schedData?.secData?.hideable, hidden: schedData?.secData?.hidden) {
 		input "${sLbl}SchedActive", "bool", title: "Schedule Enabled", description: (cnt == 1 && !settings?."${sLbl}SchedActive" ? "Enable to Edit Schedule..." : null), required: true,
 				defaultValue: false, submitOnChange: true, image: getAppImg("${actIcon}_icon.png")
 		if(act) {
@@ -10690,7 +10690,6 @@ def editSchedule(schedData) {
 		}
 	}
 	if(act) {
-		//if(settings?.schMotSetTstatTemp && !("tstatTemp" in hideStr)) {
 		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Setpoint Configuration:                                     ", hideable: true, hidden: (settings["${sLbl}HeatTemp"] != null && settings["${sLbl}CoolTemp"] != null) ) {
 			paragraph "Configure Setpoints and HVAC modes that will be set when this Schedule is in use...", title: "Setpoints and Mode"
 			if(canHeat) {
@@ -10797,14 +10796,10 @@ def getScheduleDesc(num = null) {
 			str += isRestrict ? "\n ${isSw || isTemp ? "├" : "└"} Restrictions:" : ""
 			def mLen = schData?.m ? schData?.m?.toString().length() : 0
 			def mStr = ""
-			if (mLen > 15) {
-				def mdSize = 1
-				schData?.m?.each { md ->
-					mStr += md ? "\n ${isSw || isTemp ? "│ ${(isDayRes || isTimeRes || isSw) ? "│" : "    "}" : "   "} ${mdSize < schData?.m.size() ? "├" : "└"} ${md.toString()}" : ""
-					mdSize = mdSize+1
-				}
-			} else {
-				mStr += schData?.m.toString()
+			def mdSize = 1
+			schData?.m?.each { md ->
+				mStr += md ? "\n ${isSw || isTemp ? "│ ${(isDayRes || isTimeRes || isSw) ? "│" : "    "}" : "   "} ${mdSize < schData?.m.size() ? "├" : "└"} ${md.toString()}" : ""
+				mdSize = mdSize+1
 			}
 			str += schData?.m ? "\n ${resPreBar} ${(isTimeRes || schData?.w) ? "├" : "└"} Mode${schData?.m?.size() > 1 ? "s" : ""}:${isInMode(schData?.m) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.m ? "$mStr" : ""
@@ -10893,7 +10888,7 @@ def getScheduleTimeDesc(timeFrom, timeFromCustom, timeFromOffset, timeTo, timeTo
 	}
 	def timeOk = ((timeFrom && (timeFromCustom || timeFromOffset) && timeTo && (timeToCustom || timeToOffset)) && checkTimeCondition(timeFrom, timeFromCustom, timeFromOffset, timeTo, timeToCustom, timeToOffset)) ? true : false
 	def out = ""
-	out += (timeFromVal && timeToVal && ((timeFromVal.length() + timeToVal.length()) > 15)) ?	"Time:${timeOk ? " (${okSym()})" : " (${notOkSym()})"}\n │ ${spl} ├ $timeFromVal\n │ ${spl} ├   to\n │ ${spl} └ $timeToVal" : "Time: $timeFromVal to $timeToVal"
+	out += (timeFromVal && timeToVal) ? "Time:${timeOk ? " (${okSym()})" : " (${notOkSym()})"}\n │ ${spl}     ├ $timeFromVal\n │ ${spl}     ├   to\n │ ${spl}     └ $timeToVal" : ""
 	return out
 }
 
