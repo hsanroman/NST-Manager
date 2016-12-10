@@ -279,7 +279,6 @@ def mainPage() {
 			}
 			section("View Change Logs, Donate, License Info, and Leave Feedback:") {
 				href "infoPage", title: "Help, Info, and More", description: "", image: getAppImg("info.png")
-				href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
 			}
 			if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
 				section("View App and Device Data, and Perform Device Tests:") {
@@ -299,16 +298,16 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "We hate to interupt but it has been 30 days since you installed SmartApp.  This page is a one time reminder that we accept donation but do not require them. "
-			str += "We are only reminding you this once because we have spent 1000's of hours working on new features for this application and devices in our spare time.  "
-			str += "If you have already donated please ignore and thank you very much!!!"
+			str += "Hello sorry to interupt but it's has been 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
+			str += "If you enjoy our software please remember that it's because we have spent 1000's of hours of our spare time working on features and stability for this application and devices."
+			str += "If you have already donated please ignore and thank you very much for your support!!!"
 
 			str += "\n\nThanks again for using Nest Manager"
 			paragraph title: "Donation Reminder", str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser...", state: "complete", image: getAppImg("donate_icon.png")
 			href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
-			paragraph "This is only a one time reminder and will not be shown again...", state: "complete"
+			paragraph "This is message will not be shown again...", state: "complete"
 		}
 		def iData = atomicState?.installData
 		iData["shownDonation"] = true
@@ -1100,6 +1099,9 @@ def debugPrefPage() {
 			input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(childDebug) { LogAction("Device Debug Logs are Enabled...", "info", false) }
 			else { LogAction("Device Debug Logs are Disabled...", "info", false) }
+		}
+		section("Remote Diagnostics:") {
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
 		}
 		atomicState.needChildUpd = true
 		incLogPrefLoadCnt()
@@ -4998,11 +5000,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":410, "desc":"4.1.0"],
-		"protect":["val":410, "desc":"4.1.0"],
-		"presence":["val":410, "desc":"4.1.0"],
-		"weather":["val":410, "desc":"4.1.0"],
-		"camera":["val":210 , "desc":"2.1.0"],
+		"thermostat":["val":420, "desc":"4.2.0"],
+		"protect":["val":420, "desc":"4.2.0"],
+		"presence":["val":420, "desc":"4.2.0"],
+		"weather":["val":420, "desc":"4.2.0"],
+		"camera":["val":220 , "desc":"2.2.0"],
 	]
 }
 
@@ -5107,6 +5109,7 @@ def nestInfoPage () {
 		// }
 		section("Diagnostics") {
 			href "diagPage", title: "View Diagnostic Info...", description: null, image: getAppImg("diag_icon.png")
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
 		}
 	}
 }
