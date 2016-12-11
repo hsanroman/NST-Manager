@@ -4760,6 +4760,8 @@ def stateCleanup() {
 	state.remove("pDevVer")
 	state.remove("vtDevVer")
 	state.remove("dashSetup")
+	state.remove("dashboardUrl")
+	state.remove("apiIssues")
 	state.remove("stateSize")
 	if(!atomicState?.cmdQlist) {
 		state.remove("cmdQ2")
