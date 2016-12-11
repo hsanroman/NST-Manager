@@ -7227,7 +7227,7 @@ def remSenShowTempsPage() {
 				str += "Sensor Temp (average): (${getDeviceTempAvg(settings?.remSensorDay)}°${getTemperatureScale()})\n│"
 				settings?.remSensorDay?.each { t ->
 					cnt = cnt+1
-					str += "${(cnt >= 1) ? "${(cnt == rCnt) ? "\n└" : "\n├"}" : "\n└"} ${t?.label}: ${(t?.label?.length() > 10) ? "\n${(rCnt == 1 || cnt == rCnt) ? "    " : "│"}└ " : ""}(${getDeviceTemp(t)}°${getTemperatureScale()})"
+					str += "${(cnt >= 1) ? "${(cnt == rCnt) ? "\n└" : "\n├"}" : "\n└"} ${t?.label}: ${(t?.label?.toString()?.length() > 10) ? "\n${(rCnt == 1 || cnt == rCnt) ? "    " : "│"}└ " : ""}(${getDeviceTemp(t)}°${getTemperatureScale()})"
 				}
 				paragraph "${str}", state: "complete", image: getAppImg("temperature_icon.png")
 			}
@@ -9114,7 +9114,7 @@ def nModePresenceDesc() {
 		settings?.nModePresSensor?.each { dev ->
 			cnt = cnt+1
 			def presState = dev?.currentPresence ? dev?.currentPresence?.toString().capitalize() : "No State"
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${presState})"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${presState})"
 		}
 		return str
 	}
@@ -10066,7 +10066,7 @@ def schMotModePage() {
 						dayModeDesc += settings?.remSensorDay ? "\n\nDefault Sensor${settings?.remSensorDay?.size() > 1 ? "s" : ""}:" : ""
 						def rCnt = settings?.remSensorDay?.size()
 						settings?.remSensorDay?.each { t ->
-							dayModeDesc += "\n ├ ${t?.label}: ${(t?.label?.length() > 10) ? "\n │ └ " : ""}(${getDeviceTemp(t)}${tempScaleStr})"
+							dayModeDesc += "\n ├ ${t?.label}: ${(t?.label?.toString()?.length() > 10) ? "\n │ └ " : ""}(${getDeviceTemp(t)}${tempScaleStr})"
 						}
 						dayModeDesc += settings?.remSensorDay ? "\n └ Temp${(settings?.remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings?.remSensorDay)}${tempScaleStr})" : ""
 						remSenDescStr += settings?.remSensorDay ? "${dayModeDesc}" : ""
@@ -10837,7 +10837,7 @@ def getScheduleDesc(num = null) {
 			str += isRemSen ?	"${isRemSen || isRestrict ? "\n │\n" : "\n"} └ Alternate Remote Sensor:" : ""
 			//str += isRemSen ? 	"\n      ├ Temp Sensors: (${schData?.sen0.size()})" : ""
 			settings["${sLbl}remSensor"]?.each { t ->
-				str += "\n      ├ ${t?.label}: ${(t?.label?.length() > 10) ? "\n      │ └ " : ""}(${getDeviceTemp(t)}°${getTemperatureScale()})"
+				str += "\n      ├ ${t?.label}: ${(t?.label?.toString()?.length() > 10) ? "\n      │ └ " : ""}(${getDeviceTemp(t)}°${getTemperatureScale()})"
 			}
 			str += isRemSen && schData?.sen0 ? "\n      └ Temp${(settings["${sLbl}remSensor"]?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings["${sLbl}remSensor"])}${tempScaleStr})" : ""
 			//log.debug "str: \n$str"
