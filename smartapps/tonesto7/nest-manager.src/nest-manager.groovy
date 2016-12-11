@@ -1297,7 +1297,7 @@ def uninstallPage() {
 				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 			}
 		}
-		remove("Remove Nest Manager and Devices!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not revsible...\n\nThis App, All Devices, and Automations will be removed...")
+		remove("Remove Nest Manager and Devices!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible...\n\nThis App, All Devices, and Automations will be removed...")
 	}
 }
 
@@ -6324,7 +6324,7 @@ def mainAutoPage(params) {
 					}
 				}
 			}
-			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not revsible...\n\nThis Automation will be removed completely...")
+			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible...\n\nThis Automation will be removed completely...")
 		}
 	}
 }
@@ -6987,7 +6987,7 @@ def watchDogPage() {
 				input "watDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?",  required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_on_icon.png")
 			}
 		}
-		remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not revsible...\n\nThis Automation will be removed completely...")
+		remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not reversible...\n\nThis Automation will be removed completely...")
 	}
 }
 
