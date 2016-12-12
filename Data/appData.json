@@ -62,6 +62,9 @@
     "clientBL": {
         "clients": []
     },
+    "clientRemDiagAuth": {
+        "clients:": []
+    },
     "pollMethod": {
         "allowAsync": true
     },

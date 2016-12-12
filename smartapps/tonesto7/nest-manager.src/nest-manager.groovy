@@ -1101,7 +1101,7 @@ def debugPrefPage() {
 			else { LogAction("Device Debug Logs are Disabled...", "info", false) }
 		}
 		section("Remote Diagnostics:") {
-			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		atomicState.needChildUpd = true
 		incLogPrefLoadCnt()
@@ -1125,7 +1125,7 @@ def infoPage () {
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View|Report Issues",
 				 description:"Tap to open in browser...", state: "complete", image: getAppImg("issue_icon.png")
 			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
-			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		section("Credits:") {
 			paragraph title: "Creator:", "Anthony S. (@tonesto7)", state: "complete"
@@ -1167,6 +1167,7 @@ def remoteDiagPage () {
 			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
 			paragraph "This will automatically turn itself off and remove all remote data collected after 2 hours"
 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
+
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
@@ -1188,6 +1189,8 @@ def remoteDiagPage () {
 		section() {
 			if(atomicState?.enRemDiagLogging) {
 				paragraph title: "Provide this ID to the Developer", "${atomicState?.remDiagClientId}", required: true, state: null
+				def str = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? "Client Authorized by Develop" : "This client is not authorized yet. Please contact the developer"
+				paragraph str, required: true, state: (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients ? "complete" : null)
 			}
 		}
 		section() {
@@ -1222,20 +1225,22 @@ def clearRemDiagData(force=false) {
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	//LogTrace("saveLogtoRemDiagStore($msg, $type, $logSrcType)")
 	if(parent) { return }
-	if(atomicState?.appData?.database?.allowRemoteDiag && atomicState?.enRemDiagLogging) {
-		if(getStateSizePerc() >= 90) {
-// this is log.xxxx to avoid looping/recursion
-			log.warn "saveLogtoRemDiagStore: remoteDiag log storage is suspended because state size has reached 90% of the maximum allowed space. Something must be wrong because the data should have been sent."
-			return
-		}
-		def data = atomicState?.remDiagLogDataStore ?: []
-		def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
-		data << item
-		atomicState?.remDiagLogDataStore = data
-		if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
-			sendRemDiagData()
-			atomicState?.remDiagDataSentDt = getDtNow()
-			atomicState?.remDiagLogDataStore = []
+	if(atomicState?.appData?.database?.allowRemoteDiag && (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
+		if(atomicState?.enRemDiagLogging) {
+			if(getStateSizePerc() >= 90) {
+				// this is log.xxxx to avoid looping/recursion
+				log.warn "saveLogtoRemDiagStore: remoteDiag log storage is suspended because state size has reached 90% of the maximum allowed space. Something must be wrong because the data should have been sent."
+				return
+			}
+			def data = atomicState?.remDiagLogDataStore ?: []
+			def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
+			data << item
+			atomicState?.remDiagLogDataStore = data
+			if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
+				sendRemDiagData()
+				atomicState?.remDiagDataSentDt = getDtNow()
+				atomicState?.remDiagLogDataStore = []
+			}
 		}
 	}
 	if(atomicState?.enRemDiagLogging) {
@@ -5115,7 +5120,7 @@ def nestInfoPage () {
 		// }
 		section("Diagnostics") {
 			href "diagPage", title: "View Diagnostic Info...", description: null, image: getAppImg("diag_icon.png")
-			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("feedback_icon.png")
+			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 	}
 }
