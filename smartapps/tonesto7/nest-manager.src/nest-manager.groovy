@@ -1126,6 +1126,8 @@ def formatDt2(tm) {
 
 def remoteDiagPage () {
 	def execTime = now()
+	def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag ? true : false
+	def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
 	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
 		section() {
 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
@@ -1133,10 +1135,9 @@ def remoteDiagPage () {
 			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 			paragraph title: "How will this work?", "Once enabled this SmartApp will begin queuing your manager and automation logs and will send them to the developers Firebase database for review.  When you turn this off it will remove all data from the remote site."
 			paragraph "This will automatically turn itself off and remove all remote data collected after 2 hours"
-			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
-
+			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("diagnostic_icon.png"))
 		}
-		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
+		if(diagAllowed && settings?.enRemDiagLogging) {
 			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
@@ -1146,7 +1147,7 @@ def remoteDiagPage () {
 				sendSetAndStateToFirebase()
 			}
 		} else {
-			if(atomicState?.remDiagLogActivatedDt != null && (!atomicState?.appData?.database?.allowRemoteDiag || !settings?.enRemDiagLogging)) {
+			if(atomicState?.remDiagLogActivatedDt != null && (!diagAllowed || !settings?.enRemDiagLogging)) {
 				LogAction("Remote Diagnostic Logs have been deactivated...", "info", true)
 				atomicState?.enRemDiagLogging = false
 				clearRemDiagData()
@@ -1158,8 +1159,8 @@ def remoteDiagPage () {
 				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to the Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing...",
 						required: true,state: null
 				//paragraph title: "Provide this ID to the Developer", "${atomicState?.remDiagClientId}", required: true, state: null
-				def str = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? "Client Authorized by Develop" : "This client is not authorized yet. Please contact the developer"
-				paragraph str, required: true, state: (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients ? "complete" : null)
+				def str = diagDevAuth ? "Client Authorized by Develop" : "This client is not authorized yet. Please contact the developer"
+				paragraph str, required: true, state: (diagDevAuth ? "complete" : null)
 			}
 		}
 		section() {
@@ -1218,7 +1219,7 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 			turnOff = true
 			reasonStr += "it has been active for last 2 hours "
 		}
-		if(!atomicState?.appData?.database?.allowRemoteDiag ||!(atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
+		if(!atomicState?.appData?.database?.allowRemoteDiag || !(atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
 			turnOff = true
 			reasonStr += "appData does not allow"
 		}
