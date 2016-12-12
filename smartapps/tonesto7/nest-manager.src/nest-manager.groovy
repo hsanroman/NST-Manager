@@ -1241,15 +1241,24 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 			atomicState?.remDiagLogDataStore = data
 			if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
 				sendRemDiagData()
-				atomicState?.remDiagDataSentDt = getDtNow()
 				atomicState?.remDiagLogDataStore = []
 			}
 		}
 	}
 	if(atomicState?.enRemDiagLogging) {
+		def turnOff = false
+		def reasonStr = ""
 		if(getRemDiagActSec() > (3600 * 2)) {
+			turnOff = true
+			reasonStr += "it has been active for last 2 hours "
+		}
+		if(!atomicState?.appData?.database?.allowRemoteDiag ||!(atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
+			turnOff = true
+			reasonStr += "appData does not allow"
+		}
+		if(turnOff) {
 			atomicState?.enRemDiagLogging = false
-			LogAction("Remote Diagnostics have been disabled because it has been active for the last 2 hours", "info", true)
+			LogAction("Remote Diagnostics have been disabled because ${reasonStr}", "info", true)
 			def cApps = getChildApps()
 			if(cApps) {
 				cApps?.sort()?.each { chld ->
@@ -1261,6 +1270,7 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	}
 }
 
+/*
 def genRandId(int length){
 	String alphabet = new String("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	int n = alphabet.length()
@@ -1269,21 +1279,28 @@ def genRandId(int length){
 	for (int i=0; i<length; i++) { result = result + alphabet.charAt(r.nextInt(n)) }
 	return result
 }
+*/
 
 def sendRemDiagData() {
 	def data = atomicState?.remDiagLogDataStore
 	if(data?.size()) {
 		chkRemDiagClientId()
-		def json = new groovy.json.JsonOutput().toJson(data)
-		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
-
-		def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
-		atomicState?.remDiagLogSentCnt = lsCnt
+		if(atomicState?.remDiagClientId) {
+			def json = new groovy.json.JsonOutput().toJson(data)
+			sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
+			def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
+			atomicState?.remDiagLogSentCnt = lsCnt
+			atomicState?.remDiagDataSentDt = getDtNow()
+		}
 	}
 }
 
 def sendSetAndStateToFirebase() {
-	sendFirebaseData(createManagerBackupDataJson(), "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json", "put", "Remote Diag Logs")
+	chkRemDiagClientId()
+	if(atomicState?.remDiagClientId) {
+		sendFirebaseData(createManagerBackupDataJson(), "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json", "put", "Remote Diag Logs")
+		atomicState?.remDiagDataSentDt = getDtNow()
+	}
 }
 
 def getRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getRemDiagActSec").toInteger() }
