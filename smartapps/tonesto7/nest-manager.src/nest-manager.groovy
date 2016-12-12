@@ -1174,6 +1174,7 @@ def remoteDiagPage () {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
 				atomicState?.enRemDiagLogging = true
+				//sendSetAndStateToFirebase()
 			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
@@ -1265,13 +1266,16 @@ def sendRemDiagData() {
 	def data = atomicState?.remDiagLogDataStore
 	if(data?.size()) {
 		chkRemDiagClientId()
-		def json
-		json = new groovy.json.JsonOutput().toJson(data)
+		def json = new groovy.json.JsonOutput().toJson(data)
 		sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
 
 		def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
 		atomicState?.remDiagLogSentCnt = lsCnt
 	}
+}
+
+def sendSetAndStateToFirebase() {
+	sendFirebaseData(createManagerBackupDataJson(), "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json", "put", "Remote Diag Logs")
 }
 
 def getRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getRemDiagActSec").toInteger() }
@@ -5700,22 +5704,24 @@ def buildChildAppInputMap() {
 	NOTE: Keep this for furture backup/restore reference
 	setSettings(theSettingNameHer: [type: "capability.contactSensor", value: settingValueToSet])
 */
-// def createManagerBackupDataJson() {
-// 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-// 	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
-// 	def setData = [:]
-// 	sData?.sort().each { item ->
-// 		setData[item?.key] = item?.value
-// 	}
-// 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
-// 	def stateData = [:]
-// 	stData?.sort().each { item ->
-// 		stateData[item?.key] = item?.value
-// 	}
-// 	def result = ["settingsData":setData.toString(), "stateData":stateData.toString(), "backupDt":getDtNow()]
-// 	def resultJson = new groovy.json.JsonOutput().toJson(result)
-// 	return resultJson
-// }
+
+def createManagerBackupDataJson() {
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+	def setData = [:]
+	sData?.sort().each { item ->
+		setData[item?.key] = item?.value
+	}
+	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+	def stateData = [:]
+	stData?.sort().each { item ->
+		stateData[item?.key] = item?.value
+	}
+	def result = ["settingsData":setData.toString(), "stateData":stateData.toString(), "backupDt":getDtNow()]
+	def resultJson = new groovy.json.JsonOutput().toJson(result)
+	return resultJson
+}
+
 //
 // def backupConfigToFirebase() {
 // 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
@@ -5936,7 +5942,8 @@ def removeInstallData() {
 }
 
 def removeRemDiagData(childId) {
-	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json")
+	removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json")
+	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json")
 }
 
 def sendInstallSlackNotif() {
