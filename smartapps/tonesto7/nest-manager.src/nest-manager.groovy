@@ -118,8 +118,8 @@ preferences {
 	page(name: "automationGlobalPrefsPage")
 	page(name: "automationStatisticsPage")
 	page(name: "automationSchedulePage")
-	page(name: "feedbackPage")
-	page(name: "sendFeedbackPage")
+	//page(name: "feedbackPage")
+	//page(name: "sendFeedbackPage")
 
 	//Automation Pages
 	page(name: "selectAutoPage" )
@@ -140,9 +140,6 @@ preferences {
 	//shared pages
 	page(name: "setNotificationPage")
 	page(name: "setNotificationTimePage")
-	page(name: "backupSendDataPage")
-	page(name: "backupRemoveDataPage")
-	page(name: "backupPage")
 }
 
 
@@ -278,7 +275,7 @@ def mainPage() {
 				def prefDesc = (descStr != "") ? "" : "Tap to Configure..."
 				href "prefsPage", title: "App | Device\nPreferences", description: prefDesc, state: (descStr ? "complete" : ""), image: getAppImg("settings_icon.png")
 			}
-			section("View Change Logs, Donate, License Info, and Leave Feedback:") {
+			section("View Change Logs, Donate, License Info") { //, and Leave Feedback:") {
 				href "infoPage", title: "Help, Info, and More", description: "", image: getAppImg("info.png")
 			}
 			if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
@@ -307,7 +304,7 @@ def donationPage() {
 			paragraph title: "Donation Reminder", str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser...", state: "complete", image: getAppImg("donate_icon.png")
-			href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
+			//href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
 			paragraph "This is message will not be shown again...", state: "complete"
 		}
 		def iData = atomicState?.installData
@@ -460,11 +457,6 @@ def prefsPage() {
 		section("Manage Your Nest Login:") {
 			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view...", image: getAppImg("login_icon.png")
 		}
-		if(appSettings?.devOpt == "true") {
-			section("Backup Data (Experimental):") {
-				href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
-			}
-		}
 		section("App and Device Logging:") {
 			href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to modify..." : "Tap to configure..."), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
 					image: getAppImg("log.png")
@@ -559,38 +551,12 @@ def automationsPage() {
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve your Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to call the Update() action on each automation.\nTap to Begin...", image: getAppImg("reset_icon.png")
-				if(appSettings?.devOpt == "true") {
-					href "restoreAutomationsPage", title: "Restore Your Automations...", description: "Tap to configure...", image: getAppImg("backup_icon.png")
-				}
 			}
 		}
 		incAutoLoadCnt()
 		devPageFooter("autoLoadCnt", execTime)
 	}
 }
-
-// def restoreAutomationsPage() {
-// 	def backupData = getAutomationBackupData()
-// 	dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
-// 		section("Available Automations") {
-// 			if(backupData) {
-// 				paragraph "Automation Apps Backed Up: (${backupData?.size()})"
-// 				href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData],
-// 					state: null, image: getAppImg("reset_icon.png")
-// 			}
-// 		}
-// 	}
-// }
-//
-// def automationRestorePage() {
-// 	def backupData = getAutomationBackupData()
-// 	dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
-// 		section("Restoring Automations:") {
-// 			paragraph "Restoring Automations..."
-// 			automationRestore(backupData)
-// 		}
-// 	}
-// }
 
 def automationSchedulePage() {
 	def execTime = now()
@@ -1125,7 +1091,7 @@ def infoPage () {
 				description:"Tap to open in browser...", state: "complete", image: getAppImg("info.png")
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View|Report Issues",
 				 description:"Tap to open in browser...", state: "complete", image: getAppImg("issue_icon.png")
-			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		section("Credits:") {
@@ -3359,7 +3325,7 @@ def updateWebStuff(now = false) {
 			if(canSchedule()) { runIn(20, "getWeatherConditions", [overwrite: true]) }
 		}
 	}
-	if(atomicState?.feedbackPending) { runIn(37, "sendFeedbackData", [overwrite: true]) }
+	//if(atomicState?.feedbackPending) { runIn(37, "sendFeedbackData", [overwrite: true]) }
 }
 
 def getWeatherConditions(force = false) {
@@ -5725,11 +5691,6 @@ def buildChildAppInputMap() {
 // 	}
 // }
 
-/*
-	NOTE: Keep this for furture backup/restore reference
-	setSettings(theSettingNameHer: [type: "capability.contactSensor", value: settingValueToSet])
-*/
-
 def createManagerBackupDataJson() {
 	def noShow = ["authToken", "accessToken", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
 	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
@@ -5746,132 +5707,6 @@ def createManagerBackupDataJson() {
 	def resultJson = new groovy.json.JsonOutput().toJson(result)
 	return resultJson
 }
-
-//
-// def backupConfigToFirebase() {
-// 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
-// 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
-// 	def stateData = [:]
-// 	stData?.sort().each { item ->
-// 		stateData[item?.key] = item?.value
-// 	}
-// 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
-// 	def settingsData = [:]
-//
-// 	setData?.sort().each { item ->
-// 		settingsData[item?.key] = item?.value
-// 	}
-// 	if(stateData) {
-// 		//settingsData["stateData"] = stateData.toString()
-// 		settingsData["automationTypeFlag"] = getAutoType().toString()
-// 		settingsData["backedUpData"] = true
-// 	}
-// 	def result = ["${app?.id}":["appLabel":app?.label, "settingsData":settingsData.toString(), "backupDt":getDtNow()]]
-// 	def resultJson = new groovy.json.JsonOutput().toJson(result)
-// 	return parent?.sendAutomationBackupData(resultJson)
-// }
-//
-// def sendManagerBackupData() {
-// 	try {
-// 		return sendFirebaseData(createManagerBackupDataJson(), "backupData/clients/${atomicState?.installationId}/managerAppData.json")
-// 	} catch (ex) {
-// 		LogAction("sendManagerBackupData Exception: ${ex}", "error", true)
-// 	}
-// }
-//
-// def removeManagerBackupData() {
-// 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/managerAppData.json")
-// }
-//
-// def sendAutomationBackupData(data) {
-// 	try {
-// 		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
-// 	} catch (ex) {
-// 		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
-// 	}
-// }
-
-// def removeAutomationBackupData(childId) {
-// 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
-// }
-
-
-
-// def backupPage() {
-// 	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-// 		section("") {
-// 			href "backupSendDataPage", title: "Send Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to Backup...",
-// 					state: (atomicState?.lastBackupDt ? "complete" : null), image: getAppImg("backup_icon.png")
-// 			href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
-// 		}
-// 	}
-// }
-//
-// def backupSendDataPage() {
-// 	return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
-// 		section("") {
-// 			paragraph "Sending Backup Data to Firebase..."
-// 			if(parent) {
-// 				if(backupConfigToFirebase()) {
-// 					atomicState?.lastBackupDt = getDtNow()
-// 					paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-// def backupRemoveDataPage() {
-// 	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-// 		section("") {
-// 			paragraph "Removing Backed Up App Data from Firebase..."
-// 			if(parent) {
-// 				if(backupConfigToFirebase()) {
-// 					paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-//
-// def automationRestore(data) {
-// 	if(data) {
-// 		data?.each { bApp ->
-// 			def appLbl = bApp?.value?.appLabel.toString()
-// 			//log.debug "Automation AppId: ${bApp?.key}"
-// 			//log.debug "bAppData: ${stringToMap(bApp?.value.settingsData.toString())}"
-//
-// 			def setData = stringToMap(bApp?.value?.settingsData?.toString())
-//
-// 			log.debug "settingsData: $setData"
-//
-// 			log.debug "Restoring: ($appLbl) Automation Settings...."
-// 			addChildApp(textNamespace(), appName(), appLbl, [settings:setData])
-// 		}
-// 	}
-// }
-//
-// def getAutomationBackupData() {
-// 	def clientId = atomicState?.installationId
-// 	def params = [ uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${clientId}/automationApps.json", contentType: 'application/json' ]
-// 	try {
-// 		httpGet(params) { resp ->
-// 			if(resp.data) {
-// 				//log.debug "resp: ${resp.data}"
-// 				//atomicState?.lastClientDataUpdDt = getDtNow()
-// 				return resp.data
-// 			}
-// 			return null
-// 		}
-// 	}
-// 	catch (ex) {
-// 		if(ex instanceof groovyx.net.http.HttpResponseException) {
-// 			   //log.warn  "clientData.json file not found..."
-// 		} else {
-// 			LogAction("getAutomationBackupData Exception: ${ex}", "error", true)
-// 		}
-// 		return null
-// 	}
-// }
 
 def getDeviceMetricCnts() {
 	def data = [:]
@@ -6340,12 +6175,6 @@ def mainAutoPage(params) {
 				}
 				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 				atomicState?.showDebug = showDebug
-			}
-			if(appSettings?.devOpt == "true" && autoType != "watchDog") {
-				section("Backup Data (Experimental):") {
-					href "backupPage", title: "Manage Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to configure...",
-					image: getAppImg("backup_icon.png"), state: atomicState?.lastBackupDt ? "complete" : null
-				}
 			}
 			section("Automation Name:") {
 				if(autoType == "watchDog") {
