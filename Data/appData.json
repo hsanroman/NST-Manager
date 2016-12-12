@@ -63,7 +63,7 @@
         "clients": []
     },
     "clientRemDiagAuth": {
-        "clients:": ["bad978ab-f37e-48c9-909c-1971e1970364","44360aba-62c0-4f6b-a2c9-c93668c64352","14157c70-619b-4718-b34d-55e6cfb06200"]
+        "clients": ["bad978ab-f37e-48c9-909c-1971e1970364","44360aba-62c0-4f6b-a2c9-c93668c64352","14157c70-619b-4718-b34d-55e6cfb06200"]
     },
     "pollMethod": {
         "allowAsync": true
