@@ -1208,7 +1208,7 @@ def remoteDiagPage () {
 }
 
 void chkRemDiagClientId() {
-	if(!atomicState?.remDiagClientId) { atomicState?.remDiagClientId = genRandId(8)	}
+	if(!atomicState?.remDiagClientId) { atomicState?.remDiagClientId = atomicState?.installationId	}
 }
 
 def clearRemDiagData(force=false) {
