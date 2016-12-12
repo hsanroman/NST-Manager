@@ -1174,7 +1174,7 @@ def remoteDiagPage () {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
 				atomicState?.enRemDiagLogging = true
-				//sendSetAndStateToFirebase()
+				sendSetAndStateToFirebase()
 			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
@@ -5717,7 +5717,7 @@ def createManagerBackupDataJson() {
 	stData?.sort().each { item ->
 		stateData[item?.key] = item?.value
 	}
-	def result = ["settingsData":setData.toString(), "stateData":stateData.toString(), "backupDt":getDtNow()]
+	def result = ["settingsData":setData, "stateData":stateData, "backupDt":getDtNow().toString()]
 	def resultJson = new groovy.json.JsonOutput().toJson(result)
 	return resultJson
 }
