@@ -41,12 +41,12 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.13" }
+def appVersion() { "4.2.0" }
 def appVerDate() { "12-12-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.1.10 (December 7th, 2016):"
+	str += "V4.2.0 (December 12th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • Updated: Will update this later."
 	str += "\n • Updated: Automations changed to set thermostat to ECO instead of Off."
@@ -1089,7 +1089,7 @@ def infoPage () {
 		section("Help and Feedback:") {
 			href url: getHelpPageUrl(), style:"embedded", required:false, title:"View the Projects Wiki",
 				description:"Tap to open in browser...", state: "complete", image: getAppImg("info.png")
-			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View|Report Issues",
+			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
 				 description:"Tap to open in browser...", state: "complete", image: getAppImg("issue_icon.png")
 			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Your Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
@@ -1126,9 +1126,10 @@ def formatDt2(tm) {
 
 def remoteDiagPage () {
 	def execTime = now()
-	def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag ? true : false
-	def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
 	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
+		def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag == true ? true : false
+		def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
+		log.debug "diagAllowed: $diagAllowed | diagDevAuth: $diagDevAuth"
 		section() {
 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 			def tf = new SimpleDateFormat(formatVal)
@@ -1158,8 +1159,7 @@ def remoteDiagPage () {
 			if(atomicState?.enRemDiagLogging) {
 				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to the Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing...",
 						required: true,state: null
-				//paragraph title: "Provide this ID to the Developer", "${atomicState?.remDiagClientId}", required: true, state: null
-				def str = diagDevAuth ? "Client Authorized by Develop" : "This client is not authorized yet. Please contact the developer"
+				def str = diagDevAuth ? "Client id Authorized by Developer to stream the logs" : "This client is not authorized yet. Please contact the developer"
 				paragraph str, required: true, state: (diagDevAuth ? "complete" : null)
 			}
 		}
@@ -1178,7 +1178,7 @@ def remoteDiagPage () {
 }
 
 void chkRemDiagClientId() {
-	if(!atomicState?.remDiagClientId) { atomicState?.remDiagClientId = atomicState?.installationId	}
+	if(!atomicState?.remDiagClientId || atomicState?.remDiagClientId != atomicState?.installationId) { atomicState?.remDiagClientId = atomicState?.installationId	}
 }
 
 def clearRemDiagData(force=false) {
