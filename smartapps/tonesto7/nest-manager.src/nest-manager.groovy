@@ -1174,16 +1174,17 @@ def remoteDiagPage () {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
 				atomicState?.enRemDiagLogging = true
+				(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 				sendSetAndStateToFirebase()
 			}
 			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
-			if(atomicState?.enRemDiagLogging || !settings?.enRemDiagLogging) {
+			if(atomicState?.appData?.database?.allowRemoteDiag && !settings?.enRemDiagLogging) {
 				LogAction("Remote Diagnostic Logs have been deactivated...", "info", true)
 				atomicState?.enRemDiagLogging = false
 				clearRemDiagData()
+				atomicState?.remDiagLogActivatedDt = null   // require toggle off then on again to force back on after timeout
 			}
-			atomicState?.remDiagLogActivatedDt = null   // require toggle off then on again to force back on after timeout
 		}
 		section() {
 			if(atomicState?.enRemDiagLogging) {
@@ -1240,8 +1241,8 @@ def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
 	}
 	if(atomicState?.enRemDiagLogging) {
 		if(getRemDiagActSec() > (3600 * 2)) {
-			LogAction("Remote Diagnostics have been disabled because it has been active for the last 2 hours", "info", true)
 			atomicState?.enRemDiagLogging = false
+			LogAction("Remote Diagnostics have been disabled because it has been active for the last 2 hours", "info", true)
 			def cApps = getChildApps()
 			if(cApps) {
 				cApps?.sort()?.each { chld ->
