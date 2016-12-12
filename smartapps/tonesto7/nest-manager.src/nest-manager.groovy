@@ -19,6 +19,7 @@ import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
 import java.security.MessageDigest
+//import com.firebase.client.*
 
 definition(
 	name: "${textAppName()}",
@@ -40,8 +41,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.1.12" }
-def appVerDate() { "12-9-2016" }
+def appVersion() { "4.1.13" }
+def appVerDate() { "12-12-2016" }
 def appVerInfo() {
 	def str = ""
 
@@ -1188,7 +1189,9 @@ def remoteDiagPage () {
 		}
 		section() {
 			if(atomicState?.enRemDiagLogging) {
-				paragraph title: "Provide this ID to the Developer", "${atomicState?.remDiagClientId}", required: true, state: null
+				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to the Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing...",
+						required: true,state: null
+				//paragraph title: "Provide this ID to the Developer", "${atomicState?.remDiagClientId}", required: true, state: null
 				def str = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? "Client Authorized by Develop" : "This client is not authorized yet. Please contact the developer"
 				paragraph str, required: true, state: (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients ? "complete" : null)
 			}
