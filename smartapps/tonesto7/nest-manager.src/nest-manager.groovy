@@ -5707,7 +5707,7 @@ def buildChildAppInputMap() {
 */
 
 def createManagerBackupDataJson() {
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather"]
+	def noShow = ["authToken", "accessToken", "curAlerts", "curAstronomy", "curForecast", "curWeather"]
 	def sData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
 	def setData = [:]
 	sData?.sort().each { item ->
