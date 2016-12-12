@@ -1169,17 +1169,16 @@ def remoteDiagPage () {
 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("list_icon.png"))
 		}
 		if(atomicState?.appData?.database?.allowRemoteDiag && settings?.enRemDiagLogging) {
-			chkRemDiagClientId()
 			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
 				LogAction("Remote Diagnostic Logs have been activated...", "info", true)
 				clearRemDiagData()
+				chkRemDiagClientId()
 				atomicState?.enRemDiagLogging = true
-				(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
+				atomicState?.remDiagLogActivatedDt = getDtNow()
 				sendSetAndStateToFirebase()
 			}
-			if(!atomicState?.remDiagLogActivatedDt) { atomicState?.remDiagLogActivatedDt = getDtNow() }
 		} else {
-			if(atomicState?.appData?.database?.allowRemoteDiag && !settings?.enRemDiagLogging) {
+			if(atomicState?.remDiagLogActivatedDt != null && (!atomicState?.appData?.database?.allowRemoteDiag || !settings?.enRemDiagLogging)) {
 				LogAction("Remote Diagnostic Logs have been deactivated...", "info", true)
 				atomicState?.enRemDiagLogging = false
 				clearRemDiagData()
