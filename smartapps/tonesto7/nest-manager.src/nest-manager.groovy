@@ -1129,7 +1129,7 @@ def remoteDiagPage () {
 	dynamicPage(name: "remoteDiagPage", title: "Send your Logs to the Developer:", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
 		def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag == true ? true : false
 		def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
-		log.debug "diagAllowed: $diagAllowed | diagDevAuth: $diagDevAuth"
+		//log.debug "diagAllowed: $diagAllowed | diagDevAuth: $diagDevAuth"
 		section() {
 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 			def tf = new SimpleDateFormat(formatVal)
@@ -1159,7 +1159,7 @@ def remoteDiagPage () {
 			if(atomicState?.enRemDiagLogging) {
 				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to the Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing...",
 						required: true,state: null
-				def str = diagDevAuth ? "Client id Authorized by Developer to stream the logs" : "This client is not authorized yet. Please contact the developer"
+				def str = diagDevAuth ? "This ClientId has been Authorized by Developer to stream it's logs to the remote server." : "This client is not authorized to stream the logs. Please contact the developer"
 				paragraph str, required: true, state: (diagDevAuth ? "complete" : null)
 			}
 		}
