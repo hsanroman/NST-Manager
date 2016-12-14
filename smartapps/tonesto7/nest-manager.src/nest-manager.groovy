@@ -5235,7 +5235,7 @@ def alarmTestPage () {
 				if(settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke) {
 					section("Execute Selected Tests from Above:") {
 						if(!atomicState?.isAlarmCoTestActive) {
-							paragraph "WARNING: If your protect devices are used Smart Home Monitor (SHM) it will not see these as a test and will trigger any action/alarms you have configured...",
+							paragraph "WARNING: If your protect devices are used by Smart Home Monitor (SHM) SHM will not see these as a test and will trigger any action/alarms you have configured...",
 									required: true, state: null
 						}
 						if(settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimLowBatt) {
@@ -5256,10 +5256,10 @@ def alarmTestPage () {
 					section("Instructions") {
 						paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null
 					}
-					if(!settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
-						atomicState?.isAlarmCoTestActive = false
-						atomicState?.curProtTestPageData = null
-					}
+				}
+				if(!settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
+					atomicState?.isAlarmCoTestActive = false
+					atomicState?.curProtTestPageData = null
 				}
 			}
 		}
