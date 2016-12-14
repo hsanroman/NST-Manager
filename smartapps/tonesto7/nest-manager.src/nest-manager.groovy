@@ -8937,7 +8937,9 @@ def nestModePresPage() {
 			}
 		}
 		if((nModeHomeModes && nModeAwayModes) || nModePresSensor || nModeSwitch) {
-			section("Delay Changes:") {
+			section("Additional Settings:") {
+// TODO FIX THIS ICON
+				input (name: "nModeSetEco", type: "bool", title: "Set ECO mode when away?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("thermostat_icon.png"))
 				input (name: "nModeDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("delay_time_icon.png"))
 				if(nModeDelay) {
 					input "nModeDelayVal", "enum", title: "Delay before change?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()],
@@ -9041,6 +9043,38 @@ def nModeSwitchEvt(evt) {
 	}
 }
 
+def adjustEco(on) {
+	def tstats = parent?.getTstats()
+	def foundTstats
+	if(tstats) {
+		foundTstats = tstats?.collect { dni ->
+			def d1 = parent.getThermostatDevice(dni)
+			if(d1) {
+				def didsomething = false
+				def didstr = ""
+				def curMode = d1?.currentnestThermostatMode?.toString()
+				if(on && !(curMode in ["eco", "off"])) {
+					didsomething = true
+					didstr = "ECO"
+					d1?.eco()
+				}
+				if(!on && curMode in ["eco"]) {
+					def prevMode = d1?.currentpreviousThermostatMode?.toString()
+					if(prevMode && prevMode != curMode) {
+						didsomething = true
+						didstr = "$prevMode"
+						d1?."$prevMode"()
+					}
+				}
+				if(didsomething) {
+					LogAction("adjustEco($on): | Thermostat: ${d1?.displayName} setting to HVAC mode $didstr was $curMode", "trace", true)
+				}
+				return d1
+			}
+		}
+	}
+}
+
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
 
 def checkNestMode() {
@@ -9115,6 +9149,9 @@ def checkNestMode() {
 
 			if(away && !nestModeAway && !modeMatch) {
 				LogAction("${awayDesc} Nest 'Away'", "info", true)
+				if(nModeSetEco) {
+					adjustEco(true)
+				}
 				if(parent?.setStructureAway(null, true)) {
 					storeLastAction("Set Nest Location (Away)", getDtNow())
 					atomicState?.nModeTstatLocAway = true
@@ -9146,6 +9183,9 @@ def checkNestMode() {
 					atomicState?.nModeTstatLocAway = false
 					atomicState.lastStMode = curStMode
 					atomicState.lastPresSenAway = away
+					if(nModeSetEco) {
+						adjustEco(false)
+					}
 					if(allowNotif) {
 						sendEventPushNotifications("${homeDesc} Nest 'Home'", "Info", pName)
 					}
