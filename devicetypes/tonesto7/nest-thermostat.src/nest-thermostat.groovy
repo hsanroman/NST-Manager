@@ -910,7 +910,7 @@ def checkSafetyTemps() {
 	if(curMinTemp && curMaxTemp) {
 		if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
 	}
-	//LogAction("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curinRange: ${curinRange} inRange: ${inRange}")
+	//Logger("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curInRange: ${curInRange} inRange: ${inRange}")
 	if (curRangeStr == null || inRange != curInRange) {
 		sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
 		Logger("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
