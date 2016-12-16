@@ -1676,7 +1676,7 @@ def initManagerApp() {
 	} else { atomicState.isInstalled = false }
 	subscriber()
 	setPollingState()
-	if(optInAppAnalytics) { runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
+	runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
 	runIn(50, "stateCleanup", [overwrite: true])
 }
 
@@ -3319,7 +3319,7 @@ def updateWebStuff(now = false) {
 			getWebFileData()
 		} else { getWebFileData(false) }
 	}
-	if(optInAppAnalytics && atomicState?.isInstalled) {
+	if(atomicState?.isInstalled) {
 		if(getLastAnalyticUpdSec() > (3600*24)) { sendInstallData() }
 	}
 	if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900)) {
@@ -5770,10 +5770,17 @@ def createInstallDataJson() {
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def devUseMetCnt = getDeviceMetricCnts()
 		def appUseMetCnt = atomicState?.usageMetricsStore
-		def data = [
-			"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
-			"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
-		]
+		def data = []
+		if(settings?.optInAppAnalytics) {
+			data =	[
+				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
+			]
+		} else {
+			data = [
+				"guid":atomicState?.installationId, "optOut":true, "datetime":getDtNow()?.toString()
+			]
+		}
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
 		return resultJson
 
@@ -5799,15 +5806,11 @@ def renderInstallId() {
 }
 
 def sendInstallData() {
-	if(settings?.optInAppAnalytics) {
-		sendFirebaseData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json")
-	}
+	sendFirebaseData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json")
 }
 
 def removeInstallData() {
-	if(settings?.optInAppAnalytics) {
-		return removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
-	}
+	return removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
 }
 
 def removeRemDiagData(childId) {
