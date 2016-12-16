@@ -3223,7 +3223,6 @@ def appUpdateNotify() {
 	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
 	def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
 	def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
-	def vtstatUpd = atomicState?.vThermostats ? isvTstatUpdateAvail() : null
 	def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
 	def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
 	if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
@@ -3640,11 +3639,6 @@ def isCamUpdateAvail() {
 
 def isTstatUpdateAvail() {
 	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "thermostat")) { return true }
-	return false
-}
-
-def isvTstatUpdateAvail() {
-	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.thermostat?.ver, atomicState?.tDevVer, "vthermostat")) { return true }
 	return false
 }
 
@@ -4762,7 +4756,11 @@ def stateCleanup() {
 	state.remove("autoAppInstalled")
 	state.remove("nestStructures")
 	state.remove("lastSentExceptionDataDt")
+	state.remove("tDevVer")
 	state.remove("pDevVer")
+	state.remove("camDevVer")
+	state.remove("presDevVer")
+	state.remove("weatDevVer")
 	state.remove("vtDevVer")
 	state.remove("dashSetup")
 	state.remove("dashboardUrl")
