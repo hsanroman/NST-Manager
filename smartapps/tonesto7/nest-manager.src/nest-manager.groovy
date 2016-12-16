@@ -41,7 +41,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.2.1" }
+def appVersion() { "4.2.2" }
 def appVerDate() { "12-12-2016" }
 def appVerInfo() {
 	def str = ""
@@ -1676,6 +1676,7 @@ def initManagerApp() {
 	} else { atomicState.isInstalled = false }
 	subscriber()
 	setPollingState()
+	def autoDesc = getInstAutoTypesDesc()   // This is a hack to get installAutomations data updated without waiting for user to hit done
 	runIn(4, "sendInstallData", [overwrite: true]) //If analytics are enabled this will send non-user identifiable data to firebase server
 	runIn(50, "stateCleanup", [overwrite: true])
 }
