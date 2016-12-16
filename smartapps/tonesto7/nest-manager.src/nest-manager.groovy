@@ -5301,7 +5301,7 @@ def simulateTestEventPage(params) {
 							testText = "Smoke 'Detected'"
 							dev?.runSmokeTest()
 						}
-						else if(testType == "co") {
+						else if(testType == "battery") {
 							testText = "Battery 'Replace'"
 							dev?.runBatteryTest()
 						}
