@@ -6417,14 +6417,16 @@ def getAutoIcon(type) {
 }
 
 def automationsInst() {
-	atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
-	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
+	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
 	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
-	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
-	atomicState.isTstatSchedConfigured= isTstatSchedConfigured() ? true : false
-	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
-	atomicState.isConWatConfigured = 	isConWatConfigured() ? true : false
+	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
+
 	atomicState.isLeakWatConfigured = 	isLeakWatConfigured() ? true : false
+	atomicState.isConWatConfigured = 	isConWatConfigured() ? true : false
+	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
+	atomicState.isRemSenConfigured =	isRemSenConfigured() ? true : false
+	atomicState.isTstatSchedConfigured = 	isTstatSchedConfigured() ? true : false
+	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
 	atomicState.isFanCircConfigured = 	isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
 }
@@ -6439,12 +6441,13 @@ def getAutomationsInstalled() {
 		case "schMot":
 			def tmp = [:]
 			tmp[aType] = []
+			if(isLeakWatConfigured()) 		{ tmp[aType].push("leakWat") }
+			if(isConWatConfigured()) 		{ tmp[aType].push("conWat") }
+			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
+			if(isRemSenConfigured())		{ tmp[aType].push("remSen") }
+			if(isTstatSchedConfigured()) 		{ tmp[aType].push("tSched") }  // This is number of schedules active
 			if(isFanCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
 			if(isFanCircConfigured()) 		{ tmp[aType].push("fanCirc") }
-			if(isTstatSchedConfigured()) 	{ tmp[aType].push("tSched") }
-			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
-			if(isConWatConfigured()) 		{ tmp[aType].push("conWat") }
-			if(isLeakWatConfigured()) 		{ tmp[aType].push("leakWat") }
 			if(tmp?.size()) { list.push(tmp) }
 			break
 		case "watchDog":
