@@ -1676,7 +1676,7 @@ def initManagerApp() {
 	} else { atomicState.isInstalled = false }
 	subscriber()
 	setPollingState()
-	runIn(4, "sendInstallData", [overwrite: true]) } //If analytics are enabled this will send non-user identifiable data to firebase server
+	runIn(4, "sendInstallData", [overwrite: true]) //If analytics are enabled this will send non-user identifiable data to firebase server
 	runIn(50, "stateCleanup", [overwrite: true])
 }
 
@@ -1685,10 +1685,8 @@ def uninstManagerApp() {
 	try {
 		if(addRemoveDevices(true)) {
 			//removes analytic data from the server
-			if(optInAppAnalytics) {
-				if(removeInstallData()) {
-					atomicState?.installationId = null
-				}
+			if(removeInstallData()) {
+				atomicState?.installationId = null
 			}
 			clearRemDiagData(true)
 			//Revokes Smartthings endpoint token...
@@ -5771,7 +5769,7 @@ def createInstallDataJson() {
 		def devUseMetCnt = getDeviceMetricCnts()
 		def appUseMetCnt = atomicState?.usageMetricsStore
 		def data = []
-		if(settings?.optInAppAnalytics) {
+		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
 				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString()
@@ -5854,7 +5852,7 @@ def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 		}
 		exCnt = atomicState?.appExceptionCnt ? atomicState?.appExceptionCnt + 1 : 1
 		atomicState?.appExceptionCnt = exCnt ?: 1
-		if(settings?.optInSendExceptions) {
+		if(settings?.optInSendExceptions || settings?.optInSendExceptions == null) {
 			def appType = isChild && autoType ? "automationApp/${autoType}" : "managerApp"
 			def exData
 			if(isChild) {
@@ -5878,7 +5876,7 @@ def sendChildExceptionData(devType, devVer, ex, methodName) {
 	}
 	exCnt = atomicState?.childExceptionCnt ? atomicState?.childExceptionCnt + 1 : 1
 	atomicState?.childExceptionCnt = exCnt ?: 1
-	if(settings?.optInSendExceptions) {
+	if(settings?.optInSendExceptions || settings?.optInSendExceptions == null) {
 		def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
 		def results = new groovy.json.JsonOutput().toJson(exData)
 		sendFirebaseData(results, "${getDbExceptPath()}/${devType}/${methodName}.json", "post", "Exception")
