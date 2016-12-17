@@ -654,7 +654,7 @@ def automationGlobalPrefsPage() {
 				input "locDesiredComfortDewpointMax", "decimal", title: "Max. Dewpoint Desired (${tRange} °${getTemperatureScale()})", required: false,  range: trange,
 						image: getAppImg("dewpoint_icon.png")
 				href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"embedded", title: "What is Dew Point?",
-						description:"Tap to View Info", image: getAppImg("instruct_icon.png")
+						description:"Tap to view", image: getAppImg("instruct_icon.png")
 			}
 			section(title: "Safety Preferences 									", hideable:true, hidden: false) {
 				if(atomicState?.thermostats) {
@@ -1100,7 +1100,7 @@ def infoPage () {
 			paragraph title: "Collaborator:", "Ben W. (@desertblade)", state: "complete"
 		}
 		section("App Revision History:") {
-			href "changeLogPage", title: "View App Change Log Info", description: "Tap to View", image: getAppImg("change_log_icon.png")
+			href "changeLogPage", title: "View App Change Log Info", description: "Tap to view", image: getAppImg("change_log_icon.png")
 		}
 		section("Licensing Info:") {
 			paragraph "${textCopyright()}\n${textLicense()}"
@@ -5202,7 +5202,7 @@ def nestInfoPage () {
 // 				data?.sort().each { item ->
 // 					if(item?.key != "last_event") {
 // 						if(item?.key in ["app_url", "web_url"]) {
-// 							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to View in Mobile Browser", state: "complete"
+// 							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to view in Browser", state: "complete"
 // 						} else {
 // 							cnt = cnt+1
 // 							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
@@ -5210,7 +5210,7 @@ def nestInfoPage () {
 // 					} else {
 // 						item?.value?.sort().each { item2 ->
 // 							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
-// 								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to View in Mobile Browser", state: "complete"
+// 								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to view in Browser", state: "complete"
 // 							}
 // 							else {
 // 								cnt2 = cnt2+1
@@ -10972,7 +10972,7 @@ def schMotCheck() {
 		if(getLastschMotEvalSec() < schWaitVal) {
 			def schChkVal = ((schWaitVal - getLastschMotEvalSec()) < 30) ? 30 : (schWaitVal - getLastschMotEvalSec())
 			scheduleAutomationEval(schChkVal)
-			LogAction("Remote Sensor: Too Soon to Evaluate ActionsScheduling Re-Evaluation in (${schChkVal} seconds)", "info", true)
+			LogAction("Remote Sensor: Too Soon to Evaluate Actions; Re-Evaluation in (${schChkVal} seconds)", "info", true)
 			return
 		}
 
@@ -11537,7 +11537,7 @@ def scheduleAlarmOn(autoType) {
 	if(canSchedule() && ok2Notify) {
 		if(timeVal > 0) {
 			runIn(timeVal, "alarm0FollowUp", [data: [autoType: autoType]])
-			LogAction("scheduleAlarmOn: Scheduling Alarm Followup 0in timeVal: $timeVal", "info", true)
+			LogAction("scheduleAlarmOn: Scheduling Alarm Followup 0 in timeVal: $timeVal", "info", true)
 			atomicState."${autoType}AlarmActive" = true
 		} else { LogAction("scheduleAlarmOn: Did not schedule ANY operation timeVal: $timeVal", "error", true) }
 	} else { LogAction("scheduleAlarmOn: Could not schedule operation timeVal: $timeVal", "error", true) }
@@ -11550,7 +11550,7 @@ def alarm0FollowUp(val) {
 	LogAction("alarm0FollowUp timeVal: $timeVal", "info", true)
 	if(canSchedule() && timeVal > 0 && sendEventAlarmAction(1, autoType)) {
 		runIn(timeVal, "alarm1FollowUp", [data: [autoType: autoType]])
-		LogAction("alarm0FollowUp: Scheduling Alarm Followup 1in timeVal: $timeVal", "info", true)
+		LogAction("alarm0FollowUp: Scheduling Alarm Followup 1 in timeVal: $timeVal", "info", true)
 	} else { LogAction ("alarm0FollowUp: Could not schedule operation timeVal: $timeVal", "error", true) }
 }
 
@@ -11567,7 +11567,7 @@ def alarm1FollowUp(val) {
 	//if(canSchedule() && (settings["${autoType}_Alert_2_Use_Alarm"] && timeVal > 0)) {
 	if(canSchedule() && timeVal > 0) {
 		runIn(timeVal, "alarm2FollowUp", [data: [autoType: autoType]])
-		LogAction("alarm1FollowUp: Scheduling Alarm Followup 2in timeVal: $timeVal", "info", true)
+		LogAction("alarm1FollowUp: Scheduling Alarm Followup 2 in timeVal: $timeVal", "info", true)
 	} else { LogAction ("alarm1FollowUp: Could not schedule operation timeVal: $timeVal", "error", true) }
 }
 
@@ -11577,7 +11577,7 @@ def alarm2FollowUp(val) {
 	def timeVal = getAlert2AlarmEvtOffVal(autoType)
 	if(canSchedule() && timeVal > 0 && sendEventAlarmAction(2, autoType)) {
 		runIn(timeVal, "alarm3FollowUp", [data: [autoType: autoType]])
-		LogAction("alarm2FollowUp: Scheduling Alarm Followup 3in timeVal: $timeVal", "info", true)
+		LogAction("alarm2FollowUp: Scheduling Alarm Followup 3 in timeVal: $timeVal", "info", true)
 	} else { LogAction ("alarm2FollowUp: Could not schedule operation timeVal: $timeVal", "error", true) }
 }
 
@@ -12191,7 +12191,7 @@ def textVerInfo()   { return "${appVerInfo()}" }
 def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
 def textCopyright() { return "Copyright© 2016 - Anthony S." }
-def textDesc()      { return "This SmartApp is used to integrate you're Nest devices with SmartThings and allow you to enable built-in automations" }
+def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
 def textHelp()      { return "" }
 def textLicense() {
 	return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
