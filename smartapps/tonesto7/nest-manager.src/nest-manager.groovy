@@ -10446,7 +10446,7 @@ def tstatConfigAutoPage(params) {
 								image: getAppImg("delay_time_icon.png")
 					}
 					section("Restoration Preferences (Optional):") {
-						input "${pName}OffTimeout", "enum", title: "Auto Restore after...", defaultValue: 3600, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+						input "${pName}OffTimeout", "enum", title: "Auto Restore after...", defaultValue: 0, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 						if(!settings?."${pName}OffTimeout") { atomicState."${pName}timeOutScheduled" = false }
 					}
@@ -10506,7 +10506,7 @@ def tstatConfigAutoPage(params) {
 								image: getAppImg("delay_time_icon.png")
 					}
 					section("Restoration Preferences (Optional):") {
-						input "${pName}OffTimeout", "enum", title: "Auto Restore after (Optional)", defaultValue: 43200, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
+						input "${pName}OffTimeout", "enum", title: "Auto Restore after (Optional)", defaultValue: 0, metadata: [values:longTimeSecEnum()], required: false, submitOnChange: true,
 								image: getAppImg("delay_time_icon.png")
 						if(!settings?."${pName}OffTimeout") { atomicState."${pName}timeOutScheduled" = false }
 					}
@@ -11738,9 +11738,9 @@ def restoreAfterTimeOut(val) {
 				atomicState."${pName}timeOutScheduled" = false
 				conWatCheck(true)
 				break
-			case "leakWat":
+			//case "leakWat":
 				//leakWatCheck(true)
-				break
+				//break
 			case "extTmp":
 				atomicState."${pName}timeOutScheduled" = false
 				extTmpTempCheck(true)
