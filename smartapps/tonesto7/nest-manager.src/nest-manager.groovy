@@ -183,7 +183,7 @@ def authPage() {
 					desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again"
 				}
 				else if(!atomicState?.devHandlersTested) {
-					desc = "Device Handlers are likely Missing or Not Published.  Please verify the installation instructions and device handlers are present before continuing."
+					desc = "Device Handlers are Missing or Not Published.  Please verify the installation instructions and device handlers are present before continuing."
 				}
 				else if(!preReqOk) {
 					desc = "SmartThings Location is not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the ST IDE or Mobile App"
@@ -221,8 +221,8 @@ def authPage() {
 				paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
 			}
 			section(""){
-				paragraph "Tap 'Login to Nest' below to authorize SmartThings to access your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
-				paragraph "❖ FYI: If you are using a Nest Family account please signin with the parent Nest account, family member accounts will not work correctly", state: "complete"
+				paragraph "Tap 'Login to Nest' below to authorize SmartThings to your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
+				paragraph "❖ FYI: Please use the parent Nest account, Nest Family member accounts will not work correctly", state: "complete"
 				href url: redirectUrl, style:"embedded", required: true, title: "Login to Nest", description: description
 			}
 		}
@@ -248,7 +248,7 @@ def mainPage() {
 		}
 		if(atomicState?.isInstalled) {
 			section("Manage Devices & Location:") {
-				def devDesc = getDevicesDesc() ? "Nest Location: (${strCapitalize(locationPresence())})\n${getDevicesDesc()}\n\nTap to Modify" : "Tap to Configure"
+				def devDesc = getDevicesDesc() ? "Nest Location: (${strCapitalize(locationPresence())})\n${getDevicesDesc()}\n\nTap to modify" : "Tap to configure"
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
 			getDevChgDesc()
@@ -257,9 +257,9 @@ def mainPage() {
 			devicesPage()
 		}
 		if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras)) {
-			def autoDesc = getInstAutoTypesDesc() ? "${getInstAutoTypesDesc()}\n\nTap to Modify" : null
+			def autoDesc = getInstAutoTypesDesc() ? "${getInstAutoTypesDesc()}\n\nTap to modify" : null
 			section("Manage Automations:") {
-				href "automationsPage", title: "Automations", description: (autoDesc ? autoDesc : "Tap to Configure"), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
+				href "automationsPage", title: "Automations", description: (autoDesc ? autoDesc : "Tap to configure"), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
 			}
 		}
 		if(atomicState?.isInstalled) {
@@ -272,7 +272,7 @@ def mainPage() {
 				if(descStr.size() != sz) { descStr += "\n\n"; sz = descStr.size() }
 				descStr += getPollingConfDesc() ?: ""
 				if(descStr.size() != sz) { descStr += "\n\n"; sz = descStr.size() }
-				def prefDesc = (descStr != "") ? "" : "Tap to Configure"
+				def prefDesc = (descStr != "") ? "" : "Tap to configure"
 				href "prefsPage", title: "App | Device\nPreferences", description: prefDesc, state: (descStr ? "complete" : ""), image: getAppImg("settings_icon.png")
 			}
 			section("View Change Logs, Donate, License Info") { //, and Leave Feedback:") {
@@ -387,11 +387,11 @@ def reviewSetupPage() {
 				if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
 					def wDesc = getWeatherConfDesc()
 					def wmsg = "Please update ST zip codes - Nest and ST do not match"
-					href "custWeatherPage", title: "Customize Weather Location?", description: (wDesc ? "${wDesc}\n\nTap to Modify" : "${wmsg}"), state: ((wDesc || !wmsg) ? "complete":""), image: getAppImg("weather_icon_grey.png")
+					href "custWeatherPage", title: "Customize Weather Location?", description: (wDesc ? "${wDesc}\n\nTap to modify" : "${wmsg}"), state: ((wDesc || !wmsg) ? "complete":""), image: getAppImg("weather_icon_grey.png")
 				}
 			}
 			if(!atomicState?.isInstalled && (settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice)) {
-				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to Modify" : "Tap to configure"),
+				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to modify" : "Tap to configure"),
 						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
@@ -400,11 +400,11 @@ def reviewSetupPage() {
 		showVoiceRprtPrefs()
 
 		section("Notifications:") {
-			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to Modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
+			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
 		}
 		section("Polling:") {
 			def pollDesc = getPollingConfDesc()
-			href "pollPrefPage", title: "Polling Preferences", description: (pollDesc != "" ? "${pollDesc}\n\nTap to Modify" : "Tap to configure"), state: (pollDesc != "" ? "complete" : null), image: getAppImg("timer_icon.png")
+			href "pollPrefPage", title: "Polling Preferences", description: (pollDesc != "" ? "${pollDesc}\n\nTap to modify" : "Tap to configure"), state: (pollDesc != "" ? "complete" : null), image: getAppImg("timer_icon.png")
 		}
 		showDevSharePrefs()
 		if(atomicState?.showHelp) {
@@ -439,17 +439,17 @@ def prefsPage() {
 	def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))
 	dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false, uninstall: false ) {
 		section("Polling:") {
-			href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to Modify", state: (getPollingConfDesc() != "" ? "complete" : null), image: getAppImg("timer_icon.png")
+			href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to modify", state: (getPollingConfDesc() != "" ? "complete" : null), image: getAppImg("timer_icon.png")
 		}
 		if(devSelected) {
 			section("Devices:") {
-				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to Modify" : "Tap to configure"),
+				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to modify" : "Tap to configure"),
 						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
 		showVoiceRprtPrefs()
 		section("Notifications Options:") {
-			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to Modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null),
+			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null),
 					image: getAppImg("notification_icon.png")
 		}
 		showDevSharePrefs()
@@ -458,7 +458,7 @@ def prefsPage() {
 			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view", image: getAppImg("login_icon.png")
 		}
 		section("App and Device Logging:") {
-			href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to Modify" : "Tap to configure"), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
+			href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to modify" : "Tap to configure"), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
 					image: getAppImg("log.png")
 		}
 		section ("Misc. Options:") {
@@ -547,7 +547,7 @@ def automationsPage() {
 				descStr += (settings?.locDesiredComfortDewpointMax) ? "${(settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "\n\n" : ""}Dew Point:" : ""
 				descStr += settings?.locDesiredComfortDewpointMax ? "\n • Max Dew Point: (${settings?.locDesiredComfortDewpointMax}${getTemperatureScale()})" : ""
 				descStr += "${(settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
-				def prefDesc = (descStr != "") ? "${descStr}\n\nTap to Modify" : "Tap to Configure"
+				def prefDesc = (descStr != "") ? "${descStr}\n\nTap to modify" : "Tap to configure"
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
@@ -1005,7 +1005,7 @@ def devPrefPage() {
 	dynamicPage(name: "devPrefPage", title: "Device Preferences", uninstall: false) {
 		if(settings?.thermostats || settings?.protects || settings?.presDevice || settings?.weatherDevice) {
 			section("Device Name Customization:") {
-				def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set\n\nTap to Modify" : "Tap to Configure"
+				def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set\n\nTap to modify" : "Tap to configure"
 				href "devNamePage", title: "Device Names", description: devDesc, state:(atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : "", image: getAppImg("device_name_icon.png")
 			}
 		}
@@ -1023,7 +1023,7 @@ def devPrefPage() {
 		}
 		if(atomicState?.weatherDevice) {
 			section("Weather Device:") {
-				href "custWeatherPage", title: "Customize Weather Location?", description: (getWeatherConfDesc() ? "${getWeatherConfDesc()}\n\nTap to Modify" : ""), state: (getWeatherConfDesc() ? "complete":""), image: getAppImg("weather_icon_grey.png")
+				href "custWeatherPage", title: "Customize Weather Location?", description: (getWeatherConfDesc() ? "${getWeatherConfDesc()}\n\nTap to modify" : ""), state: (getWeatherConfDesc() ? "complete":""), image: getAppImg("weather_icon_grey.png")
 				input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
 			}
 		}
@@ -1352,7 +1352,7 @@ def showVoiceRprtPrefs() {
 	if(atomicState?.thermostats && (!atomicState?.appData?.reportPrefs?.disVoiceZoneRprt || !atomicState?.appData?.reportPrefs?.disVoiceUsageRprt)) {
 		def rPrefs = getVoiceRprtPrefDesc()
 		section("Voice Reports:") {
-			href "voiceRprtPrefPage", title: "Voice Report Preferences", description: (rPrefs ? "${rPrefs}\n\nTap to Modify" : "Tap to configure"), state: (rPrefs ? "complete" : ""), image: getAppImg("speech2_icon.png")
+			href "voiceRprtPrefPage", title: "Voice Report Preferences", description: (rPrefs ? "${rPrefs}\n\nTap to modify" : "Tap to configure"), state: (rPrefs ? "complete" : ""), image: getAppImg("speech2_icon.png")
 		}
 	}
 }
@@ -4230,7 +4230,7 @@ def addRemoveDevices(uninst = null) {
 			LogAction("addRemoveDevices Exception | $msg", "warn", true)
 		}
 		else if(ex instanceof physicalgraph.app.exception.UnknownDeviceTypeException) {
-			def msg = "Error: Device Handlers are likely Missing or Not Published.  Please verify all device handlers are present before continuing."
+			def msg = "Error: Device Handlers are Missing or Not Published.  Please verify all device handlers are present before continuing."
 			sendPush(msg)
 			LogAction("addRemoveDevices Exception | $msg", "warn", true)
 		}
@@ -5236,7 +5236,7 @@ def alarmTestPage () {
 						metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png"))
 			}
 			if(settings?.alarmCoTestDevice) {
-				section("Select the Events to Generate:") {
+				section("Select the Event to Generate:") {
 					input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
 					input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
 					input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
@@ -5379,7 +5379,7 @@ def managAppDataPage() {
 			paragraph "Show the following items in the results:"
 			input "managAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
 			if(settings?.managAppPageShowState) {
-				input(name: "managAppDataStateFilter", title: "Select State Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
+				input(name: "managAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
 				atomicState?.diagManagAppStateFilters = settings?.managAppDataStateFilter ?: []
 			}
 			input "managAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
@@ -5429,7 +5429,7 @@ def managAppDataPage() {
 // 				paragraph "Show the following items in the device results:"
 // 				input "childAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
 // 				if(settings?.childAppPageShowState) {
-// 					input(name: "childAppDataStateFilter", title: "Select State Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("childapp")])
+// 					input(name: "childAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("childapp")])
 // 					atomicState?.diagChildAppStateFilters = settings?.childAppDataStateFilter ?: []
 // 				}
 // 				input "childAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
@@ -5494,7 +5494,7 @@ def managAppDataPage() {
 // 				paragraph "Show the following items in the device results:"
 // 				input "childDevPageShowState", "bool", title: "State Data?", defaultValue: true, submitOnChange: true
 // 				if(settings?.childDevPageShowState) {
-// 					input(name: "childDevDataStateFilter", title: "Select State Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("device")])
+// 					input(name: "childDevDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys("device")])
 // 					atomicState?.diagDevStateFilters = settings?.childDevDataStateFilter ?: []
 // 				}
 // 				input "childDevPageShowAttr", "bool", title: "Attributes?", defaultValue: false, submitOnChange: true
@@ -6131,9 +6131,9 @@ def mainAutoPage(params) {
 					nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
 					nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
-					nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to Modify" : ""
+					nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
 					def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
-					href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to Configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
+					href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
 				}
 
 				if(autoType == "schMot" && !atomicState?.disableAutomation) {
@@ -6161,9 +6161,9 @@ def mainAutoPage(params) {
 						sDesc += "\n • Control Fans with HVAC"
 					}
 
-					sDesc += settings?.schMotTstat ? "\n\nTap to Modify" : ""
+					sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
 					def sModeDesc = isSchMotConfigured() ? "${sDesc}" : null
-					href "schMotModePage", title: "Thermostat Automation Config", description: sModeDesc ?: "Tap to Configure", state: (sModeDesc ? "complete" : null), image: getAppImg("thermostat_automation_icon.png")
+					href "schMotModePage", title: "Thermostat Automation Config", description: sModeDesc ?: "Tap to configure", state: (sModeDesc ? "complete" : null), image: getAppImg("thermostat_automation_icon.png")
 				}
 
 				if(autoType == "watchDog" && !atomicState?.disableAutomation) {
@@ -6172,7 +6172,7 @@ def mainAutoPage(params) {
 					watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc("watchDog")) ?
 							"\n\nVoice Notifications:${getVoiceNotifConfigDesc("watchDog")}" : ""
 					def watDogDesc = isWatchdogConfigured() ? "${watDesc}" : null
-					href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to Configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
+					href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
 				}
 			}
 			section("Automation Options:") {
@@ -8992,8 +8992,8 @@ def nestModePresPage() {
 		if(!nModeHomeModes && !nModeAwayModes && !nModeSwitch) {
 			section("(Optional) Set Nest Presence using Presence Sensor:") {
 				//paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
-				def presDesc = nModePresenceDesc() ? "\n\n${nModePresenceDesc()}\n\nTap to Modify" : "Tap to Configure"
-				input "nModePresSensor", "capability.presenceSensor", title: "Select a Presence Sensor", description: presDesc, multiple: true, submitOnChange: true, required: false,
+				def presDesc = nModePresenceDesc() ? "\n\n${nModePresenceDesc()}\n\nTap to modify" : "Tap to configure"
+				input "nModePresSensor", "capability.presenceSensor", title: "Select Presence Sensor(s)", description: presDesc, multiple: true, submitOnChange: true, required: false,
 						image: getAppImg("presence_icon.png")
 				if(nModePresSensor) {
 					if(nModePresSensor.size() > 1) {
@@ -9951,7 +9951,7 @@ def schMotModePage() {
 
 			section("Schedule Automation:") {
 				def actSch = atomicState?.activeSchedData?.size()
-				def tDesc = (isTstatSchedConfigured() || atomicState?.activeSchedData?.size()) ? "Tap to Modify Schedules" : null
+				def tDesc = (isTstatSchedConfigured() || atomicState?.activeSchedData?.size()) ? "Tap to modify Schedules" : null
 				href "tstatConfigAutoPage", title: "Use Schedules to adjust Temp Setpoints and HVAC mode?", description: (tDesc != null ? tDesc : ""), params: ["configType":"tstatSch"], state: (tDesc != null ? "complete" : ""), image: getAppImg("schedule_icon.png")
 				if (actSch) {
 					def schInfo = getScheduleDesc()
@@ -9962,7 +9962,7 @@ def schMotModePage() {
 							def schDesc = schItem?.value
 							def schInUse = (curSch?.toInteger() == schNum?.toInteger()) ? true : false
 							if(schNum && schDesc) {
-								href "schMotSchedulePage", title: "", description: "${schDesc}\n\nTap to Modify this Schedule", params: ["sNum":schNum], state: (schInUse ? "complete" : "")
+								href "schMotSchedulePage", title: "", description: "${schDesc}\n\nTap to modify this Schedule", params: ["sNum":schNum], state: (schInUse ? "complete" : "")
 							}
 						}
 					}
@@ -9978,7 +9978,7 @@ def schMotModePage() {
 					if(settings?.schMotOperateFan) {
 						def fanCtrlDescStr = ""
 						fanCtrlDescStr += getFanSwitchDesc() ? "${getFanSwitchDesc()}" : ""
-						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to Modify" : null
+						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
 						href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
 								required: true, image: getAppImg("configure_icon.png")
 					}
@@ -10018,7 +10018,7 @@ def schMotModePage() {
 						dayModeDesc += settings?.remSensorDay ? "\n └ Temp${(settings?.remSensorDay?.size() > 1) ? " (avg):" : ":"} (${getDeviceTempAvg(settings?.remSensorDay)}${tempScaleStr})" : ""
 						remSenDescStr += settings?.remSensorDay ? "${dayModeDesc}" : ""
 
-						def remSenDesc = isRemSenConfigured() ? "${remSenDescStr}\n\nTap to Modify" : null
+						def remSenDesc = isRemSenConfigured() ? "${remSenDescStr}\n\nTap to modify" : null
 						href "tstatConfigAutoPage", title: "Remote Sensor Config", description: remSenDesc ?: "Not Configured", params: ["configType":"remSen"], required: true, state: (remSenDesc ? "complete" : null),
 								image: getAppImg("configure_icon.png")
 					}
@@ -10042,9 +10042,9 @@ def schMotModePage() {
 						leakDesc += (settings?.leakWatModes || settings?.leakWatDays || (settings?.leakWatStartTime && settings?.leakWatStopTime)) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(leakWatPrefix()) ? "ON" : "OFF"})" : ""
 						leakDesc += getNotifConfigDesc(leakWatPrefix()) ? "\n\n${getNotifConfigDesc(leakWatPrefix())}" : ""
-						leakDesc += (settings?.leakWatSensors) ? "\n\nTap to Modify" : ""
+						leakDesc += (settings?.leakWatSensors) ? "\n\nTap to modify" : ""
 						def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
-						href "tstatConfigAutoPage", title: "Leak Sensor Automation", description: leakWatDesc ?: "Tap to Configure", params: ["configType":"leakWat"], required: true, state: (leakWatDesc ? "complete" : null),
+						href "tstatConfigAutoPage", title: "Leak Sensor Automation", description: leakWatDesc ?: "Tap to configure", params: ["configType":"leakWat"], required: true, state: (leakWatDesc ? "complete" : null),
 								image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
@@ -10067,9 +10067,9 @@ def schMotModePage() {
 						conDesc += (settings?."${conWatPrefix()}Modes" || settings?."${conWatPrefix()}Days" || (settings?."${conWatPrefix()}StartTime" && settings?."${conWatPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(conWatPrefix()) ? "ON" : "OFF"})" : ""
 						conDesc += getNotifConfigDesc(conWatPrefix()) ? "\n\n${getNotifConfigDesc(conWatPrefix())}" : ""
-						conDesc += (settings?.conWatContacts) ? "\n\nTap to Modify" : ""
+						conDesc += (settings?.conWatContacts) ? "\n\nTap to modify" : ""
 						def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
-						href "tstatConfigAutoPage", title: "Contact Sensors Config", description: conWatDesc ?: "Tap to Configure", params: ["configType":"conWat"], required: true, state: (conWatDesc ? "complete" : null),
+						href "tstatConfigAutoPage", title: "Contact Sensors Config", description: conWatDesc ?: "Tap to configure", params: ["configType":"conWat"], required: true, state: (conWatDesc ? "complete" : null),
 								image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
@@ -10096,9 +10096,9 @@ def schMotModePage() {
 						extDesc += (settings?."${extTmpPrefix()}Modes" || settings?."${extTmpPrefix()}Days" || (settings?."${extTmpPrefix()}StartTime" && settings?."${extTmpPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(extTmpPrefix()) ? "ON" : "OFF"})" : ""
 						extDesc += getNotifConfigDesc(extTmpPrefix()) ? "\n\n${getNotifConfigDesc(extTmpPrefix())}" : ""
-						extDesc += ((settings?.extTmpTempSensor || settings?.extTmpUseWeather) ) ? "\n\nTap to Modify" : ""
+						extDesc += ((settings?.extTmpTempSensor || settings?.extTmpUseWeather) ) ? "\n\nTap to modify" : ""
 						def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
-						href "tstatConfigAutoPage", title: "External Temps Config", description: extTmpDesc ?: "Tap to Configure", params: ["configType":"extTmp"], required: true, state: (extTmpDesc ? "complete" : null),
+						href "tstatConfigAutoPage", title: "External Temps Config", description: extTmpDesc ?: "Tap to configure", params: ["configType":"extTmp"], required: true, state: (extTmpDesc ? "complete" : null),
 								image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
@@ -10665,7 +10665,7 @@ def editSchedule(schedData) {
 		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Motion Sensor Setpoints:                                        ", hideable: true, hidden:(settings["${sLbl}Motion"] == null) ) {
 			paragraph "Activate alternate HVAC settings with Motion", title: "(Optional)"
 			def mmot = settings["${sLbl}Motion"]
-			input "${sLbl}Motion", "capability.motionSensor", title: "Motion Sensors", description: "Select Sensors to Configure", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
+			input "${sLbl}Motion", "capability.motionSensor", title: "Motion Sensors", description: "Select Sensors to Use", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
 			if(settings["${sLbl}Motion"]) {
 				paragraph " • Motion State: (${isMotionActive(mmot) ? "Active" : "Not Active"})", state: "complete", image: getAppImg("instruct_icon.png")
 				if(canHeat) {
@@ -11155,8 +11155,8 @@ def setNotificationPage(params) {
 					}
 					input "${pName}SendToAskAlexaQueue", "bool", title: "Send to Ask Alexa Message Queue?", required: false, defaultValue: (settings?."${pName}AllowSpeechNotif" ? false : true), submitOnChange: true,
 							image: askAlexaImgUrl()
-					input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
-					input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesis Devices", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
+					input "${pName}SpeechMediaPlayer", "capability.musicPlayer", title: "Select Media Player(s)", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("media_player.png")
+					input "${pName}SpeechDevices", "capability.speechSynthesis", title: "Select Speech Synthesizer(s)", hideWhenEmpty: true, multiple: true, required: false, submitOnChange: true, image: getAppImg("speech2_icon.png")
 					if(settings["${pName}SpeechMediaPlayer"]) {
 						input "${pName}SpeechVolumeLevel", "number", title: "Default Volume Level?", required: false, defaultValue: 30, range: "0::100", submitOnChange: true, image: getAppImg("volume_icon.png")
 						input "${pName}SpeechAllowResume", "bool", title: "Can Resume Playing Media?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("resume_icon.png")
@@ -11206,7 +11206,7 @@ def setNotificationPage(params) {
 				input "${pName}AllowAlarmNotif", "bool", title: "Enable Alarm|Siren?", required: false, defaultValue: (settings?."${pName}AllowAlarmNotif" ? true : false), submitOnChange: true,
 						image: getAppImg("alarm_icon.png")
 				if(settings["${pName}AllowAlarmNotif"]) {
-					input "${pName}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren Devices", multiple: true, required: settings["${pName}AllowAlarmNotif"], submitOnChange: true, image: getAppImg("alarm_icon.png")
+					input "${pName}AlarmDevices", "capability.alarm", title: "Select Alarm/Siren(s)", multiple: true, required: settings["${pName}AllowAlarmNotif"], submitOnChange: true, image: getAppImg("alarm_icon.png")
 				}
 			}
 		}
@@ -11421,7 +11421,7 @@ def getDayModeTimeDesc(pName) {
 	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}"  : ""
 	str += days ? "${(startTime || stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
 	str += modes ? "${(startTime || stopTime || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
-	str += (str != "") ? "\n\nTap to Modify" : ""
+	str += (str != "") ? "\n\nTap to modify" : ""
 	return str
 }
 
