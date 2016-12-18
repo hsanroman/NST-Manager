@@ -1921,7 +1921,7 @@ def poll(force = false, type = null) {
 
 def finishPoll(str, dev) {
 	LogAction("finishPoll($str, $dev) received", "info", false)
-	if(atomicState?.pollBlocked) { schedNextWorkQ(null); return }
+	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
@@ -2750,9 +2750,7 @@ def setTargetTempHigh(child, unit, temp, virtual=false) {
 }
 
 def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
-	def childDev = getChildDevice(childId)
 	LogAction("sendNestApiCmd $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", false)
-	//if(childDebug && childDev) { childDev?.log("sendNestApiCmd $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId") }
 	try {
 		if(cmdTypeId) {
 			def qnum = getQueueNumber(cmdTypeId, childId)
@@ -2760,40 +2758,43 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 
 			if(!atomicState?."cmdQ${qnum}" ) { atomicState."cmdQ${qnum}" = [] }
 			def cmdQueue = atomicState?."cmdQ${qnum}"
-			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal]
 
-			if(cmdQueue?.contains(cmdData)) {
+			def now = new Date()
+			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal, now]
+
+			def tempQueue = []
+			cmdQueue.each { cmd ->
+				def newCmd = [cmd[0], cmd[1], cmd[2], cmd[3]]
+				tempQueue << newCmd
+			}
+			def compcmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal]
+
+			if(tempQueue?.contains(compcmdData)) {
 				LogAction("Command Exists in queue ${qnum} - Skipping", "warn", true)
-				//if(childDev) { childDev?.log("Command Exists in queue ${qnum} Skipping", "warn") }
-				schedNextWorkQ(childId)
 			} else {
 				LogAction("Adding to Queue ${qnum}: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
-				//if(childDebug && childDev) { childDev?.log("Adding Command to Queue ${qnum}: $cmdData") }
 				atomicState?.pollBlocked = true
 				cmdQueue = atomicState?."cmdQ${qnum}"
 				cmdQueue << cmdData
 				atomicState."cmdQ${qnum}" = cmdQueue
 				atomicState?.lastQcmd = cmdData
-				schedNextWorkQ(childId)
 			}
+			schedNextWorkQ(childId)
 			return true
 
 		} else {
 			LogAction("sendNestApiCmd null cmdTypeId $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "warn", true)
-			//if(childDebug && childDev) { childDev?.log("sendNestApiCmd null cmdTypeId $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId") }
 			return false
 		}
 	}
 	catch (ex) {
 		log.error "sendNestApiCmd Exception:", ex
 		sendExceptionData(ex, "sendNestApiCmd")
-		//if(childDebug && childDev) { childDev?.log("sendNestApiCmd Exception: ${ex.message}", "error") }
 		return false
 	}
 }
 
 private getQueueNumber(cmdTypeId, childId) {
-	def childDev = getChildDevice(childId)
 	if(!atomicState?.cmdQlist) { atomicState.cmdQlist = [] }
 	def cmdQueueList = atomicState?.cmdQlist
 	def qnum = cmdQueueList.indexOf(cmdTypeId)
@@ -2807,14 +2808,32 @@ private getQueueNumber(cmdTypeId, childId) {
 		setRecentSendCmd(qnum, null)
 	}
 	qnum = cmdQueueList.indexOf(cmdTypeId)
-	//if(qnum == -1 ) { if(childDev) { childDev?.log("getQueueNumber: NOT FOUND" ) } }
 	if(qnum == -1 ) { LogAction("getQueueNumber: NOT FOUND", "warn", true ) }
-	//if(childDebug && childDev) { childDev?.log("getQueueNumber: cmdTypeId ${cmdTypeId} is queue ${qnum}" ) }
 	return qnum
 }
 
+def getQueueToWork() {
+	def qnum
+	def savedtim
+	if(!atomicState?.cmdQlist) { atomicState.cmdQlist = [] }
+	def cmdQueueList = atomicState?.cmdQlist
+	cmdQueueList.eachWithIndex { val, idx ->
+		def cmdQueue = atomicState?."cmdQ${idx}"
+		if(cmdQueue?.size() > 0) {
+			def cmdData = cmdQueue[0] 
+			def timVal = cmdData[4]
+			if(savedtim == null || timVal < savedtim) {
+				savedtim = timVal
+				qnum = idx
+			}
+		}
+	}
+	LogAction("getQueueToWork queue: ${qnum}", "info", false)
+	return qnum
+}
+
+
 void schedNextWorkQ(childId) {
-	def childDev = getChildDevice(childId)
 	def cmdDelay = getChildWaitVal()
 	//
 	// This is throttling the rate of commands to the Nest service for this access token.
@@ -2823,32 +2842,17 @@ void schedNextWorkQ(childId) {
 	// throttle this if the battery state on device is low.
 	//
 
-	if(!atomicState?.cmdQlist) { atomicState.cmdQlist = [] }
-	def cmdQueueList = atomicState?.cmdQlist
-	def done = false
-	def nearestQ = 100
-	def qnum = -1
-	cmdQueueList.eachWithIndex { val, idx ->
-		if(done || !atomicState?."cmdQ${idx}" ) { return }
-		else {
-			if( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
-				runIn(cmdDelay, "workQueue", [overwrite: true])
-				qnum = idx
-				done = true
-				return
-			} else {
-				if((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
-					nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
-					qnum = idx
-				}
-			}
+	def qnum = getQueueToWork()
+	def timeVal = cmdDelay
+	if(qnum != null) {	
+		if( (getRecentSendCmd(qnum) > 0 ) || (getLastCmdSentSeconds(qnum) > 60) ) {
+			timeVal = cmdDelay
+		} else {
+			timeVal = (60 - getLastCmdSentSeconds(qnum) + cmdDelay)
 		}
+		LogAction("schedNextWorkQ schedTime: ${timeVal} | queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}", "info", true)
 	}
-	if(!done) {
-		 runIn(nearestQ, "workQueue", [overwrite: true])
-	}
-	//if(childDebug && childDev) { childDev?.log("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}") }
-	LogAction("schedNextWorkQ queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}", "info", true)
+	runIn(timeVal, "workQueue", [overwrite: true])
 }
 
 private getRecentSendCmd(qnum) {
@@ -2898,24 +2902,8 @@ void workQueue() {
 	if(!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
 	def cmdQueueList = atomicState?.cmdQlist
 
-	def qnum = 0
-	def done = false
-	def nearestQ = 100
-	cmdQueueList?.eachWithIndex { val, idx ->
-		if(done || !atomicState?."cmdQ${idx}" ) { return }
-		else {
-			if( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
-				qnum = idx
-				done = true
-				return
-			} else {
-				if((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
-					nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
-					qnum = idx
-				}
-			}
-		}
-	}
+	def qnum = getQueueToWork()
+	if(qnum == null) { qnum = 0 }
 
 	def allowAsync = false
 	def metstr = "sync"
@@ -2924,12 +2912,12 @@ void workQueue() {
 		metstr = "async"
 	}
 
-	LogAction("workQueue Run queue: ${qnum} $metstr", "trace", true)
 	if(!atomicState?."cmdQ${qnum}") { atomicState."cmdQ${qnum}" = [] }
 	def cmdQueue = atomicState?."cmdQ${qnum}"
 
 	try {
 		if(cmdQueue?.size() > 0) {
+			LogAction("workQueue Run queue: ${qnum} $metstr", "trace", true)
 			runIn(60, "workQueue", [overwrite: true])  // lost schedule catchall
 
 			if(!cmdIsProc()) {
@@ -2979,9 +2967,6 @@ def finishWorkQ(cmd, result) {
 	//LogTrace("finishWorkQ")
 	def cmdDelay = getChildWaitVal()
 
-	if(!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
-	def cmdQueueList = atomicState?.cmdQlist
-
 	cmdProcState(false)
 	if( !result ) {
 		atomicState.needChildUpd = true
@@ -2995,24 +2980,8 @@ def finishWorkQ(cmd, result) {
 		atomicState.needChildUpd = true
 	}
 
-	def qnum = 0
-	def done = false
-	def nearestQ = 100
-	cmdQueueList?.eachWithIndex { val, idx ->
-		if(done || !atomicState?."cmdQ${idx}" ) { return }
-		else {
-			if( (getRecentSendCmd(idx) > 0 ) || (getLastCmdSentSeconds(idx) > 60) ) {
-				qnum = idx
-				done = true
-				return
-			} else {
-				if((60 - getLastCmdSentSeconds(idx) + cmdDelay) < nearestQ) {
-					nearestQ = (60 - getLastCmdSentSeconds(idx) + cmdDelay)
-					qnum = idx
-				}
-			}
-		}
-	}
+	def qnum = getQueueToWork()
+	if(qnum == null) { qnum = 0 }
 
 	if(!atomicState?."cmdQ${qnum}") { atomicState?."cmdQ${qnum}" = [] }
 	def cmdQueue = atomicState?."cmdQ${qnum}"
@@ -3093,7 +3062,7 @@ def nestResponse(resp, data) {
 		}
 
 		if(resp?.status == 200) {
-			LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) Successfully!", "info", true)
+			LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
 			apiIssueEvent(false)
 			increaseCmdCnt()
 			atomicState?.lastCmdSentStatus = "ok"
@@ -4474,7 +4443,7 @@ def callback() {
 			}
 
 			if(atomicState?.authToken) {
-				LogAction("Nest AuthToken Generated Successfully", "info", true)
+				LogAction("Nest AuthToken Generated SUCCESSFULLY", "info", true)
 				generateInstallId
 				success()
 			} else {
@@ -6961,7 +6930,9 @@ def watchDogCheck() {
 
 // This is allowing for warning if Nest has problem of system coming out of ECO while away
 
-						def nestModeAway = (getNestLocPres() == "home") ? false : true
+//ERSERS
+						def nestModeAway = (d1?.currentpresence?.toString() == "not present") ? true : false
+						//def nestModeAway = (getNestLocPres() == "home") ? false : true
 						if(nestModeAway) {
 							def curMode = d1?.currentnestThermostatMode?.toString()
 							if(!(curMode in ["eco"])) {
@@ -9096,7 +9067,7 @@ def adjustCameras(on) {
 					dev?.off()
 					didstr = "Off"
 				}
-				LogAction("checkNestMode: Turning Streaming ${didstr} for (${dev})", "info", true)
+				LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev})", "info", true)
 				storeLastAction("Turned ${didstr} Streaming $cam", getDtNow())
 				return dev
 			}
@@ -9130,7 +9101,28 @@ def adjustEco(on) {
 					storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow())
 				}
 				return d1
-			} else { LogAction("NO D1", "warn", true) }
+			} else { LogAction("adjustEco NO D1", "warn", true) }
+		}
+	}
+}
+
+def setAway(away) {
+	def tstats = parent?.getTstats()
+	def foundTstats
+	if(tstats) {
+		foundTstats = tstats?.collect { dni ->
+			def d1 = parent.getThermostatDevice(dni)
+			if(d1) {
+				if(away) {
+					d1?.away()
+				} else {
+					d1?.present()
+				}
+				def didstr = away ? "AWAY" : "HOME"
+				LogAction("setAway($away): | Thermostat: ${d1?.displayName} setting to $didstr", "trace", true)
+				storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow())
+				return d1
+			} else { LogAction("setaway NO D1", "warn", true) }
 		}
 	}
 }
@@ -9216,42 +9208,33 @@ def checkNestMode() {
 				if(nModeSetEco) {
 					adjustEco(true)
 				}
-				storeLastAction("Set Nest Location (Away)", getDtNow())
-				if(parent?.setStructureAway(null, true)) {
-					atomicState?.nModeTstatLocAway = true
-					if(allowNotif) {
-						sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info", pName)
-					}
-					if(nModeCamOnAway) { adjustCameras(true) }
-				} else {
-					LogAction("checkNestMode: There was an issue sending the AWAY command to Nest", "error", true)
+				setAway(true)
+				atomicState?.nModeTstatLocAway = true
+				if(allowNotif) {
+					sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info", pName)
 				}
+				if(nModeCamOnAway) { adjustCameras(true) }
 			}
 			//else if(home && nestModeAway && !modeMatch) {
 			else if(home && nestModeAway) {
 				LogAction("${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
 				storeLastAction("Set Nest Location (Home)", getDtNow())
-				if(parent?.setStructureAway(null, false)) {
-					atomicState?.nModeTstatLocAway = false
-					if(nModeSetEco) { adjustEco(false) }
-					if(allowNotif) {
-						sendEventPushNotifications("${homeDesc} Nest 'Home'", "Info", pName)
-					}
-					if(nModeCamOffHome) { adjustCameras(false) }
-				} else {
-					LogAction("checkNestMode: There was an issue sending the HOME command to Nest", "error", true)
+				setAway(false)
+				atomicState?.nModeTstatLocAway = false
+				if(nModeSetEco) { adjustEco(false) }
+				if(allowNotif) {
+					sendEventPushNotifications("${homeDesc} Nest 'Home'", "Info", pName)
 				}
+				if(nModeCamOffHome) { adjustCameras(false) }
 			}
 			else {
 				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
-				atomicState.lastStMode = curStMode
-				atomicState.lastPresSenAway = away
 			}
+			atomicState.lastStMode = curStMode
+			atomicState.lastPresSenAway = away
 			if(didsomething) {
-				atomicState.lastStMode = curStMode
-				atomicState.lastPresSenAway = away
-				scheduleAutomationEval(60)
+				scheduleAutomationEval(120)
 			}
 			storeExecutionHistory((now() - execTime), "checkNestMode")
 		}
