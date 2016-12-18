@@ -41,7 +41,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.2.3" }
+def appVersion() { "4.2.4" }
 def appVerDate() { "12-12-2016" }
 def appVerInfo() {
 	def str = ""
@@ -1934,6 +1934,8 @@ def forcedPoll(type = null) {
 	if(lastFrcdPoll > pollWaitVal) { // This limits manual forces to 10 seconds or more
 		atomicState?.lastForcePoll = getDtNow()
 		atomicState?.pollBlocked = false
+		cmdProcState(false)
+
 		LogAction("Last Forced Update was ${lastFrcdPoll} seconds ago.", "info", true)
 		if(type == "dev" || !type) {
 			LogAction("Update Device Data", "info", true)
@@ -2510,7 +2512,7 @@ def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTim
 *************************************************************************************************/
 
 private cmdProcState(Boolean value) { atomicState?.cmdIsProc = value }
-private cmdIsProc() { return !atomicState?.cmdIsProc ? false : true }
+private cmdIsProc() { return (!atomicState?.cmdIsProc) ? false : true }
 private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSeconds(atomicState?.cmdLastProcDt, null, "getLastProcSeconds") : 0 }
 
 def apiVar() {
@@ -2820,7 +2822,7 @@ def getQueueToWork() {
 	cmdQueueList.eachWithIndex { val, idx ->
 		def cmdQueue = atomicState?."cmdQ${idx}"
 		if(cmdQueue?.size() > 0) {
-			def cmdData = cmdQueue[0] 
+			def cmdData = cmdQueue[0]
 			def timVal = cmdData[4]
 			if(savedtim == null || timVal < savedtim) {
 				savedtim = timVal
@@ -2923,6 +2925,7 @@ void workQueue() {
 			if(!cmdIsProc()) {
 				cmdProcState(true)
 				atomicState?.pollBlocked = true
+				cmdQueue = atomicState?."cmdQ${qnum}"
 				def cmd = cmdQueue?.remove(0)
 				atomicState?."cmdQ${qnum}" = cmdQueue
 				def cmdres
@@ -2947,7 +2950,7 @@ void workQueue() {
 				finishWorkQ(cmd, cmdres)
 			} else { LogAction("workQueue: busy processing command", "warn", true) }
 
-		} else { atomicState.pollBlocked = false }
+		} else { atomicState.pollBlocked = false; cmdProcState(false) }
 	}
 	catch (ex) {
 		log.error "workQueue Exception Error:", ex
@@ -2975,7 +2978,7 @@ def finishWorkQ(cmd, result) {
 	}
 
 	atomicState.needDevPoll = true
-	if(cmd[1] == apiVar().rootTypes.struct.toString()) {
+	if(cmd && cmd[1] == apiVar().rootTypes.struct.toString()) {
 		atomicState.needStrPoll = true
 		atomicState.needChildUpd = true
 	}
@@ -2988,6 +2991,7 @@ def finishWorkQ(cmd, result) {
 	if(cmdQueue?.size() == 0) {
 		atomicState.pollBlocked = false
 		atomicState.needChildUpd = true
+		cmdProcState(false)
 		runIn(cmdDelay * 2, "postCmd", [overwrite: true])
 	}
 	else { schedNextWorkQ(null) }
@@ -3051,7 +3055,7 @@ def nestResponse(resp, data) {
 	def command = data?.cmd
 	def result = false
 	try {
-		if(!command) { return }
+		if(!command) { cmdProcState(false); return }
 
 		if(resp?.status == 307) {
 			//LogTrace("resp: ${resp.headers}")
@@ -3086,6 +3090,7 @@ def nestResponse(resp, data) {
 		sendExceptionData(ex, "nestResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
+		cmdProcState(false)
 	}
 }
 
@@ -3145,6 +3150,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 		sendExceptionData(ex, "procNestApiCmd")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
+		cmdProcState(false)
 	}
 	return result
 }
@@ -4642,16 +4648,16 @@ def Logger(msg, type, logSrc=null) {
 				log.debug "${themsg}"
 				break
 			case "info":
-				log.info "${themsg}"
+				log.info "||| ${themsg}"
 				break
 			case "trace":
-				log.trace "${themsg}"
+				log.trace "||${themsg}"
 				break
 			case "error":
-				log.error "${themsg}"
+				log.error "|${themsg}"
 				break
 			case "warn":
-				log.warn "${themsg}"
+				log.warn "||${themsg}"
 				break
 			default:
 				log.debug "${themsg}"
@@ -4735,6 +4741,9 @@ def stateCleanup() {
 	state.remove("apiIssues")
 	state.remove("stateSize")
 	state.remove("haveRun")
+	state.remove("lastStMode")
+	state.remove("lastPresSenAway")
+
 	if(!atomicState?.cmdQlist) {
 		state.remove("cmdQ2")
 		state.remove("cmdQ3")
@@ -6585,7 +6594,6 @@ def subscribeToEvents() {
 			subscribe(schMotTstat, "thermostatMode", automationGenericEvt)
 			subscribe(schMotTstat, "nestThermostatMode", automationGenericEvt)
 			subscribe(schMotTstat, "thermostatOperatingState", automationGenericEvt)
-			//subscribe(schMotTstat, "temperature", automationTstatTempEvt)
 			subscribe(schMotTstat, "temperature", automationGenericEvt)
 			subscribe(schMotTstat, "presence", automationGenericEvt)
 			subscribe(schMotTstat, "coolingSetpoint", automationGenericEvt)
@@ -6657,10 +6665,31 @@ def heartbeatAutomation() {
 }
 
 def scheduleAutomationEval(schedtime = 20) {
-	if(schedtime < 20) { schedtime = 20 }
-	if(getLastAutomationSchedSec() > 14) {
+	def theTime = schedtime
+	if(theTime < 20) { theTime = 20 }
+	def autoType = getAutoType()
+	def random = new Random()
+	def random_int = random.nextInt(6)  // this randomizes a bunch of automations firing at same time off same event
+	switch(autoType) {
+		case "nMode":
+			if(theTime == 20) {
+				theTime = 14 + random_int  // this has nMode fire first as it may change the Nest Mode
+			}
+			break
+		case "schMot":
+			if(theTime == 20) {
+				theTime = 20 + random_int
+			}
+			break
+		case "watchDog":
+			if(theTime == 20) {
+				theTime = 35 + random_int  // this has watchdog fire last so other automations can finish changes
+			}
+			break
+	}
+	if(getLastAutomationSchedSec() > 11) {
 		atomicState?.lastAutomationSchedDt = getDtNow()
-		runIn(schedtime, "runAutomationEval", [overwrite: true])
+		runIn(theTime, "runAutomationEval", [overwrite: true])
 	}
 }
 
@@ -8320,7 +8349,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							} else { LogAction("extTmpTempCheck: | There was problem restoring the last mode to '", "error", true) }
 						} else {
 							if(!lastMode) {
-								LogAction("extTmpTempCheck: | Unable to restore settings: previous mode was not found. Likely other automation operation", "warn", true)
+								LogAction("extTmpTempCheck: | Unable to restore settings: previous mode not found. Likely other automation operation", "warn", true)
 								atomicState?.extTmpTstatOffRequested = false
 							} else if(!timeOut && safetyOk) { LogAction("extTmpTstatCheck: | Skipping Restore: the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
 							if(!safetyOk) { LogAction("extTmpTempCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
@@ -8343,7 +8372,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						}
 						else if( (!atomicState?.extTmpRestoreMode && atomicState?.extTmpTstatOffRequested) ||
 								(atomicState?.extTmpRestoreMode && !atomicState?.extTmpTstatOffRequested) ) {
-							LogAction("extTmpTempCheck: | Unable to restore settings: previous mode was not found.", "warn", true)
+							LogAction("extTmpTempCheck: | Unable to restore settings: previous mode not found.", "warn", true)
 							atomicState?.extTmpRestoreMode = null
 							atomicState?.extTmpTstatOffRequested = false
 						}
@@ -8592,7 +8621,7 @@ def conWatCheck(cTimeOut = false) {
 							} else { LogAction("conWatCheck: | There was Problem Restoring the Last Mode to ($lastMode)", "error", true) }
 						} else {
 							if(!lastMode) {
-								LogAction("conWatCheck: | Unable to restore settings: previous mode was not found. Likely other automation operation", "warn", true)
+								LogAction("conWatCheck: | Unable to restore settings: previous mode not found. Likely other automation operation", "warn", true)
 								atomicState?.conWatTstatOffRequested = false
 							} else if(!timeOut && safetyOk) { LogAction("conWatCheck: | Skipping Restore: the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
 							if(!safetyOk) { LogAction("conWatCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
@@ -8613,7 +8642,7 @@ def conWatCheck(cTimeOut = false) {
 							atomicState."${pName}timeOutOn" = false
 						}
 						else if(!atomicState?.conWatRestoreMode && atomicState?.conWatTstatOffRequested) {
-							LogAction("conWatCheck: | Unable to restore settings: previous mode was not found. Likely other automation operation", "warn", true)
+							LogAction("conWatCheck: | Unable to restore settings: previous mode not found. Likely other automation operation", "warn", true)
 							atomicState?.conWatTstatOffRequested = false
 						}
 					}
@@ -8849,7 +8878,7 @@ def leakWatCheck() {
 							LogAction("leakWatCheck: | Safety temps exceeded and Unable to restore settings okToRestore is false", "warn", true)
 						}
 						else if(!atomicState?.leakWatRestoreMode && atomicState?.leakWatTstatOffRequested) {
-							LogAction("leakWatCheck: | Unable to restore settings: previous mode was not found. Likely other automation operation", "warn", true)
+							LogAction("leakWatCheck: | Unable to restore settings: previous mode not found. Likely other automation operation", "warn", true)
 							atomicState?.leakWatTstatOffRequested = false
 						}
 					}
@@ -9089,7 +9118,7 @@ def adjustEco(on) {
 					d1?.eco()
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
-				LogAction(" CURMODE: ${curMode}   ON: ${on} PREVMODE: ${prevMode}", "trace", true)
+				LogAction("adjustEco: CURMODE: ${curMode}   ON: ${on} PREVMODE: ${prevMode}", "trace", false)
 				if(!on && curMode in ["eco"]) {
 					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
@@ -9139,8 +9168,6 @@ def checkNestMode() {
 		if(atomicState?.disableAutomation) { return }
 		else if(!nModeScheduleOk()) {
 			LogAction("checkNestMode: Skipping: Schedule Restrictions", "info", true)
-			atomicState.lastStMode = null
-			atomicState.lastPresSenAway = null
 		} else {
 			def execTime = now()
 			atomicState?.lastEvalDt = getDtNow()
@@ -9155,9 +9182,6 @@ def checkNestMode() {
 			def modeDesc = ((!nModeSwitch && !nModePresSensor) && nModeHomeModes && nModeAwayModes) ? "The mode (${curStMode}) has triggered " : ""
 			def awayDesc = "${awayPresDesc}${awaySwitDesc}${modeDesc}"
 			def homeDesc = "${homePresDesc}${homeSwitDesc}${modeDesc}"
-
-			def previousStMode = atomicState?.lastStMode
-			def previousPresSenAway = atomicState?.lastPresSenAway
 
 			def away = false
 			def home = false
@@ -9185,25 +9209,10 @@ def checkNestMode() {
 				LogAction("checkNestMode: Nothing Matched", "info", true)
 			}
 
-			def modeMatch = false   // these check that we only change once per ST or presence change
-/*			if(nModeHomeModes && nModeAwayModes) {
-				if(previousStMode == curStMode) {
-					modeMatch = true
-				}
-			}
-			else if(nModePresSensor && !nModeSwitch) {
-				if(previousPresSenAway != null && previousPresSenAway == away) {
-					modeMatch = true
-				}
-			}
-*/
-
-			//LogAction("checkNestMode: isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", false)
-
 			def didsomething = false
 			//if(away && !nestModeAway && !modeMatch) {
 			if(away && !nestModeAway) {
-				LogAction("${awayDesc} Nest 'Away'", "info", true)
+				LogAction("checkNestMode: ${awayDesc} Nest 'Away'", "info", true)
 				didsomething = true
 				if(nModeSetEco) {
 					adjustEco(true)
@@ -9217,7 +9226,7 @@ def checkNestMode() {
 			}
 			//else if(home && nestModeAway && !modeMatch) {
 			else if(home && nestModeAway) {
-				LogAction("${homeDesc} Nest 'Home'", "info", true)
+				LogAction("checkNestMode: ${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
 				storeLastAction("Set Nest Location (Home)", getDtNow())
 				setAway(false)
@@ -9229,12 +9238,10 @@ def checkNestMode() {
 				if(nModeCamOffHome) { adjustCameras(false) }
 			}
 			else {
-				LogAction("checkNestMode: Conditions are not valid to change mode | isPresenceHome: (${nModePresSensor ? "${isPresenceHome(nModePresSensor)}" : "Presence Not Used"}) | ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home) | modeMatch: ($modeMatch)", "info", true)
+				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}| ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
 			}
-			atomicState.lastStMode = curStMode
-			atomicState.lastPresSenAway = away
 			if(didsomething) {
-				scheduleAutomationEval(120)
+				scheduleAutomationEval(90)
 			}
 			storeExecutionHistory((now() - execTime), "checkNestMode")
 		}
