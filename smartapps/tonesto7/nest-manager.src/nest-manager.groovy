@@ -11988,6 +11988,8 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 	def hvacMode = "unknown"
 	def reqCool
 	def reqHeat
+	def curCoolSetpoint
+	def curHeatSetpoint
 
 	if(tstat) {
 		hvacMode = tstat?.currentnestThermostatMode.toString()
@@ -11996,8 +11998,8 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 		retVal = true
 		setStr = ""
 
-		def curCoolSetpoint = getTstatSetpoint(tstat, "cool")
-		def curHeatSetpoint = getTstatSetpoint(tstat, "heat")
+		curCoolSetpoint = getTstatSetpoint(tstat, "cool")
+		curHeatSetpoint = getTstatSetpoint(tstat, "heat")
 		def diff = getTemperatureScale() == "C" ? 2.0 : 3.0
 		reqCool =  coolSetpoint?.toDouble() ?: null
 		reqHeat =  heatSetpoint?.toDouble() ?: null
