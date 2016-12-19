@@ -41,7 +41,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.2.4" }
+def appVersion() { "4.2.5" }
 def appVerDate() { "12-12-2016" }
 def appVerInfo() {
 	def str = ""
@@ -4681,6 +4681,24 @@ def Logger(msg, type, logSrc=null) {
 	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg} | logSrc: ${logSrc}" }
 }
 
+/*
+def fixState() {
+	if(settings?.structures && settings.structures != atomicState?.structures) { atomicState.structures = settings?.structures ?: null }
+	if(settings?.thermostats && settings.thermostats != atomicState?.thermostats) { atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null }
+	if(settings?.protects && settings.protects != atomicState?.protects) { atomicState.protects = settings?.protects ? coState(settings?.protects) : null }
+	if(settings?.cameras && settings.cameras != atomicState?.cameras) { atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null }
+	atomicState.presDevice = settings?.presDevice ?: null
+	atomicState.weatherDevice = settings?.weatherDevice ?: null
+	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
+		atomicState.isInstalled = true
+	} else { atomicState.isInstalled = false }
+	atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
+	atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
+	atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+	atomicState.useAltNames = settings?.useAltNames ? true : false
+	atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
+}
+*/
 
 
 def setStateVar(frc = false) {
@@ -4689,6 +4707,7 @@ def setStateVar(frc = false) {
 	//the app to create any new state values that might not exist or reset those that do to prevent errors
 	def stateVer = 3
 	def stateVar = !atomicState?.stateVarVer ? 0 : atomicState?.stateVarVer.toInteger()
+	//fixState()
 	if(!atomicState?.stateVarUpd || frc || (stateVer < atomicState?.appData.state.stateVarVer.toInteger())) {
 		if(!atomicState?.newSetupComplete)		{ atomicState.newSetupComplete = false }
 		if(!atomicState?.setupVersion)			{ atomicState?.setupVersion = 0 }
@@ -4743,6 +4762,17 @@ def stateCleanup() {
 	state.remove("haveRun")
 	state.remove("lastStMode")
 	state.remove("lastPresSenAway")
+	state.remove("automationsActive")
+	state.remove("temperatures")
+	state.remove("powers")
+	state.remove("energies")
+	state.remove("use24Time")
+	state.remove("useMilitaryTime")
+	state.remove("advAppDebug")
+	state.remove("appDebug")
+	state.remove("awayModes")
+	state.remove("homeModes")
+	state.remove("childDebug")
 
 	if(!atomicState?.cmdQlist) {
 		state.remove("cmdQ2")
