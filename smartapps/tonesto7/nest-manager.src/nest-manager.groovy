@@ -319,7 +319,7 @@ def devicesPage() {
 	LogAction("${structDesc} (${structs})", "info", false)
 	if (atomicState?.thermostats || atomicState?.protects || atomicState?.vThermostats || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice ) {  // if devices are configured, you cannot change the structure until they are removed
 		section("Location:") {
-			 paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
+			paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
 		}
 	} else {
 		section("Select Location:") {
@@ -674,10 +674,10 @@ def automationGlobalPrefsPage() {
 
 						/*
 						 TODO
-							  need to check / default to current setting in dth
-							  should have method in dth to set safety temps (today they are sent from nest manager polls..)
-							  should have method in dth to clear safety temps
-							  add global default
+							need to check / default to current setting in dth
+							should have method in dth to set safety temps (today they are sent from nest manager polls..)
+							should have method in dth to clear safety temps
+							add global default
 						*/
 
 						def str = ""
@@ -1090,7 +1090,7 @@ def infoPage () {
 			href url: getHelpPageUrl(), style:"embedded", required:false, title:"View the Projects Wiki",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
-				 description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
+				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
 			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
@@ -2519,8 +2519,8 @@ def apiVar() {
 	def api = [
 		rootTypes:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata" ],
 		cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
-					  targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
-					  fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ]
+					targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
+					fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ]
 	]
 	return api
 }
@@ -4349,7 +4349,7 @@ def removeTestDevs() {
 			def delete = getChildDevices().findAll { it?.deviceNetworkId == dev }
 			//log.debug "delete: ${delete}"
 			if(delete) {
-			   delete.each { deleteChildDevice(it.deviceNetworkId) }
+				delete.each { deleteChildDevice(it.deviceNetworkId) }
 			}
 		}
 	} catch (ex) {
@@ -4378,7 +4378,7 @@ def getEndpointUrl() {
 	def params = [
 		uri: "https://graph.api.smartthings.com/api/smartapps/endpoints",
 		query: ["access_token": atomicState?.accessToken],
-		   contentType: 'application/json'
+		contentType: 'application/json'
 	]
 	try {
 		httpGet(params) { resp ->
@@ -6184,7 +6184,7 @@ def mainAutoPage(params) {
 				}
 			}
 			section("Automation Options:") {
-				 if(atomicState?.isInstalled && (isNestModesConfigured() || isWatchdogConfigured() || isSchMotConfigured())) {
+				if(atomicState?.isInstalled && (isNestModesConfigured() || isWatchdogConfigured() || isSchMotConfigured())) {
 					//paragraph title:"Enable/Disable this Automation", ""
 					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: disableAutomation, submitOnChange: true, image: getAppImg("disable_icon.png")
 					if(!atomicState?.disableAutomation && disableAutomationreq) {
@@ -7115,7 +7115,7 @@ def automationMotionEvt(evt) {
 	else {
 		storeLastEventData(evt)
 		def dorunIn = false
-		def delay
+		def delay = 120
 		def sLbl
 
 		def mySched = getCurrentSchedule()
@@ -7880,7 +7880,7 @@ def doFanOperation(tempDiff) {
 		LogAction("doFanOperation: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)
 
 		def hvacFanOn = false
-		 //1:"Heating/Cooling", 2:"With Fan Only"
+		//1:"Heating/Cooling", 2:"With Fan Only"
 
 		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  1) {
 			hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false
@@ -8383,7 +8383,7 @@ def extTmpTempCheck(cTimeOut = false) {
 								atomicState?.extTmpTstatOffRequested = false
 							} else if(!timeOut && safetyOk) { LogAction("extTmpTstatCheck: | Skipping Restore: the Mode to Restore is same as Current Mode ${curMode}", "info", true) }
 							if(!safetyOk) { LogAction("extTmpTempCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true) }
-						 // TODO check if timeout quickly cycles back
+							// TODO check if timeout quickly cycles back
 						}
 					} else {
 						if(safetyOk) {
@@ -8446,7 +8446,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						scheduleAutomationEval(remaining)
 					}
 				} else {
-				   LogAction("extTmpTempCheck: | Skipping: Exterior temperatures in range and '${extTmpTstat?.label}' mode is 'OFF or ECO'", "info", true)
+					LogAction("extTmpTempCheck: | Skipping: Exterior temperatures in range and '${extTmpTstat?.label}' mode is 'OFF or ECO'", "info", true)
 				}
 			} else {
 				if(modeEco) { LogAction("extTmpTempCheck: Skipping: in ECO mode", "info", true) }
@@ -9833,7 +9833,7 @@ def setTstatTempCheck() {
 					atomicState?."${pName}lastMode" = curMode
 					storeExecutionHistory((now() - execTime), "setTstatTempCheck")
 					return
-				 }
+				}
 
 				def isModeOff = (curMode in ["off","eco"]) ? true : false
 				def tstatHvacMode = curMode
@@ -9929,8 +9929,8 @@ def schMotModePage() {
 				str += (atomicState?.schMotTstatHasFan) ? "\n• FanMode: (${strCapitalize(tstat?.currentThermostatFanMode)})" : "\n• No Fan on HVAC system"
 				str += "\n• Presence: (${strCapitalize(getTstatPresence(tstat))})"
 				def safetyTemps = getSafetyTemps(tstat)
-					   str +=  safetyTemps ? "\n• Safefy Temps: \n     └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
-					   str +=  "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
+					str +=  safetyTemps ? "\n• Safefy Temps: \n     └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
+					str +=  "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
 				paragraph "${str}", title: "${tstat.displayName} Zone Status", state: (str != "" ? "complete" : null), image: getAppImg("info_icon2.png")
 
 				if(!tStatPhys) {      // if virtual thermostat, check if physical thermostat is in mirror list
@@ -10003,7 +10003,7 @@ def schMotModePage() {
 								required: true, image: getAppImg("configure_icon.png")
 					}
 				} else if(!tStatPhys) {
-				  paragraph "Fan Control is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
+					paragraph "Fan Control is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
 				}
 				if(!tStatPhys && settings?.schMotOperateFan) { paragraph "ERROR:\nThe Primary Thermostat is VIRTUAL and UNSUPPORTED for Fan Control.\nPlease Correct to Proceed", required: true, state: null, image: getAppImg("error_icon.png") }
 			}
@@ -10299,7 +10299,7 @@ def tstatConfigAutoPage(params) {
 					}
 					section("${schTitle}") { // FANS USE TEMPS IN LOGIC
 						href "scheduleConfigPage", title: "Enable/Modify Schedules", description: pageDesc, params: ["sData":["hideStr":"${hideStr}"]], state: (pageDesc ? "complete" : null), image: getAppImg("schedule_icon.png")
-					 }
+					}
 				}
 			}
 
@@ -11773,7 +11773,7 @@ def checkThermostatDupe(tstatOne, tstatTwo) {
 def checkModeDuplication(modeOne, modeTwo) {
 	def result = false
 	if(modeOne && modeTwo) {
-		 modeOne?.each { dm ->
+		modeOne?.each { dm ->
 			if(dm in modeTwo) {
 				result = true
 			}
