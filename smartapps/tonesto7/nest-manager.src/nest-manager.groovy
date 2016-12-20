@@ -41,13 +41,17 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.2.0" }
+def appVersion() { "4.3.0" }
 def appVerDate() { "12-20-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.2.0 (December 20th, 2016):"
+	str += "V4.3.0 (December 20th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+
+	str += "\n\nV4.2.0 (Decemnber 12th, 2016):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • Updated: Modified the minimum device version removed some unnecessary code."
 
 	str += "\n\nV4.1.0 (November 21st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -5010,11 +5014,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":420, "desc":"4.2.0"],
-		"protect":["val":420, "desc":"4.2.0"],
-		"presence":["val":420, "desc":"4.2.0"],
-		"weather":["val":420, "desc":"4.2.0"],
-		"camera":["val":220 , "desc":"2.2.0"],
+		"thermostat":["val":430, "desc":"4.3.0"],
+		"protect":["val":430, "desc":"4.3.0"],
+		"presence":["val":430, "desc":"4.3.0"],
+		"weather":["val":430, "desc":"4.3.0"],
+		"camera":["val":230 , "desc":"2.3.0"],
 	]
 }
 
