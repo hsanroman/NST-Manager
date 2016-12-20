@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.1.1" }
+def devVer() { return "2.2.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -171,7 +171,7 @@ void installed() {
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = state?.hcTimeout ?: 35
-	if(!val || val.toInteger() != timeOut) {
+	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
@@ -219,6 +219,7 @@ def processEvent() {
 			def results = eventData?.data
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
+			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -520,7 +521,7 @@ def getPublicVideoId() {
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
 void chgStreaming() {
-	def cur = device.latestValue("isStreaming").stringValue
+	def cur = device?.currentState("isStreaming")?.value.toString()
 	if(cur == "on" || cur == "unavailable" || !cur) {
 		streamingOff(true)
 	} else {
@@ -623,6 +624,9 @@ void Logger(msg, logType = "debug") {
 		default:
 			log.debug "${smsg}"
 			break
+	}
+	if(state?.enRemDiagLogging) {
+		parent.saveLogtoRemDiagStore(smsg, logType, "Camera DTH")
 	}
 }
 
