@@ -41,16 +41,13 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.2.5" }
-def appVerDate() { "12-12-2016" }
+def appVersion() { "4.2.0" }
+def appVerDate() { "12-20-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.2.0 (December 12th, 2016):"
+	str += "V4.2.0 (December 20th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Will update this later."
-	str += "\n • Updated: Automations changed to set thermostat to ECO instead of Off."
-	str += "\n • Added: Toggle to allow disabling the Watchdog Nest Home|Away Mode is Away and not in Eco notification."
 
 	str += "\n\nV4.1.0 (November 21st, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -2846,7 +2843,7 @@ void schedNextWorkQ(childId) {
 
 	def qnum = getQueueToWork()
 	def timeVal = cmdDelay
-	if(qnum != null) {	
+	if(qnum != null) {
 		if( (getRecentSendCmd(qnum) > 0 ) || (getLastCmdSentSeconds(qnum) > 60) ) {
 			timeVal = cmdDelay
 		} else {
