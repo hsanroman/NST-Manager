@@ -46,8 +46,9 @@ def appVerDate() { "12-22-2016" }
 def appVerInfo() {
 	def str = ""
 
-	str += "V4.3.0 (December 20th, 2016):"
+	str += "V4.3.1 (December 23rd, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • ADDED: Nest Manager | Automations will now allow you to repair/rebuild corrupted states."
 
 	str += "\n\nV4.2.0 (Decemnber 12th, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
@@ -1631,7 +1632,7 @@ def nestTokenResetPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
-	if(!parent) { 
+	if(!parent) {
 		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
 		sendInstallSlackNotif()
 	}
