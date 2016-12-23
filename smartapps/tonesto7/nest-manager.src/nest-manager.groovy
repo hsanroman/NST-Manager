@@ -1631,8 +1631,10 @@ def nestTokenResetPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
-	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
-	sendInstallSlackNotif()
+	if(!parent) { 
+		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
+		sendInstallSlackNotif()
+	}
 	initialize()
 	sendNotificationEvent("${textAppName()} installed")
 }
