@@ -10559,7 +10559,7 @@ def schMotSchedulePage(params) {
 }
 
 def getScheduleList() {
-	def cnt = atomicState?.appData?.schedules?.count
+	def cnt = parent ? parent?.state?.appData?.schedules?.count : null
 	def maxCnt = cnt ? cnt.toInteger() : 4
 	if(maxCnt < 4) { maxCnt = 4 }
 	if(maxCnt > 8) { maxCnt = 8 }
