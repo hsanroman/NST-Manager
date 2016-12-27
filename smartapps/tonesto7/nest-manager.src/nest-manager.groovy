@@ -1663,7 +1663,7 @@ def initialize() {
 	//LogTrace("initialize")
 	def settingsReset = parent ? parent?.settings?.resetAllData : settings?.resetAllData
 	if(atomicState?.resetAllData || settingsReset) {
-		if(fixState()) { return }	// runIn of fixState will call updated() again
+		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
 	}
 	if(parent) {
 		runIn(6, "initAutoApp", [overwrite: true])
@@ -9142,7 +9142,16 @@ def setAway(away) {
 				return d1
 			} else { LogAction("setaway NO D1", "warn", true) }
 		}
-	}
+	} else {
+		if(away) {
+			parent?.setStructureAway(null, true)
+		} else {
+			parent?.setStructureAway(null, false)
+ 		}
+		def didstr = away ? "AWAY" : "HOME"
+		LogAction("setAway($away): | Setting structure to $didstr", "trace", true)
+		storeLastAction("Set structure to $didstr", getDtNow())
+ 	}
 }
 
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
