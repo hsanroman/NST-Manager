@@ -4044,6 +4044,10 @@ def getTstats() {
 	return atomicState?.thermostats
 }
 
+def getCams() {
+	return atomicState?.cameras
+}
+
 def getCameraDevice(dni) {
 	def d = getChildDevice(getNestCamDni(dni))
 	if(d) { return d }
@@ -9073,7 +9077,7 @@ def nModeGenericEvt(evt) {
 }
 
 def adjustCameras(on) {
-	def cams = parent?.settings?.cameras
+	def cams = parent?.getCams()
 	def foundCams
 	if(cams) {
 		foundCams = cams?.collect { dni ->
