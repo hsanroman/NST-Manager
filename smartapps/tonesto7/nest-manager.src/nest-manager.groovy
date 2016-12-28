@@ -1713,7 +1713,7 @@ def uninstManagerApp() {
 			//Revokes Smartthings endpoint token
 			revokeAccessToken()
 			//Revokes Nest Auth Token
-			if(atomicState?.authToken) { revokeNestToken() }
+			revokeNestToken()
 			//sends notification of uninstall
 			sendNotificationEvent("${textAppName()} is uninstalled")
 		}
@@ -4480,24 +4480,27 @@ def callback() {
 }
 
 def revokeNestToken() {
-	def params = [
-		uri: "https://api.home.nest.com",
-		path: "/oauth2/access_tokens/${atomicState?.authToken}",
-		contentType: 'application/json'
-	]
-	try {
-		httpDelete(params) { resp ->
-			if(resp?.status == 204) {
-				atomicState?.authToken = null
-				LogAction("Nest Token revoked", "warn", true)
-				return true
+	if(atomicState?.authToken) {
+		def params = [
+			uri: "https://api.home.nest.com",
+			path: "/oauth2/access_tokens/${atomicState?.authToken}",
+			contentType: 'application/json'
+		]
+		try {
+			httpDelete(params) { resp ->
+				if(resp?.status == 204) {
+					atomicState.authToken = null
+					LogAction("Nest Token revoked", "warn", true)
+					return true
+				}
 			}
 		}
-	}
-	catch (ex) {
-		log.error "revokeNestToken Exception:", ex
-		sendExceptionData(ex, "revokeNestToken")
-		return false
+		catch (ex) {
+			log.error "revokeNestToken Exception:", ex
+			atomicState.authToken = null
+			sendExceptionData(ex, "revokeNestToken")
+			return false
+		}
 	}
 }
 
