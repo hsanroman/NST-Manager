@@ -2198,7 +2198,7 @@ def schedUpdateChild() {
 }
 
 def updateChildData(force = false) {
-	LogAction("updateChildData()", "info", true)
+	LogAction("updateChildData()", "info", false)
 	if(atomicState?.pollBlocked) { return }
 	def nforce = atomicState?.needChildUpd
 	atomicState.needChildUpd = true
@@ -2227,7 +2227,8 @@ def updateChildData(force = false) {
 				curWeatherTemp = getTemperatureScale() == "C" ? (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
-		getAllChildDevices()?.each {
+ 		def devices = getAllChildDevices()
+		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
 				def defmin = atomicState?."${physdevId}_safety_temp_min" ?: 0.0
@@ -2450,6 +2451,10 @@ def updateChildData(force = false) {
 	}
 	//unschedule("postCmd")
 	atomicState.needChildUpd = false
+}
+
+def setNeedChildUpdate() {
+	atomicState.needChildUpd = true
 }
 
 def locationPresence() {
@@ -6664,6 +6669,7 @@ def subscribeToEvents() {
 							} else {
 								senlist.push(sen)
 								subscribe(sen, "temperature", automationGenericEvt)
+								subscribe(sen, "humidity", automationGenericEvt)
 							}
 						}
 					}
@@ -6808,7 +6814,7 @@ def heartbeatAutomation() {
 		val = 220
 	}
 	if(getLastAutomationSchedSec() > val) {
-		LogAction("${autoType} Heartbeat run requested", "trace", true)
+		LogAction("${autoType} Heartbeat run requested", "trace", false)
 		runAutomationEval()
 	}
 }
@@ -6854,6 +6860,10 @@ def runAutomationEval() {
 			}
 			break
 		case "schMot":
+			if(atomicState?.needChildUpdate) {
+				atomicState?.needChildUpdate = false
+				parent?.setNeedChildUpdate()
+			}
 			if(isSchMotConfigured()) {
 				schMotCheck()
 			}
@@ -6895,6 +6905,9 @@ def getAutoActionData() {
 
 def automationGenericEvt(evt) {
 	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	if(isRemSenConfigured() && settings?.vthermostat) {
+		atomicState.needChildUpdate = true
+	}
 	doTheEvent(evt)
 }
 
@@ -6955,7 +6968,6 @@ def watchDogCheck() {
 
 // This is allowing for warning if Nest has problem of system coming out of ECO while away
 
-//ERSERS
 						def nestModeAway = (d1?.currentpresence?.toString() == "not present") ? true : false
 						//def nestModeAway = (getNestLocPres() == "home") ? false : true
 						if(nestModeAway) {
@@ -7249,7 +7261,7 @@ def getRemSenModeOk() {
 */
 
 private remSenCheck() {
-	LogAction("remSenCheck", "trace", true)
+	LogAction("remSenCheck", "trace", false)
 	if(atomicState?.disableAutomation) { return }
 	try {
 		def remSenTstat = settings?.schMotTstat
