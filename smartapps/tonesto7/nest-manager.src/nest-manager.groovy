@@ -4082,7 +4082,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d1) {
 						def d1Label = getNestTstatLabel("${dni?.value}")
 						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, null, [label: "${d1Label}"])
-						d1.take()
+						//d1.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
 					} else {
@@ -4099,7 +4099,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d2) {
 						def d2Label = getNestProtLabel("${dni.value}")
 						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
-						d2.take()
+						//d2.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d2?.displayName} with (Id: ${dni?.key})", "debug", true)
 					} else {
@@ -4117,7 +4117,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d3) {
 						def d3Label = getNestPresLabel()
 						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${d3Label}"])
-						d3.take()
+						//d3.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
 					} else {
@@ -4137,7 +4137,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d4) {
 						def d4Label = getNestWeatherLabel()
 						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
-						d4.take()
+						//d4.take()
 						atomicState?.lastWeatherUpdDt = null
 						atomicState?.lastForecastUpdDt = null
 						devsCrt = devsCrt + 1
@@ -4157,7 +4157,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d5) {
 						def d5Label = getNestCamLabel("${dni.value}")
 						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, null, [label: "${d5Label}"])
-						d5.take()
+						//d5.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d5?.displayName} with (Id: ${dni?.key})", "debug", true)
 					} else {
@@ -4175,7 +4175,7 @@ def addRemoveDevices(uninst = null) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
 						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
-						d6.take()
+						//d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
 					} else {
