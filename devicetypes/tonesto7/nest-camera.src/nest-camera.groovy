@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.3.0" }
+def devVer() { return "2.3.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -148,6 +148,9 @@ metadata {
 		}
 		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 11, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
+		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
+			state "default", label: 'Test', action:"testBtn"
+		}
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
 		details(["devCamHtml", "isStreaming", "refresh"])
@@ -241,7 +244,7 @@ def processEvent() {
 			audioInputEnabledEvent(results?.is_audio_input_enabled?.toString())
 			softwareVerEvent(results?.software_version?.toString())
 			if(results?.activity_zones) { state?.activityZones = results?.activity_zones }
-			if(results?.public_share_url) { state?.public_share_url = results?.public_share_url }
+			if(results?.public_share_url) { publicShareUrlEvent(results?.public_share_url) }
 			if(results?.snapshot_url) { state?.snapshot_url = results?.snapshot_url?.toString() }
 			if(results?.app_url) { state?.app_url = results?.app_url?.toString() }
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
@@ -403,17 +406,26 @@ def lastEventDataEvent(data) {
 	def curEndDt = device?.currentState("lastEventEnd")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value.toString())) : null
 	def newStartDt = data?.start_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) : "Not Available"
 	def newEndDt = data?.end_time ? tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) : "Not Available"
-	def hasPerson = data?.has_person == "true" ? true : false
+
+	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
+	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
+	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
+
+	log.debug "hasPerson | Data: ${data?.has_person} | Var: $hasPerson"
+	log.debug "hasMotion | Data: ${data?.has_motion} | Var: $hasMotion"
+	log.debug "hasSound | Data: ${data?.has_sound} | Var: $hasSound"
+
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 	state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
 	state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
-	state?.lastEventData = data
+	if(state?.lastEventData) { state.lastEventData == null }
 
-	if((curStartDt != newStartDt || curEndDt != newEndDt) && hasPerson) {
+	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound)) {
 		Logger("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is now ${newStartDt}", displayed: false)
 		Logger("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is now ${newEndDt}", displayed: false)
+		state.lastCamEvtData = ["startDt":newStartDt, "endDt":newEndDt, "hasMotion":hasMotion, "hasSound":hasSound, "hasPerson":hasPerson, "actZones":(data?.activity_zone_ids ?: null)]
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
 		LogAction("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
@@ -505,17 +517,36 @@ def onlineStatusEvent(online) {
 	} else { LogAction("Online Status is: (${val}) | Original State: (${isOn})") }
 }
 
-def getPublicVideoId() {
-	try {
-		if(state?.public_share_url) {
-			def vidId = state?.public_share_url.tokenize('/')
-			return vidId[3].toString()
+def publicShareUrlEvent(url) {
+	if(url) {
+		def pubVidId = getPublicVidID()
+		def lastVidId = state?.lastPubVidId
+		if(lastVidId == null || lastVidId.toString() != pubVidId.toString()) {
+			state?.public_share_url = url
+			state.lastPubVidId = pubVidId
 		}
-	} catch (ex) {
-		log.error "getPublicVideoId Exception:", ex
+		if(!state.camUUID) {
+			getCamUUID(pubVidId)
+		}
+	} else {
+		state?.pubVidId = null
+		state?.lastPubVidId = null
+		state?.camUUID = null
+		state?.camApiServerData = null
+		Logger("Cleared Cached Camera State Info because Sharing has been disabled or the Public ID is no longer available...", "warn")
 	}
 }
 
+def getPublicVidID() {
+	def id = null
+	if(!state?.pubVidId) {
+		id = state?.public_share_url.tokenize('/')[3].toString()
+		state?.pubVidId = id
+	} else {
+		id = state?.pubVidId
+	}
+	return id
+}
 
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
@@ -665,10 +696,10 @@ def incInfoBtnTapCnt()		{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.
 
 def getMetricCntData() {
 	return 	[
-			camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadCnt ?: 0)//,
-			//camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0), camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0),
-			//camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
-			]
+		camManStrChgCnt:(state?.manStreamChgCnt ?: 0), camProgStrChgCnt:(state?.progStreamChgCnt ?: 0), camHtmlLoadedCnt:(state?.htmlLoadCnt ?: 0)//,
+		//camVidBtnTapCnt:(state?.videoBtnTapCnt ?: 0), camImgBtnTapCnt:(state?.imageBtnTapCnt ?: 0), camEvtBtnTapCnt:(state?.eventBtnTapCnt ?: 0),
+		//camInfoBtnCnt:(state?.infoBtnTapCnt ?: 0)
+	]
 }
 
 /************************************************************************************************
@@ -802,59 +833,65 @@ def getCssData() {
 def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 
 //this scrapes the public nest cam page for its unique id for using in render html tile
+include 'asynchttp_v1' //<<<<<This is currently in Beta
+
 def getCamUUID(pubVidId) {
 	try {
 		if(pubVidId) {
-			def params = [
-				uri: "https://opengraph.io/api/1.0/site/https://video.nest.com/live/${pubVidId}"
-			]
-			httpGet(params) { resp ->
-				def uuid = (resp?.data?.hybridGraph.image =~ /uuid=(\w*)/)[0][1]
-				//log.debug "uuid: $uuid"
-				return uuid ?: null
+			if(!state?.lastPubVidId || !state?.camUUID || state?.lastPubVidId != pubVidId) {
+				def params = [
+			    	uri: "https://video.nest.com/live/${pubVidId}",
+			    	requestContentType: 'text/html'
+			  	]
+				asynchttp_v1.get('camPageHtmlRespMethod', params)
+			} else {
+				return state?.camUUID
 			}
-		} else { Logger("getCamUUID PublicVideoId is missing....", "warn") }
+		} else { Logger("getCamUUID: Your Camera's PublicVideoId was not found!!! Please make sure you have public video sharing enabled under your Cameras settings in the Nest Mobile App...", "warn") }
 	} catch (ex) {
-		log.error "getCamUUID Exception:", ex
+		log.error "getCamUUID Exception: $ex"
 		exceptionDataHandler(ex.message, "getCamUUID")
 	}
 }
 
-def getLiveStreamHost(camUUID) {
-	try {
-		if(camUUID) {
-			def params = [
-				uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
-			]
-			httpGet(params) { resp ->
-				def stream = resp?.data?.items.live_stream_host.toString().replaceAll("\\[|\\]", "")
-				return stream ?: null
-			}
-		} else { Logger("getLiveStreamHost camUUID is missing....", "warn") }
-	}
-	catch (ex) {
-		log.error "getLiveStreamHost Exception:", ex
-		exceptionDataHandler(ex.message, "getLiveStreamHost")
-	}
+def camPageHtmlRespMethod(response, data) {
+	def rData = response.getData()
+	def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
+    def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
+    // log.debug "UUID: ${uuid}"
+	state.camUUID = uuid
 }
 
-def getCamApiServer(camUUID) {
+def getCamApiServerData(camUUID) {
 	try {
-		if(camUUID) {
+		if(camUUID && state?.camApiServerData == null) {
 			def params = [
 				uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}",
 			]
 			httpGet(params)  { resp ->
-				def apiServer = (resp?.data?.items.nexus_api_http_server)
-				def apiServer1 = apiServer.toString().replaceAll("\\[|\\]", "")
-				return apiServer1 ?: null
+				state?.camApiServerData = resp?.data
+				return state?.camApiServerData ?: null
 			}
-		} else { Logger("getCamApiServer camUUID is missing....", "warn") }
+		} else { Logger("getCamApiServerData camUUID is missing....", "warn") }
 	}
 	catch (ex) {
-		log.error "getCamApiServer Exception:", ex
-		exceptionDataHandler(ex.message, "getCamApiServer")
+		log.error "getCamApiServerData Exception:", ex
+		exceptionDataHandler(ex.message, "getCamApiServerData")
 	}
+}
+
+def getStreamHostUrl() {
+	def res = state?.camApiServerData?.items?.live_stream_host
+	def data = res.toString().replaceAll("\\[|\\]", "")
+	//log.debug "getStreamHostUrl: $data"
+	return data ?: null
+}
+
+def getCamApiServer() {
+	def res = state?.camApiServerData?.items?.nexus_api_http_server
+	def data = res.toString().replaceAll("\\[|\\]", "")
+	//log.debug "getCamApiServer: $data"
+	return data ?: null
 }
 
 def getCamBtnJsData() {
@@ -862,13 +899,10 @@ def getCamBtnJsData() {
 	"""
 	  function toggle_visibility(id) {
 		var id = document.getElementById(id);
-
 		var divsToHide = document.getElementsByClassName("hideable");
-
 		for (var i = 0; i < divsToHide.length; i++) {
 		  divsToHide[i].style.display = "none";
 		}
-
 		id.style.display = 'block'
 	  }
 	"""
@@ -880,8 +914,8 @@ def getCamHtml() {
 		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def pubVidUrl = state?.public_share_url
-		def camHtml = (pubVidUrl || state?.isStreaming) ? showCamHtml() : hideCamHtml()
-
+		def camHtml = ((pubVidUrl && state?.camUUID) || state?.isStreaming) ? showCamHtml() : hideCamHtml()
+		log.debug "lastCamEvtData: ${state?.lastCamEvtData}"
 		def mainHtml = """
 		<!DOCTYPE html>
 		<html>
@@ -902,13 +936,13 @@ def getCamHtml() {
 				${camHtml}
 
 				<br></br>
-
+				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Last Event</h4>
 				<table>
 				  <col width="50%">
-					<col width="50%">
+				  <col width="50%">
 					  <thead>
-						<th>Last Event Start</th>
-						<th>Last Event End</th>
+						<th style="background: #ABABAB;">Event Started</th>
+						<th style="background: #ABABAB;">Event Ended</th>
 					  </thead>
 					  <tbody>
 						<tr>
@@ -917,6 +951,25 @@ def getCamHtml() {
 						</tr>
 					  </tbody>
 				</table>
+				<table>
+				  <col width="33%">
+				  <col width="33%">
+				  <col width="33%">
+				  <thead>
+					<th style="background: #ABABAB;">Had Person?</th>
+					<th style="background: #ABABAB;">Had Motion?</th>
+					<th style="background: #ABABAB;">Had Sound?</th>
+				  </thead>
+				  <tbody>
+					<tr>
+					  <td>${state?.lastCamEvtData?.hasPerson}</td>
+					  <td>${state?.lastCamEvtData?.hasMotion}</td>
+					  <td>${state?.lastCamEvtData?.hasSound}</td>
+					</tr>
+				  </tbody>
+				</table>
+				<br></br>
+				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Other Info</h4>
 				<table>
 				  <col width="33%">
 					<col width="33%">
@@ -984,10 +1037,13 @@ def getCamHtml() {
 
 def showCamHtml() {
 	def pubVidUrl = state?.public_share_url
-	def pubVidId = getPublicVideoId()
-	def camUUID = getCamUUID(pubVidId)
-	def apiServer = getCamApiServer(camUUID)
-	def liveStreamURL = getLiveStreamHost(camUUID)
+	if(!state?.camUUID) { getCamUUID(getPublicVidID()) }
+	def camUUID = state?.camUUID
+	if(camUUID && state?.camApiServerData == null) { getCamApiServerData(camUUID) }
+
+	def apiServer = getCamApiServer()
+
+	def liveStreamURL = getStreamHostUrl()
 	def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
 	def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
@@ -1026,12 +1082,17 @@ def showCamHtml() {
 	"""
 }
 
-def hideCamHtml() {
+def hideCamHtml(eNum=3) {
 	def data = ""
-	if(state?.isStreaming == false) {
+	if(!state?.isStreaming || eNum == 1) {
 		data = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>"""
+	}
+	else if(!state?.camUUID || eNum == 2) {
+		data = """<br></br><h3>Camera ID Not Found...\nIf this is your First Try Please Refresh the Page!!!\nIf this message continues after a few minutes...Please verify public streaming is enabled for this camera</h3>"""
+	} else if(!state?.public_share_url || eNum == 3) {
+		data = """<br></br><h3>Unable to Display Video Stream\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
 	} else {
-		data = """<br></br><h3>Unable to Display Video Stream!!!\nPlease make sure that public streaming is enabled for this camera under https://home.nest.com</h3>"""
+		data = """<br></br><h3>Unable to Display Video Stream\nAn Unknown Issue has Occurred... Please consult the Live Logs in the SmartThings IDE</h3>"""
 	}
 	return data
 }
