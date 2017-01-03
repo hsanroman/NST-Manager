@@ -411,10 +411,6 @@ def lastEventDataEvent(data) {
 	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
 	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
 
-	log.debug "hasPerson | Data: ${data?.has_person} | Var: $hasPerson"
-	log.debug "hasMotion | Data: ${data?.has_motion} | Var: $hasMotion"
-	log.debug "hasSound | Data: ${data?.has_sound} | Var: $hasSound"
-
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 	state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
 	state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
@@ -915,7 +911,7 @@ def getCamHtml() {
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def pubVidUrl = state?.public_share_url
 		def camHtml = ((pubVidUrl && state?.camUUID) || state?.isStreaming) ? showCamHtml() : hideCamHtml()
-		log.debug "lastCamEvtData: ${state?.lastCamEvtData}"
+
 		def mainHtml = """
 		<!DOCTYPE html>
 		<html>
