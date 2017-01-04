@@ -924,6 +924,19 @@ def getCamHtml() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+                
+                <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+				<style>
+					.vex.vex-theme-default .vex-content {
+						width: 300px;
+					}
+				</style>
 			</head>
 			<body>
 				${clientBl}
@@ -965,60 +978,68 @@ def getCamHtml() {
 				  </tbody>
 				</table>
 				<br></br>
-				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Other Info</h4>
-				<table>
-				  <col width="33%">
-					<col width="33%">
-					  <col width="33%">
-						<thead>
-						  <th>Public Video</th>
-						  <th>Audio Input</th>
-						  <th>Video History</th>
-						</thead>
-						<tbody>
-						  <tr>
-							<td>${state?.publicShareEnabled.toString()}</td>
-							<td>${state?.audioInputEnabled.toString()}</td>
-							<td>${state?.videoHistoryEnabled.toString()}</td>
-						  </tr>
-						</tbody>
-				</table>
-				<table>
-				  <col width="50%">
-					<col width="50%">
-					  <thead>
-						<th>Network Status</th>
-						<th>API Status</th>
-					  </thead>
-					  <tbody>
-						<tr>
-						  <td>${state?.onlineStatus.toString()}</td>
-						  <td>${state?.apiStatus}</td>
-						</tr>
-					  </tbody>
-				</table>
-				<table>
-				  <tr>
-					<th>Firmware Version</th>
-					<th>Debug</th>
-					<th>Device Type</th>
-				  </tr>
-				  <td>v${state?.softwareVer.toString()}</td>
-				  <td>${state?.debugStatus}</td>
-				  <td>${state?.devTypeVer.toString()}</td>
-				</table>
-				<table>
-				  <thead>
-					<th>Last Online Change</th>
-					<th>Data Last Received</th>
-				  </thead>
-				  <tbody>
-					<tr>
-					  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-					  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-					</tr>
-				  </tbody>
-				</table>
+                <p class="centerText">
+					<a class="other-info button"">Other Info</a>
+               </p>
+            <script>
+                \$('.other-info').click(function(){
+                    vex.dialog.alert({ unsafeMessage: `
+                    <table>
+                      <col width="33%">
+                        <col width="33%">
+                          <col width="33%">
+                            <thead>
+                              <th>Public Video</th>
+                              <th>Audio Input</th>
+                              <th>Video History</th>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>${state?.publicShareEnabled.toString()}</td>
+                                <td>${state?.audioInputEnabled.toString()}</td>
+                                <td>${state?.videoHistoryEnabled.toString()}</td>
+                              </tr>
+                            </tbody>
+                    </table>
+                    <table>
+                      <col width="50%">
+                        <col width="50%">
+                          <thead>
+                            <th>Network Status</th>
+                            <th>API Status</th>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>${state?.onlineStatus.toString()}</td>
+                              <td>${state?.apiStatus}</td>
+                            </tr>
+                          </tbody>
+                    </table>
+                    <table>
+                      <tr>
+                        <th>Firmware Version</th>
+                        <th>Debug</th>
+                        <th>Device Type</th>
+                      </tr>
+                      <td>v${state?.softwareVer.toString()}</td>
+                      <td>${state?.debugStatus}</td>
+                      <td>${state?.devTypeVer.toString()}</td>
+                    </table>
+                    <table>
+                      <thead>
+                        <th>Last Online Change</th>
+                        <th>Data Last Received</th>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+                          <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                `})
+                });
+                </script>
 			</body>
 		</html>
 		"""
