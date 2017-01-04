@@ -146,7 +146,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 11, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
@@ -195,7 +195,7 @@ def poll() {
 }
 
 def refresh() {
-	Logger("refreshing parent...")
+	//Logger("refreshing parent...")
 	poll()
 }
 
@@ -357,6 +357,7 @@ def isStreamingEvent(isStreaming) {
 	if(!isOn.equals(val)) {
 		Logger("UPDATED | Streaming Video is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Streaming Video is: ${val}", displayed: true, isStateChange: true, state: val)
+		sendEvent(name: "switch", value: val)
 	} else { LogAction("Streaming Video Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -412,8 +413,9 @@ def lastEventDataEvent(data) {
 	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
 
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
-	state.lastEventStartDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), true)
-	state.lastEventEndDt = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), true)
+
+	state.lastEventDate = formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "MMMMM d, yyyy").toString()
+	state.lastEventTime = "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "h:mma")} to ${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), "h:mma")}"
 	if(state?.lastEventData) { state.lastEventData == null }
 
 	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound)) {
@@ -561,6 +563,7 @@ void streamingOn(manChg=false) {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
 			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
+			sendEvent(name: "switch", value: "on")
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
@@ -576,6 +579,7 @@ void streamingOff(manChg=false) {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
 			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
+			sendEvent(name: "switch", value: "off")
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
@@ -702,10 +706,20 @@ def getMetricCntData() {
 |										OTHER METHODS     										|
 *************************************************************************************************/
 
-def formatDt(dt, mdy = false) {
+def formatLocalDt(dt, mdy = false) {
 	//log.trace "formatDt($dt, $mdy)..."
 	def formatVal = mdy ? (state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a") : "E MMM dd HH:mm:ss z yyyy"
 	def tf = new SimpleDateFormat(formatVal)
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	else {
+		Logger("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...")
+	}
+	return tf.format(dt)
+}
+
+def formatDt(dt, fmt=null) {
+	//log.trace "formatDt($dt, $mdy)..."
+	def tf = new SimpleDateFormat(fmt)
 	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
 	else {
 		Logger("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...")
@@ -910,7 +924,7 @@ def getCamHtml() {
 		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		def pubVidUrl = state?.public_share_url
-		def camHtml = ((pubVidUrl && state?.camUUID) || state?.isStreaming) ? showCamHtml() : hideCamHtml()
+		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming) ? showCamHtml() : hideCamHtml()
 
 		def mainHtml = """
 		<!DOCTYPE html>
@@ -924,7 +938,7 @@ def getCamHtml() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
-                
+
                 <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
 
@@ -945,41 +959,35 @@ def getCamHtml() {
 				${camHtml}
 
 				<br></br>
-				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Last Event</h4>
+				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Event</h4>
 				<table>
-				  <col width="50%">
-				  <col width="50%">
-					  <thead>
-						<th style="background: #ABABAB;">Event Started</th>
-						<th style="background: #ABABAB;">Event Ended</th>
-					  </thead>
-					  <tbody>
-						<tr>
-						  <td>${state?.lastEventStartDt}</td>
-						  <td>${state?.lastEventEndDt}</td>
-						</tr>
-					  </tbody>
+				  <tbody>
+					<tr>
+					  <td>${state?.lastEventDate}</td>
+					  <td>${state?.lastEventTime}</td>
+					</tr>
+				  </tbody>
 				</table>
 				<table>
 				  <col width="33%">
 				  <col width="33%">
 				  <col width="33%">
 				  <thead>
-					<th style="background: #ABABAB;">Had Person?</th>
-					<th style="background: #ABABAB;">Had Motion?</th>
-					<th style="background: #ABABAB;">Had Sound?</th>
+					<th>Had Person?</th>
+					<th>Had Motion?</th>
+					<th>Had Sound?</th>
 				  </thead>
 				  <tbody>
 					<tr>
-					  <td>${state?.lastCamEvtData?.hasPerson}</td>
-					  <td>${state?.lastCamEvtData?.hasMotion}</td>
-					  <td>${state?.lastCamEvtData?.hasSound}</td>
+					  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize()}</td>
+					  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize()}</td>
+					  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize()}</td>
 					</tr>
 				  </tbody>
 				</table>
 				<br></br>
                 <p class="centerText">
-					<a class="other-info button"">Other Info</a>
+					<a class="other-info button"">View More Info (Tap)</a>
                </p>
             <script>
                 \$('.other-info').click(function(){
@@ -1067,9 +1075,9 @@ def showCamHtml() {
 	def animationUrl = state?.animation_url ? getImgBase64(state?.animation_url, 'gif') : null
 	def pubSnapUrl = state?.snapshot_url ? getImgBase64(state?.snapshot_url,'jpeg') : null
 
-	def vidBtn = !liveStreamURL ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
-	def imgBtn = !pubSnapUrl ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
-	def lastEvtBtn = !animationUrl ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
+	def vidBtn = (!state?.isStreaming || !liveStreamURL) ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
+	def imgBtn = (!state?.isStreaming || !pubSnapUrl) ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
+	def lastEvtBtn = (!state?.isStreaming || !animationUrl) ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
 
 	def data = """
 		<script type="text/javascript">
@@ -1102,7 +1110,7 @@ def showCamHtml() {
 def hideCamHtml(eNum=3) {
 	def data = ""
 	if(!state?.isStreaming || eNum == 1) {
-		data = """<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off...</h3>"""
+		data = """<br></br><br></br><br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Video Streaming is Currently Off\nPlease Turn it back On below and refresh this page...</h3><br></br><br></br>"""
 	}
 	else if(!state?.camUUID || eNum == 2) {
 		data = """<br></br><h3>Camera ID Not Found...\nIf this is your First Try Please Refresh the Page!!!\nIf this message continues after a few minutes...Please verify public streaming is enabled for this camera</h3>"""
