@@ -4614,7 +4614,7 @@ def toQueryString(Map m) {
 
 def clientId() {
 	if(!appSettings.clientId) {
-		def tokenNum = atomicState?.appData?.token?.tokenNum?.toInteger() ?: 1
+		def tokenNum = atomicState?.appData?.token?.tokenNum?.toInteger() ?: 3
 		switch(tokenNum) {
 			case 1:
 				return "63e9befa-dc62-4b73-aaf4-dcf3826dd704" // Original Token Updated with Cam/Image Support
@@ -4625,6 +4625,9 @@ def clientId() {
 			case 3:
 				return "665dbbb1-2765-4145-b3ae-36cb986c309d" //Added a 3rd token with 50 available slots
 				break
+			case 4:
+				return "9d132e83-11fc-45be-9a8d-95b7a7cb07a0" //Added a 4th token with 50 available slots
+				break
 		}
 	} else {
 		return appSettings.clientId
@@ -4633,7 +4636,7 @@ def clientId() {
 
 def clientSecret() {
 	if(!appSettings.clientSecret) {
-		def tokenNum = atomicState?.appData?.token?.tokenNum?.toInteger() ?: 1
+		def tokenNum = atomicState?.appData?.token?.tokenNum?.toInteger() ?: 3
 		switch(tokenNum) {
 			case 1:
 				return "8iqT8X46wa2UZnL0oe3TbyOa0" // Original Token Updated with Cam/Image Support
@@ -4643,6 +4646,9 @@ def clientSecret() {
 				break
 			case 3:
 				return "jzARJspM2bmXETMVWXeGTYBDJ" //Added a 3rd token with 50 available slots
+				break
+			case 4:
+				return "LDaJe8tAMvdPGyFPt0JJP165x" //Added a 4th token with 50 available slots
 				break
 		}
 	} else {
