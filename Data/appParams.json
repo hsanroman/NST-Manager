@@ -7,26 +7,26 @@
     },
     "versions": {
         "app": {
-            "ver": "4.3.1"
+            "ver": "4.3.4"
         },
         "thermostat": {
-            "ver": "4.3.0"
+            "ver": "4.4.0"
         },
         "protect": {
-            "ver": "4.3.0"
+            "ver": "4.4.0"
         },
         "camera": {
-            "ver": "2.3.0"
+            "ver": "2.4.0"
         },
         "presence": {
-            "ver": "4.3.0"
+            "ver": "4.4.0"
         },
         "weather": {
-            "ver": "4.3.0"
+            "ver": "4.4.0"
         }
     },
     "token": {
-        "tokenNum": 2
+        "tokenNum": 3
     },
     "broadcast": {
         "msgId": "",
@@ -44,19 +44,19 @@
                 "ver": "4.3.1"
             },
             "thermostat": {
-                "ver": "4.3.0"
+                "ver": "4.4.0"
             },
             "protect": {
-                "ver": "4.3.0"
+                "ver": "4.4.0"
             },
             "camera": {
-                "ver": "2.3.0"
+                "ver": "2.4.0"
             },
             "presence": {
-                "ver": "4.3.0"
+                "ver": "4.4.0"
             },
             "weather": {
-                "ver": "4.3.0"
+                "ver": "4.4.0"
             }
         }
     },

@@ -5149,11 +5149,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":430, "desc":"4.3.0"],
-		"protect":["val":430, "desc":"4.3.0"],
-		"presence":["val":430, "desc":"4.3.0"],
-		"weather":["val":430, "desc":"4.3.0"],
-		"camera":["val":230 , "desc":"2.3.0"],
+		"thermostat":["val":440, "desc":"4.4.0"],
+		"protect":["val":440, "desc":"4.4.0"],
+		"presence":["val":440, "desc":"4.4.0"],
+		"weather":["val":440, "desc":"4.4.0"],
+		"camera":["val":240 , "desc":"2.4.0"],
 	]
 }
 
