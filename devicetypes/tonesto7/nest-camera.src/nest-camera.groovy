@@ -232,10 +232,11 @@ def processEvent() {
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
-			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
-			if(results?.public_share_url) { publicShareUrlEvent(results?.public_share_url) }
+
+			publicShareUrlEvent(results?.public_share_url)
 			onlineStatusEvent(results?.is_online?.toString())
 			isStreamingEvent(results?.is_streaming)
+			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
 			if(!results?.last_is_online_change) { lastCheckinEvent(null) }
 			else { lastCheckinEvent(results?.last_is_online_change?.toString()) }
@@ -257,6 +258,7 @@ def processEvent() {
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
+			vidHistoryTimeEvent()
 			lastUpdatedEvent()
 		}
 		//log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
@@ -352,7 +354,7 @@ def lastOnlineEvent(dt) {
 def onlineStatusEvent(online) {
 	//log.trace "onlineStatusEvent($online)"
 	def isOn = device.currentState("onlineStatus")?.value
-	if(state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
+	if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
 	def val = online.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = val.toString().capitalize()
 	state?.isOnline = (val == "online")
@@ -367,7 +369,7 @@ def isStreamingEvent(isStreaming) {
 	//log.trace "isStreamingEvent($isStreaming)..."
 	def isOn = device.currentState("isStreaming")?.value
 	def isOnline = device.currentState("onlineStatus")?.value
-	if(state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] }
+	if(state?.camApiServerData && state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] }
 	def val = (isStreaming.toString() == "true") ? "on" : (isOnline.toString() != "Online" ? "offline" : "off")
 	//log.debug "isStreaming: $val | isOnline: $isOnline"
 	state?.isStreaming = (val == "on") ? true : false
@@ -418,6 +420,7 @@ def softwareVerEvent(ver) {
 }
 
 def lastEventDataEvent(data) {
+	//log.trace "lastEventDataEvent($data)"
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 		tf.setTimeZone(getTimeZone())
 	def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
@@ -522,17 +525,20 @@ def lastUpdatedEvent() {
 	}
 }
 
-def vidHistoryTimeEvent(min, max) {
-	//log.trace "vidHistoryTimeEvent($val)"
+def vidHistoryTimeEvent() {
+	if(!state?.camApiServerData) { return }
+	def camData = state?.camApiServerData
+	def newMin = (camData?.items?.hours_of_free_tier_history[0] > 3 ? camData?.items?.hours_of_free_tier_history[0] : 3)
+	def newMax = (camData?.items?.hours_of_recording_max[0] > 3 ? camData?.items?.hours_of_recording_max[0] : 3)
 	def curMin = device.currentState("minVideoHistoryHours")?.value
 	def curMax = device.currentState("maxVideoHistoryHours")?.value
-	state?.minVideoHistoryHours = min
-	state?.maxVideoHistoryHours = max
-	if((curMin.toString() != min.toString()) || (curMax.toString() != max.toString())) {
-		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${min} hours | Maximum: ${max} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
-		sendEvent(name: "minVideoHistoryHours", value: min, descriptionText: "Minimum Video Recording History Hours is Now: (${min} hours)", displayed: false, isStateChange: true, state: min)
-		sendEvent(name: "maxVideoHistoryHours", value: max, descriptionText: "Maximum Video Recording History Hours is Now: (${max} hours)", displayed: false, isStateChange: true, state: max)
-	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${min} hours | Maximum: ${max} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
+	state?.minVideoHistoryHours = newMin
+	state?.maxVideoHistoryHours = newMax
+	if((curMin.toString() != newMin.toString()) || (curMax.toString() != newMax.toString())) {
+		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
+		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
+		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
+	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
 }
 
 def publicShareUrlEvent(url) {
@@ -545,16 +551,10 @@ def publicShareUrlEvent(url) {
 			state?.public_share_url = url
 			state?.lastPubVidId = pubVidId
 		}
-		if(!state?.camUUID) {
-			getCamUUID(pubVidId)
-		} else {
+		if(!state?.camUUID) { getCamUUID(pubVidId) }
+		if(state?.camUUID) {
 			def camData = getCamApiServerData(state?.camUUID)
-			if(camData && !state?.lastCamApiServerData == camData) {
-				//onlineStatusEvent((camData?.items?.is_online[0] == "true"))
-				//isStreamingEvent((camData?.items?.is_streaming[0] == "true"))
-				vidHistoryTimeEvent((camData?.items?.hours_of_free_tier_history[0] > 3 ? camData?.items?.hours_of_free_tier_history[0] : 3), (camData?.items?.hours_of_recording_max[0] > 3 ? camData?.items?.hours_of_recording_max[0] : 3))
-				state?.lastCamApiServerData = camData
-			}
+			if(camData && state?.lastCamApiServerData != camData) { state?.lastCamApiServerData = camData }
 		}
 	} else {
 		if(state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData) {
@@ -924,7 +924,7 @@ def camPageHtmlRespMethod(response, data) {
 	def rData = response.getData()
 	def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
 	def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
-	// log.debug "UUID: ${uuid}"
+	//log.debug "UUID: ${uuid}"
 	state.camUUID = uuid
 }
 
@@ -1017,8 +1017,8 @@ def getCamHtml() {
 				<table>
 				  <tbody>
 					<tr>
-					  <td>${state?.lastEventDate}</td>
-					  <td>${state?.lastEventTime}</td>
+					  <td>${state?.lastEventDate ?: "Not Available"}</td>
+					  <td>${state?.lastEventTime ?: ""}</td>
 					</tr>
 				  </tbody>
 				</table>
@@ -1033,9 +1033,9 @@ def getCamHtml() {
 				  </thead>
 				  <tbody>
 					<tr>
-					  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize()}</td>
-					  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize()}</td>
-					  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize()}</td>
+					  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
+					  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
+					  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
 					</tr>
 				  </tbody>
 				</table>
@@ -1049,8 +1049,8 @@ def getCamHtml() {
 					</thead>
 					<tbody>
 					  <tr>
-						<td>${getRecTimeDesc(state?.minVideoHistoryHours)}</td>
-						<td>${getRecTimeDesc(state?.maxVideoHistoryHours)}</td>
+						<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
+						<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
 					  </tr>
 				  </tbody>
 				</table>
@@ -1060,14 +1060,12 @@ def getCamHtml() {
 					  <col width="33%">
 						<thead>
 						  <th>Public Video</th>
-						  <th>Audio Input</th>
-						  <th>Video History</th>
+						  <th>Mic Status</th>
 						</thead>
 						<tbody>
 						  <tr>
 							<td>${state?.publicShareEnabled.toString()}</td>
 							<td>${state?.audioInputEnabled.toString()}</td>
-							<td>${state?.videoHistoryEnabled.toString()}</td>
 						  </tr>
 						</tbody>
 				</table>
