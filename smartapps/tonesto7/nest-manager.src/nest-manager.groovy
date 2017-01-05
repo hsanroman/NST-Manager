@@ -3302,8 +3302,16 @@ def getLastAnalyticUpdSec() { return !atomicState?.lastAnalyticUpdDt ? 100000 : 
 def getLastUpdateMsgSec() { return !atomicState?.lastUpdateMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdateMsgDt, null, "getLastUpdateMsgSec").toInteger() }
 
 def getStZipCode() { return location?.zipCode?.toString() }
-def getNestZipCode() { return atomicState?.structData[atomicState?.structures]?.postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : "" }
-def getNestTimeZone() { return atomicState?.structData[atomicState?.structures]?.time_zone ? atomicState?.structData[atomicState?.structures].time_zone : null}
+def getNestZipCode() {
+	if(atomicState?.structures && atomicState?.structData) {
+		return atomicState?.structData[atomicState?.structures]?.postal_code ? atomicState?.structData[atomicState?.structures]?.postal_code.toString() : ""
+	} else { return "" }
+}
+def getNestTimeZone() {
+	if(atomicState?.structures && atomicState?.structData) {
+		return atomicState?.structData[atomicState?.structures]?.time_zone ?: null
+	} else { return null }
+}
 
 def updateWebStuff(now = false) {
 	//LogTrace("updateWebStuff")
@@ -7190,7 +7198,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
 	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
 	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
+	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
 	def maxTempChangeVal = tempChangeVal * 3
 
 	chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
@@ -7199,8 +7207,8 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 		scheduleAutomationEval(60)
 		def cHeat = null
 		if(hvacMode in ["auto"]) {
-			if(curHeatSetpoint > (chgval-5.0)) {
-				cHeat = chgval - 5.0
+			if(curHeatSetpoint >= (offTemp-tempChangeVal)) {
+				cHeat = offTemp - tempChangeVal
 				LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${getTemperatureScale()}) to allow COOL setting", "info", true)
 				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
 			}
@@ -7224,7 +7232,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
 	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
 	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
+	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
 	def maxTempChangeVal = tempChangeVal * 3
 
 	chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
@@ -7233,8 +7241,8 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 		scheduleAutomationEval(60)
 		def cCool = null
 		if(hvacMode in ["auto"]) {
-			if(curCoolSetpoint < (chgval+5)) {
-				cCool = chgval + 5.0
+			if(curCoolSetpoint <= (offTemp+tempChangeVal)) {
+				cCool = offTemp + tempChangeVal
 				LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${getTemperatureScale()}) to allow HEAT setting", "info", true)
 				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
 			}
@@ -7288,19 +7296,19 @@ private remSenCheck() {
 
 			def reqSenHeatSetPoint = getRemSenHeatSetTemp()
 			def reqSenCoolSetPoint = getRemSenCoolSetTemp()
+			def threshold = !remSenTempDiffDegrees ? 2.0 : Math.min(Math.max(remSenTempDiffDegrees.toDouble(),1.0), 4.0)
 
 			if(hvacMode in ["auto"]) {
 				// check that requested setpoints make sense & notify
 				def coolheatDiff = Math.abs(reqSenCoolSetPoint - reqSenHeatSetPoint)
-				if( !((reqSenCoolSetPoint >= reqSenHeatSetPoint) && (coolheatDiff > 2)) ) {
-					LogAction("remSenCheck: Invalid Requested Setpoints with auto mode: (${reqSenCoolSetPoint})/(${reqSenHeatSetPoint})", "warn", true)
+				if( !((reqSenCoolSetPoint > reqSenHeatSetPoint) && (coolheatDiff >= 2)) ) {
+					LogAction("remSenCheck: Invalid Requested Setpoints with auto mode: (${reqSenCoolSetPoint})/(${reqSenHeatSetPoint}, ${threshold})", "warn", true)
 					storeExecutionHistory((now() - execTime), "remSenCheck")
 					return
 				}
 			}
 
-			def threshold = !remSenTempDiffDegrees ? 2.0 : remSenTempDiffDegrees.toDouble()
-			def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : remSenTstatTempChgVal.toDouble()
+			def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
 			def maxTempChangeVal = tempChangeVal * 3
 			def curTstatTemp = getDeviceTemp(remSenTstat).toDouble()
 			def curSenTemp = (settings?.remSensorDay) ? getRemoteSenTemp().toDouble() : null
