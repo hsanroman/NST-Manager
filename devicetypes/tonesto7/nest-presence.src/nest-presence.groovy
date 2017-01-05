@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.3.0" }
+def devVer() { return "4.3.1" }
 
 // for the UI
 metadata {
@@ -41,6 +41,8 @@ metadata {
 		command "setPresence"
 		command "refresh"
 		command "log"
+		command "setHome"
+		command "setAway"
 
 		attribute "lastConnection", "string"
 		attribute "apiStatus", "string"
