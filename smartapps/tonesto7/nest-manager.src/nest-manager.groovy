@@ -1,8 +1,8 @@
 /********************************************************************************************
 |    Application Name: Nest Manager and Automations                                         |
-|    Author: Anthony S. (@tonesto7), Eric S. (@E_sch)                                       |
+|    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
-|    A few code methods are modeled from CoRE by Adrian Caramaliu                           |
+|    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
 |                                                                                           |
 |*******************************************************************************************|
 |    There maybe portions of the code that may resemble code from other apps in the         |
@@ -19,7 +19,6 @@ import groovy.json.*
 import groovy.time.*
 import java.text.SimpleDateFormat
 import java.security.MessageDigest
-//import com.firebase.client.*
 
 definition(
 	name: "${textAppName()}",
@@ -41,8 +40,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.3.1" }
-def appVerDate() { "12-22-2016" }
+def appVersion() { "4.3.4" }
+def appVerDate() { "1-5-2017" }
 def appVerInfo() {
 	def str = ""
 
@@ -254,7 +253,7 @@ def mainPage() {
 				def devDesc = getDevicesDesc() ? "Nest Location: ${atomicState?.structName} (${strCapitalize(locationPresence())})\n${getDevicesDesc()}\n\nTap to modify" : "Tap to configure"
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
-			getDevChgDesc()
+			//getDevChgDesc()
 		}
 		if(!atomicState?.isInstalled) {
 			devicesPage()
@@ -386,7 +385,7 @@ def reviewSetupPage() {
 		atomicState?.setupVersion = atomicState?.appData?.updater?.setupVersion?.toInteger() ?: 0
 		section("Device Summary:") {
 			def str = getDevicesDesc() ?: ""
-			paragraph title: (!atomicState?.isInstalled ? "Devices to Install:" : "Installed Devices:"), "${str}"//, state: (str ? "complete" : null)
+			paragraph title: (!atomicState?.isInstalled ? "Devices Pending Install:" : "Installed Devices:"), "${str}"//, state: (str ? "complete" : null)
 			if(atomicState?.weatherDevice) {
 				if(!getStZipCode() || getStZipCode() != getNestZipCode()) {
 					def wDesc = getWeatherConfDesc()
@@ -399,7 +398,7 @@ def reviewSetupPage() {
 						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
-		getDevChgDesc()
+		//getDevChgDesc()
 
 		showVoiceRprtPrefs()
 
@@ -1398,7 +1397,7 @@ def getPollingConfDesc() {
 	pStr += "\n• Device: (${getInputEnumLabel(pollValue?:180, pollValEnum())})"
 	pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})" : ""
-	pStr += "\n• Forced Poll Refresh Limit:\n    └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
+	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
 	return ((pollValDesc || pollStrValDesc || pollWEatherValDesc || pollWaitValDesc) ? pStr : "")
 }
 
@@ -1464,7 +1463,7 @@ def getDevicesDesc() {
 	str += atomicState?.vthermostats ? "\n • [${atomicStateatomicState?.vthermostats?.size()}] Virtual Thermostat${(atomicState?.vthermostats?.size() > 1) ? "s" : ""}" : ""
 	str += settings?.presDevice ? "\n • [1] Presence Device" : ""
 	str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
-	str += (!settings?.thermostats && !settings?.protects && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected" : ""
+	str += (!settings?.thermostats && !settings?.protects && !settings?.cameras && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected" : ""
 	return (str != "") ? str : null
 }
 
@@ -1480,6 +1479,7 @@ def getDevChgDesc() {
 	def added = [:]
 	def deleted = [:]
 	def result = compareDevMap(atomicState?.currentDevMap?.instDevicesMap, currentDevMap()?.instDevicesMap, added, deleted)
+	log.debug "getDevChgDesc | result: $result"
 	def res = []
 	def opts = ["added", "removed"]
 	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
@@ -1528,12 +1528,13 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 		def m1Key = map1?."${keyVal}"
 		def m2Key = map2?."${keyVal}"
 		if ((m1Key != null) && (m2Key == null)) {
-			//log.debug "Map1 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M1Key: $m1Key | M2Key: $m2Key | M1Data: $m1"
+			log.debug "Map1 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M1Key: $m1Key | M2Key: $m2Key | M1Data: $m1"
 			def val = lastkey ?: keyVal
 			if(val in keys) {
-				if(deleted[val] == null) { deleted[val] = [] } //if the key is in valid them create the map entry
+				log.debug "val: $val"
+				if(deleted[val] == null) { deleted[val] = [] } //if the key is invalid then create the map entry
 				deleted[val].push(m1Key)
-				//log.debug "($val) Device Deleted: ${m1Key}"
+				log.debug "($val) Devices Pending Removal: ${m1Key}"
 			}
 		} else {
 			if ((m1Key instanceof Map) && (m2Key instanceof Map)) {
@@ -1546,12 +1547,12 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 		def m1Key = map1?."${keyVal}"
 		def m2Key = map2?."${keyVal}"
 		if ((m2Key != null) && (m1Key == null)) {
-			//log.debug "Map2 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M2Key: $m2Key | M1Key: $m1Key | M2Data: $m2"
+			log.debug "Map2 Key${keyVal ? " (2nd Lvl.)" : ""}: ($keyVal) | M2Key: $m2Key | M1Key: $m1Key | M2Data: $m2"
 			def val = lastkey ?: m2Key
 			if(val in keys) {
 				if(added[val] == null) { added[val] = [] }
 				added[val].push(m2Key)
-				//log.debug "($val) Device Added: ${m2Key}"
+				log.debug "($val) Devices Pending Install: ${m2Key}"
 			}
 		}
 	}
@@ -1737,7 +1738,7 @@ def initWatchdogApp() {
 				//LogAction("Running Update Command on Watchdog", "warn", true)
 				chld.update()
 			} else if (cnt > 1) {
-				LogAction("Deleting Extra Watchdog (${chld})", "warn", true)
+				LogAction("Deleting Extra Watchdog (${chld?.id})", "warn", true)
 				deleteChildApp(chld)
 			}
 		}
@@ -12213,7 +12214,7 @@ def textNamespace() { return "${appNamespace()}" }
 def textVerInfo()   { return "${appVerInfo()}" }
 def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
-def textCopyright() { return "Copyright© 2016 - Anthony S." }
+def textCopyright() { return "Copyright© 2017 - Anthony S." }
 def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
 def textHelp()      { return "" }
 def textLicense() {
