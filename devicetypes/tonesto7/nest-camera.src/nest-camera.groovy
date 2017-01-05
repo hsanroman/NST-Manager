@@ -1,22 +1,11 @@
 /**
  *  Nest Cam
- *	Authors: Anthony S. (@tonesto7), Ben W. (@desertblade), Eric S. (@E_Sch)
- *  A Big Thanks go out to Greg (@ghesp) for your help getting the video working.
+ *	Authors: Anthony S. (@tonesto7)
+ *	Contributors: Ben W. (@desertblade), Eric S. (@E_Sch)
+ *  A Huge thanks goes out to Greg (@ghesp) for all of your help getting this working.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the "Software"), to deal in the Software
- * without restriction, including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to the following
- * conditions: The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *	Copyright (C) 2017 Anthony S.
+ * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
 import java.text.SimpleDateFormat
@@ -34,8 +23,8 @@ metadata {
 		capability "Refresh"
 		capability "Notification"
 		capability "Image Capture"
-		//capability "Video Camera"
-		//capability "Video Capture"
+		capability "Video Camera"
+		capability "Video Capture"
 		capability "Health Check"
 
 		command "refresh"
@@ -44,7 +33,8 @@ metadata {
 		command "streamingOn"
 		command "streamingOff"
 		command "chgStreaming"
-		command "testBtn"
+		command "cltLiveStreamStart"
+		//command "testBtn"
 
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
@@ -71,11 +61,14 @@ metadata {
 
 	tiles(scale: 2) {
 		multiAttributeTile(name: "videoPlayer", type: "videoPlayer", width: 6, height: 4) {
-			tileAttribute("device.switch5", key: "CAMERA_STATUS") {
-				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", action: "vidOff", backgroundColor: "#79b821", defaultState: true)
-				attributeState("off", label: "Inactive", icon: "st.camera.dlink-indoor", action: "vidOn", backgroundColor: "#ffffff")
+			tileAttribute("device.switch", key: "CAMERA_STATUS") {
+				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", action: "switch.off", backgroundColor: "#79b821", defaultState: true)
+				attributeState("off", label: "Inactive", icon: "st.camera.dlink-indoor", action: "switch.on", backgroundColor: "#ffffff")
 				attributeState("restarting", label: "Connecting", icon: "st.camera.dlink-indoor", backgroundColor: "#53a7c0")
 				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", action: "refresh.refresh", backgroundColor: "#F22000")
+			}
+			tileAttribute("device.errorMessage", key: "CAMERA_ERROR_MESSAGE") {
+				attributeState("errorMessage", label: "", value: "", defaultState: true)
 			}
 			tileAttribute("device.camera", key: "PRIMARY_CONTROL") {
 				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", backgroundColor: "#79b821", defaultState: true)
@@ -84,14 +77,19 @@ metadata {
 				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", backgroundColor: "#F22000")
 			}
 			tileAttribute("device.startLive", key: "START_LIVE") {
-				attributeState("live", action: "start", defaultState: true)
+				attributeState("live", action: "cltLiveStreamStart", defaultState: true)
 			}
 			tileAttribute("device.stream", key: "STREAM_URL") {
 				attributeState("activeURL", defaultState: true)
 			}
-			tileAttribute("device.betaLogo", key: "BETA_LOGO") {
+			/*tileAttribute("device.betaLogo", key: "BETA_LOGO") {
 				attributeState("betaLogo", label: "", value: "", defaultState: true)
-			}
+			}*/
+			/*tileAttribute("device.profile", key: "STREAM_QUALITY") {
+				attributeState("1", label: "720p", action: "setProfileHD", defaultState: true)
+				attributeState("2", label: "h360p", action: "setProfileSDH", defaultState: true)
+				attributeState("3", label: "l360p", action: "setProfileSDL", defaultState: true)
+			}*/
 		}
 		standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
 			state("on", label: "Streaming", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
@@ -154,16 +152,19 @@ metadata {
 		}
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
-		details(["devCamHtml", "isStreaming", "cameraDetails", "take", "refresh"])
+		details(["videoPlayer", "devCamHtml", "isStreaming", "cameraDetails", "take", "refresh"])
 	}
 }
 
 mappings {
+	path("/getInHomeURL") {action: [GET: "getInHomeURL"]}
 	path("/getCamHtml") {action: [GET: "getCamHtml"]}
 }
 
+def getInHomeURL() { return [InHomeURL: getCamPlaylistURL().toString()] }
+
 def initialize() {
-	log.info "Nest Camera ${textVersion()} ${textCopyright()}"
+	//log.info "Nest Camera ${textVersion()} ${textCopyright()}"
 	poll()
 }
 
@@ -198,6 +199,15 @@ def poll() {
 def refresh() {
 	//Logger("refreshing parent...")
 	poll()
+}
+
+def cltLiveStreamStart() {
+	//log.trace "video stream start()"
+	def url = getCamPlaylistURL()
+	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
+	def dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
+	def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)
+	sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the livestream", eventType: "VIDEO", displayed: false, isStateChange  : true)
 }
 
 // parent calls this method to queue data.
@@ -936,7 +946,7 @@ def getCamApiServerData(camUUID) {
 			]
 			httpGet(params)  { resp ->
 				state?.camApiServerData = resp?.data
-				return state?.camApiServerData ?: null
+				return resp?.data ?: null
 			}
 		} else { Logger("getCamApiServerData camUUID is missing....", "warn") }
 	}
@@ -947,13 +957,21 @@ def getCamApiServerData(camUUID) {
 }
 
 def getStreamHostUrl() {
+	if(!state?.camApiServerData) { return null }
 	def res = state?.camApiServerData?.items?.live_stream_host
 	def data = res.toString().replaceAll("\\[|\\]", "")
 	//log.debug "getStreamHostUrl: $data"
 	return data ?: null
 }
 
+def getCamPlaylistURL() {
+	def hUrl = getStreamHostUrl()
+	if(hUrl && state?.camUUID) { return "https://${hUrl}/nexus_aac/${state?.camUUID}/playlist.m3u8" }
+	return null
+}
+
 def getCamApiServer() {
+	if(!state?.camApiServerData) { return null }
 	def res = state?.camApiServerData?.items?.nexus_api_http_server
 	def data = res.toString().replaceAll("\\[|\\]", "")
 	//log.debug "getCamApiServer: $data"
@@ -1002,17 +1020,25 @@ def getCamHtml() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
 				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+				<script type="text/javascript">
+					${getCamBtnJsData()}
+				</script>
 				<style>
-					.vex.vex-theme-default .vex-content { width: 100%; }
+					.vex.vex-theme-default .vex-content {
+                    width: 100%;
+                    padding: 3px;
+                    }
+					video {
+					  width: 100%    !important;
+					  max-width:410px !important;
+					  height: auto   !important;
+					}
 				</style>
 			</head>
 			<body>
 				${clientBl}
 				${updateAvail}
 
-				${camHtml}
-
-				<br></br>
 				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
 				<table>
 				  <tbody>
@@ -1072,8 +1098,15 @@ def getCamHtml() {
 				<br></br>
 				<p class="centerText">
 					<a class="other-info button"">View More Info (Tap)</a>
+                    <a class="other-data button"">View Other Data(Tap)</a>
 			   </p>
 			<script>
+				\$('.other-data').click(function(){
+					vex.dialog.alert({ unsafeMessage: `
+						${camHtml}
+					`})
+				});
+
 				\$('.other-info').click(function(){
 					vex.dialog.alert({ unsafeMessage: `
 					<table>
@@ -1101,19 +1134,20 @@ def getCamHtml() {
 					  <td>${state?.devTypeVer.toString()}</td>
 					</table>
 					<table>
-					  <thead>
-						<th>Last Online Change</th>
-						<th>Data Last Received</th>
-					  </thead>
-					  <tbody>
-						<tr>
-						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-						</tr>
-					  </tbody>
-					</table>
+ 					  <thead>
+ 						<th>Last Online Change</th>
+ 						<th>Data Last Received</th>
+ 					  </thead>
+ 					  <tbody>
+ 						<tr>
+ 						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+ 						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+ 						</tr>
+ 					  </tbody>
+ 					</table>
 				`})
 				});
+
 				</script>
 			</body>
 		</html>
@@ -1146,12 +1180,12 @@ def showCamHtml() {
 	def imgBtn = (!state?.isStreaming || !pubSnapUrl) ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
 	def lastEvtBtn = (!state?.isStreaming || !animationUrl) ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
 
-	def data = """
+	/*def data = """
 		<script type="text/javascript">
 			${getCamBtnJsData()}
 		</script>
 		<div class="hideable" id="liveStream">
-			<video width="410" controls
+			<video controls
 				id="nest-video"
 				class="video-js vjs-default-skin"
 				poster="${camImgUrl}"
@@ -1168,6 +1202,20 @@ def showCamHtml() {
 		</div>
 		<div class="centerText">
 		  ${vidBtn}
+		  ${lastEvtBtn}
+		  ${lastEvtBtn}
+		</div>
+	"""*/
+
+	def data = """
+		<br></br>
+		<div class="hideable" id="still">
+			<img src="${pubSnapUrl}" width="100%"/>
+		</div>
+		<div class="hideable" id="animation" style="display:none">
+			<img src="${animationUrl}" width="100%"/>
+		</div>
+		<div class="centerText">
 		  ${imgBtn}
 		  ${lastEvtBtn}
 		</div>
