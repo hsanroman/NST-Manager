@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.3.0" }
+def devVer() { return "4.4.0" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -1067,6 +1067,7 @@ def getSunriseSunset() {
 
 
 def forecastDay(day) {
+	if(!state?.curForecast) { return }
 	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
 	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
 	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
@@ -1364,6 +1365,9 @@ def getMetricCntData() {
 def getWeatherHTML() {
 	try {
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
+		if(!state?.curWeather || !state?.curForecast) {
+			return hideWeatherHtml()
+		}
 		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
 		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
 		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
@@ -1574,6 +1578,15 @@ def getWeatherHTML() {
 		log.error "getWeatherHTML Exception:", ex
 		exceptionDataHandler(ex.message, "getWeatherHTML")
 	}
+}
+
+def hideWeatherHtml() {
+	def data = """
+		<br></br><br></br>
+		<h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">The Required Weather data is not available yet...</h3>
+		<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Please refresh this page after a couple minutes...</h3>
+		<br></br><br></br>"""
+	render contentType: "text/html", data: data, status: 200
 }
 
 private def textDevName()	{ return "Nest Weather${appDevName()}" }
