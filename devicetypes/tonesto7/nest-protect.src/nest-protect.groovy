@@ -765,14 +765,21 @@ def getInfoHtml() {
 					</tbody>
 			  </table>
 			  <table>
-				<tr>
+				<col width="40%">
+				<col width="20%">
+				<col width="40%">
+				<thead>
 				  <th>Firmware Version</th>
 				  <th>Debug</th>
 				  <th>Device Type</th>
-				</tr>
-				<td>v${state?.softwareVer.toString()}</td>
-				<td>${state?.debugStatus}</td>
-				<td>${state?.devTypeVer.toString()}</td>
+				</thead>
+				<tbody>
+				  <tr>
+					<td>v${state?.softwareVer.toString()}</td>
+				  	<td>${state?.debugStatus}</td>
+				  	<td>${state?.devTypeVer.toString()}</td>
+				  </tr>
+				</tbody>
 			  </table>
 			  <table>
 				<thead>

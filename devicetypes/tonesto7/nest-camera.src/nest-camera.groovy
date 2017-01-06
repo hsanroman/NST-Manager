@@ -145,14 +145,14 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 12, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 9, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
 		}
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
-		details(["videoPlayer", "devCamHtml", "isStreaming", "cameraDetails", "take", "refresh"])
+		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails" ])
 	}
 }
 
@@ -1007,11 +1007,10 @@ def getCamHtml() {
 				<meta charset="utf-8"/>
 				<meta http-equiv="cache-control" content="max-age=0"/>
 				<meta http-equiv="cache-control" content="no-cache"/>
-				<meta http-equiv="expires" content="0"/>
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
-				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+				<link rel="stylesheet" href="${getCssData()}"/>
 
 				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
@@ -1024,10 +1023,10 @@ def getCamHtml() {
 					${getCamBtnJsData()}
 				</script>
 				<style>
-					.vex.vex-theme-default .vex-content {
-                    width: 100%;
-                    padding: 3px;
-                    }
+					.vex.vex-theme-top .vex-content {
+					width: 100%;
+					padding: 3px;
+					}
 					video {
 					  width: 100%    !important;
 					  max-width:410px !important;
@@ -1038,83 +1037,33 @@ def getCamHtml() {
 			<body>
 				${clientBl}
 				${updateAvail}
-
-				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
+				<br></br>
 				<table>
+				  <col width="45%">
+				  <col width="45%">
 				  <tbody>
 					<tr>
-					  <td>${state?.lastEventDate ?: "Not Available"}</td>
-					  <td>${state?.lastEventTime ?: ""}</td>
-					</tr>
-				  </tbody>
-				</table>
-				<table>
-				  <col width="33%">
-				  <col width="33%">
-				  <col width="33%">
-				  <thead>
-					<th>Had Person?</th>
-					<th>Had Motion?</th>
-					<th>Had Sound?</th>
-				  </thead>
-				  <tbody>
-					<tr>
-					  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
-					  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
-					  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
+					  <td><a class="event-data button red">View\nLast Event</a></td>
+					  <td><a class="other-info button">Show\nDevice Info</a></td>
 					</tr>
 				  </tbody>
 				</table>
 				<br></br>
-				<table>
-				  <col width="50%">
-				  <col width="50%">
-					<thead>
-					  <th>Video History (Min.)</th>
-					  <th>Video History (Max.)</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
-						<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
-					  </tr>
-				  </tbody>
-				</table>
-				<table>
-				  <col width="33%">
-					<col width="33%">
-					  <col width="33%">
-						<thead>
-						  <th>Public Video</th>
-						  <th>Mic Status</th>
-						</thead>
-						<tbody>
-						  <tr>
-							<td>${state?.publicShareEnabled.toString()}</td>
-							<td>${state?.audioInputEnabled.toString()}</td>
-						  </tr>
-						</tbody>
-				</table>
-				<br></br>
-				<p class="centerText">
-					<a class="other-info button"">View More Info (Tap)</a>
-                    <a class="other-data button"">View Other Data(Tap)</a>
-			   </p>
-			<script>
-				\$('.other-data').click(function(){
-					vex.dialog.alert({ unsafeMessage: `
-						${camHtml}
-					`})
-				});
+				<script>
+					\$('.event-data').click(function(){
+						vex.dialog.alert({ unsafeMessage: `
+							${camHtml}
+						`})
+					});
 
-				\$('.other-info').click(function(){
-					vex.dialog.alert({ unsafeMessage: `
-					<table>
-					  <col width="50%">
-						<col width="50%">
+					\$('.other-info').click(function(){
+						vex.dialog.alert({ unsafeMessage: `
+						<table>
+						  <col width="50%">
+						  <col width="50%">
 						  <thead>
-							<th>Network Status</th>
-							<th>API Status</th>
+							<th style="font-size: 16px;">Network Status</th>
+							<th style="font-size: 16px;">API Status</th>
 						  </thead>
 						  <tbody>
 							<tr>
@@ -1122,32 +1071,60 @@ def getCamHtml() {
 							  <td>${state?.apiStatus}</td>
 							</tr>
 						  </tbody>
-					</table>
-					<table>
-					  <tr>
-						<th>Firmware Version</th>
-						<th>Debug</th>
-						<th>Device Type</th>
-					  </tr>
-					  <td>v${state?.softwareVer.toString()}</td>
-					  <td>${state?.debugStatus}</td>
-					  <td>${state?.devTypeVer.toString()}</td>
-					</table>
-					<table>
- 					  <thead>
- 						<th>Last Online Change</th>
- 						<th>Data Last Received</th>
- 					  </thead>
- 					  <tbody>
- 						<tr>
- 						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
- 						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
- 						</tr>
- 					  </tbody>
- 					</table>
-				`})
-				});
-
+						</table>
+						<table>
+						  <tr>
+							<th style="font-size: 16px;">Firmware Version</th>
+							<th style="font-size: 16px;">Debug</th>
+							<th style="font-size: 16px;">Device Type</th>
+						  </tr>
+						  <td>v${state?.softwareVer.toString()}</td>
+						  <td>${state?.debugStatus}</td>
+						  <td>${state?.devTypeVer.toString()}</td>
+						</table>
+						<table>
+						  <col width="50%">
+						  <col width="50%">
+							<thead>
+							  <th style="font-size: 16px;">Video History (Min.)</th>
+							  <th style="font-size: 16px;">Video History (Max.)</th>
+							</thead>
+							<tbody>
+							  <tr>
+								<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
+								<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
+							  </tr>
+						  </tbody>
+						</table>
+						<table>
+						  <col width="33%">
+						  <col width="33%">
+						  <col width="33%">
+						  <thead>
+							<th style="font-size: 16px;">Public Video</th>
+							<th style="font-size: 16px;">Mic Status</th>
+						  </thead>
+						  <tbody>
+							<tr>
+							  <td>${state?.publicShareEnabled.toString()}</td>
+							  <td>${state?.audioInputEnabled.toString()}</td>
+							</tr>
+						  </tbody>
+						</table>
+						<table>
+						   <thead>
+							 <th style="font-size: 16px;">Last Online Change</th>
+							 <th style="font-size: 16px;">Data Last Received</th>
+						   </thead>
+						   <tbody>
+							 <tr>
+							   <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+							   <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+							 </tr>
+						   </tbody>
+						 </table>
+					`})
+					});
 				</script>
 			</body>
 		</html>
@@ -1180,44 +1157,53 @@ def showCamHtml() {
 	def imgBtn = (!state?.isStreaming || !pubSnapUrl) ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
 	def lastEvtBtn = (!state?.isStreaming || !animationUrl) ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
 
-	/*def data = """
-		<script type="text/javascript">
-			${getCamBtnJsData()}
-		</script>
-		<div class="hideable" id="liveStream">
-			<video controls
-				id="nest-video"
-				class="video-js vjs-default-skin"
-				poster="${camImgUrl}"
-				data-video-url="${pubVidUrl}"
-				data-video-title="">
-				<source src="${camPlaylistUrl}" type="application/x-mpegURL">
-			</video>
-		</div>
-		<div class="hideable" id="still" style="display:none">
-			<img src="${pubSnapUrl}" width="100%"/>
-		</div>
-		<div class="hideable" id="animation" style="display:none">
-			<img src="${animationUrl}" width="100%"/>
-		</div>
-		<div class="centerText">
-		  ${vidBtn}
-		  ${lastEvtBtn}
-		  ${lastEvtBtn}
-		</div>
-	"""*/
-
 	def data = """
-		<br></br>
 		<div class="hideable" id="still">
+			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Snapshot Image</h4>
 			<img src="${pubSnapUrl}" width="100%"/>
+			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This Image is only refresh when this window is generated...</h4>
 		</div>
 		<div class="hideable" id="animation" style="display:none">
+			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
 			<img src="${animationUrl}" width="100%"/>
+			<table>
+			  <tbody>
+				<tr>
+				  <td>${state?.lastEventDate ?: "Not Available"}</td>
+				  <td>${state?.lastEventTime ?: ""}</td>
+				</tr>
+			  </tbody>
+			</table>
+			<table>
+			  <col width="33%">
+			  <col width="33%">
+			  <col width="33%">
+			  <thead>
+				<th style="font-size: 16px;">Had Person?</th>
+				<th style="font-size: 16px;">Had Motion?</th>
+				<th style="font-size: 16px;">Had Sound?</th>
+			  </thead>
+			  <tbody>
+				<tr>
+				  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
+				  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
+				  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
+				</tr>
+			  </tbody>
+			</table>
 		</div>
+		<br></br>
 		<div class="centerText">
-		  ${imgBtn}
-		  ${lastEvtBtn}
+			<table>
+			  <col width="48%">
+			  <col width="48%">
+			  <tbody>
+				<tr>
+				  <td>${imgBtn}</td>
+				  <td>${lastEvtBtn}</td>
+				</tr>
+			  </tbody>
+			</table>
 		</div>
 	"""
 }

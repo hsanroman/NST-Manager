@@ -2910,13 +2910,17 @@ def getGraphHTML() {
 			</head>
 			<body>
 				<table
+				  <col width="50%">
+				  <col width="50%">
+				  <thead>
+				    <th>Time to Target</th>
+				    <th>Sun Correction</th>
+				  </thead>
 				  <tbody>
 					<tr>
-					  <th>Time to Target</th>
-					  <th>Sun Correction</th>
+					  <td>${timeToTarget}</td>
+				  	  <td>${sunCorrectStr}</td>
 					</tr>
-					<td>${timeToTarget}</td>
-					<td>${sunCorrectStr}</td>
 				  </tbody>
 				</table>
 				<table>
@@ -2939,15 +2943,21 @@ def getGraphHTML() {
 				</tbody>
 			  </table>
 			  <table>
-				  <tbody>
+			    <col width="40%">
+			    <col width="20%">
+			    <col width="40%">
+			  	<thead>
+				  <th>Firmware Version</th>
+				  <th>Debug</th>
+				  <th>Device Type</th>
+				</thead>
+				<tbody>
 				  <tr>
-					<th>Firmware Version</th>
-					<th>Debug</th>
-					<th>Device Type</th>
+					<td>${state?.softwareVer.toString()}</td>
+  				    <td>${state?.debugStatus}</td>
+  				    <td>${state?.devTypeVer.toString()}</td>
 				  </tr>
-				  <td>${state?.softwareVer.toString()}</td>
-				  <td>${state?.debugStatus}</td>
-				  <td>${state?.devTypeVer.toString()}</td>
+
 				</tbody>
 			  </table>
 			  <table>
