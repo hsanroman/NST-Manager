@@ -44,7 +44,12 @@ def appVersion() { "4.4.1" }
 def appVerDate() { "1-7-2017" }
 def appVerInfo() {
 	def str = ""
-	str += "V4.4.0 (January 7th, 2017):"
+	
+	str += "V4.4.1 (January 7th, 2017):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
+
+	str += "\n\nV4.4.0 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • FIXED: NullPointer issue during install if ST mode was not set"
 	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \'Off\'"
@@ -4620,8 +4625,8 @@ def toQueryString(Map m) {
 
 def clientId() {
 	if(!appSettings.clientId) {
-		return = atomicState?.appData?.token?.id ?: "9d132e83-11fc-45be-9a8d-95b7a7cb07a0"
-
+		if(!atomicState?.appData?.token?.id) { LogAction("appData missing clientId using default clientId...", "warn", true) }
+		return atomicState?.appData?.token?.id ?: "9d132e83-11fc-45be-9a8d-95b7a7cb07a0"
 	} else {
 		return appSettings.clientId
 	}
@@ -4629,6 +4634,7 @@ def clientId() {
 
 def clientSecret() {
 	if(!appSettings.clientSecret) {
+		if(!atomicState?.appData?.token?.secret) { LogAction("appData missing clientId using default clientSecret", "warn", true) }
 		return atomicState?.appData?.token?.secret ?: "LDaJe8tAMvdPGyFPt0JJP165x"
 	} else {
 		return appSettings.clientSecret
