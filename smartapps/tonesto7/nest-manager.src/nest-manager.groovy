@@ -4620,8 +4620,8 @@ def toQueryString(Map m) {
 
 def clientId() {
 	if(!appSettings.clientId) {
-		return = atomicState?.appData?.token?.id ?: "9d132e83-11fc-45be-9a8d-95b7a7cb07a0"
-
+		if(!atomicState?.appData?.token?.id) { LogAction("appData missing clientId using default clientId...", "warn", true) }
+		return atomicState?.appData?.token?.id ?: "9d132e83-11fc-45be-9a8d-95b7a7cb07a0"
 	} else {
 		return appSettings.clientId
 	}
@@ -4629,6 +4629,7 @@ def clientId() {
 
 def clientSecret() {
 	if(!appSettings.clientSecret) {
+		if(!atomicState?.appData?.token?.secret) { LogAction("appData missing clientId using default clientSecret", "warn", true) }
 		return atomicState?.appData?.token?.secret ?: "LDaJe8tAMvdPGyFPt0JJP165x"
 	} else {
 		return appSettings.clientSecret
