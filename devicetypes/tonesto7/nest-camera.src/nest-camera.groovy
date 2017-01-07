@@ -24,7 +24,7 @@ metadata {
 		capability "Notification"
 		capability "Image Capture"
 		capability "Video Camera"
-		capability "Video Capture"
+		//capability "Video Capture"
 		capability "Health Check"
 
 		command "refresh"
@@ -1159,9 +1159,9 @@ def showCamHtml() {
 
 	def data = """
 		<div class="hideable" id="still">
-			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Snapshot Image</h4>
+			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Image</h4>
 			<img src="${pubSnapUrl}" width="100%"/>
-			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This Image is only refresh when this window is generated...</h4>
+			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
 		</div>
 		<div class="hideable" id="animation" style="display:none">
 			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
