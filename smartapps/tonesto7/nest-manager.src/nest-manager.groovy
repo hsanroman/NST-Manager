@@ -47,7 +47,7 @@ def appVerInfo() {
 	str += "V4.4.0 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • FIXED: NullPointer issue during install if ST mode was not set"
-	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \“Off\”"
+	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \'Off\'"
 	str += "\n • FIXED: Nest mode should now work properly in cases where there are no thermostats"
 
 	str += "\n\nV4.3.1 (December 23rd, 2016):"
