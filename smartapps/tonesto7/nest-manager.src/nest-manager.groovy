@@ -44,6 +44,7 @@ def appVersion() { "4.4.1" }
 def appVerDate() { "1-7-2017" }
 def appVerInfo() {
 	def str = ""
+	
 	str += "V4.4.1 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
