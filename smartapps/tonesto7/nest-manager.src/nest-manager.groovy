@@ -40,12 +40,17 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.3.4" }
-def appVerDate() { "1-5-2017" }
+def appVersion() { "4.4.0" }
+def appVerDate() { "1-7-2017" }
 def appVerInfo() {
 	def str = ""
+	str += "V4.4.0 (January 7th, 2017):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • FIXED: NullPointer issue during install if ST mode was not set"
+	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \“Off\”"
+	str += "\n • FIXED: Nest mode should now work properly in cases where there are no thermostats"
 
-	str += "V4.3.1 (December 23rd, 2016):"
+	str += "\n\nV4.3.1 (December 23rd, 2016):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • ADDED: Nest Manager | Automations will now allow you to repair/rebuild corrupted states."
 

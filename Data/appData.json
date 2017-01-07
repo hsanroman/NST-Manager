@@ -6,7 +6,7 @@
         "stateVarVer": 2
     },
     "token": {
-        "tokenNum": 3
+        "tokenNum": 4
     },
     "broadcast": {
         "msgId": "",
@@ -21,7 +21,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.3.4"
+                "ver": "4.4.0"
             },
             "thermostat": {
                 "ver": "4.4.0"
