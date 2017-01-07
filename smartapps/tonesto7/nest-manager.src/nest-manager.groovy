@@ -44,7 +44,11 @@ def appVersion() { "4.4.1" }
 def appVerDate() { "1-7-2017" }
 def appVerInfo() {
 	def str = ""
-	str += "V4.4.0 (January 7th, 2017):"
+	str += "V4.4.1 (January 7th, 2017):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
+
+	str += "\n\nV4.4.0 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • FIXED: NullPointer issue during install if ST mode was not set"
 	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \'Off\'"
