@@ -44,7 +44,7 @@ def appVersion() { "4.4.1" }
 def appVerDate() { "1-7-2017" }
 def appVerInfo() {
 	def str = ""
-	
+
 	str += "V4.4.1 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
@@ -4193,7 +4193,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", preferences:["virtual":true]])
+						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)

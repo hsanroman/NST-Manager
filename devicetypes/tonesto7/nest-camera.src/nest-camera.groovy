@@ -158,10 +158,12 @@ metadata {
 
 mappings {
 	path("/getInHomeURL") {action: [GET: "getInHomeURL"]}
+	path("/getOutHomeURL") {action: [GET: "getOutHomeURL"]}
 	path("/getCamHtml") {action: [GET: "getCamHtml"]}
 }
 
 def getInHomeURL() { return [InHomeURL: getCamPlaylistURL().toString()] }
+def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL().toString()] }
 
 def initialize() {
 	//log.info "Nest Camera ${textVersion()} ${textCopyright()}"
@@ -203,7 +205,7 @@ def refresh() {
 
 def cltLiveStreamStart() {
 	//log.trace "video stream start()"
-	def url = getCamPlaylistURL()
+	def url = getCamPlaylistURL().toString()
 	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
 	def dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
 	def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)

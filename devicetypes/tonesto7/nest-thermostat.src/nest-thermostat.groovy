@@ -231,7 +231,6 @@ metadata {
 				"heatSliderControl", "coolSliderControl", "graphHTML", "offBtn", "ecoBtn", "heatBtn", "coolBtn", "autoBtn", "blank", "refresh"] )
 	}
 	preferences {
-		input "virtual", "bool", title: "Virtual Device", description: "Does not change", displayDuringSetup: false
 		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
 		input "resetAllData", "bool", title: "Reset All Stored Event Data", description: "", displayDuringSetup: false
 	}
@@ -307,8 +306,9 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
+	log.debug "virtual: ${getDataValue("isVirtual")}"
 	if(state?.virtual == null) {
-		if(virtual) {				   // preference passed in
+		if(getDataValue("isVirtual") == "true") {	// preference passed in
 			Logger("Setting virtual to TRUE")
 			state.virtual = true
 		} else {
