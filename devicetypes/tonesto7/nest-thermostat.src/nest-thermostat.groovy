@@ -306,18 +306,28 @@ def initialize() {
 
 void installed() {
 	Logger("installed...")
-	log.debug "virtual: ${getDataValue("isVirtual")}"
-	if(state?.virtual == null) {
-		if(getDataValue("isVirtual") == "true") {	// preference passed in
-			Logger("Setting virtual to TRUE")
-			state.virtual = true
-		} else {
-			Logger("Setting virtual to FALSE")
-			state.virtual = false
-		}
-	}
+	checkVirtualStatus()
 	state.isInstalled = true
 	verifyHC()
+}
+
+void updated() {
+	Logger("Device Updated...")
+	checkVirtualStatus()
+}
+
+void checkVirtualStatus() {
+	if(getDataValue("isVirtual") == null && state?.virtual != null) {
+		def res = (state?.virtual instanceof Boolean) ? state?.virtual : false
+		Logger("Updating the device's 'isVirtual' data value to (${res})")
+		updateDataValue("isVirtual", "${res}")
+	} else {
+		def dVal = getDataValue("isVirtual").toString() == "true" ? true : false
+		if(dVal != state?.virtual || state?.virtual == null) {
+			state?.virtual = dVal
+			Logger("Setting virtual to ${dVal?.toString()?.toUpperCase()}")
+		}
+	}
 }
 
 void verifyHC() {
@@ -2630,7 +2640,7 @@ def getLast3MonthsUsageMap() {
 		for(int i=1; i<=3; i++) {
 			def newMap = [:]
 			def mName = getMonthNumToStr(mVal)
-			log.debug "$mName Usage - Idle: (${hm?."OperatingState_Month${mVal}_idle"}) | Heat: (${hm?."OperatingState_Month${mVal}_heating"}) | Cool: (${hm?."OperatingState_Month${mVal}_cooling"})"
+			//log.debug "$mName Usage - Idle: (${hm?."OperatingState_Month${mVal}_idle"}) | Heat: (${hm?."OperatingState_Month${mVal}_heating"}) | Cool: (${hm?."OperatingState_Month${mVal}_cooling"})"
 			newMap << ["cooling":["tSec":(hm?."OperatingState_Month${mVal}_cooling" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["heating":["tSec":(hm?."OperatingState_Month${mVal}_heating" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["idle":["tSec":(hm?."OperatingState_Month${mVal}_idle" ?: 0L), "iNum":cnt, "mName":mName]]
@@ -2856,6 +2866,7 @@ def getMaxTemp() {
 
 def getGraphHTML() {
 	try {
+		checkVirtualStatus()
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def canHeat = state?.can_heat == true ? true : false
 		def canCool = state?.can_cool == true ? true : false
