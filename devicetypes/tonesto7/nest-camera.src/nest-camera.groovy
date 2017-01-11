@@ -1026,13 +1026,8 @@ def getCamHtml() {
 				</script>
 				<style>
 					.vex.vex-theme-top .vex-content {
-					width: 100%;
-					padding: 3px;
-					}
-					video {
-					  width: 100%    !important;
-					  max-width:410px !important;
-					  height: auto   !important;
+						width: 100%;
+						padding: 3px;
 					}
 				</style>
 			</head>

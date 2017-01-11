@@ -736,12 +736,19 @@ def getInfoHtml() {
 				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
 
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
+				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<style>
+					.vex.vex-theme-default .vex-content {
+						width: 98%; padding: 3px;
+					}
+				</style>
 			</head>
 			<body>
 			  ${testModeHTML}
+			  ${clientBl}
+			  ${updateAvail}
 			  <div class="row">
 				<div class="offset-by-two four columns centerText">
 				  <img class='alarmImg' src="${getCarbonImg()}">
@@ -750,51 +757,64 @@ def getInfoHtml() {
 				  <img class='alarmImg' src="${getSmokeImg()}">
 				</div>
 			  </div>
-			  <table>
-				<col width="50%">
-				  <col width="50%">
-					<thead>
-					  <th>Network Status</th>
-					  <th>API Status</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td>${state?.onlineStatus.toString()}</td>
-						<td>${state?.apiStatus}</td>
-					  </tr>
-					</tbody>
-			  </table>
-			  <table>
-				<col width="40%">
-				<col width="20%">
-				<col width="40%">
-				<thead>
-				  <th>Firmware Version</th>
-				  <th>Debug</th>
-				  <th>Device Type</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td>v${state?.softwareVer.toString()}</td>
-				  	<td>${state?.debugStatus}</td>
-				  	<td>${state?.devTypeVer.toString()}</td>
-				  </tr>
-				</tbody>
-			  </table>
-			  <table>
-				<thead>
-				  <th>Nest Last Checked-In</th>
-				  <th>Data Last Received</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-				  </tr>
-				</tbody>
-			  </table>
-              ${clientBl}
-			  ${updateAvail}
+				<br></br>
+				<table>
+				  <tbody>
+					<tr>
+					  <td><p class="centerText"><a class="more-info button">More Info</a></p></td>
+					</tr>
+				  </tbody>
+				</table>
+				<br></br>
+			  <script>
+				  \$('.more-info').click(function(){
+					  vex.dialog.alert({ unsafeMessage: `
+						  <table>
+							<col width="50%">
+							  <col width="50%">
+								<thead>
+								  <th>Network Status</th>
+								  <th>API Status</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td>${state?.onlineStatus.toString()}</td>
+									<td>${state?.apiStatus}</td>
+								  </tr>
+								</tbody>
+						  </table>
+						  <table>
+							<col width="40%">
+							<col width="20%">
+							<col width="40%">
+							<thead>
+							  <th>Firmware Version</th>
+							  <th>Debug</th>
+							  <th>Device Type</th>
+							</thead>
+							<tbody>
+							  <tr>
+								<td>v${state?.softwareVer.toString()}</td>
+							  	<td>${state?.debugStatus}</td>
+							  	<td>${state?.devTypeVer.toString()}</td>
+							  </tr>
+							</tbody>
+						  </table>
+						  <table>
+							<thead>
+							  <th>Nest Last Checked-In</th>
+							  <th>Data Last Received</th>
+							</thead>
+							<tbody>
+							  <tr>
+								<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+								<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+							  </tr>
+							</tbody>
+						  </table>
+				  	  `})
+			  	  });
+			  </script>
 			</body>
 		</html>
 		"""
