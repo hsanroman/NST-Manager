@@ -5970,7 +5970,7 @@ def sendInstallSlackNotif() {
 	sendDataToSlack(json, "", "post", "New Client Slack Notif")
 }
 
-def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: "errorData" }
+def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: "exceptionData" }
 def getDbRemDiagPath() { return atomicState?.appData?.database?.remoteDiagPath ?: "remoteDiagLogs" }
 
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
@@ -7187,32 +7187,38 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 	def remSenTstat = settings?.schMotTstat
 	def remSenTstatMir = settings?.schMotTstatMir
 
-	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
-	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
-	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
-	def maxTempChangeVal = tempChangeVal * 3
+	try {
+		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+		def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+		def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
+		def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
+		def maxTempChangeVal = tempChangeVal * 3
 
-	chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
-	chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
-	if(chgval != curCoolSetpoint) {
-		scheduleAutomationEval(60)
-		def cHeat = null
-		if(hvacMode in ["auto"]) {
-			if(curHeatSetpoint >= (offTemp-tempChangeVal)) {
-				cHeat = offTemp - tempChangeVal
-				LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${getTemperatureScale()}) to allow COOL setting", "info", true)
-				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
+		chgval = (chgval > (onTemp + maxTempChangeVal)) ? onTemp + maxTempChangeVal : chgval
+		chgval = (chgval < (offTemp - maxTempChangeVal)) ? offTemp - maxTempChangeVal : chgval
+		if(chgval != curCoolSetpoint) {
+			scheduleAutomationEval(60)
+			def cHeat = null
+			if(hvacMode in ["auto"]) {
+				if(curHeatSetpoint >= (offTemp-tempChangeVal)) {
+					cHeat = offTemp - tempChangeVal
+					LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${cHeat}°${getTemperatureScale()}) to allow COOL setting", "info", true)
+					if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
+				}
 			}
+			if(setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
+				//LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${getTemperatureScale()}) ", "info", true)
+				//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow())
+				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
+			}
+			return  true // let all this take effect
+		} else {
+			LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${getTemperatureScale()}) ", "info", true)
 		}
-		if(setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
-			//LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${getTemperatureScale()}) ", "info", true)
-			//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow())
-			if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
-		}
-		return  true // let all this take effect
-	} else {
-		LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${getTemperatureScale()}) ", "info", true)
+
+	} catch (ex) {
+		log.error "remSendoSetCool Exception:", ex
+		parent?.sendExceptionData(ex, "remSendoSetCool", true, getAutoType())
 	}
 	return  false
 }
@@ -7221,32 +7227,38 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 	def remSenTstat = schMotTstat
 	def remSenTstatMir = schMotTstatMir
 
-	def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
-	def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
-	def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
-	def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
-	def maxTempChangeVal = tempChangeVal * 3
+	try {
+		def hvacMode = remSenTstat ? remSenTstat?.currentThermostatMode.toString() : null
+		def curCoolSetpoint = getTstatSetpoint(remSenTstat, "cool")
+		def curHeatSetpoint = getTstatSetpoint(remSenTstat, "heat")
+		def tempChangeVal = !remSenTstatTempChgVal ? 5.0 : Math.min(Math.max(remSenTstatTempChgVal.toDouble(), 2.0), 5.0)
+		def maxTempChangeVal = tempChangeVal * 3
 
-	chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
-	chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
-	if(chgval != curHeatSetpoint) {
-		scheduleAutomationEval(60)
-		def cCool = null
-		if(hvacMode in ["auto"]) {
-			if(curCoolSetpoint <= (offTemp+tempChangeVal)) {
-				cCool = offTemp + tempChangeVal
-				LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${getTemperatureScale()}) to allow HEAT setting", "info", true)
-				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
+		chgval = (chgval < (onTemp - maxTempChangeVal)) ? onTemp - maxTempChangeVal : chgval
+		chgval = (chgval > (offTemp + maxTempChangeVal)) ? offTemp + maxTempChangeVal : chgval
+		if(chgval != curHeatSetpoint) {
+			scheduleAutomationEval(60)
+			def cCool = null
+			if(hvacMode in ["auto"]) {
+				if(curCoolSetpoint <= (offTemp+tempChangeVal)) {
+					cCool = offTemp + tempChangeVal
+					LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${cCool}°${getTemperatureScale()}) to allow HEAT setting", "info", true)
+					if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
+				}
 			}
+			if(setTstatAutoTemps(remSenTstat, cCool, chgval)) {
+				//LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${getTemperatureScale()})", "info", true)
+				//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow())
+				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
+			}
+			return  true // let all this take effect
+		} else {
+			LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${getTemperatureScale()})", "info", true)
 		}
-		if(setTstatAutoTemps(remSenTstat, cCool, chgval)) {
-			//LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${getTemperatureScale()})", "info", true)
-			//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow())
-			if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
-		}
-		return  true // let all this take effect
-	} else {
-		LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${getTemperatureScale()})", "info", true)
+
+	} catch (ex) {
+		log.error "remSendoSetHeat Exception:", ex
+		parent?.sendExceptionData(ex, "remSendoSetHeat", true, getAutoType())
 	}
 	return  false
 }
@@ -8403,7 +8415,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							modeEco = true
 							rmsg = "${extTmpTstat.label} turned 'ECO': External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})"
 							if(extTmpTstatMir) {
-								setMultipleTstatMode(extTmpTstatMir, "eco") {
+								if(setMultipleTstatMode(extTmpTstatMir, "eco")) {
 									LogAction("Mirroring (ECO) Mode to ${extTmpTstatMir}", "info", true)
 								}
 							}
@@ -8670,7 +8682,7 @@ def conWatCheck(cTimeOut = false) {
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
 							if(conWatTstatMir) {
-								setMultipleTstatMode(conWatTstatMir, "eco") {
+								if(setMultipleTstatMode(conWatTstatMir, "eco")) {
 									LogAction("Mirroring (ECO) Mode to ${conWatTstatMir}", "info", true)
 								}
 							}
@@ -11462,7 +11474,7 @@ def autoScheduleOk(autoType) {
 		return (modeOk && dayOk && timeOk) ? true : false
 	} catch (ex) {
 		log.error "${autoType}-autoScheduleOk Exception:", ex
-		parent?.sendExceptionData(ex, "${autoType}-autoScheduleOk", true, getAutoType())
+		parent?.sendExceptionData(ex, "autoScheduleOk", true, getAutoType())
 	}
 }
 
@@ -11797,7 +11809,7 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
 	} catch (ex) {
 		log.error "getTstatCapabilities Exception:", ex
-		parent?.sendExceptionData("${tstat} - ${autoType} | ${ex.message}", "getTstatCapabilities", true, getAutoType())
+		parent?.sendExceptionData(ex, "getTstatCapabilities", true, getAutoType())
 	}
 }
 
