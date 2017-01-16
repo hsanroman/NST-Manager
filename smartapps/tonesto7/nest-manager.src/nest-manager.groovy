@@ -9826,6 +9826,11 @@ def setTstatTempCheck() {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow())
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
+					if(tstatMir) {
+						if(setMultipleTstatMode(tstatMir, newHvacMode)) {
+							LogAction("Mirroring (${newHvacMode}) to ${tstatMir}", "info", true)
+						}
+					}
 				}
 
 				curMode = tstat?.currentnestThermostatMode?.toString()
