@@ -40,12 +40,15 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.4.1" }
-def appVerDate() { "1-7-2017" }
+def appVersion() { "4.4.2" }
+def appVerDate() { "1-16-2017" }
 def appVerInfo() {
 	def str = ""
+	str += "V4.4.2 (January 16th, 2017):"
+	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
+	str += "\n • FIXED: Lot's and lot's of bugs"
 
-	str += "V4.4.1 (January 7th, 2017):"
+	str += "\n\nV4.4.1 (January 7th, 2017):"
 	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
 	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
 
@@ -1648,7 +1651,7 @@ def nestTokenResetPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
-	if(!parent) {
+	if(!parent && atomicState?.installData == null) {
 		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
 		sendInstallSlackNotif()
 	}
@@ -5912,7 +5915,7 @@ def createInstallDataJson() {
 		def data = []
 		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt, "installDt": atomicState?.installData?.dt,
 				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString(), "optOut":false
 			]
 		} else {

@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.4.0"}
+def devVer() { return "4.4.1"}
 
 // for the UI
 metadata {
