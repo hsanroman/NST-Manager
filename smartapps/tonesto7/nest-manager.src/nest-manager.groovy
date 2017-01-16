@@ -1572,34 +1572,39 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 def currentDevMap(update=false) {
 	def res = [:]
 	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
-	keys?.each { key ->
-		def items = [:]
-		def var = atomicState?."${key}"
-		if(var) {
-			if(res[key] == null) { res[key] = [:] }
-			var?.each { item ->
-				if(key == "presDevice") {
-					def val = [(getNestPresId().toString()):getNestPresLabel().toString()]
-					res[key] << val
-					//log.debug "val: ${val}"
-				}
-				else if(key == "weatherDevice") {
-					def val = [(getNestWeatherId().toString()):getNestWeatherLabel().toString()]
-					res[key] << val
-					//log.debug "val: ${val}"
-				} else {
-					if(item?.key) {
-						res[key] << [(item?.key):item?.value]
+	try {
+		keys?.each { key ->
+			def items = [:]
+			def var = atomicState?."${key}"
+			if(var) {
+				if(res[key] == null) { res[key] = [:] }
+				var?.each { item ->
+					if(key == "presDevice") {
+						def val = [(getNestPresId().toString()):getNestPresLabel().toString()]
+						res[key] << val
+						//log.debug "val: ${val}"
+					}
+					else if(key == "weatherDevice") {
+						def val = [(getNestWeatherId().toString()):getNestWeatherLabel().toString()]
+						res[key] << val
+						//log.debug "val: ${val}"
+					} else {
+						if(item?.key) {
+							res[key] << [(item?.key):item?.value]
+						}
 					}
 				}
 			}
 		}
+		res = ["instDevicesMap":res]
+		//log.debug "res: ${res}"
+		if(update) {
+			atomicState?.currentDevMap = res
+		} else { return res }
+	} catch (ex) {
+		log.error "currentDevMap Exception:", ex
+		sendExceptionData(ex, "currentDevMap")
 	}
-	res = ["instDevicesMap":res]
-	//log.debug "res: ${res}"
-	if(update) {
-		atomicState?.currentDevMap = res
-	} else { return res }
 	return ""
 }
 
@@ -1768,7 +1773,8 @@ def getInstAutoTypesDesc() {
 	def disItems = []
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
-		if(a?.getIsAutomationDisabled()) {
+		def dis = a?.getIsAutomationDisabled()
+		if(dis) {
 			disItems.push(a?.label.toString())
 			dat["disabled"] = dat["disabled"] ? dat["disabled"]+1 : 1
 		} else {
@@ -2190,13 +2196,13 @@ def processResponse(resp, data) {
 		}
 		if((atomicState?.qdevRequested == false && atomicState?.qstrRequested == false) && (dev || atomicState?.needChildUpd)) { finishPoll(true, true) }
 
-	} catch (e) {
+	} catch (ex) {
 		apiIssueEvent(true)
 		atomicState.needChildUpd = true
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
-		log.error "processResponse (type: $type) Exception:", e
+		log.error "processResponse (type: $type) Exception:", ex
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
 		else if(type == "meta") { atomicState?.needMetaPoll = true }
