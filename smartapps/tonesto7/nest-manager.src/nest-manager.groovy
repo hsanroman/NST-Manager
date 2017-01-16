@@ -11963,7 +11963,7 @@ def setTstatMode(tstat, mode) {
 def setMultipleTstatMode(tstats, mode) {
 	def result = false
 	try {
-		if(tstats && md) {
+		if(tstats && mode) {
 			tstats?.each { ts ->
 				if(setTstatMode(ts, mode)) {
 					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
