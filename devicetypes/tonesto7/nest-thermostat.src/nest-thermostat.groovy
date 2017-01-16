@@ -3409,10 +3409,12 @@ def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLo
 def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
+	def ttype = ""
+	if(virtType()) { ttype = "v" }
 	return 	[
-			tstatVoiceRptCnt:(state?.voiceRprtCnt ?: 0), tstatManTmpChgCnt:(state?.manTmpChgCnt ?: 0), tstatProgTmpChgCnt:(state?.progTmpChgCnt ?: 0), tstatManModeChgCnt:(state?.manModeChgCnt ?: 0),
-			tstatProgModeChgCnt:(state?.progModeChgCnt ?: 0), tstatManFanChgCnt:(state?.manFanChgCnt ?: 0),	tstatProgFanChgCnt:(state?.progFanChgCnt ?: 0), tstatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0),
-			//tstatInfoBtnTapCnt:(state?.infoBtnTapCnt ?: 0)
+			"${ttype}tstatVoiceRptCnt":(state?.voiceRprtCnt ?: 0), "${ttype}tstatManTmpChgCnt":(state?.manTmpChgCnt ?: 0), "${ttype}tstatProgTmpChgCnt":(state?.progTmpChgCnt ?: 0), "${ttype}tstatManModeChgCnt":(state?.manModeChgCnt ?: 0),
+			"${ttype}tstatProgModeChgCnt":(state?.progModeChgCnt ?: 0), "${ttype}tstatManFanChgCnt":(state?.manFanChgCnt ?: 0),	"${ttype}tstatProgFanChgCnt":(state?.progFanChgCnt ?: 0), "${ttype}tstatHtmlLoadCnt":(state?.htmlLoadCnt ?: 0),
+			//"${ttype}tstatInfoBtnTapCnt":(state?.infoBtnTapCnt ?: 0)
 			]
 }
 
