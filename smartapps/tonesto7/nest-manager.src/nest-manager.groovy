@@ -1,22 +1,18 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations                                         |
+|    Application Name: Nest Manager and Automations     									|
+|	 Copyright (C) 2017 Anthony S.                                    						|
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
-|                                                                                           |
-|*******************************************************************************************|
-|    There maybe portions of the code that may resemble code from other apps in the         |
-|    community. I may have used some of it as a point of reference.                         |
-|    Thanks go out to those Authors!!!                                                      |
-|    I apologize if i've missed anyone.  Please let me know and I will add your credits     |
-|                                                                                           |
-|    ### I really hope that we don't have a ton or forks being released to the community,   |
-|    ### I hope that we can collaborate and make app and device type that will accommodate  |
-|    ### every use case                                                                     |
-*********************************************************************************************/
+|																							|
+|	 License Info: https://github.com/tonesto7/nest-manager/blob/master/app_license.txt		|
+|																							|
+|    NOTE: I really hope that we don't have a ton or forks being released to the community, |
+|    and that we can collaborate to make the smartapp and devices that will accommodate  	|
+|    every use case                                                                     	|
+|*******************************************************************************************|*/
 
 import groovy.json.*
-import groovy.time.*
 import java.text.SimpleDateFormat
 import java.security.MessageDigest
 
@@ -40,54 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.4.2" }
-def appVerDate() { "1-16-2017" }
-def appVerInfo() {
-	def str = ""
-	str += "V4.4.2 (January 16th, 2017):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • FIXED: Lot's and lot's of bugs"
-
-	str += "\n\nV4.4.1 (January 7th, 2017):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • UPDATE: Added the Nest Auth token to appData for easy management"
-
-	str += "\n\nV4.4.0 (January 7th, 2017):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • FIXED: NullPointer issue during install if ST mode was not set"
-	str += "\n • FIXED: Eco fix for WatchDog warnings to honor \'Off\'"
-	str += "\n • FIXED: Nest mode should now work properly in cases where there are no thermostats"
-
-	str += "\n\nV4.3.1 (December 23rd, 2016):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • ADDED: Nest Manager | Automations will now allow you to repair/rebuild corrupted states."
-
-	str += "\n\nV4.2.0 (Decemnber 12th, 2016):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Modified the minimum device version removed some unnecessary code."
-
-	str += "\n\nV4.1.0 (November 21st, 2016):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • Updated: Modified the minimum device version removed some unnecessary code."
-
-	str += "\n\nV4.1.0 (November 19th, 2016):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • ADDED: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode."
-	str += "\n • ADDED: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating."
-	str += "\n • ADDED: Cleaned up thermostat voice reports to sound more natural and added some more detail."
-	str += "\n • ADDED: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)"
-	str += "\n • ADDED: Thermostat device graphs updated to display external temps and hvac runtime."
-	str += "\n • ADDED: Added two new pie charts to represent the Today and Month usage."
-	str += "\n • UPDATED: Virtual Thermostat device now shares the same code as the physical device handler"
-	str += "\n • UPDATED: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries"
-	str += "\n • UPDATED: Complete update to device and child app diagnostic pages it includes filters to increase loading and not show irrelavent data."
-	str += "\n • UPDATED: Lot's of Bugfixes"
-
-	str += "\n\nV4.0.0 (October 28th, 2016):"
-	str += "\n▔▔▔▔▔▔▔▔▔▔▔"
-	str += "\n • V4.0.0 Release"
-	return str
-}
+def appVersion() { "4.5.0" }
+def appVerDate() { "1-17-2017" }
 
 preferences {
 	//startPage
@@ -2247,7 +2197,7 @@ def updateChildData(force = false) {
 				curWeatherTemp = getTemperatureScale() == "C" ? (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
- 		def devices = getAllChildDevices()
+		 def devices = getAllChildDevices()
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
@@ -3515,6 +3465,24 @@ def webResponse(resp, data) {
 		LogAction("Get failed appData.json status: ${resp?.status}", "warn", true)
 	}
 	return result
+}
+
+def getWebData(path, content, label) {
+	try {
+		LogAction("Getting ${label} data", "info", true)
+		httpGet([ uri: path, contentType: "$content" ]) { resp ->
+			return resp?.data?.text.toString()
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			LogAction("${label} file not found", "warn", true)
+		} else {
+			log.error "getWebData($path, $content, $label) Exception:", ex
+		}
+		sendExceptionData(ex, "getWebData")
+		return "${label} info not found"
+	}
 }
 
 def clientBlacklisted() {
@@ -9185,11 +9153,11 @@ def setAway(away) {
 			parent?.setStructureAway(null, true)
 		} else {
 			parent?.setStructureAway(null, false)
- 		}
+		 }
 		def didstr = away ? "AWAY" : "HOME"
 		LogAction("setAway($away): | Setting structure to $didstr", "trace", true)
 		storeLastAction("Set structure to $didstr", getDtNow())
- 	}
+	 }
 }
 
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
@@ -12223,21 +12191,9 @@ def textModified()  { return "Updated: ${appVerDate()}" }
 def textAuthor()    { return "${appAuthor()}" }
 def textNamespace() { return "${appNamespace()}" }
 def textVerInfo()   { return "${appVerInfo()}" }
+def appVerInfo() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Data/changelog.txt", "text/plain; charset=UTF-8", "changelog") }
+def textLicense() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/app_license.txt", "text/plain; charset=UTF-8", "license") }
 def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
 def textCopyright() { return "Copyright© 2017 - Anthony S." }
 def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
-def textHelp()      { return "" }
-def textLicense() {
-	return "Licensed under the Apache License, Version 2.0 (the 'License'); "+
-		"you may not use this file except in compliance with the License. "+
-		"You may obtain a copy of the License at"+
-		"\n\n"+
-		"    http://www.apache.org/licenses/LICENSE-2.0"+
-		"\n\n"+
-		"Unless required by applicable law or agreed to in writing, software "+
-		"distributed under the License is distributed on an 'AS IS' BASIS, "+
-		"WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "+
-		"See the License for the specific language governing permissions and "+
-		"limitations under the License."
-}

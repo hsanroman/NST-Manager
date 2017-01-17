@@ -1,0 +1,46 @@
+V4.4.2 (January 16th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • FIXED: Lot's and lot's of bugs
+
+V4.4.2 (January 16th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • FIXED: Lot's and lot's of bugs
+
+V4.4.1 (January 7th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • UPDATE: Added the Nest Auth token to appData for easy management
+
+V4.4.0 (January 7th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • FIXED: NullPointer issue during install if ST mode was not set
+ • FIXED: Eco fix for WatchDog warnings to honor \'Off\'
+ • FIXED: Nest mode should now work properly in cases where there are no thermostats
+
+V4.3.1 (December 23rd, 2016):
+▔▔▔▔▔▔▔▔▔▔▔
+ • ADDED: Nest Manager | Automations will now allow you to repair/rebuild corrupted states.
+
+V4.2.0 (December 12th, 2016):
+▔▔▔▔▔▔▔▔▔▔▔
+ • Updated: Modified the minimum device version removed some unnecessary code.
+
+V4.1.0 (November 21st, 2016):
+▔▔▔▔▔▔▔▔▔▔▔
+ • Updated: Modified the minimum device version removed some unnecessary code.
+
+V4.1.0 (November 19th, 2016):
+▔▔▔▔▔▔▔▔▔▔▔
+ • ADDED: Manager and thermostat devices now support all of the new Nest Api features like time-to-temp, sunlight correction, and Eco mode.
+ • ADDED: Devices now support SmartThings undocumented device Health Check system. Which will show you when your device isn't communicating.
+ • ADDED: Cleaned up thermostat voice reports to sound more natural and added some more detail.
+ • ADDED: Voice Report preferences to the Setup Review and preferences pages. This allows you to select which items to disable from the voice report (zone info, automation schedule info, device usage info)
+ • ADDED: Thermostat device graphs updated to display external temps and HVAC runtime.
+ • ADDED: Added two new pie charts to represent the Today and Month usage.
+ • UPDATED: Virtual Thermostat device now shares the same code as the physical device handler
+ • UPDATED: All device logging methods modified to honor the manager setting to disable appending app/device name to log entries
+ • UPDATED: Complete update to device and child app diagnostic pages it includes filters to increase loading and not show irrelevant data."
+ • UPDATED: Lot's of bug fixes.
+
+V4.0.0 (October 28th, 2016):
+▔▔▔▔▔▔▔▔▔▔▔
+ • V4.0.0 Release
