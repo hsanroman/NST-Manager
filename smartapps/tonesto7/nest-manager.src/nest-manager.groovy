@@ -2255,7 +2255,7 @@ def updateChildData(force = false) {
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldProtData${devId}" = pDataChecksum
 				pDataChecksum = atomicState."oldProtData${devId}"
-				if(force || nforce || (oldProtData != pDataChecksum)) {
+				if(!force || nforce || (oldProtData != pDataChecksum)) {
 					def origlbl = it?.label?.toString()
 					def newlbl = getNestProtLabel(pData.data.name.toString())
 					if(origlbl != newlbl) {
@@ -4070,47 +4070,6 @@ def getThermostatDevice(dni) {
 	if(d) { return d }
 	return null
 }
-
-/*
-def checkDeviceLabels() {
-	def data = atomicState?.deviceData
-	if(data?.thermostats) {
-		data?.thermostats?.each { dev ->
-			updateDeviceLabel(dev?.key, dev?.value?.name)
-		}
-	}
-	if(data?.protects) {
-		data?.protects?.each { dev ->
-			updateDeviceLabel(dev?.key, dev?.value?.name)
-		}
-	}
-	if(data?.cameras) {
-		data?.cameras?.each { dev ->
-			updateDeviceLabel(dev?.key, dev?.value?.name)
-		}
-	}
-}
-
-def updateDevName(devId, name) {
-	if(devId && name) {
-		def childDevice = getChildDevice(devId)
-		childDevice?.label = name
-	}
-}
-
-def updateDeviceLabel(dni, apiLbl) {
-	def dev = getChildDevice(dni)
-	if(dev?.label?.toString() != apiLbl.toString()) {
-		LogAction("updateDeviceLabel Device's Cloud Name has changed.  Updating ${dev.label} to $apiLbl")
-		dev?.label = apiLbl.toString()
-	}
-}
-
-def checkLabelChanges() {
-	log.trace "checkLabelChanges..."
-	checkDeviceLabels()
-}
-*/
 
 def addRemoveDevices(uninst = null) {
 	//LogTrace("addRemoveDevices")
@@ -12162,10 +12121,10 @@ def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/S
 |				Application Help and License Info Variables		  			  |
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-def appName()		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
+def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDevName()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def appLabel()		{ return "ST Community Works w/Nest Integration" }
+def appLabel()		{ return "Smart Comfort & Protection Manager" }
 def gitBranch()		{ return "master" }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
