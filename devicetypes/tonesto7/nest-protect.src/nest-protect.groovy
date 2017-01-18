@@ -357,6 +357,7 @@ def deviceVerEvent(ver) {
 }
 
 def lastCheckinEvent(checkin) {
+	log.debug "TODO: fix checkins to update the online status of the device"
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
