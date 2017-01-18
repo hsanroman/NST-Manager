@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.4.0" }
+def devVer() { return "4.4.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -46,6 +46,7 @@ metadata {
 		attribute "carbonMonoxide", "string"
 		attribute "smoke", "string"
 		attribute "nestCarbonMonoxide", "string"
+		attribute "powerSource", "string"
 		attribute "nestSmoke", "string"
 	}
 
@@ -153,17 +154,28 @@ void installed() {
 	verifyHC()
 }
 
+void updated() {
+	Logger("updated...")
+	verifyHC()
+}
+
+def getHcTimeout() {
+	def wired = (device.currentValue("powerSource") == "wired") ? true : false
+	return wired ? (60*35) : 90000
+}
+
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout ?: 35
-	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+	def timeOut = getHcTimeout()
+	if(!val || val.toInteger() != timeOut.toInteger()) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
 }
 
 def ping() {
 	Logger("ping...")
+    //if (device.currentValue("OnlineStatus").toString() == "Online") { refresh() }
 	refresh()
 }
 
@@ -274,12 +286,12 @@ def processEvent(data) {
 			state.nestTimeZone = eventData?.tz ?: null
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
-			if(!results?.last_connection) { lastCheckinEvent(null) }
+			if(!results?.last_connection) { lastCheckinEvent(null, null) }
 			else { lastCheckinEvent(results?.last_connection) }
 			lastTestedEvent(results?.last_manual_test_time)
 			apiStatusEvent(eventData?.apiIssues)
 			debugOnEvent(eventData?.debug ? true : false)
-			onlineStatusEvent(results?.is_online.toString())
+			//onlineStatusEvent(results?.is_online.toString())
 			batteryStateEvent(results?.battery_health.toString())
 			testingStateEvent(results?.is_manual_test_active.toString())
 			uiColorEvent(results?.ui_color_state.toString())
@@ -287,10 +299,10 @@ def processEvent(data) {
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
+			determinePwrSrc()
 
-			lastUpdatedEvent()
+			//lastUpdatedEvent() I don't see a need for this any more
 		}
-
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
 		return null
@@ -298,6 +310,35 @@ def processEvent(data) {
 	catch (ex) {
 		log.error "generateEvent Exception:", ex
 		exceptionDataHandler(ex.message, "generateEvent")
+	}
+}
+
+def formatDt(dt) {
+	def tf = new java.text.SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	else {
+		LogAction("SmartThings TimeZone is not set; Please open your ST location and Press Save", "warn", true)
+	}
+	return tf.format(dt)
+}
+
+def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
+	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
+	try {
+		if((strtDate && !stpDate) || (strtDate && stpDate)) {
+			//if(strtDate?.contains("dtNow")) { return 10000 }
+			def now = new Date()
+			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+			def diff = (int) (long) (stop - start) / 1000
+			//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+			return diff
+		} else { return null }
+	} catch (ex) {
+		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
 	}
 }
 
@@ -357,17 +398,76 @@ def deviceVerEvent(ver) {
 }
 
 def lastCheckinEvent(checkin) {
-	log.debug "TODO: fix checkins to update the online status of the device"
+	//log.debug "lastCheckinEvent($checkin)"
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-	def tf = new SimpleDateFormat(formatVal)
-	tf.setTimeZone(getTimeZone())
-	def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastChk = device.currentState("lastConnection")?.value
+	def isOn = device.currentState("onlineStatus")?.value
+	def onlineStat = "Offline"
+
+	def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
+
+	def hcTimeout = getHcTimeout()
+	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
+
 	state?.lastConnection = lastConn?.toString()
-	if(!lastChk.equals(lastConn?.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
-	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
+	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
+		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
+		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+
+		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "Online" : "Offline" }
+		//log.debug "lastConnSeconds: $lastConnSeconds"
+		if(lastConnSeconds >=0) { addCheckinTime(lastConnSeconds) }
+	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
+
+	state?.onlineStatus = onlineStat
+	if(isStateChange(device, "onlineStatus", onlineStat)) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${isOn})")
+		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${isOn})") }
+}
+
+def addCheckinTime(val) {
+	def list = state?.checkinTimeList ?: []
+	def listSize = 7
+	if(list?.size() < listSize) {
+		list.push(val)
+	}
+	else if(list?.size() > listSize) {
+		def nSz = (list?.size()-listSize) + 1
+		def nList = list?.drop(nSz)
+		nList?.push(val)
+		list = nList
+	}
+	else if(list?.size() == listSize) {
+		def nList = list?.drop(1)
+		nList?.push(val)
+		list = nList
+	}
+	if(list) { state?.checkinTimeList = list }
+}
+
+def determinePwrSrc() {
+	if(!state?.checkinTimeList) { state?.checkinTimeList = [] }
+	def checkins = state?.checkinTimeList
+	def checkinAvg = checkins?.size() ? (checkins?.sum()/checkins?.size()).toDouble().round(0).toInteger() : null
+	if(checkinAvg && checkinAvg < 10000) {
+		powerTypeEvent(true)
+	} else { powerTypeEvent(false) }
+	log.debug "checkins: $checkins | Avg: $checkinAvg"
+}
+
+def powerTypeEvent(wired) {
+	def curVal = device.currentState("powerSource")?.value
+	def newVal = wired == true ? "wired" : "battery"
+	state?.powerSource = newVal
+	if(isStateChange(device, "powerSource", newVal)) {
+		Logger("UPDATED | The Device's Power Source is: (${newVal}) | Original State: (${curVal})")
+		sendEvent(name: 'powerSource', value: newVal, displayed: true, isStateChange: true)
+		verifyHC()
+	} else { LogAction("The Device's Power Source is: (${newVal}) | Original State: (${curVal})") }
 }
 
 def lastTestedEvent(dt) {
@@ -413,6 +513,8 @@ def apiStatusEvent(issue) {
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
+
+//I'm not sure this is really needed any more especially if the health check is functioning
 def lastUpdatedEvent() {
 	def now = new Date()
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
@@ -433,16 +535,6 @@ def uiColorEvent(color) {
 		Logger("UI Color is: (${color}) | Original State: (${colorVal})")
 		sendEvent(name:'uiColor', value: color.toString(), displayed: false, isStateChange: true)
 	} else { LogAction("UI Color: (${color}) | Original State: (${colorVal})") }
-}
-
-def onlineStatusEvent(online) {
-	def isOn = device.currentState("onlineStatus")?.value
-	def val = online ? "Online" : "Offline"
-	state?.onlineStatus = val
-	if(!isOn.equals(val)) {
-		Logger("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
-		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: state?.showProtActEvts, isStateChange: true, state: val)
-	} else { LogAction("Online Status is: (${val}) | Original State: (${isOn})") }
 }
 
 def batteryStateEvent(batt) {
@@ -497,7 +589,9 @@ def testingStateEvent(test) {
 	} else { LogAction("CO State: (${coState.toString().toUpperCase()}) | Original State: (${carbonVal.toString().toUpperCase()})") }
 
 	//log.info "alarmState: ${alarmStateST} (Nest Smoke: ${smokeState.toString().capitalize()} | Nest CarbonMonoxide: ${coState.toString().capitalize()})"
-	sendEvent( name: 'alarmState', value: alarmStateST, descriptionText: "Alarm: ${alarmStateST} (Smoke/CO: ${smokeState}/${coState}) ( ${stvalStr} )", type: "physical", displayed: state?.showProtActEvts )
+	if(isStateChange(device, "alarmState", alarmStateST)) {
+		sendEvent( name: 'alarmState', value: alarmStateST, descriptionText: "Alarm: ${alarmStateST} (Smoke/CO: ${smokeState}/${coState})", type: "physical", displayed: state?.showProtActEvts )
+	}
 }
 
 /************************************************************************************************
