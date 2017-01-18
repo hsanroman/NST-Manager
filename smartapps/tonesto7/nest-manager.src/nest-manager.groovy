@@ -822,6 +822,7 @@ def devNamePage() {
 						if(d.displayName != getNestTstatLabel(t.value)) {
 							dstr += "$str1 ${getNestTstatLabel(t.value)}"
 						}
+// TODO we can customize labels later
 						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 					} else {
 						dstr += "New Name: ${getNestTstatLabel(t.value)}"
@@ -841,6 +842,7 @@ def devNamePage() {
 						if(d.displayName != getNestvStatLabel(t.value)) {
 							dstr += "$str1 ${getNestvStatLabel(t.value)}"
 						}
+// TODO we can customize labels later
 						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 					} else {
 						dstr += "New Name: ${getNestvStatLabel(t.value)}"
@@ -864,6 +866,7 @@ def devNamePage() {
 						if(d1.displayName != getNestProtLabel(p.value)) {
 							dstr += "$str1 ${getNestProtLabel(p.value)}"
 						}
+// TODO we can customize labels later
 						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 					} else {
 						dstr += "New Name: ${getNestProtLabel(p.value)}"
@@ -887,6 +890,7 @@ def devNamePage() {
 						if(d1.displayName != getNestCamLabel(c.value)) {
 							dstr += "$str1 ${getNestCamLabel(c.value)}"
 						}
+// TODO we can customize labels later
 						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 					} else {
 						dstr += "New Name: ${getNestCamLabel(c.value)}"
@@ -911,6 +915,7 @@ def devNamePage() {
 					if(d3.displayName != pLbl) {
 						dstr += "$str1 ${pLbl}"
 					}
+// TODO we can customize labels later
 					else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 				} else {
 					dstr += "New Name: ${pLbl}"
@@ -933,6 +938,7 @@ def devNamePage() {
 					if(d4.displayName != wLbl) {
 						dstr += "$str1 ${wLbl}"
 					}
+// TODO we can customize labels later
 					else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
 				} else {
 					dstr += "New Name: ${wLbl}"
@@ -4798,6 +4804,7 @@ void finishFixState() {
 			//def dev = getApiData("dev")
 			//def meta = getApiData("meta")
 
+// TODO ERS
 			if(settings?.thermostats && !atomicState?.thermostats) { atomicState.thermostats = settings?.thermostats ? statState(settings?.thermostats) : null }
 			if(settings?.protects && !atomicState?.protects) { atomicState.protects = settings?.protects ? coState(settings?.protects) : null }
 			if(settings?.cameras && !atomicState?.cameras) { atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null }
@@ -5231,7 +5238,7 @@ def nestInfoPage () {
 // 		atomicState?.thermostats?.sort().each { tstat ->
 // 			def str = ""
 // 			def cnt = 0
-// 			section("Thermostat Name: ${tstat?.value}") {
+// 			section("Thermostat Name: ${atomicState?.deviceData?.thermostats[tstat?.key]?.name}") {    // was ${tstat?.value}
 // 				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
 // 				data?.sort().each { item ->
 // 					cnt = cnt+1
@@ -5252,7 +5259,7 @@ def nestInfoPage () {
 // 		atomicState?.protects.sort().each { prot ->
 // 			def str = ""
 // 			def cnt = 0
-// 			section("Protect Name: ${prot?.value}") {
+// 			section("Protect Name: ${atomicState?.deviceData?.smoke_co_alarms[prot?.key]?.name}") {   // was ${prot?.value}
 // 				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
 // 				data?.sort().each { item ->
 // 					cnt = cnt+1
@@ -5275,7 +5282,7 @@ def nestInfoPage () {
 // 			def evtStr = ""
 // 			def cnt = 0
 // 			def cnt2 = 0
-// 			section("Camera Name: ${cam?.value}") {
+// 			section("Camera Name: ${atomicState?.deviceData?.cameras[cam?.key]?.name}") {	// was ${cam?.value}
 // 				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
 // 				data?.sort().each { item ->
 // 					if(item?.key != "last_event") {
