@@ -7793,16 +7793,39 @@ def doFanOperation(tempDiff) {
 		def savedHaveRun = atomicState.haveRunFan
 
 		def hvacFanOn = false
-		//1:"Heating/Cooling", 2:"With Fan Only"
+//	1:"Heating/Cooling", 2:"With Fan Only", 3:"Heating", 4:"Cooling"
 
+		def validOperModes = []
+		switch ( settings?."${pName}FanSwitchTriggerType".toInteger() ) {
+			case 1:
+				validOperModes = ["heating", "cooling"]
+				hvacFanOn = (curTstatOperState in validOperModes) ? true : false
+				break
+			case 2:
+				hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
+				break
+			case 3:
+				validOperModes = ["heating"]
+				hvacFanOn = (curTstatOperState in validOperModes) ? true : false
+				break
+			case 4:
+				validOperModes = ["cooling"]
+				hvacFanOn = (curTstatOperState in validOperModes) ? true : false
+				break
+			default:
+				break
+		}
+/*
 		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  1) {
+			def validOperModes = ["heating", "cooling"]
 			hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false
 		}
 		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  2) {
 			hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
 		}
 		//if(settings?."${pName}FanSwitchHvacModeFilter" != "any" && (settings?."${pName}FanSwitchHvacModeFilter" != hvacMode)) {
-		if( !("any" in settings?."${pName}FanSwitchHvacModeFilter") && !(hvacMode in settings?."${pName}FanSwitchHvacModeFilter" )) {
+*/
+		if( !( ("any" in settings?."${pName}FanSwitchHvacModeFilter") || (hvacMode in settings?."${pName}FanSwitchHvacModeFilter") ) ){
 			LogAction("doFanOperation: Evaluating turn fans off; Thermostat Mode does not Match the required Mode", "info", true)
 			hvacFanOn = false  // force off of fans
 		}
@@ -12049,10 +12072,12 @@ def switchRunEnum() {
 	def pName = schMotPrefix()
 	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
 	def vals = [
-		1:"Heating/Cooling", 2:"With Fan Only"
+		1:"Heating and Cooling", 2:"With Fan Only", 3:"Heating", 4:"Cooling"
 	]
 	if(!hasFan) {
-		vals = [1:"Heating/Cooling"]
+		vals = [
+			1:"Heating and Cooling", 3:"Heating", 4:"Cooling"
+		]
 	}
 	return vals
 }
