@@ -1,15 +1,15 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations     									|
-|	 Copyright (C) 2017 Anthony S.                                    						|
+|    Application Name: Nest Manager and Automations                                         |
+|        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
-|																							|
-|	 License Info: https://github.com/tonesto7/nest-manager/blob/master/app_license.txt		|
-|																							|
-|    NOTE: I really hope that we don't have a ton or forks being released to the community, |
-|    and that we can collaborate to make the smartapp and devices that will accommodate  	|
-|    every use case                                                                     	|
+|                                                                                           |
+|    License Info: https://github.com/tonesto7/nest-manager/blob/master/app_license.txt     |
+|                                                                                           |
+|    NOTE: I really hope that we don't have a ton of forks being released to the community, |
+|    and that we can collaborate to make the smartapp and devices that will accommodate     |
+|    every use case                                                                         |
 |*******************************************************************************************|*/
 
 import groovy.json.*
@@ -843,7 +843,7 @@ def devNamePage() {
 					}
 					paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed && !d) ? " " : getAppImg("thermostat_icon.png")
 					if(atomicState.custLabelUsed && !d) {
-						input "tstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
+						input "vtstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
 								image: getAppImg("thermostat_icon.png")
 					}
 				}
@@ -1915,7 +1915,6 @@ def finishPoll(str, dev) {
 	LogAction("finishPoll($str, $dev) received", "info", false)
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
-	runIn(5, "checkLabelChanges", [overwrite: true])
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
 }
@@ -2198,12 +2197,12 @@ def updateChildData(force = false) {
 				curWeatherTemp = getTemperatureScale() == "C" ? (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
-		 def devices = getAllChildDevices()
+		def devices = getAllChildDevices()
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-				def defmin = atomicState?."${physdevId}_safety_temp_min" ?: 0.0
-				def defmax = atomicState?."${physdevId}_safety_temp_max" ?: 0.0
+				def defmin = atomicState?."${devId}_safety_temp_min" ?: 0.0
+				def defmax = atomicState?."${devId}_safety_temp_max" ?: 0.0
 				def safetyTemps = [ "min":defmin, "max":defmax ]
 
 				def comfortDewpoint = settings?."${devId}_comfort_dewpoint_max" ?: 0.0
@@ -2219,6 +2218,12 @@ def updateChildData(force = false) {
 				atomicState."oldTstatData${devId}" = tDataChecksum
 				tDataChecksum = atomicState."oldTstatData${devId}"
 				if(force || nforce || (oldTstatData != tDataChecksum)) {
+					def origlbl = it?.label?.toString()
+					def newlbl = getNestTstatLabel(tData.data.name.toString())
+					if(origlbl != newlbl) {
+						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
+						it?.label = newlbl?.toString()
+					}
 					atomicState?.tDevVer = it?.devVer() ?: ""
 					if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
@@ -2239,6 +2244,12 @@ def updateChildData(force = false) {
 				atomicState."oldProtData${devId}" = pDataChecksum
 				pDataChecksum = atomicState."oldProtData${devId}"
 				if(force || nforce || (oldProtData != pDataChecksum)) {
+					def origlbl = it?.label?.toString()
+					def newlbl = getNestProtLabel(pData.data.name.toString())
+					if(origlbl != newlbl) {
+						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
+						it?.label = newlbl?.toString()
+					}
 					atomicState?.pDevVer = it?.devVer() ?: ""
 					if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect?.val)) {
 						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
@@ -2257,6 +2268,12 @@ def updateChildData(force = false) {
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
 				if(force || nforce || (oldCamData != cDataChecksum)) {
+					def origlbl = it?.label?.toString()
+					def newlbl = getNestCamLabel(camData.data.name.toString())
+					if(origlbl != newlbl) {
+						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
+						it?.label = newlbl?.toString()
+					}
 					atomicState?.camDevVer = it?.devVer() ?: ""
 					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera?.val)) {
 						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
@@ -2381,6 +2398,12 @@ def updateChildData(force = false) {
 					atomicState."oldvStatData${devId}" = tDataChecksum
 					tDataChecksum = atomicState."oldvStatData${devId}"
 					if(force || nforce || (oldTstatData != tDataChecksum)) {
+						def origlbl = it?.label?.toString()
+						def newlbl = getNestvStatLabel(tData.data.name.toString())
+						if(origlbl != newlbl) {
+							LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
+							it?.label = newlbl?.toString()
+						}
 						atomicState?.vtDevVer = it?.devVer() ?: ""
 						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
@@ -3982,9 +4005,9 @@ def getNestCamLabel(name) {
 def getNestvStatLabel(name) {
 	def devt = appDevName()
 	def defName = "Nest vThermostat${devt} - ${name}"
-	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Virtual ${name}" }
 	if(atomicState?.custLabelUsed) {
-		return settings?."vtsat_${name}_lbl" ?: defName
+		return settings?."vtstat_${name}_lbl" ?: defName
 	}
 	else { return defName }
 }
@@ -4036,6 +4059,7 @@ def getThermostatDevice(dni) {
 	return null
 }
 
+/*
 def checkDeviceLabels() {
 	def data = atomicState?.deviceData
 	if(data?.thermostats) {
@@ -4074,6 +4098,7 @@ def checkLabelChanges() {
 	log.trace "checkLabelChanges..."
 	checkDeviceLabels()
 }
+*/
 
 def addRemoveDevices(uninst = null) {
 	//LogTrace("addRemoveDevices")
@@ -4306,7 +4331,7 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 			atomicState."vThermostatChildAppId${devId}" = myID
 			atomicState?."vThermostatMirrorId${devId}" = odevId
 			def vtlist = atomicState?.vThermostats ?: [:]
-			vtlist[devId] = "v${tstat.toString()}"
+			vtlist[devId] = "${tstat.label.toString()}"
 			atomicState.vThermostats = vtlist
 			runIn(10, "updated", [overwrite: true])  // create what is needed
 
@@ -4433,6 +4458,7 @@ def getAccessToken() {
 	catch (ex) {
 		def msg = "Error: OAuth is not Enabled for the Nest Manager application!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE"
 		sendPush(msg)
+		log.error "getAccessToken Exception", ex
 		LogAction("getAccessToken Exception | $msg", "warn", true)
 		sendExceptionData(ex, "getAccessToken")
 		return false
@@ -7859,6 +7885,9 @@ def doFanOperation(tempDiff) {
 		def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
 		LogAction("doFanOperation: Thermostat Info - ( Temperature: (${curTstatTemp}) | HeatSetpoint: (${curHeatSetpoint}) | CoolSetpoint: (${curCoolSetpoint}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) | FanMode: (${curTstatFanMode}) )", "info", false)
 
+		if(atomicState?.haveRunFan == null) { atomicState.haveRunFan = false }
+		def savedHaveRun = atomicState.haveRunFan
+
 		def hvacFanOn = false
 		//1:"Heating/Cooling", 2:"With Fan Only"
 
@@ -7868,12 +7897,11 @@ def doFanOperation(tempDiff) {
 		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  2) {
 			hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
 		}
-		if(settings?."${pName}FanSwitchHvacModeFilter" != "any" && (settings?."${pName}FanSwitchHvacModeFilter" != hvacMode)) {
+		//if(settings?."${pName}FanSwitchHvacModeFilter" != "any" && (settings?."${pName}FanSwitchHvacModeFilter" != hvacMode)) {
+		if( !("any" in settings?."${pName}FanSwitchHvacModeFilter") && !(hvacMode in settings?."${pName}FanSwitchHvacModeFilter" )) {
 			LogAction("doFanOperation: Evaluating turn fans off; Thermostat Mode does not Match the required Mode", "info", true)
 			hvacFanOn = false  // force off of fans
 		}
-		if(atomicState?.haveRunFan == null) { atomicState.haveRunFan = false }
-		def savedHaveRun = atomicState.haveRunFan
 
 		settings?."${pName}FanSwitches"?.each { sw ->
 			def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
@@ -9168,11 +9196,11 @@ def setAway(away) {
 			parent?.setStructureAway(null, true)
 		} else {
 			parent?.setStructureAway(null, false)
-		 }
+		}
 		def didstr = away ? "AWAY" : "HOME"
 		LogAction("setAway($away): | Setting structure to $didstr", "trace", true)
 		storeLastAction("Set structure to $didstr", getDtNow())
-	 }
+	}
 }
 
 def nModeScheduleOk() { return autoScheduleOk(nModePrefix()) }
@@ -10260,7 +10288,7 @@ def tstatConfigAutoPage(params) {
 						input "${pName}FanSwitchTriggerType", "enum", title: "Control Switches When?", defaultValue: 1, metadata: [values:switchRunEnum()],
 							submitOnChange: true, image: getAppImg("${settings?."${pName}FanSwitchTriggerType" == 1 ? "thermostat" : "home_fan"}_icon.png")
 						input "${pName}FanSwitchHvacModeFilter", "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
-								submitOnChange: true, image: getAppImg("mode_icon.png")
+								submitOnChange: true, multiple: true, image: getAppImg("mode_icon.png")
 					}
 					if(getFanSwitchesSpdChk()) {
 						section("Fan Speed Options") {
