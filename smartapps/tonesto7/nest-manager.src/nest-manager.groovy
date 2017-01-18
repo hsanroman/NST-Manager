@@ -610,6 +610,7 @@ def automationGlobalPrefsPage() {
 				paragraph "These settings are applied if individual thermostat settings are not present"
 			}
 			section(title: "Comfort Preferences 									", hideable: true, hidden: false) {
+//TODO need to check C vs F
 				input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
 						required: false, image: getAppImg("heat_icon.png")
 				input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
@@ -651,10 +652,13 @@ def automationGlobalPrefsPage() {
 						str += safeTemp ? "\n• Safefy Temps:\n	  └ Min: ${safeTemp.min}°${getTemperatureScale()}/Max: ${safeTemp.max}°${getTemperatureScale()}" : "\n• Safefy Temps: (Not Set)"
 						str += dew_max ? "\n• Comfort Max Dewpoint:\n  └Max: ${dew_max}°${getTemperatureScale()}" : "\n• Comfort Max Dewpoint: (Not Set)"
 						paragraph "${str}", title:"${dev?.displayName}", state: "complete", image: getAppImg("instruct_icon.png")
+//TODO need to check C vs F
+// this has 0 to try to let you unset it...
 						if(canHeat) {
 							input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Desired °(${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
 									range: "0..90", submitOnChange: true, required: false, image: getAppImg("heat_icon.png")
 						}
+// TODO this does not have 0 to try to let you unset it...
 						if(canCool) {
 							input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Desired (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
 									range: tempRangeValues(), submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
@@ -2201,6 +2205,7 @@ def updateChildData(force = false) {
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
+//TODO need to check C vs F
 				def defmin = atomicState?."${devId}_safety_temp_min" ?: 0.0
 				def defmax = atomicState?."${devId}_safety_temp_max" ?: 0.0
 				def safetyTemps = [ "min":defmin, "max":defmax ]
@@ -6338,6 +6343,7 @@ def initAutoApp() {
 					hvacm: settings["${sLbl}HvacMode"],
 					sen0: settings["schMotRemoteSensor"] ? buildDeviceNameList(settings["${sLbl}remSensor"], "and") : null,
 					m0: buildDeviceNameList(settings["${sLbl}Motion"], "and"),
+//TODO need to check C vs F
 					mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
 					mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
 					mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
@@ -7540,6 +7546,7 @@ def getRemSenCoolSetTemp() {
 		def hvacSettings = atomicState?."sched${mySched}restrictions"
 		coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
 	}
+//TODO need to check C vs F
 	if (coolTemp) {
 		return coolTemp.toDouble()
 	} else if(remSenDayCoolTemp) {
@@ -7566,6 +7573,7 @@ def getRemSenHeatSetTemp() {
 		def hvacSettings = atomicState?."sched${mySched}restrictions"
 		heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
 	}
+//TODO need to check C vs F
 	if (heatTemp) {
 		return heatTemp.toDouble()
 	} else if(remSenDayHeatTemp) {
@@ -8068,7 +8076,7 @@ def getExtTmpTemperature() {
 		extTemp = getDeviceTemp(settings?.extTmpTempSensor)
 	} else {
 		if(settings?.extTmpUseWeather && (atomicState?.curWeatherTemp_f || atomicState?.curWeatherTemp_c)) {
-			if(location?.temperatureScale == "C" && atomicState?.curWeatherTemp_c) { extTemp = atomicState?.curWeatherTemp_c.toDouble() }
+			if(getTemperatureScale() == "C") { extTemp = atomicState?.curWeatherTemp_c.toDouble() }
 			else { extTemp = atomicState?.curWeatherTemp_f.toDouble() }
 		}
 	}
@@ -8078,7 +8086,7 @@ def getExtTmpTemperature() {
 def getExtTmpDewPoint() {
 	def extDp = 0.0
 	if(settings?.extTmpUseWeather && (atomicState?.curWeatherDewpointTemp_f || atomicState?.curWeatherDewpointTemp_c)) {
-		if(location?.temperatureScale == "C" && atomicState?.curWeatherDewpointTemp_c) { extDp = roundTemp(atomicState?.curWeatherDewpointTemp_c.toDouble()) }
+		if(getTemperatureScale() == "C") { extDp = roundTemp(atomicState?.curWeatherDewpointTemp_c.toDouble()) }
 		else { extDp = roundTemp(atomicState?.curWeatherDewpointTemp_f.toDouble()) }
 	}
 //TODO if an external sensor, if it has temp and humidity, we can calculate DP
@@ -10316,10 +10324,12 @@ def tstatConfigAutoPage(params) {
 								if(remSenHeatTempsReq()) {
 									defHeat = getGlobalDesiredHeatTemp()
 									defHeat = defHeat ?: tStatHeatSp
+//TODO need to check C vs F
 									input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (${tempScaleStr})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
 											required: true, defaultValue: defHeat, image: getAppImg("heat_icon.png")
 								}
 								if(remSenCoolTempsReq()) {
+//TODO need to check C vs F
 									defCool = getGlobalDesiredCoolTemp()
 									defCool = defCool ?: tStatCoolSp
 									input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (${tempScaleStr})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
@@ -10611,6 +10621,7 @@ def editSchedule(schedData) {
 	if(act) {
 		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Setpoint Configuration:                                     ", hideable: true, hidden: (settings["${sLbl}HeatTemp"] != null && settings["${sLbl}CoolTemp"] != null) ) {
 			paragraph "Configure Setpoints and HVAC modes that will be set when this Schedule is in use", title: "Setpoints and Mode"
+//TODO need to check C vs F
 			if(canHeat) {
 				input "${sLbl}HeatTemp", "decimal", title: "Heat Set Point (${tempScaleStr})", description: "Range within ${tempRangeValues()}", required: true, range: tempRangeValues(),
 						submitOnChange: true, image: getAppImg("heat_icon.png")
@@ -10636,6 +10647,7 @@ def editSchedule(schedData) {
 			def mmot = settings["${sLbl}Motion"]
 			input "${sLbl}Motion", "capability.motionSensor", title: "Motion Sensors", description: "Select Sensors to Use", required: false, multiple: true, submitOnChange: true, image: getAppImg("motion_icon.png")
 			if(settings["${sLbl}Motion"]) {
+//TODO need to check C vs F
 				paragraph " • Motion State: (${isMotionActive(mmot) ? "Active" : "Not Active"})", state: "complete", image: getAppImg("instruct_icon.png")
 				if(canHeat) {
 					input "${sLbl}MHeatTemp", "decimal", title: "Heat Setpoint with Motion(${tempScaleStr})", description: "Range within ${tempRangeValues()}", required: true, range: tempRangeValues(), image: getAppImg("heat_icon.png")
@@ -10886,6 +10898,7 @@ def updateScheduleStateMap() {
 					hvacm: settings["${sLbl}HvacMode"],
 					sen0: settings["schMotRemoteSensor"] ? deviceInputToList(settings["${sLbl}remSensor"]) : null,
 					m0: deviceInputToList(settings["${sLbl}Motion"]),
+//TODO need to check C vs F
 					mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
 					mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
 					mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
@@ -11766,6 +11779,7 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 }
 
 def getSafetyTemps(tstat) {
+//TODO need to check C vs F
 	def minTemp = tstat?.currentState("safetyTempMin")?.doubleValue
 	def maxTemp = tstat?.currentState("safetyTempMax")?.doubleValue
 	if(minTemp == 0) {
@@ -11800,6 +11814,7 @@ def getComfortDewpoint(tstat) {
 def getSafetyTempsOk(tstat) {
 	def sTemps = getSafetyTemps(tstat)
 	//log.debug "sTempsOk: $sTemps"
+//TODO need to check C vs F
 	if(sTemps) {
 		def curTemp = tstat?.currentTemperature?.toDouble()
 		//log.debug "curTemp: ${curTemp}"
