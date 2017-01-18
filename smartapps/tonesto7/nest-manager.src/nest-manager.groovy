@@ -1601,7 +1601,7 @@ def nestTokenResetPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
-	if(!parent && atomicState?.installData == null) {
+	if(!parent) {
 		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
 		sendInstallSlackNotif()
 	}
@@ -1846,7 +1846,7 @@ def pollWatcher(evt) {
 
 def checkIfSwupdated() {
 	if(atomicState?.swVersion != appVersion()) {
-		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false]
+		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
@@ -1915,6 +1915,7 @@ def finishPoll(str, dev) {
 	LogAction("finishPoll($str, $dev) received", "info", false)
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
+	runIn(5, "checkLabelChanges", [overwrite: true])
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
 }
@@ -3887,46 +3888,21 @@ def getCameraDisplayName(cam) {
 	if(cam?.name) { return cam.name.toString() }
 }
 
-def getNestTstatDni(dni) {
-	//LogTrace("getNestTstatDni: $dni")
+def getNestDeviceDni(dni, type) {
+	//LogTrace("getNestDeviceDni: $dni | $type")
 	def d1 = getChildDevice(dni?.key.toString())
 	if(d1) { return dni?.key.toString() }
-	else {
-		def devt =  appDevName()
-		return "NestThermostat-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
-	}
-	//LogAction("getNestTstatDni Issue", "warn", true)
+	else { return "Nest${type}-${dni?.value.toString()}${appDevName()} | ${dni?.key.toString()}" }
+	//LogAction("getNestDeviceDni ($type) Issue", "warn", true)
 }
 
-def getNestProtDni(dni) {
-	def d2 = getChildDevice(dni?.key.toString())
-	if(d2) { return dni?.key.toString() }
-	else {
-		def devt =  appDevName()
-		return "NestProtect-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
-	}
-	//LogAction("getNestProtDni Issue", "warn", true)
-}
+def getNestTstatDni(dni) { return getNestDeviceDni(dni, "Thermostat") }
 
-def getNestCamDni(dni) {
-	def d5 = getChildDevice(dni?.key.toString())
-	if(d5) { return dni?.key.toString() }
-	else {
-		def devt =  appDevName()
-		return "NestCam-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
-	}
-	//LogAction("getNestCamDni Issue", "warn", true)
-}
+def getNestProtDni(dni) { return getNestDeviceDni(dni, "Protect") }
 
-def getNestvStatDni(dni) {
-	def d6 = getChildDevice(dni.key.toString())
-	if(d6) { return dni?.key.toString() }
-	else {
-		def devt =  appDevName()
-		return "NestvThermostat-${dni?.value.toString()}${devt} | ${dni?.key.toString()}"
-	}
-	//LogAction("getNestvStatDni Issue", "warn", true)
-}
+def getNestCamDni(dni) { return getNestDeviceDni(dni, "Cam") }
+
+def getNestvStatDni(dni) { return getNestDeviceDni(dni, "vThermostat") }
 
 def getNestPresId() {
 	def dni = "Nest Presence Device" // old name 1
@@ -3978,7 +3954,7 @@ def getNestTstatLabel(name) {
 	def defName = "Nest Thermostat${devt} - ${name}"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 	if(atomicState?.custLabelUsed) {
-		return settings?."tstat_${name}_lbl" ? settings?."tstat_${name}_lbl" : defName
+		return settings?."tstat_${name}_lbl" ?: defName
 	}
 	else { return defName }
 }
@@ -3988,7 +3964,7 @@ def getNestProtLabel(name) {
 	def defName = "Nest Protect${devt} - ${name}"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 	if(atomicState?.custLabelUsed) {
-		return settings?."prot_${name}_lbl" ? settings?."prot_${name}_lbl" : defName
+		return settings?."prot_${name}_lbl" ?: defName
 	}
 	else { return defName }
 }
@@ -3998,7 +3974,7 @@ def getNestCamLabel(name) {
 	def defName = "Nest Camera${devt} - ${name}"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 	if(atomicState?.custLabelUsed) {
-		return settings?."cam_${name}_lbl" ? settings?."cam_${name}_lbl" : defName
+		return settings?."cam_${name}_lbl" ?: defName
 	}
 	else { return defName }
 }
@@ -4008,7 +3984,7 @@ def getNestvStatLabel(name) {
 	def defName = "Nest vThermostat${devt} - ${name}"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 	if(atomicState?.custLabelUsed) {
-		return settings?."vtsat_${name}_lbl" ? settings?."vtstat_${name}_lbl" : defName
+		return settings?."vtsat_${name}_lbl" ?: defName
 	}
 	else { return defName }
 }
@@ -4058,6 +4034,45 @@ def getThermostatDevice(dni) {
 	def d = getChildDevice(getNestTstatDni(dni))
 	if(d) { return d }
 	return null
+}
+
+def checkDeviceLabels() {
+	def data = atomicState?.deviceData
+	if(data?.thermostats) {
+		data?.thermostats?.each { dev ->
+			updateDeviceLabel(dev?.key, dev?.value?.name)
+		}
+	}
+	if(data?.protects) {
+		data?.protects?.each { dev ->
+			updateDeviceLabel(dev?.key, dev?.value?.name)
+		}
+	}
+	if(data?.cameras) {
+		data?.cameras?.each { dev ->
+			updateDeviceLabel(dev?.key, dev?.value?.name)
+		}
+	}
+}
+
+def updateDevName(devId, name) {
+	if(devId && name) {
+		def childDevice = getChildDevice(devId)
+		childDevice?.label = name
+	}
+}
+
+def updateDeviceLabel(dni, apiLbl) {
+	def dev = getChildDevice(dni)
+	if(dev?.label?.toString() != apiLbl.toString()) {
+		LogAction("updateDeviceLabel Device's Cloud Name has changed.  Updating ${dev.label} to $apiLbl")
+		dev?.label = apiLbl.toString()
+	}
+}
+
+def checkLabelChanges() {
+	log.trace "checkLabelChanges..."
+	checkDeviceLabels()
 }
 
 def addRemoveDevices(uninst = null) {

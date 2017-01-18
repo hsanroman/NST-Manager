@@ -374,6 +374,7 @@ def onlineStatusEvent(online) {
 	if(!isOn.equals(val.toString().capitalize())) {
 		Logger("UPDATED | Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})")
 		sendEvent(name: "onlineStatus", value: val.toString().capitalize(), descriptionText: "Online Status is: ${val.toString().capitalize()}", displayed: true, isStateChange: true, state: val.toString().capitalize())
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: (val == "online" ? "online" : "offline"), displayed: false)
 	} else { LogAction("Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})") }
 }
 
