@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations                                         |
+|    Application Name: Smart Comfort & Protection Manager and Automations                                         |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -144,7 +144,7 @@ def authPage() {
 			section ("Status Page:") {
 				def desc
 				if(!atomicState?.accessToken) {
-					desc = "OAuth is not Enabled for the Nest Manager application.  Please click remove and review the installation directions again"
+					desc = "OAuth is not Enabled for ${appName()} application.  Please click remove and review the installation directions again"
 				}
 				else if(!atomicState?.devHandlersTested) {
 					desc = "Device Handlers are Missing or Not Published.  Please verify the installation instructions and device handlers are present before continuing."
@@ -265,7 +265,7 @@ def donationPage() {
 			str += "If you enjoy our software please remember that we have spent 1000's of hours of our spare time working on features and stability for this application and devices."
 			str += "If you have already donated please ignore and thank you very much for your support!"
 
-			str += "\n\nThanks again for using Nest Manager"
+			str += "\n\nThanks again for using ${appName()}"
 			paragraph title: "Donation Reminder", str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
@@ -1031,7 +1031,7 @@ def debugPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "debugPrefPage", install: false) {
 		section ("Application Logs") {
-			input (name: "appDebug", type: "bool", title: "Show Nest Manager Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+			input (name: "appDebug", type: "bool", title: "Show ${appName()} Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(appDebug) {
 				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
 				LogAction("Debug Logs Enabled", "info", false)
@@ -1274,7 +1274,7 @@ def uninstallPage() {
 				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 			}
 		}
-		remove("Remove Nest Manager and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
+		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
 	}
 }
 
@@ -3233,7 +3233,7 @@ def appUpdateNotify() {
 		str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 		str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-		sendMsg("Info", "Nest Manager Update(s) are Available:${str} \n\nPlease visit the IDE to Update code")
+		sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code")
 		atomicState?.lastUpdMsgDt = getDtNow()
 	}
 }
@@ -3242,7 +3242,7 @@ def updateHandler() {
 	//LogTrace("updateHandler")
 	if(atomicState?.isInstalled) {
 		if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo?.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
-			sendMsg("Critical", "There are Critical Updates available for the Nest Manager Application! Please visit the IDE and make sure to update the App and Devices Code")
+			sendMsg("Critical", "There are Critical Updates available for ${appName()}! Please visit the IDE and make sure to update the App and Devices Code")
 			atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater?.updateVer?.toInteger()]
 		}
 		if(atomicState?.appData?.updater?.updateMsg != null && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
@@ -3732,8 +3732,8 @@ def reqSchedInfoRprt(child) {
 				result = str
 			}
 		} else {
-			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for the ${tstat} device", "warn", true)
-			//result = "No Thermostat Automation Schedules were found for the ${tstat} device"
+			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for ${tstat} device", "warn", true)
+			//result = "No Thermostat Automation Schedules were found for ${tstat} device"
 		}
 	} else {
 		LogAction("reqSchedInfoRprt: Thermostat device not found", "error", true)
@@ -4427,7 +4427,7 @@ def getAccessToken() {
 		else { return true }
 	}
 	catch (ex) {
-		def msg = "Error: OAuth is not Enabled for the Nest Manager application!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE"
+		def msg = "Error: OAuth is not Enabled for ${appName()}!.  Please click remove and Enable Oauth under the SmartApp App Settings in the IDE"
 		sendPush(msg)
 		log.error "getAccessToken Exception", ex
 		LogAction("getAccessToken Exception | $msg", "warn", true)
@@ -5398,7 +5398,7 @@ def diagPage () {
 		}
 		section("Other Data:") {
 			paragraph "API Token Client Version: ${atomicState?.metaData?.client_version ?: "Not Found"}"
-			paragraph "Nest Manager Client Id:\n${atomicState?.installationId ?: "Not Found"}"
+			paragraph "${appName()} Client Id:\n${atomicState?.installationId ?: "Not Found"}"
 			paragraph "Token Number: ${atomicState?.appData?.token?.tokenNum ?: "Not Found"}"
 		}
 	}
@@ -6389,11 +6389,13 @@ def uninstAutomationApp() {
 	}
 }
 
+def getCurAppLbl() { return app?.label?.toString() }
+
 def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
-	def appLbl = app?.label?.toString()
-	def newName = appName() == "Nest Manager" ? "Nest Automations" : "${appName()}"
+	def appLbl = getCurAppLbl()
+	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
 	def dis = atomicState?.disableAutomation ? "\n(Disabled)" : ""
@@ -6401,7 +6403,7 @@ def getAutoTypeLabel() {
 	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
-	if(appLbl != "Nest Manager") {
+	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
 		if(appLbl.contains("\n(Disabled)")) {
 			newLbl = appLbl.replaceAll('\\\n\\(Disabled\\)', '')
 		} else {
