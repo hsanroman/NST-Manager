@@ -1856,7 +1856,7 @@ def pollWatcher(evt) {
 
 def checkIfSwupdated() {
 	if(atomicState?.swVersion != appVersion()) {
-		if(getCurAppLbl() == "Nest Manager" && atomicState?.installData) { app.updateLabel(appLabel().toString()) }
+		//if(getCurAppLbl() == "Nest Manager" && atomicState?.installData) { app.updateLabel(appLabel().toString()) }
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
 		if(cApps) {
