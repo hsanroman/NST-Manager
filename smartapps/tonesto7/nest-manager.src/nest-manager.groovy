@@ -4865,97 +4865,24 @@ def setStateVar(frc = false) {
 def stateCleanup() {
 	LogAction("stateCleanup", "trace", true)
 
-	state.remove("exLogs")
-	state.remove("pollValue")
-	state.remove("pollStrValue")
-	state.remove("pollWaitVal")
-	state.remove("tempChgWaitVal")
-	state.remove("cmdDelayVal")
-	state.remove("testedDhInst")
-	state.remove("missedPollNotif")
-	state.remove("updateMsgNotif")
-	state.remove("updChildOnNewOnly")
-	state.remove("disAppIcons")
-	state.remove("showProtAlarmStateEvts")
-	state.remove("showAwayAsAuto")
-	state.remove("cmdQ")
-	state.remove("recentSendCmd")
-	state.remove("currentWeather")
-	state.remove("altNames")
-	state.remove("locstr")
-	state.remove("custLocStr")
-	state.remove("autoAppInstalled")
-	state.remove("nestStructures")
-	state.remove("lastSentExceptionDataDt")
-	state.remove("tDevVer")
-	state.remove("pDevVer")
-	state.remove("camDevVer")
-	state.remove("presDevVer")
-	state.remove("weatDevVer")
-	state.remove("vtDevVer")
-	state.remove("dashSetup")
-	state.remove("dashboardUrl")
-	state.remove("apiIssues")
-	state.remove("stateSize")
-	state.remove("haveRun")
-	state.remove("lastStMode")
-	state.remove("lastPresSenAway")
-	state.remove("automationsActive")
-	state.remove("temperatures")
-	state.remove("powers")
-	state.remove("energies")
-	state.remove("use24Time")
-	state.remove("useMilitaryTime")
-	state.remove("advAppDebug")
-	state.remove("appDebug")
-	state.remove("awayModes")
-	state.remove("homeModes")
-	state.remove("childDebug")
+	def data = [ "exLogs", "pollValue", "pollStrValue", "pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updateMsgNotif", "updChildOnNewOnly", "disAppIcons",
+		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
+		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
+		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug" ]
+	data.each { item ->
+		state.remove(item?.toString())
+	}
 
 	if(!atomicState?.cmdQlist) {
-		state.remove("cmdQ2")
-		state.remove("cmdQ3")
-		state.remove("cmdQ4")
-		state.remove("cmdQ5")
-		state.remove("cmdQ6")
-		state.remove("cmdQ7")
-		state.remove("cmdQ8")
-		state.remove("cmdQ9")
-		state.remove("cmdQ10")
-		state.remove("cmdQ11")
-		state.remove("cmdQ12")
-		state.remove("cmdQ13")
-		state.remove("cmdQ14")
-		state.remove("cmdQ15")
-		state.remove("lastCmdSentDt2")
-		state.remove("lastCmdSentDt3")
-		state.remove("lastCmdSentDt4")
-		state.remove("lastCmdSentDt5")
-		state.remove("lastCmdSentDt6")
-		state.remove("lastCmdSentDt7")
-		state.remove("lastCmdSentDt8")
-		state.remove("lastCmdSentDt9")
-		state.remove("lastCmdSentDt10")
-		state.remove("lastCmdSentDt11")
-		state.remove("lastCmdSentDt12")
-		state.remove("lastCmdSentDt13")
-		state.remove("lastCmdSentDt14")
-		state.remove("lastCmdSentDt15")
-		state.remove("recentSendCmd2")
-		state.remove("recentSendCmd3")
-		state.remove("recentSendCmd4")
-		state.remove("recentSendCmd5")
-		state.remove("recentSendCmd6")
-		state.remove("recentSendCmd7")
-		state.remove("recentSendCmd8")
-		state.remove("recentSendCmd9")
-		state.remove("recentSendCmd10")
-		state.remove("recentSendCmd11")
-		state.remove("recentSendCmd12")
-		state.remove("recentSendCmd13")
-		state.remove("recentSendCmd14")
-		state.remove("recentSendCmd15")
+		data = [ "cmdQ2", "cmdQ3", "cmdQ4", "cmdQ5", "cmdQ6", "cmdQ7", "cmdQ8", "cmdQ9", "cmdQ10", "cmdQ11", "cmdQ12", "cmdQ13", "cmdQ14", "cmdQ15", "lastCmdSentDt2", "lastCmdSentDt3",
+			"lastCmdSentDt4", "lastCmdSentDt5", "lastCmdSentDt6", "lastCmdSentDt7", "lastCmdSentDt8", "lastCmdSentDt9", "lastCmdSentDt10", "lastCmdSentDt11", "lastCmdSentDt12", "lastCmdSentDt13",
+			"lastCmdSentDt14", "lastCmdSentDt15", "recentSendCmd2", "recentSendCmd3", "recentSendCmd4", "recentSendCmd5", "recentSendCmd6", "recentSendCmd7", "recentSendCmd8", "recentSendCmd9",
+			"recentSendCmd10", "recentSendCmd11", "recentSendCmd12", "recentSendCmd13", "recentSendCmd14", "recentSendCmd15" ]
+		data.each { item ->
+			state.remove(item?.toString())
+		}
 	}
+	//app.updateSetting(”variable”, “”)   // clear settings
 }
 
 /******************************************************************************
