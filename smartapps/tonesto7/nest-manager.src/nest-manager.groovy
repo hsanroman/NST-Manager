@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.0" }
-def appVerDate() { "1-17-2017" }
+def appVersion() { "4.4.5" }
+def appVerDate() { "1-18-2017" }
 
 preferences {
 	//startPage
@@ -1856,6 +1856,7 @@ def pollWatcher(evt) {
 
 def checkIfSwupdated() {
 	if(atomicState?.swVersion != appVersion()) {
+		if(app?.label != appLabel() || !atomicState) { app.updateLabel(appLabel().toString()) }
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
 		if(cApps) {
@@ -12164,6 +12165,7 @@ def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/S
 def appName()		{ return "${parent ? "Nest Automations" : "Nest Manager"}${appDevName()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
+def appLabel()		{ return "ST Community Works w/Nest Integration" }
 def gitBranch()		{ return "master" }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
