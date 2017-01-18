@@ -203,7 +203,7 @@ metadata {
 			state "default", label:'', action:"heatingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_arrow_down.png"
 			state "", label: ''
 		}
-		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, inactiveLabel: false) {
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 3, range: getRange(), inactiveLabel: false) {
 			state "default", action:"setHeatingSetpoint", backgroundColor:"#FF3300"
 			state "", label: ''
 		}
@@ -215,7 +215,7 @@ metadata {
 			state "default", label:'', action:"coolingSetpointDown", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_arrow_down.png"
 			state "", label: ''
 		}
-		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, inactiveLabel: false) {
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 3, range: getRange(), inactiveLabel: false) {
 			state "setCoolingSetpoint", action:"setCoolingSetpoint", backgroundColor:"#0099FF"
 			state "", label: ''
 		}
@@ -236,9 +236,15 @@ metadata {
 	}
 }
 
+def compileForC() {
+	def retVal = false   // if using C mode, set this to true so that enums and colors are correct (due to ST issue of compile time evaluation)
+	return retVal
+}
+
 def getTempColors() {
 	def colorMap
-	if (wantMetric()) {
+//getTemperatureScale() == "C"   wantMetric()
+	if (compileForC()) {
 		colorMap = [
 			// Celsius Color Range
 			[value: 0, color: "#153591"],
@@ -261,6 +267,15 @@ def getTempColors() {
 			[value: 96, color: "#bc2323"]
 		]
 	}
+}
+
+def getRange() {
+	def retVal = "50..90"
+//getTemperatureScale() == "C" wantMetric()
+	if (compileForC()) {
+		retVal = "9..32"
+	}
+	return retVal
 }
 
 mappings {
