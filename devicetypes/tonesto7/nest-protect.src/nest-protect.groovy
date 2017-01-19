@@ -175,7 +175,6 @@ void verifyHC() {
 
 def ping() {
 	Logger("ping...")
-    //if (device.currentValue("OnlineStatus").toString() == "Online") { refresh() }
 	refresh()
 }
 
@@ -287,7 +286,7 @@ def processEvent(data) {
 			state?.showProtActEvts = eventData?.showProtActEvts ? true : false
 			carbonSmokeStateEvent(results?.co_alarm_state.toString(),results?.smoke_alarm_state.toString())
 			if(!results?.last_connection) { lastCheckinEvent(null, null) }
-			else { lastCheckinEvent(results?.last_connection) }
+			else { lastCheckinEvent(results?.last_connection, results?.is_online.toString()) }
 			lastTestedEvent(results?.last_manual_test_time)
 			apiStatusEvent(eventData?.apiIssues)
 			debugOnEvent(eventData?.debug ? true : false)
@@ -301,7 +300,7 @@ def processEvent(data) {
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			determinePwrSrc()
 
-			//lastUpdatedEvent() I don't see a need for this any more
+			lastUpdatedEvent() //I don't see a need for this any more
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
@@ -397,12 +396,12 @@ def deviceVerEvent(ver) {
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
-def lastCheckinEvent(checkin) {
+def lastCheckinEvent(checkin, isOnline) {
 	//log.debug "lastCheckinEvent($checkin)"
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def lastChk = device.currentState("lastConnection")?.value
 	def isOn = device.currentState("onlineStatus")?.value
-	def onlineStat = "Offline"
+	def onlineStat = isOn ? isOn.toString() : "Offline"
 
 	def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
@@ -421,7 +420,7 @@ def lastCheckinEvent(checkin) {
 		//log.debug "lastConnSeconds: $lastConnSeconds"
 		if(lastConnSeconds >=0) { addCheckinTime(lastConnSeconds) }
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
-
+	if(isOnline != "true") { onlineStat = "Offline" }
 	state?.onlineStatus = onlineStat
 	if(isStateChange(device, "onlineStatus", onlineStat)) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${isOn})")
@@ -525,7 +524,7 @@ def lastUpdatedEvent() {
 	state?.lastUpdatedDt = lastDt?.toString()
 	if(!lastUpd.equals(lastDt?.toString())) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+		//sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
 }
 

@@ -329,6 +329,7 @@ void installed() {
 void updated() {
 	Logger("Device Updated...")
 	checkVirtualStatus()
+	verifyHC()
 }
 
 void checkVirtualStatus() {
@@ -345,12 +346,16 @@ void checkVirtualStatus() {
 	}
 }
 
+def getHcTimeout() {
+	return state?.hcTimeout ?: 35
+}
+
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout ?: 35
-	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+	def timeOut = getHcTimeout()
+	if(!val || val.toInteger() != timeOut.toInteger()) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -424,13 +429,13 @@ void processEvent(data) {
 			humidityEvent(eventData?.data?.humidity.toString())
 			operatingStateEvent(eventData?.data?.hvac_state.toString())
 			fanModeEvent(eventData?.data?.fan_timer_active.toString())
-			if(!eventData?.data?.last_connection) { lastCheckinEvent(null) }
-			else { lastCheckinEvent(eventData?.data?.last_connection) }
+			if(!eventData?.data?.last_connection) { lastCheckinEvent(null,null) }
+			else { lastCheckinEvent(eventData?.data?.last_connection, results?.is_online.toString()) }
 			sunlightCorrectionEnabledEvent(eventData?.data?.sunlight_correction_enabled)
 			sunlightCorrectionActiveEvent(eventData?.data?.sunlight_correction_active)
 			timeToTargetEvent(eventData?.data?.time_to_target, eventData?.data?.time_to_target_training)
 			softwareVerEvent(eventData?.data?.software_version.toString())
-			onlineStatusEvent(eventData?.data?.is_online.toString())
+			//onlineStatusEvent(eventData?.data?.is_online.toString())
 			apiStatusEvent(eventData?.apiIssues)
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
@@ -528,7 +533,7 @@ void processEvent(data) {
 					break
 			}
 			getSomeData(true)
-			lastUpdatedEvent()
+			lastUpdatedEvent() //I don't know that this is needed any more
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -670,18 +675,35 @@ def debugOnEvent(debug) {
 	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
-def lastCheckinEvent(checkin) {
-	//LogAction("lastCheckinEvent()...", "trace")
-	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-	def tf = new SimpleDateFormat(formatVal)
-	tf.setTimeZone(getTimeZone())
-	def lastConn = checkin ? "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+def lastCheckinEvent(checkin, isOnline) {
+	//log.debug "lastCheckinEvent($checkin)"
+	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def lastChk = device.currentState("lastConnection")?.value
+	def isOn = device.currentState("onlineStatus")?.value
+	def onlineStat = isOn ? isOn.toString() : "Offline"
+
+	def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
+
+	def hcTimeout = getHcTimeout()
+	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
+
 	state?.lastConnection = lastConn?.toString()
-	if(!lastChk.equals(lastConn?.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false, isStateChange: true)
-	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
+	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
+		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
+		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+
+		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "Online" : "Offline" }
+		//log.debug "lastConnSeconds: $lastConnSeconds"
+	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
+	if(isOnline != "true") { onlineStat = "Offline" }
+	state?.onlineStatus = onlineStat
+	if(isStateChange(device, "onlineStatus", onlineStat)) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${isOn})")
+		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${isOn})") }
 }
 
 def lastUpdatedEvent() {
@@ -694,7 +716,7 @@ def lastUpdatedEvent() {
 	state?.lastUpdatedDt = lastDt?.toString()
 	if(!lastUpd.equals(lastDt?.toString())) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+		//sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
 }
 
@@ -1262,6 +1284,25 @@ def GetTimeDiffSeconds(lastDate) {
 	return diff
 }
 
+def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
+	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
+	try {
+		if(strtDate) {
+			//if(strtDate?.contains("dtNow")) { return 10000 }
+			def now = new Date()
+			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+			def diff = (int) (long) (stop - start) / 1000
+			//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+			return diff
+		} else { return null }
+	} catch (ex) {
+		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
+	}
+}
 // Nest does not allow temp changes in away modes
 def canChangeTemp() {
 	//LogAction("canChangeTemp()...", "trace")
