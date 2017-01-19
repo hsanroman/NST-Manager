@@ -2789,30 +2789,57 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			def qnum = getQueueNumber(cmdTypeId, childId)
 			if(qnum == -1 ) { return false }
 
-			if(!atomicState?."cmdQ${qnum}" ) { atomicState."cmdQ${qnum}" = [] }
-			def cmdQueue = atomicState?."cmdQ${qnum}"
-
 			def now = new Date()
 			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal, now]
 
 			def tempQueue = []
-			cmdQueue.each { cmd ->
-				def newCmd = [cmd[0], cmd[1], cmd[2], cmd[3]]
-				tempQueue << newCmd
-			}
-			def compcmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal]
+			def newCmd = []
+			def replaced = false
+			def skipped = false
+			def schedQ = false
 
-			if(tempQueue?.contains(compcmdData)) {
-				LogAction("Command Exists in queue ${qnum} - Skipping", "warn", true)
-			} else {
-				LogAction("Adding to Queue ${qnum}: $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
-				atomicState?.pollBlocked = true
-				cmdQueue = atomicState?."cmdQ${qnum}"
-				cmdQueue << cmdData
-				atomicState."cmdQ${qnum}" = cmdQueue
-				atomicState?.lastQcmd = cmdData
+			if(!atomicState?."cmdQ${qnum}" ) { atomicState."cmdQ${qnum}" = [] }
+			def cmdQueue = atomicState?."cmdQ${qnum}"
+			cmdQueue.each { cmd ->
+				if(newCmd != []) {
+					tempQueue << newCmd
+				}
+				newCmd = [cmd[0], cmd[1], cmd[2], cmd[3]]
 			}
-			schedNextWorkQ(childId)
+
+			if(newCmd != []) {   // newCmd is last command in queue
+				if(newCmd[1] == cmdType?.toString() && newCmd[2] == cmdObj?.toString() && newCmd[3] == cmdObjVal) {   // Exact same command; leave it and skip
+					skipped = true
+					tempQueue << newCmd
+				} else if(newCmd[1] == cmdType?.toString() && newCmd[2] == cmdObj?.toString() &&
+						newCmd[2] != apiVar().cmdObjs.away && newCmd[2] != apiVar().cmdObjs.fanActive && newCmd[2] != apiVar().cmdObjs.fanTimer) {
+					// if we are changing the same setting again use latest - this is Temp settings, hvac
+					replaced = true
+					tempQueue << cmdData
+				} else {
+					tempQueue << newCmd
+					tempQueue << cmdData
+				}
+			} else {
+				tempQueue << cmdData
+				schedQ = true
+			}
+			atomicState."cmdQ${qnum}" = tempQueue
+
+			def str = "Adding"
+			if(replaced) { str = "Replacing" }
+			if(skipped) { str = "Skipping" }
+
+			if(replaced || skipped) {
+				LogAction("Command Matches last in queue ${qnum} - ${str}", "warn", true)
+			}
+
+			LogAction("${str} in Queue ${qnum} (qsize: ${tempQueue?.size()}): $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
+			if(schedQ) {
+				atomicState?.pollBlocked = true
+				atomicState?.lastQcmd = cmdData
+				schedNextWorkQ(childId)
+			}
 			return true
 
 		} else {
@@ -2878,12 +2905,11 @@ void schedNextWorkQ(childId) {
 	def qnum = getQueueToWork()
 	def timeVal = cmdDelay
 	if(qnum != null) {
-		if( (getRecentSendCmd(qnum) > 0 ) || (getLastCmdSentSeconds(qnum) > 60) ) {
-			timeVal = cmdDelay
-		} else {
+		if( !(getRecentSendCmd(qnum) > 0 || getLastCmdSentSeconds(qnum) > 60) ) {
 			timeVal = (60 - getLastCmdSentSeconds(qnum) + cmdDelay)
 		}
-		LogAction("schedNextWorkQ schedTime: ${timeVal} | queue: ${qnum} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}", "info", true)
+		def str = timeVal > cmdDelay ? "RATE LIMITING ON " : ""
+		LogAction("schedNextWorkQ ${str}queue: ${qnum} | schedTime: ${timeVal} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}", "info", true)
 	}
 	runIn(timeVal, "workQueue", [overwrite: true])
 }
