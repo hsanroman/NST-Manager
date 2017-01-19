@@ -164,7 +164,7 @@ void updated() {
 def getHcTimeout() {
 	def toBatt = state?.hcBattTimeout
 	def toWire = state?.hcWireTimeout
-	return ((device.currentValue("powerSource") == "wired") ? (toWire.isInteger() ? toWire : 35) : (toBatt.isInteger() ? toBatt : 1500))*60
+	return ((device.currentValue("powerSource") == "wired") ? (toWire instanceof Integer ? toWire : 35) : (toBatt instanceof Integer ? toBatt : 1500))*60
 }
 
 void verifyHC() {
@@ -779,31 +779,20 @@ def getCSS(){
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
+	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		if(state?.cssData) {
-			if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
-				LogAction("getCssData: CSS Data is Current | Loading Data from State...")
-				cssData = state?.cssData
-			} else if (state?.cssVer?.toInteger() < htmlInfo?.cssVer?.toInteger()) {
-				LogAction("getCssData: CSS Data is Outdated | Loading Data from Source...")
-				cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-				state.cssData = cssData
-				state?.cssVer = htmlInfo?.cssVer
-			}
-		} else {
-			LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
-			cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-			state?.cssData = cssData
-			state?.cssVer = htmlInfo?.cssVer
-		}
+		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
+		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
+		state?.cssData = cssData
+		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
+		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
 }
 
-def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
 
 def getInfoHtml() {
 	try {
