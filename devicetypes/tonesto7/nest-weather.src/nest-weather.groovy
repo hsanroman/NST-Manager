@@ -540,7 +540,7 @@ def clearAlerts() {
 	def noneString = ""
 	def cntr = 1
 	def aname = "alert"
-	while (cntr <= 3) { 
+	while (cntr <= 3) {
 		sendEvent(name: "${aname}", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
 
 		state."walert${cntr}" = noneString
@@ -946,9 +946,14 @@ def getJS(url){
 	}
 }
 
+def isDev() {
+	return true
+}
+
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
+	if(isDev) { return getFileBase64(cssUrl(), "text", "css") }
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
 		if(state?.cssData) {
 			if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
@@ -1002,7 +1007,8 @@ def getChartJsData() {
 	return chartJsData
 }
 
-def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+//def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
 def getWeatherIcon() {
@@ -1528,10 +1534,43 @@ def getWeatherHTML() {
 				</div>
 			"""
 		}
+		state?.walertCount = 3
+		state?.walert1 = "Severe Weather"
+		state?.walertMessage1 =
+			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
+			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
+		state?.walert2 = "Visibility Warning"
+		state?.walertMessage2 =
+			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
+			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
+		state?.walert3 = "Something Important"
+		state?.walertMessage3 =
+			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
+			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
 
-	//state.walertCount   // count of current alerts
-	//state."walert${cntr}"   // description  1,2,3
-	//state."walertMessage${cntr}"  // full message
+		def wAlertHtml = ""
+		def alertCnt = state?.walertCount as Integer
+		//log.debug "Weather Alert Count: ${state.walertCount}"   // count of current alerts
+
+		if(alertCnt > 0) {
+			for(int i=1; i < alertCnt.toInteger()+1; i++) {
+				if(state?."walert${i}" && state?."walertMessage${i}") {
+					wAlertHtml += """
+						<div class="alertBanner"><a class=\"alert-modal${i}\">${alertCnt > 1 ? "Alert ${i}: " : ""}${state?."walert${i}"}</a></div>
+						<script>
+							\$('.alert-modal${i}').click(function(){
+								vex.dialog.alert({ unsafeMessage: `
+									<h2 class="alertModalTitle">${alertCnt > 1 ? "#${i}: " : ""}${state?."walert${i}"}</h2>
+									<p>${state?."walertMessage${i}"}</p>
+								`, className: 'vex-theme-top' })
+							});
+						</script>
+					"""
+					//log.debug "Alert $i Description: ${state."walert${i}"}"   // description  1,2,3
+					//log.debug "Alert $i Message: ${state."walertMessage${i}"}"  // full message
+				}
+			}
+		}
 
 		def mainHtml = """
 		<!DOCTYPE html>
@@ -1553,25 +1592,17 @@ def getWeatherHTML() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
 				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<style>
-					.vex.vex-theme-default .vex-content {
-						width: 300px;
-					}
+					.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
 				</style>
 			</head>
 			<body>
 				${clientBl}
 				${updateAvail}
 				<div class="container">
+
+				${wAlertHtml}
+
 				<h4>Current Weather Conditions</h4>
-				<h3><a class=\"alert-modal\">${state?.walert1}</a></h3>
-				<script>
-					\$('.alert-modal').click(function(){
-						vex.dialog.alert({
-							message: ' ${state?.walertMessage1}',
-							className: 'vex-theme-top' // Overwrites defaultOptions
-						})
-					});
-				</script>
 				<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
 					<div class="row">
 						<div class="six columns">
