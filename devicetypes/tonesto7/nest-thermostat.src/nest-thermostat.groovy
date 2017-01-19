@@ -317,18 +317,19 @@ void checkStateClear() {
 
 def initialize() {
 	Logger("initialize")
+	checkVirtualStatus()
+	verifyHC()
 }
 
 void installed() {
 	Logger("installed...")
-	checkVirtualStatus()
+	initialize()
 	state.isInstalled = true
-	verifyHC()
 }
 
 void updated() {
 	Logger("Device Updated...")
-	checkVirtualStatus()
+	initialize()
 }
 
 void checkVirtualStatus() {
@@ -346,15 +347,16 @@ void checkVirtualStatus() {
 }
 
 def getHcTimeout() {
-	return state?.hcTimeout ?: 35
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 35)*60
 }
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut.toInteger()) {
+	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -405,12 +407,12 @@ void processEvent(data) {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
-			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
 			}
 			if(state?.swVersion != devVer()) {
-				installed()
+				initialize()
 				state.swVersion = devVer()
 			}
 			state?.childWaitVal = eventData?.childWaitVal.toInteger()

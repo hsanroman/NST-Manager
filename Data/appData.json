@@ -76,7 +76,7 @@
     "healthcheck": {
         "camTimeout": 35,
         "protWireTimeout": 35,
-        "protBattTimeout": 88000,
+        "protBattTimeout": 1500,
         "tstatTimeout": 35,
         "longTimeout": 120,
         "timeout": 35

@@ -166,36 +166,39 @@ def getInHomeURL() { return [InHomeURL: getCamPlaylistURL().toString()] }
 def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL().toString()] }
 
 def initialize() {
-	//log.info "Nest Camera ${textVersion()} ${textCopyright()}"
-	poll()
+	Logger("initialize...")
+	verifyHC()
+	//poll()
 }
 
 void installed() {
 	Logger("installed...")
-	verifyHC()
+	initialize()
+	state?.isInstalled = true
 }
 
 void updated() {
 	Logger("updated...")
+	initialize()
 }
 
 def getHcTimeout() {
-	return state?.hcTimeout ?: 35
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
 }
 
 def ping() {
 	Logger("ping...")
 	keepAwakeEvent()
-	//refresh()
 }
 
 def parse(String description) {
@@ -232,7 +235,7 @@ def generateEvent(Map eventData) {
 
 def processEvent() {
 	if(state?.swVersion != devVer()) {
-		installed()
+		initialize()
 		state.swVersion = devVer()
 	}
 	def eventData = state?.eventData
@@ -245,7 +248,7 @@ def processEvent() {
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
 			}

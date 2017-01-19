@@ -7,13 +7,11 @@
  * 	Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
 
-// TODO: Need to update Copyright
-
 import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.4.1" }
+def devVer() { return "4.4.2" }
 
 // for the UI
 metadata {
@@ -79,33 +77,37 @@ mappings {
 
 void installed() {
 	Logger("installed...")
+	initialize()
+	state?.isInstalled = true
+}
+
+def initialize() {
+	LogAction("initialize")
 	verifyHC()
 }
 
 void updated() {
 	Logger("updated...")
+	initialize()
 }
 
 def getHcTimeout() {
-	return state?.hcTimeout ?: 3600
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout ?: 60
-	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+	def timeOut = getHcTimeout()
+	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
 }
 
 def ping() {
 	Logger("ping...")
 	keepAwakeEvent()
-}
-
-def initialize() {
-	LogAction("initialize")
 }
 
 def parse(String description) {
@@ -134,7 +136,7 @@ def generateEvent(Map eventData) {
 
 def processEvent(data) {
 	if(state?.swVersion != devVer()) {
-		installed()
+		initialize()
 		state.swVersion = devVer()
 	}
 	def eventData = data?.evt
@@ -145,7 +147,7 @@ def processEvent(data) {
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
 			}
@@ -389,6 +391,40 @@ def exceptionDataHandler(msg, methodName) {
 def incHtmlLoadCnt() { state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
 def getMetricCntData() {
 	return [presHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]
+}
+
+def getDtNow() {
+	def now = new Date()
+	return formatDt(now)
+}
+
+def formatDt(dt) {
+	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	else {
+		Logger("SmartThings TimeZone is not found or is not set... Please Try to open your ST location and Press Save...", "warn")
+	}
+	return tf.format(dt)
+}
+
+def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
+	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
+	try {
+		if(strtDate) {
+			//if(strtDate?.contains("dtNow")) { return 10000 }
+			def now = new Date()
+			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+			def diff = (int) (long) (stop - start) / 1000
+			//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+			return diff
+		} else { return null }
+	} catch (ex) {
+		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
+	}
 }
 
 def getImgBase64(url,type) {

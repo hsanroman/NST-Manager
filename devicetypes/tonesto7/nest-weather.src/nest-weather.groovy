@@ -122,35 +122,39 @@ void checkStateClear() {
 	//LogAction("Device State Data: ${getState()}")
 }
 
+def initialize() {
+	Logger("initialize")
+	verifyHC()
+}
+
 void installed() {
 	Logger("installed...")
-	verifyHC()
+	initialize()
+	state.isInstalled = true
 }
 
 void updated() {
 	Logger("updated...")
+	initialize()
 }
 
 def getHcTimeout() {
-	return state?.hcTimeout ?: 3600
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
+	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
 }
 
 def ping() {
 	Logger("ping...")
 	keepAwakeEvent()
-}
-
-def initialize() {
-	Logger("initialize")
 }
 
 def parse(String description) {
@@ -210,6 +214,10 @@ def generateEvent(Map eventData) {
 }
 
 void processEvent() {
+	if(state?.swVersion != devVer()) {
+		initialize()
+		state.swVersion = devVer()
+	}
 	def eventData = state?.eventData
 	state.eventData = null
 	checkStateClear()
@@ -225,14 +233,9 @@ void processEvent() {
 			state.tempUnit = getTemperatureScale()
 
 			//LogAction("processEvent Parsing data ${eventData}", "trace")
-
-			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
-			}
-			if(state?.swVersion != devVer()) {
-				installed()
-				state.swVersion = devVer()
 			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType

@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.4.1" }
+def devVer() { return "4.4.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -145,29 +145,34 @@ mappings {
 }
 
 def initialize() {
-	Logger("Nest Protect ${textVersion()} ${textCopyright()}")
-	poll()
+	Logger("initialize...")
+	verifyHC()
+	//poll()
 }
 
 void installed() {
 	Logger("installed...")
-	verifyHC()
+	initialize()
+	state?.isInstalled = true
 }
 
 void updated() {
 	Logger("updated...")
+	initialize()
 }
 
 def getHcTimeout() {
-	return (device.currentValue("powerSource") == "wired") ? (60*(state?.hcWireTimeout ?: 35)) : (60*(state?.hcBattTimeout ?: 88000))
+	def toBatt = state?.hcBattTimeout
+	def toWire = state?.hcWireTimeout
+	return ((device.currentValue("powerSource") == "wired") ? (toWire.isInteger() ? toWire : 35) : (toBatt.isInteger() ? toBatt : 1500))*60
 }
 
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
 	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut.toInteger()) {
+	if(!val || val.toInteger() != timeOut) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
+		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
 }
 
@@ -261,7 +266,7 @@ def generateEvent(Map eventData) {
 
 def processEvent(data) {
 	if(state?.swVersion != devVer()) {
-		installed()
+		initialize()
 		state.swVersion = devVer()
 	}
 	def eventData = data?.evt
@@ -273,11 +278,13 @@ def processEvent(data) {
 			def results = eventData?.data
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			if((eventData.hcBattTimeout && state?.hcBattTimeout != eventData?.hcBattTimeout) || (eventData.hcWireTimeout && state?.hcWireTimeout != eventData?.hcWireTimeout) ) {
+
+			if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
 				state.hcBattTimeout = eventData?.hcBattTimeout
 				state.hcWireTimeout = eventData?.hcWireTimeout
 				verifyHC()
 			}
+
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
