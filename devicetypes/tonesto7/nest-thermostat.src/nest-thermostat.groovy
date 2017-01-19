@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.4.1"}
+def devVer() { return "4.4.2"}
 
 // for the UI
 metadata {
@@ -329,7 +329,6 @@ void installed() {
 void updated() {
 	Logger("Device Updated...")
 	checkVirtualStatus()
-	verifyHC()
 }
 
 void checkVirtualStatus() {
@@ -361,7 +360,8 @@ void verifyHC() {
 
 def ping() {
 	Logger("ping...")
-	refresh()
+	keepAwakeEvent()
+	//refresh()
 }
 
 def parse(String description) {
@@ -442,7 +442,7 @@ void processEvent(data) {
 			if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
 			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
 			state.voiceReportPrefs = eventData?.vReportPrefs
-
+			autoSchedDataEvent(eventData?.autoSchedData)
 			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
@@ -706,17 +706,17 @@ def lastCheckinEvent(checkin, isOnline) {
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${isOn})") }
 }
 
-def lastUpdatedEvent() {
+def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-	tf.setTimeZone(getTimeZone())
+		tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
-	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
-	if(!lastUpd.equals(lastDt?.toString())) {
+	state?.lastUpdatedDtFmt = formatDt(now)
+	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		//sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
 	}
 }
 
@@ -1013,6 +1013,22 @@ def nestReportStatusEvent() {
 		Logger("UPDATED | Current Nest Report Data has been updated", "info")
 		sendEvent(name: 'nestReportData', value: rprtData, descriptionText: "Nest Report Data has been updated...", display: false, displayed: false)
 	}
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
+}
+
+def autoSchedDataEvent(schedData) {
+	state?.curAutoSchedData = schedData
+	//log.debug "autoData: ${state?.curAutoSchedData}"
 }
 
 def canHeatCool(canHeat, canCool) {
@@ -2049,12 +2065,10 @@ def getChartJsData() {
 	return chartJsData
 }
 
-def cssUrl()	 { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
+def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
-def getImg(imgName) {
-	return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
-}
+def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
 
 /*
 	 variable	  attribute for history	   getRoutine			 variable is present
@@ -2931,23 +2945,8 @@ def getGraphHTML() {
 		def canCool = state?.can_cool == true ? true : false
 		def hasFan = state?.has_fan == true ? true : false
 		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
-		def updateAvail = !state.updateAvailable ? "" : """
-			<script>
-			  vex.dialog.alert({
-				message: 'Device Update Available!',
-				className: 'vex-theme-top'
-			   })
-			</script>
-		"""
-
-		def clientBl = state?.clientBl ? """
-				<script>
-				  vex.dialog.alert({
-					unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
-					className: 'vex-theme-top'
-				  })
-				</script>
-			""" : ""
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
