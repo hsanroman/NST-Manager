@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.4.1" }
+def devVer() { return "4.4.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -127,9 +127,17 @@ void installed() {
 	verifyHC()
 }
 
+void updated() {
+	Logger("updated...")
+}
+
+def getHcTimeout() {
+	return state?.hcTimeout ?: 3600
+}
+
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = state?.hcTimeout ?: 60
+	def timeOut = getHcTimeout()
 	if(!val || val.toInteger() != (timeOut.toInteger() * 60)) {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: 60 * timeOut.toInteger(), data: [protocol: "cloud"], displayed: false)
@@ -138,7 +146,7 @@ void verifyHC() {
 
 def ping() {
 	Logger("ping...")
-	refresh()
+	keepAwakeEvent()
 }
 
 def initialize() {
@@ -320,18 +328,29 @@ def debugOnEvent(debug) {
 	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
 }
 
-def lastUpdatedEvent() {
+def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
-	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
-	if(!lastUpd.equals(lastDt?.toString())) {
+	state?.lastUpdatedDtFmt = formatDt(now)
+	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
 	}
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
 }
 
 def apiStatusEvent(issue) {
