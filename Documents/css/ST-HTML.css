@@ -319,13 +319,49 @@ box-shadow: 1px 1px 3px #000;
   background-color:#dba800;
 }
 
-.alertBanner {
+.redAlertBanner {
   font-size: 6vw;
   font-weight: bold;
   text-align: center;
   background: #B74C4C;
   color: #f5f5f5;
-  padding: 10px 0px;
+  padding: 8px 0px;
+}
+
+.brightRedAlertBanner {
+  font-size: 6vw;
+  font-weight: bold;
+  text-align: center;
+  background: #ff3b19;
+  color: #f5f5f5;
+  padding: 8px 0px;
+}
+
+.greenAlertBanner {
+  font-size: 6vw;
+  font-weight: bold;
+  text-align: center;
+  background: #00ff00;
+  -webkit-text-stroke: 1.0px #000000;
+  -webkit-text-fill-color: #FFFFFF;
+  padding: 8px 0px;
+}
+
+.orangeAlertBanner {
+  font-size: 6vw;
+  font-weight: bold;
+  text-align: center;
+  background: #ffae19;
+  color: #f5f5f5;
+  padding: 8px 0px;
+}
+
+.blueTitle {
+  font-size: 4vw;
+  font-weight: bold;
+  text-align: center;
+  background: #00a1db;
+  color: #f5f5f5;
 }
 
 .alertModalTitle {

@@ -946,14 +946,9 @@ def getJS(url){
 	}
 }
 
-def isDev() {
-	return true
-}
-
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	if(isDev) { return getFileBase64(cssUrl(), "text", "css") }
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
 		if(state?.cssData) {
 			if (state?.cssVer?.toInteger() == htmlInfo?.cssVer?.toInteger()) {
@@ -1007,7 +1002,6 @@ def getChartJsData() {
 	return chartJsData
 }
 
-//def cssUrl() { return "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" }
 def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
@@ -1416,8 +1410,8 @@ def getWeatherHTML() {
 		if(!state?.curWeather || !state?.curForecast) {
 			return hideWeatherHtml()
 		}
-		def updateAvail = !state.updateAvailable ? "" : "<h3>Device Update Available!</h3>"
-		def clientBl = state?.clientBl ? """<h3>Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</h3>""" : ""
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
 
@@ -1556,7 +1550,7 @@ def getWeatherHTML() {
 			for(int i=1; i < alertCnt.toInteger()+1; i++) {
 				if(state?."walert${i}" && state?."walertMessage${i}") {
 					wAlertHtml += """
-						<div class="alertBanner"><a class=\"alert-modal${i}\">${alertCnt > 1 ? "Alert ${i}: " : ""}${state?."walert${i}"}</a></div>
+						<div class="redAlertBanner"><a class=\"alert-modal${i}\">${alertCnt > 1 ? "Alert ${i}: " : ""}${state?."walert${i}"}</a></div>
 						<script>
 							\$('.alert-modal${i}').click(function(){
 								vex.dialog.alert({ unsafeMessage: `
