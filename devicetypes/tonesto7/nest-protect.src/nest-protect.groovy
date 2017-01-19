@@ -805,26 +805,10 @@ def getInfoHtml() {
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
+		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
+		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
-        def updateAvail = !state.updateAvailable ? "" : """
-        	<script>
-              vex.dialog.alert({
-                message: 'Device Update Available!',
-                className: 'vex-theme-top'
-              })
-			</script>
-        """
-
-        def clientBl = state?.clientBl ? """
-              <script>
-                vex.dialog.alert({
-                  unsafeMessage: 'Your Manager client has been blacklisted! <br> <br> Please contact the Nest Manager developer to get the issue resolved!!!',
-                  className: 'vex-theme-top'
-                })
-			  </script>
-            """ : ""
-
-        def html = """
+		def html = """
 		<!DOCTYPE html>
 		<html>
 			<head>
