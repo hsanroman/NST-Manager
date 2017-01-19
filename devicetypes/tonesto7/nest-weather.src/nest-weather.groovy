@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.4.0" }
+def devVer() { return "4.4.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -49,6 +49,8 @@ metadata {
 		attribute "dewpoint", "string"
 		attribute "visibility", "string"
 		attribute "alert", "string"
+		attribute "alert2", "string"
+		attribute "alert3", "string"
 		attribute "alertKeys", "string"
 	}
 
@@ -149,9 +151,14 @@ def parse(String description) {
 
 def configure() { }
 
+def compileForC() {
+	def retVal = false   // if using C mode, set this to true so that enums and colors are correct (due to ST issue of compile time evaluation)
+	return retVal
+}
+
 def getTempColors() {
 	def colorMap
-	if (wantMetric()) {
+	if (compileForC()) {
 		colorMap = [
 			// Celsius Color Range
 			[value: 0, color: "#153591"],
@@ -526,6 +533,30 @@ def getWeatherAstronomy(weatData) {
 	}
 }
 
+def clearAlerts() {
+	def newKeys = []
+	sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
+
+	def noneString = ""
+	def cntr = 1
+	def aname = "alert"
+	while (cntr <= 3) { 
+		sendEvent(name: "${aname}", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
+
+		state."walert${cntr}" = noneString
+		state."walertMessage${cntr}" = null
+
+		cntr += 1
+		aname = "alert${cntr}"
+	}
+	state.lastWeatherAlertNotif = null
+	state.walertCount = 0
+
+	// below are old variables from prior releases
+	state.remove("walert")
+	state.remove("walertMessage")
+}
+
 def getWeatherAlerts(weatData) {
 	try {
 		if(!weatData) {
@@ -543,63 +574,74 @@ def getWeatherAlerts(weatData) {
 				def oldKeys = device.currentState("alertKeys")?.jsonValue
 				//LogAction("${device.displayName}: oldKeys: $oldKeys")
 
-				if(state?.walert == null) {
-					state.walert = ""
-					state.walertMessage = null
-				}
-
 				def noneString = ""
-				if (newkeys == [] && (oldKeys == null || oldKeys == [])) {
-					sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
-					sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
-					state.walert = noneString
-					state.walertMessage = null
-					state.lastWeatherAlertNotif = null
+
+				if (oldKeys == null) { oldKeys = [] }
+				if(state?.lastWeatherAlertNotif == null) { state?.lastWeatherAlertNotif = [] }
+
+				if(state?.walert != null) { oldKeys = []; state.walert = null }	// this is code for this upgrade
+
+				if(newkeys == [] && !(oldKeys == [])) {
+					clearAlerts()
 				}
 				else if (newKeys != oldKeys) {
-					if (oldKeys == null) {
-						oldKeys = []
-					}
 					sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
 
+					def totalAlerts = newKeys.size()
+					def cntr = 1
 					def newAlerts = false
-					alerts.each {alert ->
-						if (!oldKeys.contains(alert.type + alert.date_epoch)) {
-							if(alert?.description == null) {
-								Logger("null alert.description")
-								return true
-							}
-							if(alert?.message == null) {
-								Logger("null alert.message")
-								return true
-							}
-							def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
-							sendEvent(name: "alert", value: pad(alert.description), descriptionText: msg)
-							newAlerts = true
-							state.walert = pad(alert.description) // description
-							state.walertMessage = pad(alert.message) // message
+					def newWalertNotif = []
 
-							// Try to format message some
-							state.walertMessage = state.walertMessage.replaceAll(/\.\.\./, ' ')
-							state.walertMessage = state.walertMessage.replaceAll(/\*/, '')
-							state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
-							state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
-							state.walertMessage = state.walertMessage.replaceAll(/\n\n\n/, '\n\n')
-							state.walertMessage = state.walertMessage.replaceAll(/\n\n/, '<br>')
-							state.walertMessage = state.walertMessage.replaceAll(/\n/, ' ')
-
-							if(state?.weatherAlertNotify && (alert?.message.toString() != state?.lastWeatherAlertNotif.toString())) {
-								sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
-								state?.lastWeatherAlertNotif = alert?.message
-							}
+					alerts.each { alert ->
+						def thisKey = alert.type + alert.date_epoch
+						if(alert?.description == null) {
+							Logger("null alert.description")
+							return true
 						}
-					}
+						if(alert?.message == null) {
+							Logger("null alert.message")
+							return true
+						}
+						def msg = "${alert.description} from ${alert.date} until ${alert.expires}"
+						def aname = "alert"
+						if(cntr > 1) {
+							aname = "alert${cntr}"
+						}
+						def statechange = oldKeys.contains(alert.type + alert.date_epoch) ? false : true
+						sendEvent(name: "${aname}", value: pad(alert.description), descriptionText: msg, isStateChange: statechange, displayed: statechange)
 
-					if (!newAlerts && device.currentValue("alert") != noneString) {
-						sendEvent(name: "alert", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
-						state.walert = noneString
-						state.walertMessage = null
-						state.lastWeatherAlertNotif = null
+						if(statechange) { newAlerts = true }
+
+						def walert = pad(alert.description) // description
+						def walertMessage = pad(alert.message) // message
+
+						// Try to format message some
+						walertMessage = walertMessage.replaceAll(/\.\.\./, ' ')
+						walertMessage = walertMessage.replaceAll(/\*/, '')
+						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
+						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
+						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
+						walertMessage = walertMessage.replaceAll(/\n\n/, '<br>')
+						walertMessage = walertMessage.replaceAll(/\n/, ' ')
+
+						state."walert${cntr}" = walert
+						state."walertMessage${cntr}" = walertMessage
+
+						if(state?.weatherAlertNotify) {
+							if(statechange && !(thisKey in state.lastWeatherAlertNotif)) {
+								sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+							}
+							newWalertNotif << thisKey
+						}
+						state.walertCount = cntr
+
+						if(cntr < 3) { cntr += 1 } else { log.error "Many Alerts"; return true }
+					}
+					state?.lastWeatherAlertNotif = newWalertNotif
+
+					if(totalAlerts == 0 && device.currentValue("alert") != noneString) {
+						log.error "clearing alerts again"
+						clearAlerts()
 					}
 				}
 			}
@@ -1486,6 +1528,11 @@ def getWeatherHTML() {
 				</div>
 			"""
 		}
+
+	//state.walertCount   // count of current alerts
+	//state."walert${cntr}"   // description  1,2,3
+	//state."walertMessage${cntr}"  // full message
+
 		def mainHtml = """
 		<!DOCTYPE html>
 		<html>
@@ -1516,11 +1563,11 @@ def getWeatherHTML() {
 				${updateAvail}
 				<div class="container">
 				<h4>Current Weather Conditions</h4>
-				<h3><a class=\"alert-modal\">${state?.walert}</a></h3>
+				<h3><a class=\"alert-modal\">${state?.walert1}</a></h3>
 				<script>
 					\$('.alert-modal').click(function(){
 						vex.dialog.alert({
-							message: ' ${state?.walertMessage}',
+							message: ' ${state?.walertMessage1}',
 							className: 'vex-theme-top' // Overwrites defaultOptions
 						})
 					});
