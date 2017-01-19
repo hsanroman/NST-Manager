@@ -156,12 +156,10 @@ void installed() {
 
 void updated() {
 	Logger("updated...")
-	verifyHC()
 }
 
 def getHcTimeout() {
-	def wired = (device.currentValue("powerSource") == "wired") ? true : false
-	return wired ? (60*35) : 90000
+	return (device.currentValue("powerSource") == "wired") ? (60*(state?.hcWireTimeout ?: 35)) : (60*(state?.hcBattTimeout ?: 88000))
 }
 
 void verifyHC() {
@@ -175,7 +173,7 @@ void verifyHC() {
 
 def ping() {
 	Logger("ping...")
-	refresh()
+	keepAwakeEvent()
 }
 
 def parse(String description) {
@@ -275,8 +273,9 @@ def processEvent(data) {
 			def results = eventData?.data
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
-			if(eventData.hcTimeout && state?.hcTimeout != eventData?.hcTimeout) {
-				state.hcTimeout = eventData?.hcTimeout
+			if((eventData.hcBattTimeout && state?.hcBattTimeout != eventData?.hcBattTimeout) || (eventData.hcWireTimeout && state?.hcWireTimeout != eventData?.hcWireTimeout) ) {
+				state.hcBattTimeout = eventData?.hcBattTimeout
+				state.hcWireTimeout = eventData?.hcWireTimeout
 				verifyHC()
 			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
@@ -512,20 +511,29 @@ def apiStatusEvent(issue) {
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
-
-//I'm not sure this is really needed any more especially if the health check is functioning
-def lastUpdatedEvent() {
+def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
-	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-	tf.setTimeZone(getTimeZone())
+		tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
-	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
-	if(!lastUpd.equals(lastDt?.toString())) {
+	state?.lastUpdatedDtFmt = formatDt(now)
+	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		//sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
 	}
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
 }
 
 def uiColorEvent(color) {
