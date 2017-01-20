@@ -602,23 +602,55 @@ def automationStatisticsPage() {
 	}
 }
 
+def locDesiredClear() {
+	LogAction("locDesiredClear", "info", true)
+	def list = [ "locDesiredHeatTemp", "locDesiredCoolTemp","locDesiredComfortDewpointMax", "locDesiredTempScale", "locDesiredButton" ]
+	list.each { item ->
+		app.updateSetting(item.toString(), "")
+	}
+	if(atomicState?.thermostats) {
+		atomicState?.thermostats?.each { ts ->
+			def dev = getChildDevice(ts?.key)
+			def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
+			def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true
+			if(canHeat) {
+				app.updateSetting("${dev?.deviceNetworkId}_safety_temp_min", "")
+			}
+			if(canCool) {
+				app.updateSetting("${dev?.deviceNetworkId}_safety_temp_max", "")
+			}
+			app.updateSetting("${dev?.deviceNetworkId}_comfort_dewpoint_max", "")
+		}
+	}
+}
+
+def getGlobTitleStr(typ) {
+	return "Desired Default ${typ} Temp (°${getTemperatureScale()})"
+}
+
 def automationGlobalPrefsPage() {
 	def execTime = now()
 	dynamicPage(name: "automationGlobalPrefsPage", title: "", nextPage: "", install: false) {
 		if(atomicState?.thermostats) {
+			def descStr = "Range within ${tempRangeValues()}"
+			def req = (locDesiredHeatTemp || locDesiredCoolTemp || locDesiredComfortDewpointMax) ? true : false
+			if(!req) { req = getSafetyValuesDesc() != "" ? true : req }
 			section {
 				paragraph "These settings are applied if individual thermostat settings are not present"
+				if(req) {
+					input(type: "enum", name: "locDesiredTempScale", style: "segmented", title: "Temperature Scale", required: req, submitOnChange: true, options: ["C", "F"])
+				}
 			}
 			section(title: "Comfort Preferences 									", hideable: true, hidden: false) {
 //TODO need to check C vs F
-				input "locDesiredHeatTemp", "decimal", title: "Desired Global Heat Temp (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
+				input "locDesiredHeatTemp", "decimal", title: getGlobTitleStr("Heat"), description: descStr, range: tempRangeValues(), submitOnChange: true,
 						required: false, image: getAppImg("heat_icon.png")
-				input "locDesiredCoolTemp", "decimal", title: "Desired Global Cool Temp (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
+				input "locDesiredCoolTemp", "decimal", title: getGlobTitleStr("Cool"), description: descStr, range: tempRangeValues(), submitOnChange: true,
 						required: false, image: getAppImg("cool_icon.png")
 				def tRange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
 				def wDev = getChildDevice(getNestWeatherId())
 				def curDewPnt = wDev ? "${wDev?.currentDewpoint}°${getTemperatureScale()}" : 0
-				input "locDesiredComfortDewpointMax", "decimal", title: "Max. Dewpoint Desired (${tRange} °${getTemperatureScale()})", required: false,  range: trange,
+				input "locDesiredComfortDewpointMax", "decimal", title: "Default Dewpoint Threshold (${tRange} °${getTemperatureScale()})", required: false,  range: trange, submitOnChange: true,
 						image: getAppImg("dewpoint_icon.png")
 				href url: "https://en.wikipedia.org/wiki/Dew_point#Relationship_to_human_comfort", style:"embedded", title: "What is Dew Point?",
 						description:"Tap to view", image: getAppImg("instruct_icon.png")
@@ -632,12 +664,12 @@ def automationGlobalPrefsPage() {
 
 						def defmin
 						def defmax
-						def safeTemp = getSafetyTemps(dev)
+						def safeTemp = getSafetyTemps(dev, false)
 						if(safeTemp) {
 							defmin = safeTemp.min
 							defmax = safeTemp.max
 						}
-						def dew_max = getComfortDewpoint(dev)
+						def dew_max = getComfortDewpoint(dev,false)
 
 						/*
 						 TODO
@@ -653,14 +685,12 @@ def automationGlobalPrefsPage() {
 						str += dew_max ? "\n• Comfort Max Dewpoint:\n  └Max: ${dew_max}°${getTemperatureScale()}" : "\n• Comfort Max Dewpoint: (Not Set)"
 						paragraph "${str}", title:"${dev?.displayName}", state: "complete", image: getAppImg("instruct_icon.png")
 //TODO need to check C vs F
-// this has 0 to try to let you unset it...
 						if(canHeat) {
-							input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Min. Temp Desired °(${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
-									range: "0..90", submitOnChange: true, required: false, image: getAppImg("heat_icon.png")
+							input "${dev?.deviceNetworkId}_safety_temp_min", "decimal", title: "Low Safety Temp °(${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
+									range: tempRangeValues(), submitOnChange: true, required: false, image: getAppImg("heat_icon.png")
 						}
-// TODO this does not have 0 to try to let you unset it...
 						if(canCool) {
-							input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "Max. Temp Desired (°${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
+							input "${dev?.deviceNetworkId}_safety_temp_max", "decimal", title: "High Safety Temp °(${getTemperatureScale()})", description: "Range within ${tempRangeValues()}",
 									range: tempRangeValues(), submitOnChange: true, required: false, image: getAppImg("cool_icon.png")
 						}
 						def tmin = settings?."${dev?.deviceNetworkId}_safety_temp_min"
@@ -668,23 +698,26 @@ def automationGlobalPrefsPage() {
 
 						def comparelow = getTemperatureScale() == "C" ? 10 : 50
 						def comparehigh = getTemperatureScale() == "C" ? 32 : 90
-						tmin = (tmin == null || tmin == 0 || (tmin >= comparelow && tmin <= comparehigh)) ? tmin : 0
-						tmax = (tmax == null || tmax == 0 || (tmax <= comparehigh && tmax >= comparelow)) ? tmax : 0
-						if (tmin && tmin != 0 && tmax && tmax != 0) {
-							tmin = tmin < tmax ? tmin : 0
-							tmax = tmax > tmin ? tmax : 0
-						}
+						tmin = tmin != null ? Math.min(Math.max((tmin ?: comparelow),comparelow),comparehigh) : null
+						tmax = tmax != null ? Math.max(Math.min((tmax ?: comparehigh),comparehigh),comparelow) : null
+						tmax = (tmax && tmin) ? tmax > tmin ? tmax : null : tmax  // minimum temp takes presedence
+
 						atomicState?."${dev?.deviceNetworkId}_safety_temp_min" = tmin
 						atomicState?."${dev?.deviceNetworkId}_safety_temp_max" = tmax
 
 						def tRange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
-						input "${dev?.deviceNetworkId}_comfort_dewpoint_max", "decimal", title: "Max. Dewpoint Desired (${tRange} °${getTemperatureScale()})", required: false, range: trange,
+						input "${dev?.deviceNetworkId}_comfort_dewpoint_max", "decimal", title: "Dewpoint Threshold (${tRange} °${getTemperatureScale()})", required: false, range: trange,
 									image: getAppImg("dewpoint_icon.png")
 						// def hrange = "10..80"
 						// input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Desired (%)", description: "Range within ${hrange}", range: hrange,
 						// 			required: false, image: getAppImg("humidity_icon.png")
 					}
 				}
+			}
+			section(title: "Reset All Comfort and Safety Temps") {
+				buttons(name: "locDesiredButton", title: "", submitOnChange: true, buttons: [
+					[label: "Clear", action: "locDesiredClear"]
+				])
 			}
 		}
 		incAutoGlobPrefLoadCnt()
@@ -1296,37 +1329,42 @@ def devPageFooter(var, eTime) {
 *******************************************************************************/
 def getSafetyValuesDesc() {
 	def str = ""
+	def ctr = 1
 	def tstats = atomicState?.thermostats
+	def siz = tstats?.size()
 	if(tstats) {
 		tstats?.each { ts ->
 			def dev = getChildDevice(ts?.key)
 			def defmin
 			def defmax
-			def safeTemp = getSafetyTemps(dev)
+			def safeTemp = getSafetyTemps(dev, false)
 			if(safeTemp) {
 				defmin = safeTemp.min
 				defmax = safeTemp.max
 			}
-			def dew_max = getComfortDewpoint(dev)
+			def maxDew = getComfortDewpoint(dev, false)
 			def minTemp = defmin
 			def maxTemp = defmax
-			def maxDew = dew_max ?: (getTemperatureScale() == "C") ? 19 : 66
 
 			if(minTemp == 0) { minTemp = null }
 			if(maxTemp == 0) { maxTemp = null }
 			if(maxDew == 0) { maxDew = null }
 
-			str += (ts && (minTemp || maxTemp)) ? "${dev?.displayName}\nSafety Values:" : ""
+			str += (ts && (minTemp || maxTemp || maxDew)) ? "${dev?.displayName}" : ""
+
+			str += (ts && (minTemp || maxTemp)) ? "\nSafety Values:" : ""
 			str += minTemp ? "\n• Min. Temp: ${minTemp}°${getTemperatureScale()}" : ""
 			str += maxTemp ? "\n• Max. Temp: ${maxTemp}°${getTemperatureScale()}" : ""
 			//str += maxHum ? "\n• Max. Humidity: ${maxHum}%" : ""
-			str += (ts && (minTemp || maxTemp) && (maxDew)) ? "\n\n" : ""
-			str += (ts && (maxDew)) ? "${dev?.displayName}\nComfort Values:" : ""
+			//str += (ts && (minTemp || maxTemp) && (maxDew)) ? "\n" : ""
+			str += (ts && (maxDew)) ? "\nComfort Values:" : ""
 			str += maxDew ? "\n• Max. Dewpnt: ${maxDew}°${getTemperatureScale()}" : ""
-			str += tstats?.size() > 1 ? "\n\n" : ""
+			str += (str != "" && siz > ctr) ? "\n\n" : ""
+			ctr = (str != "") ? ctr += 1 : ctr
+			siz = (str == "") ? siz -= 1 : siz
 		}
 	}
-	return (str != "") ? "${str}" : null
+	return str
 }
 
 def showVoiceRprtPrefs() {
@@ -6556,7 +6594,8 @@ def getAutomationType() {
 }
 
 def getIsAutomationDisabled() {
-	return atomicState?.disableAutomation ? true : false
+	def dis = atomicState?.disableAutomation
+	return (dis != null && dis == true) ? true : false
 }
 
 def subscribeToEvents() {
@@ -8153,7 +8192,7 @@ def extTmpTempOk() {
 		def intTemp = extTmpTstat ?  getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
 		def curMode = extTmpTstat.currentnestThermostatMode.toString()
-		def dpLimit = getComfortDewpoint(extTmpTstat) ?: (getTemperatureScale() == "C" ? 19 : 66)
+		def dpLimit = getComfortDewpoint(extTmpTstat)
 		def curDp = getExtTmpDewPoint()
 		def diffThresh = Math.abs(getExtTmpTempDiffVal())
 
@@ -11808,13 +11847,13 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 	}
 }
 
-def getSafetyTemps(tstat) {
+def getSafetyTemps(tstat, usedefault=true) {
 //TODO need to check C vs F
 	def minTemp = tstat?.currentState("safetyTempMin")?.doubleValue
 	def maxTemp = tstat?.currentState("safetyTempMax")?.doubleValue
 	if(minTemp == 0) {
-		//minTemp = null
-		minTemp = (getTemperatureScale() == "C") ? 7 : 45
+		if(usedefault) { minTemp = (getTemperatureScale() == "C") ? 7 : 45 }
+		else { minTemp = null }
 	}
 	if(maxTemp == 0) { maxTemp = null }
 	if(minTemp || maxTemp) {
@@ -11823,6 +11862,7 @@ def getSafetyTemps(tstat) {
 	return null
 }
 
+/*
 def getComfortHumidity(tstat) {
 	def maxHum = tstat?.currentValue("comfortHumidityMax") ?: 0
 	if(maxHum) {
@@ -11831,12 +11871,15 @@ def getComfortHumidity(tstat) {
 	}
 	return null
 }
+*/
 
-def getComfortDewpoint(tstat) {
+def getComfortDewpoint(tstat, usedefault=true) {
 	def maxDew = tstat?.currentState("comfortDewpointMax")?.doubleValue ?: 0.0
-	if(maxDew) {
-		//return ["min":minDew, "max":maxDew]
-		return maxDew.toDouble()
+	if(maxDew == 0.0) {
+		if(usedefault) {
+			maxDew = (getTemperatureScale() == "C") ? 19 : 66 
+			return maxDew.toDouble()
+		}
 	}
 	return null
 }
