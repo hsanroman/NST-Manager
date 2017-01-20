@@ -638,11 +638,6 @@ def automationGlobalPrefsPage() {
 			if(!req) { req = getSafetyValuesDesc() != "" ? true : req }
 			section {
 				paragraph "These settings are applied if individual thermostat settings are not present"
-				if(req) {
-					input(type: "enum", name: "locDesiredTempScale", style: "segmented", title: "Temperature Scale", defaultValue: "F", required: req, submitOnChange: true, options: ["C", "F"])
-					log.debug "locDesiredTempScale: $locDesiredTempScale"
-					paragraph "${locDesiredTempScale == "C" ? "Celsius" : "Fahrenheight"} Temp Scale..."
-				}
 			}
 			section(title: "Comfort Preferences 									", hideable: true, hidden: false) {
 //TODO need to check C vs F
@@ -710,14 +705,14 @@ def automationGlobalPrefsPage() {
 
 						def tRange = (getTemperatureScale() == "C") ? "15..19" : "60..66"
 						input "${dev?.deviceNetworkId}_comfort_dewpoint_max", "decimal", title: "Dewpoint Threshold (${tRange} °${getTemperatureScale()})", required: false, range: trange,
-									image: getAppImg("dewpoint_icon.png")
+									submitOnChange: true, image: getAppImg("dewpoint_icon.png")
 						// def hrange = "10..80"
 						// input "${dev?.deviceNetworkId}_comfort_humidity_max", "number", title: "Max. Humidity Desired (%)", description: "Range within ${hrange}", range: hrange,
 						// 			required: false, image: getAppImg("humidity_icon.png")
 					}
 				}
 			}
-			section(title: "Reset All Comfort and Safety Temps") {
+			section(title: "Reset All Comfort and Safety Temps 									", hideable: true, hidden: true) {
 				input(name: "clearLocDesired", type: "bool", title: "Clear Comfort and Safety Temps?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
 				if(clearLocDesired == true) {
 					locDesiredClear()
