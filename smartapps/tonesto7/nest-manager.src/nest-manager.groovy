@@ -608,7 +608,7 @@ def locDesiredClear() {
 	list.each { item ->
 		app.updateSetting(item.toString(), "")
 	}
-	if(atomicState?.thermostats) {
+	if(atomicState?.thermostats && settings?.clearLocDesired) {
 		atomicState?.thermostats?.each { ts ->
 			def dev = getChildDevice(ts?.key)
 			def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
@@ -622,6 +622,7 @@ def locDesiredClear() {
 			app.updateSetting("${dev?.deviceNetworkId}_comfort_dewpoint_max", "")
 		}
 	}
+	app.updateSetting("clearLocDesired", false)
 }
 
 def getGlobTitleStr(typ) {
@@ -638,7 +639,9 @@ def automationGlobalPrefsPage() {
 			section {
 				paragraph "These settings are applied if individual thermostat settings are not present"
 				if(req) {
-					input(type: "enum", name: "locDesiredTempScale", style: "segmented", title: "Temperature Scale", required: req, submitOnChange: true, options: ["C", "F"])
+					input(type: "enum", name: "locDesiredTempScale", style: "segmented", title: "Temperature Scale", defaultValue: "F", required: req, submitOnChange: true, options: ["C", "F"])
+					log.debug "locDesiredTempScale: $locDesiredTempScale"
+					paragraph "${locDesiredTempScale == "C" ? "Celsius" : "Fahrenheight"} Temp Scale..."
 				}
 			}
 			section(title: "Comfort Preferences 									", hideable: true, hidden: false) {
@@ -681,8 +684,8 @@ def automationGlobalPrefsPage() {
 
 						def str = ""
 						str += "Safety Values:"
-						str += safeTemp ? "\n• Safefy Temps:\n	  └ Min: ${safeTemp.min}°${getTemperatureScale()}/Max: ${safeTemp.max}°${getTemperatureScale()}" : "\n• Safefy Temps: (Not Set)"
-						str += dew_max ? "\n• Comfort Max Dewpoint:\n  └Max: ${dew_max}°${getTemperatureScale()}" : "\n• Comfort Max Dewpoint: (Not Set)"
+						str += safeTemp ? "\n• Safefy Temps:\n  └ Min: ${safeTemp.min}°${getTemperatureScale()}/Max: ${safeTemp.max}°${getTemperatureScale()}" : "\n• Safefy Temps: (Not Set)"
+						str += dew_max ? "\n• Comfort Max Dewpoint:\n  └ Max: ${dew_max}°${getTemperatureScale()}" : "\n• Comfort Max Dewpoint: (Not Set)"
 						paragraph "${str}", title:"${dev?.displayName}", state: "complete", image: getAppImg("instruct_icon.png")
 //TODO need to check C vs F
 						if(canHeat) {
@@ -698,8 +701,8 @@ def automationGlobalPrefsPage() {
 
 						def comparelow = getTemperatureScale() == "C" ? 10 : 50
 						def comparehigh = getTemperatureScale() == "C" ? 32 : 90
-						tmin = tmin != null ? Math.min(Math.max((tmin ?: comparelow),comparelow),comparehigh) : null
-						tmax = tmax != null ? Math.max(Math.min((tmax ?: comparehigh),comparehigh),comparelow) : null
+						tmin = (tmin != null) ? Math.min( Math.max( (tmin.toDouble() ?: comparelow.toDouble()),comparelow.toDouble() ),comparehigh.toDouble() ) : null
+						tmax = (tmax != null) ? Math.max( Math.min((tmax.toDouble() ?: comparehigh.toDouble()),comparehigh.toDouble()),comparelow.toDouble() ) : null
 						tmax = (tmax && tmin) ? tmax > tmin ? tmax : null : tmax  // minimum temp takes presedence
 
 						atomicState?."${dev?.deviceNetworkId}_safety_temp_min" = tmin
@@ -715,9 +718,10 @@ def automationGlobalPrefsPage() {
 				}
 			}
 			section(title: "Reset All Comfort and Safety Temps") {
-				buttons(name: "locDesiredButton", title: "", submitOnChange: true, buttons: [
-					[label: "Clear", action: "locDesiredClear"]
-				])
+				input(name: "clearLocDesired", type: "bool", title: "Clear Comfort and Safety Temps?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
+				if(clearLocDesired == true) {
+					locDesiredClear()
+				}
 			}
 		}
 		incAutoGlobPrefLoadCnt()
@@ -11877,7 +11881,7 @@ def getComfortDewpoint(tstat, usedefault=true) {
 	def maxDew = tstat?.currentState("comfortDewpointMax")?.doubleValue ?: 0.0
 	if(maxDew == 0.0) {
 		if(usedefault) {
-			maxDew = (getTemperatureScale() == "C") ? 19 : 66 
+			maxDew = (getTemperatureScale() == "C") ? 19 : 66
 			return maxDew.toDouble()
 		}
 	}
