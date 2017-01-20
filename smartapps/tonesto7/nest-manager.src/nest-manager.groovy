@@ -2804,7 +2804,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 				if(newCmd != []) {
 					tempQueue << newCmd
 				}
-				newCmd = [cmd[0], cmd[1], cmd[2], cmd[3]]
+				newCmd = [cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]]
 			}
 
 			if(newCmd != []) {   // newCmd is last command in queue
