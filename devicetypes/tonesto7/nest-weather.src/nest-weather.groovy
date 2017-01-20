@@ -1546,19 +1546,6 @@ def getWeatherHTML() {
 				</div>
 			"""
 		}
-		state?.walertCount = 3
-		state?.walert1 = "Severe Weather"
-		state?.walertMessage1 =
-			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
-			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
-		state?.walert2 = "Visibility Warning"
-		state?.walertMessage2 =
-			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
-			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
-		state?.walert3 = "Something Important"
-		state?.walertMessage3 =
-			"""jaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaa aaaaaaaaaa aijiojoiajdoaij ij oaij jm ala kok pokl;a m lm mlo ojjojpojok"""+
-			"""jpojpojpojm pijoinimokm dokapokjdp okdokapok   ojpojajiji jffijeiaj afpjijfa ijaijfiajei jioj iaj ijwijfr iejrwioaj"""
 
 		def wAlertHtml = ""
 		def alertCnt = state?.walertCount as Integer
