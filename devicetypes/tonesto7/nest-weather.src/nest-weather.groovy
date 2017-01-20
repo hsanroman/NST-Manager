@@ -498,6 +498,14 @@ def getWeatherConditions(Map weatData) {
 
 				sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
 				sendEvent(name: "ultravioletIndex", value: cur?.current_observation?.UV)
+				def obsrDt = cur?.current_observation?.observation_time_rfc822
+				if(obsrDt) {
+					def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", obsrDt?.toString()))
+					if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
+						sendEvent(name: "weatherObservedDt", value: newDt)
+					}
+					//log.debug "newDt: $newDt"
+				}
 				LogAction("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
 			}
 		}
@@ -524,12 +532,6 @@ def getWeatherForecast(Map weatData) {
 					def value = f1[0].pop as String // as String because of bug in determining state change of 0 numbers
 					sendEvent(name: "percentPrecip", value: value, unit: "%")
 					sendEvent(name: "forecastIcon", value: icon, displayed: false)
-				}
-				def obsrDt = cur?.current_observation?.observation_time_rfc822
-				if(obsrDt) {
-					def curDt = device.currentValue("weatherObservedDt").toString()
-					def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", obsrDt?.toString()))
-					log.debug "newDt: $newDt"
 				}
 			}
 		}
