@@ -564,7 +564,7 @@ def automationSchedulePage() {
 
 def automationStatisticsPage() {
 	def execTime = now()
-	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refresh Every 20 sec.)", refreshInterval: 20, uninstall: false) {
+	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refreshes every 20 sec.)", refreshInterval: 20, uninstall: false) {
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
@@ -583,16 +583,16 @@ def automationStatisticsPage() {
 					def execAvgVal = data?.execAvgVal ?: null
 
 					def str = ""
-					str += lastModDt ? " • Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
-					str += lastEvtDt ? "\n\n • Last Event:" : ""
+					str += lastModDt ? "• Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
+					str += lastEvtDt ? "\n\n• Last Event:" : ""
 					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  │ Device:\n  │└ " : "\n  ├ Device: "}${data?.lastEvent?.displayName}" : ""
 					str += lastEvtDt ? "\n  ├ Type: (${strCapitalize(data?.lastEvent?.name)})" : ""
 					str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
 					str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
-					str += lastEvalDt ? "\n\n • Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
-					str += lastSchedDt ? "\n\n • Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
-					str += lastActionDt ? "\n\n • Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-					str += lastExecVal ? "\n\n • Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
+					str += lastEvalDt ? "\n\n• Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
+					str += lastSchedDt ? "\n\n• Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
+					str += lastActionDt ? "\n\n• Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
+					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
 					paragraph "${str}", state: "complete"
 				}
 			}
@@ -11352,20 +11352,20 @@ def getVoiceNotifConfigDesc(pName) {
 	if(settings?."${pName}NotificationsOn" && settings["${pName}AllowSpeechNotif"]) {
 		def speaks = settings?."${pName}SpeechDevices"
 		def medias = settings?."${pName}SpeechMediaPlayer"
-		str += settings["${pName}SendToAskAlexaQueue"] ? "\n • Send to Ask Alexa: (True)" : ""
-		str += speaks ? "\n • Speech Devices:" : ""
+		str += settings["${pName}SendToAskAlexaQueue"] ? "\n• Send to Ask Alexa: (True)" : ""
+		str += speaks ? "\n• Speech Devices:" : ""
 		if(speaks) {
 			def cnt = 1
 			speaks?.each { str += it ? "\n ${cnt < speaks.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
 		}
-		str += medias ? "${speaks ? "\n\n" : "\n"} • Media Players:" : ""
+		str += medias ? "${speaks ? "\n\n" : "\n"}• Media Players:" : ""
 		if(medias) {
 			def cnt = 1
 			medias?.each { str += it ? "\n│${cnt < medias.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
 		}
 		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n├ Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
 		str += (medias && settings?."${pName}SpeechAllowResume") ? "\n└ Resume: (${strCapitalize(settings?."${pName}SpeechAllowResume")})" : ""
-		str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n • Custom Message: (${strCapitalize(settings?."${pName}UseCustomSpeechNotifMsg")})" : ""
+		str += (settings?."${pName}UseCustomSpeechNotifMsg" && (medias || speaks)) ? "\n• Custom Message: (${strCapitalize(settings?."${pName}UseCustomSpeechNotifMsg")})" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
