@@ -81,6 +81,7 @@ metadata {
 		attribute "presence", "string"
 		attribute "canHeat", "string"
 		attribute "canCool", "string"
+		attribute "hasAuto", "string"
 		attribute "hasFan", "string"
 		attribute "sunlightCorrectionEnabled", "string"
 		attribute "sunlightCorrectionActive", "string"
@@ -160,14 +161,17 @@ metadata {
 		standardTile("ecoBtn", "device.eco", width:1, height:1, decoration: "flat") {
 			state("default", action: "eco", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
 		}
-		standardTile("heatBtn", "device.heat", width:1, height:1, decoration: "flat") {
-			state("default", action: "heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+		standardTile("heatBtn", "device.canHeat", width:1, height:1, decoration: "flat") {
+			state("true", action: "heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+			state "false", label: ''
 		}
-		standardTile("coolBtn", "device.cool", width:1, height:1, decoration: "flat") {
-			state("default", action: "cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+		standardTile("coolBtn", "device.canCool", width:1, height:1, decoration: "flat") {
+			state("true", action: "cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+			state "false", label: ''
 		}
-		standardTile("autoBtn", "device.auto", width:1, height:1, decoration: "flat") {
-			state("default", action: "auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+		standardTile("autoBtn", "device.hasAuto", width:1, height:1, decoration: "flat") {
+			state("true", action: "auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+			state "false", label: ''
 		}
 
 		standardTile("thermostatFanMode", "device.thermostatFanMode", width:2, height:2, decoration: "flat") {
@@ -1036,8 +1040,10 @@ def autoSchedDataEvent(schedData) {
 def canHeatCool(canHeat, canCool) {
 	state?.can_heat = !canHeat ? false : true
 	state?.can_cool = !canCool ? false : true
+	state?.has_auto = (canCool && canHeat) ? true : false
 	sendEvent(name: "canHeat", value: state?.can_heat.toString())
 	sendEvent(name: "canCool", value: state?.can_cool.toString())
+	sendEvent(name: "hasAuto", value: state?.has_auto.toString())
 }
 
 def hasFan(hasFan) {
@@ -1269,9 +1275,9 @@ void levelUpDown(tempVal, chgType = null) {
 }
 
 def scheduleChangeSetpoint() {
-	if (getLastChangeSetpointSec() > 15) {
+	if (getLastChangeSetpointSec() > 7) {
 		state?.lastChangeSetpointDt = getDtNow()
-		runIn( 25, "changeSetpoint", [overwrite: true] )
+		runIn( 11, "changeSetpoint", [overwrite: true] )
 	}
 }
 
@@ -1432,8 +1438,9 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 		def temp = 0.0
 		def canHeat = state?.can_heat.toBoolean()
 		def result = false
+		def locked = state?.tempLockOn.toBoolean()
 
-		LogAction("Heat Temp Received: ${reqtemp} (${tempUnit})")
+		LogAction("Heat Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
 		if(canHeat && state?.nestHvac_mode != "eco") {
 			switch (tempUnit) {
 				case "C":
@@ -1502,8 +1509,9 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 		def tempUnit = state?.tempUnit
 		def canCool = state?.can_cool.toBoolean()
 		def result = false
+		def locked = state?.tempLockOn.toBoolean()
 
-		LogAction("Cool Temp Received: ${reqtemp} (${tempUnit})")
+		LogAction("Cool Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
 		if(canCool && state?.nestHvac_mode != "eco") {
 			switch (tempUnit) {
 				case "C":
