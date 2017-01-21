@@ -2253,13 +2253,13 @@ def updateChildData(force = false) {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
 //TODO need to check C vs F
-				def defmin = atomicState?."${devId}_safety_temp_min" ?: 0.0
-				def defmax = atomicState?."${devId}_safety_temp_max" ?: 0.0
+				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min") ?: 0.0
+				def defmax = fixTempSetting(atomicState?."${devId}_safety_temp_max") ?: 0.0
 				def safetyTemps = [ "min":defmin, "max":defmax ]
 
-				def comfortDewpoint = settings?."${devId}_comfort_dewpoint_max" ?: 0.0
+				def comfortDewpoint = fixTempSetting(settings?."${devId}_comfort_dewpoint_max") ?: 0.0
 				if(comfortDewpoint == 0) {
-					comfortDewpoint = settings?.locDesiredComfortDewpointMax ?: 0.0
+					comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax) ?: 0.0
 				}
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def autoSchedData = reqSchedInfoRprt(it, false)
@@ -2388,16 +2388,17 @@ def updateChildData(force = false) {
 
 				if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[physdevId]) {
 					def data = atomicState?.deviceData?.thermostats[physdevId]
-					def defmin = atomicState?."${physdevId}_safety_temp_min" ?: 0.0
-					def defmax = atomicState?."${physdevId}_safety_temp_max" ?: 0.0
+//TODO need to check C vs F
+					def defmin = fixTempSetting(atomicState?."${physdevId}_safety_temp_min") ?: 0.0
+					def defmax = fixTempSetting(atomicState?."${physdevId}_safety_temp_max") ?: 0.0
 					def safetyTemps = [ "min":defmin, "max":defmax ]
-					def comfortDewpoint = settings?."${physdevId}_comfort_dewpoint_max" ?: 0.0
+					def comfortDewpoint = fixTempSetting(settings?."${physdevId}_comfort_dewpoint_max") ?: 0.0
 					if(comfortDewpoint == 0) {
-						comfortDewpoint = settings?.locDesiredComfortDewpointMax ?: 0.0
+						comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax) ?: 0.0
 					}
 					def comfortHumidity = settings?."${physdevId}_comfort_humidity_max" ?: 80
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
-					if(automationChildApp != null && automationChildApp.getRemoteSenAutomationEnabled()) {
+					if(automationChildApp != null && !automationChildApp.getIsAutomationDisabled()) {
 						def tempC = 0.0
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
@@ -3838,9 +3839,9 @@ def schedVoiceDesc(num, data, motion) {
 	str += data?.lbl  ? " The automation schedule slot active is number ${num} and is labeled ${data?.lbl}. " : ""
 	str += (!motion && (data?.ctemp || data?.htemp)) ? "The schedules desired temps" : ""
 	str += (motion && (data?.mctemp || data?.mhtemp)) ? "The schedules desired motion triggered temps" : ""
-	str += ((motion && data?.mhtemp) || (!motion && data?.htemp)) ? " are set to a heat temp of ${!motion ? data?.htemp : data?.mhtemp} degrees" : ""
+	str += ((motion && data?.mhtemp) || (!motion && data?.htemp)) ? " are set to a heat temp of ${!motion ? fixTempSetting(data?.htemp) : fixTempSetting(data?.mhtemp)} degrees" : ""
 	str += ((motion && data?.mctemp) || (!motion && data?.ctemp)) ? " and " : ". "
-	str += ((motion && data?.mctemp) || (!motion && data?.ctemp)) ? " ${((!motion && !data?.htemp) || (motion && !data?.mhtemp)) ? "are" : ""} a cool temp of ${!motion ? data?.ctemp : data?.mctemp} degrees. " : ""
+	str += ((motion && data?.mctemp) || (!motion && data?.ctemp)) ? " ${((!motion && !data?.htemp) || (motion && !data?.mhtemp)) ? "are" : ""} a cool temp of ${!motion ? fixTempSetting(data?.ctemp) : fixTempSetting(data?.mctemp)} degrees. " : ""
 	return str != "" ? str : null
 }
 
@@ -7577,63 +7578,93 @@ def getRemoteSenTemp() {
 	}
 }
 
+def fixTempSetting(Double temp) {
+	if(temp) {
+		if(getTemperatureScale() == "C") {
+			if(temp > 35) {    // setting was done in F
+				temp = roundTemp( (temp - 32) * 5/9 as Double)
+			}
+		} else if(getTemperatureScale() == "F") {
+			if(temp < 40) {    // setting was done in C
+				temp = roundTemp( ((temp * 9/5) + 32)).toInteger()
+			}
+		}
+	}
+	return temp
+}
+
 def getRemSenCoolSetTemp() {
+	def coolTemp
 	if(getLastOverrideCoolSec() < (3600 * 4)) {
 		if(atomicState?.coolOverride != null) {
-			return atomicState?.coolOverride.toDouble()
+			coolTemp = fixTempSetting(atomicState?.coolOverride.toDouble())
 		}
 	} else { atomicState?.coolOverride = null }
 
-	def mySched = getCurrentSchedule()
-	def coolTemp
-	if(mySched) {
-		def useMotion = atomicState?."motion${mySched}UseMotionSettings"
-		def hvacSettings = atomicState?."sched${mySched}restrictions"
-		coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
-	}
+	if(coolTemp == null) {
+		def mySched = getCurrentSchedule()
+		if(mySched) {
+			def useMotion = atomicState?."motion${mySched}UseMotionSettings"
+			def hvacSettings = atomicState?."sched${mySched}restrictions"
+			coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
+		}
 //TODO need to check C vs F
-	if (coolTemp) {
-		return coolTemp.toDouble()
-	} else if(remSenDayCoolTemp) {
-		return remSenDayCoolTemp.toDouble()
+		if(coolTemp == null && remSenDayCoolTemp) {
+			coolTemp = remSenDayCoolTemp.toDouble()
+		}
+
+		if(coolTemp == null) {
+			def desiredCoolTemp = getGlobalDesiredCoolTemp()
+			if(desiredCoolTemp) { coolTemp = desiredCoolTemp.toDouble() }
+		}
+
+		if(coolTemp) {
+			coolTemp = fixTempSetting(coolTemp)
+		}
+
+		if(coolTemp == null) {
+			coolTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : coolTemp
+		}
 	}
-	else {
-		def desiredCoolTemp = getGlobalDesiredCoolTemp()
-		if(desiredCoolTemp) { return desiredCoolTemp.toDouble() }
-		else { return schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : 0 }
-	}
+	return coolTemp
 }
 
 def getRemSenHeatSetTemp() {
+	def heatTemp
 	if(getLastOverrideHeatSec() < (3600 * 4)) {
 		if(atomicState?.heatOverride != null) {
-			return atomicState.heatOverride.toDouble()
+			heatTemp = fixTempSetting(atomicState.heatOverride.toDouble())
 		}
 	} else { atomicState?.heatOverride = null }
 
-	def mySched = getCurrentSchedule()
-	def heatTemp
-	if(mySched) {
-		def useMotion = atomicState?."motion${mySched}UseMotionSettings"
-		def hvacSettings = atomicState?."sched${mySched}restrictions"
-		heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
-	}
+	if(heatTemp == null) {
+		def mySched = getCurrentSchedule()
+		if(mySched) {
+			def useMotion = atomicState?."motion${mySched}UseMotionSettings"
+			def hvacSettings = atomicState?."sched${mySched}restrictions"
+			heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
+		}
 //TODO need to check C vs F
-	if (heatTemp) {
-		return heatTemp.toDouble()
-	} else if(remSenDayHeatTemp) {
-		return remSenDayHeatTemp.toDouble()
+		if(heatTemp == null && remSenDayHeatTemp) {
+			heatTemp = remSenDayHeatTemp.toDouble()
+		}
+
+		if(heatTemp == null) {
+			def desiredHeatTemp = getGlobalDesiredHeatTemp()
+			if(desiredHeatTemp) { heatTemp = desiredHeatTemp.toDouble() }
+		}
+
+		if(heatTemp) {
+			heatTemp = fixTempSetting(heatTemp)
+		}
+
+		if(heatTemp == null) {
+			heatTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : heatTemp
+		}
 	}
-	else {
-		def desiredHeatTemp = getGlobalDesiredHeatTemp()
-		if(desiredHeatTemp) { return desiredHeatTemp.toDouble() }
-		else { return schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : 0 }
-	}
+	return heatTemp
 }
 
-def getRemoteSenAutomationEnabled() {
-	return atomicState?.disableAutomation ? false : true
-}
 
 // TODO When a temp change is sent to virtual device, it lasts for 4 hours, next turn off, or next schedule change, then we return to automation settings
 // Other choices could be to change the schedule setpoint permanently if one is active,  or allow folks to set timer,  or have next schedule change clear override
@@ -10044,9 +10075,9 @@ def schMotModePage() {
 						remSenDescStr += settings?.remSenTempDiffDegrees ? ("\n • Threshold: (${settings?.remSenTempDiffDegrees}${tempScaleStr})") : ""
 						remSenDescStr += settings?.remSenTstatTempChgVal ? ("\n • Adjust Temp: (${settings?.remSenTstatTempChgVal}${tempScaleStr})") : ""
 
-						def hstr = remSenHeatTempsReq() ? "H: ${settings?.remSenDayHeatTemp ?: 0}${tempScaleStr}" : ""
+						def hstr = remSenHeatTempsReq() ? "H: ${fixTempSetting(settings?.remSenDayHeatTemp) ?: 0}${tempScaleStr}" : ""
 						def cstr = remSenHeatTempsReq() && remSenCoolTempsReq() ? "/" : ""
-						cstr += remSenCoolTempsReq() ? "C: ${settings?.remSenDayCoolTemp ?: 0}${tempScaleStr}" : ""
+						cstr += remSenCoolTempsReq() ? "C: ${fixTempSetting(settings?.remSenDayCoolTemp) ?: 0}${tempScaleStr}" : ""
 						remSenDescStr += (settings?.remSensorDay && (settings?.remSenDayHeatTemp || settings?.remSenDayCoolTemp)) ? "\n • Default Temps:\n   └ (${hstr}${cstr})" : ""
 
 
@@ -10390,7 +10421,7 @@ def tstatConfigAutoPage(params) {
 								}
 								def tempStr = "Default "
 								if(remSenHeatTempsReq()) {
-									defHeat = getGlobalDesiredHeatTemp()
+									defHeat = fixTempSetting(getGlobalDesiredHeatTemp())
 									defHeat = defHeat ?: tStatHeatSp
 //TODO need to check C vs F
 									input "remSenDayHeatTemp", "decimal", title: "Desired ${tempStr}Heat Temp (${tempScaleStr})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
@@ -10398,7 +10429,7 @@ def tstatConfigAutoPage(params) {
 								}
 								if(remSenCoolTempsReq()) {
 //TODO need to check C vs F
-									defCool = getGlobalDesiredCoolTemp()
+									defCool = fixTempSetting(getGlobalDesiredCoolTemp())
 									defCool = defCool ?: tStatCoolSp
 									input "remSenDayCoolTemp", "decimal", title: "Desired ${tempStr}Cool Temp (${tempScaleStr})", description: "Range within ${tempRangeValues()}", range: tempRangeValues(),
 											required: true, defaultValue: defCool, image: getAppImg("cool_icon.png")
@@ -10815,16 +10846,16 @@ def getScheduleDesc(num = null) {
 
 			//Temp Setpoints
 			str += isTemp  ? 	"${isRestrict ? "\n │\n" : "\n"} ${(isMot || isRemSen) ? "├" : "└"} Temp Setpoints:" : ""
-			str += schData?.ctemp ? "\n ${tempPreBar}  ${schData?.htemp ? "├" : "└"} Cool Setpoint: (${schData?.ctemp}${tempScaleStr})" : ""
-			str += schData?.htemp ? "\n ${tempPreBar}  ${schData?.hvacm ? "├" : "└"} Heat Setpoint: (${schData?.htemp}${tempScaleStr})" : ""
+			str += schData?.ctemp ? "\n ${tempPreBar}  ${schData?.htemp ? "├" : "└"} Cool Setpoint: (${fixTempSetting(schData?.ctemp)}${tempScaleStr})" : ""
+			str += schData?.htemp ? "\n ${tempPreBar}  ${schData?.hvacm ? "├" : "└"} Heat Setpoint: (${fixTempSetting(schData?.htemp)}${tempScaleStr})" : ""
 			str += schData?.hvacm ? "\n ${tempPreBar}  └ HVAC Mode: (${strCapitalize(schData?.hvacm)})" : ""
 
 			//Motion Info
 			str += isMot ?				"${isTemp || isFanEn || isRemSen || isRestrict ? "\n │\n" : "\n"} ${isRemSen ? "├" : "└"} Motion Settings:" : ""
 			str += isMot ?		 		"\n ${motPreBar ? "│" : "   "} ${(schData?.mctemp || schData?.mhtemp) ? "├" : "└"} Motion Sensors: (${schData?.m0.size()})" : ""
 			str += isMot ?				"\n ${motPreBar ? "│" : "   "} ${schData?.mctemp || schData?.mhtemp ? "│" : ""} └ (${isMotionActive(settings["${sLbl}Motion"]) ? "Active" : "None Active"})" : ""
-			str += isMot && schData?.mctemp ? 	"\n ${motPreBar ? "│" : "   "} ${(schData?.mctemp || schData?.mhtemp) ? "├" : "└"} Mot. Cool Setpoint: (${schData?.mctemp}${tempScaleStr})" : ""
-			str += isMot && schData?.mhtemp ? 	"\n ${motPreBar ? "│" : "   "} ${schData?.mdelayOn || schData?.mdelayOff ? "├" : "└"} Mot. Heat Setpoint: (${schData?.mhtemp}${tempScaleStr})" : ""
+			str += isMot && schData?.mctemp ? 	"\n ${motPreBar ? "│" : "   "} ${(schData?.mctemp || schData?.mhtemp) ? "├" : "└"} Mot. Cool Setpoint: (${fixTempSetting(schData?.mctemp)}${tempScaleStr})" : ""
+			str += isMot && schData?.mhtemp ? 	"\n ${motPreBar ? "│" : "   "} ${schData?.mdelayOn || schData?.mdelayOff ? "├" : "└"} Mot. Heat Setpoint: (${fixTempSetting(schData?.mhtemp)}${tempScaleStr})" : ""
 			str += isMot && schData?.mhvacm ? 	"\n ${motPreBar ? "│" : "   "} ${(schData?.mdelayOn || schData?.mdelayOff) ? "├" : "└"} Mot. HVAC Mode: (${strCapitalize(schData?.mhvacm)})" : ""
 			str += isMot && schData?.mdelayOn ? "\n ${motPreBar ? "│" : "   "} ${schData?.mdelayOff ? "├" : "└"} Mot. On Delay: (${getEnumValue(longTimeSecEnum(), schData?.mdelayOn)})" : ""
 			str += isMot && schData?.mdelayOff ?"\n ${motPreBar ? "│" : "   "} └ Mot. Off Delay: (${getEnumValue(longTimeSecEnum(), schData?.mdelayOff)})" : ""
