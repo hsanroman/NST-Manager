@@ -4787,7 +4787,7 @@ def fixState() {
 
 	} else {
 		if(!atomicState?.resetAllData && parent?.settings?.resetAllData) { // automation cleanup called from update() -> initAutoApp()
-			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData" ]) }
+			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
