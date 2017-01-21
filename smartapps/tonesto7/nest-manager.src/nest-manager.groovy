@@ -785,16 +785,16 @@ def notifPrefPage() {
 			}
 			section("App and Device Updates:") {
 				input (name: "sendAppUpdateMsg", type: "bool", title: "Notify on App|Devices Updates?", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png"))
-				if(sendMissedPollMsg == null || sendAppUpdateMsg) {
-					def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 2 Hours" : updNotifyWaitVal
-					input (name: "updNotifyWaitVal", type: "enum", title: "Remind Me Every?", required: false, defaultValue: 7200, metadata: [values:notifValEnum()], submitOnChange: true)
+				if(sendAppUpdateMsg == null || sendAppUpdateMsg) {
+					def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 12 Hours" : updNotifyWaitVal
+					input (name: "updNotifyWaitVal", type: "enum", title: "Remind Me Every?", required: false, defaultValue: 43200, metadata: [values:notifValEnum()], submitOnChange: true)
 					if(updNotifyWaitVal) {
-						atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+						atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 43200 : updNotifyWaitVal.toInteger()
 						if(updNotifyWaitVal.toInteger() == 1000000) {
-							input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 7200, submitOnChange: true)
-							if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 7200 }
+							input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 43200, submitOnChange: true)
+							if(updNotifyWaitValCust) { atomicState.updNotifyWaitVal = updNotifyWaitValCust ? updNotifyWaitValCust.toInteger() : 43200 }
 						}
-					} else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger() }
+					} else { atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 43200 : updNotifyWaitVal.toInteger() }
 				}
 			}
 			if(atomicState?.weatherDevice) {
@@ -2181,6 +2181,11 @@ def processResponse(resp, data) {
 				atomicState.qmetaRequested = false
 			}
 		} else {
+
+			if(resp?.status == 401) {
+				LogAction("Authentication ERROR, Please try refreshing Authentication settings.", "error", true)
+			}
+
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 			LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
 			if(resp.hasError()) {
@@ -3262,21 +3267,21 @@ def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDif
 def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt, null, "getLastMisPollMsgSec").toInteger() }
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
-//this is parent only method
-def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
-def isMissedPoll() { return (getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger()) ? true : false }
-
 def notificationCheck() {
-	if((settings?.recipients || settings?.usePush) && getOk2Notify()) {
-		if(sendMissedPollMsg) { missedPollNotify() }
-		if(sendAppUpdateMsg && !appDevType()) { appUpdateNotify() }
-	}
+	missedPollNotify()
+	if((sendAppUpdateMsg == null || sendAppUpdateMsg) && !appDevType()) { appUpdateNotify() }
 }
+
+def isMissedPoll() { return (getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger()) ? true : false }
 
 def missedPollNotify() {
 	if(isMissedPoll()) {
-		if(getOk2Notify() && (getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger())) {
-			sendMsg("Warning", "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing manually or refresh Nest Authentication settings.")
+		if(getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger()) {
+			def msg = "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing Nest Authentication settings."
+			if(sendMissedPollMsg || sendMissedPollMsg == null) {
+				sendMsg("Warning", msg)
+			}
+			LogAction(msg, "error", true)
 			atomicState?.lastMisPollMsgDt = getDtNow()
 		}
 	}
@@ -3320,6 +3325,9 @@ def updateHandler() {
 	}
 }
 
+//this is parent only method
+def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
+
 // parent only method
 def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null) {
 	//LogTrace("sendMsg")
@@ -3339,18 +3347,19 @@ def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null
 					}
 				} else {
 					LogAction("ContactBook is NOT Enabled on your SmartThings Account", "warn", true)
-					if(push) {
-						sendPush(newMsg)
+					if(push || settings?.usePush) {
+						sendPush(newMsg)	// sends push and notification feed
 						sent = true
 					}
-					else if(sms) {
-						sendSms(sms, newMsg)
+					def phone = sms ? sms : settings?.phone
+					if(phone) {
+						sendSms(phone, newMsg)	// send SMS and notification feed
 						sentstr = "SMS"
 						sent = true
 					}
 				}
 			} else {
-				sendPushMessage(newMsg)
+				sendPush(newMsg)		// sends push and notification feed was  sendPushMessage(newMsg)  // push but no notification feed
 				sent = true
 				sentstr = "Broadcast"
 			}
@@ -4813,7 +4822,7 @@ void finishFixState() {
 		if(atomicState?.resetAllData) {
 			atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
 			atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
-			atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 7200 : updNotifyWaitVal.toInteger()
+			atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 43200 : updNotifyWaitVal.toInteger()
 			atomicState.useAltNames = settings?.useAltNames ? true : false
 			atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
 			if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
@@ -4894,7 +4903,7 @@ def setStateVar(frc = false) {
 		if(!atomicState?.setupVersion)			{ atomicState?.setupVersion = 0 }
 		if(!atomicState?.misPollNotifyWaitVal)		{ atomicState.misPollNotifyWaitVal = 900 }
 		if(!atomicState?.misPollNotifyMsgWaitVal)	{ atomicState.misPollNotifyMsgWaitVal = 3600 }
-		if(!atomicState?.updNotifyWaitVal)		{ atomicState.updNotifyWaitVal = 7200 }
+		if(!atomicState?.updNotifyWaitVal)		{ atomicState.updNotifyWaitVal = 43200 }
 		if(!atomicState?.custLabelUsed)			{ atomicState?.custLabelUsed = false }
 		if(!atomicState?.useAltNames)			{ atomicState.useAltNames = false }
 		if(!atomicState?.apiCommandCnt)			{ atomicState?.apiCommandCnt = 0 }
