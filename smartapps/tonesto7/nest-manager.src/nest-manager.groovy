@@ -3253,10 +3253,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 }
 
 def increaseCmdCnt() {
-	def cmdCnt = atomicState?.apiCommandCnt ?: 0
-	cmdCnt = cmdCnt?.toInteger()+1
+	long cmdCnt = atomicState?.apiCommandCnt ?: 0
+	cmdCnt = cmdCnt?.toLong()+1
 	LogAction("Api CmdCnt: $cmdCnt", "info", false)
-	atomicState?.apiCommandCnt = cmdCnt?.toInteger()
+	atomicState?.apiCommandCnt = cmdCnt?.toLong()
 }
 
 
@@ -4783,7 +4783,7 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!parent) {
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn" ]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt"]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -4908,7 +4908,7 @@ def setStateVar(frc = false) {
 		if(!atomicState?.updNotifyWaitVal)		{ atomicState.updNotifyWaitVal = 43200 }
 		if(!atomicState?.custLabelUsed)			{ atomicState?.custLabelUsed = false }
 		if(!atomicState?.useAltNames)			{ atomicState.useAltNames = false }
-		if(!atomicState?.apiCommandCnt)			{ atomicState?.apiCommandCnt = 0 }
+		if(!atomicState?.apiCommandCnt)			{ atomicState?.apiCommandCnt = 0L }
 		atomicState?.stateVarUpd = true
 		atomicState?.stateVarVer = atomicState?.appData?.state?.stateVarVer ? atomicState?.appData?.state?.stateVarVer?.toInteger() : 0
 	}
@@ -4936,7 +4936,12 @@ def stateCleanup() {
 			state.remove(item?.toString())
 		}
 	}
-	//app.updateSetting(”variable”, “”)   // clear settings
+	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPage", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
+	sdata.each { item ->
+		if(settings?."${$item}" != null) {
+			app.updateSetting("${item.toString()}", "")   // clear settings
+		}
+	}
 }
 
 /******************************************************************************
