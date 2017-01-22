@@ -4936,9 +4936,9 @@ def stateCleanup() {
 			state.remove(item?.toString())
 		}
 	}
-	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPage", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
+	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
 	sdata.each { item ->
-		if(settings?."${$item}" != null) {
+		if(settings?."${item}" != null) {
 			app.updateSetting("${item.toString()}", "")   // clear settings
 		}
 	}
