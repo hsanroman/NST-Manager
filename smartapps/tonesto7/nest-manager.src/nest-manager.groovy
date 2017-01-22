@@ -2452,9 +2452,11 @@ def updateChildData(force = false) {
 						}
 					}
 
+					def autoSchedData = reqSchedInfoRprt(it, false)
 					def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locationPresence(), "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
-						"latestVer":latestvStatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag ]
+						"latestVer":latestvStatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
+						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData]
 
 					def oldTstatData = atomicState?."oldvStatData${devId}"
 					def tDataChecksum = generateMD5_A(tData.toString())
