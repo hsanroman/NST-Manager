@@ -2288,6 +2288,7 @@ def updateChildData(force = false) {
 						it.generateEvent(tData)
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+						appUpdateNotify()
 						return false
 					}
 				}
@@ -2315,6 +2316,7 @@ def updateChildData(force = false) {
 						it.generateEvent(pData)
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minDevVersions()?.protect?.desc}) Update the Device to latest", "error", true)
+						appUpdateNotify()
 						return false
 					}
 				}
@@ -2339,6 +2341,7 @@ def updateChildData(force = false) {
 						atomicState."oldCamData${devId}" = cDataChecksum
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
+						appUpdateNotify()
 						return false
 					}
 				}
@@ -2359,6 +2362,7 @@ def updateChildData(force = false) {
 						it.generateEvent(pData)
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minDevVersions()?.presence?.desc}) Update the Device to latest", "error", true)
+						appUpdateNotify()
 						return false
 					}
 				}
@@ -2380,6 +2384,7 @@ def updateChildData(force = false) {
 										"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag ])
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
+						appUpdateNotify()
 						return false
 					}
 				}
