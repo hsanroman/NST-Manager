@@ -135,10 +135,11 @@ def startPage() {
 
 def authPage() {
 	//LogTrace("authPage()")
-	getAccessToken()
-	initAppMetricStore()
-	def preReqOk = preReqCheck()
-	deviceHandlerTest()
+	if(!atomicState?.accessToken) { getAccessToken() }
+	if(!atomicState?.usageMetricsStore) { initAppMetricStore() }
+	def preReqOk = (atomicState?.preReqTested == true) ? true : preReqCheck()
+	if(!atomicState?.devHandlersTested) { deviceHandlerTest() }
+
 	if(!atomicState?.accessToken || (!atomicState?.isInstalled && (!atomicState?.devHandlersTested || !preReqOk))) {
 		return dynamicPage(name: "authPage", title: "Status Page", nextPage: "", install: false, uninstall: false) {
 			section ("Status Page:") {
@@ -175,10 +176,10 @@ def authPage() {
 		oauthTokenProvided = true
 	} else { description = "Click to enter Nest Credentials" }
 
-	def redirectUrl = buildRedirectUrl
-	//LogTrace("RedirectUrl = ${redirectUrl}")
-
 	if(!oauthTokenProvided && atomicState?.accessToken) {
+		def redirectUrl = buildRedirectUrl
+		//LogTrace("RedirectUrl = ${redirectUrl}")
+
 		LogAction("AuthToken not found: Directing to Login Page", "info", true)
 		return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", install: false, uninstall: false) {
 			section("") {
@@ -284,7 +285,7 @@ def devicesPage() {
 	LogAction("${structDesc} (${structs})", "info", false)
 	if (atomicState?.thermostats || atomicState?.protects || atomicState?.vThermostats || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice ) {  // if devices are configured, you cannot change the structure until they are removed
 		section("Location:") {
-			paragraph "Location: ${structs[atomicState?.structures]}\n\n(Remove All Devices to Change!)", image: getAppImg("nest_structure_icon.png")
+			paragraph "Location: ${structs[atomicState?.structures]}\n${(structs.size() > 1) ? "\n(Remove All Devices to Change!)" : ""}", image: getAppImg("nest_structure_icon.png")
 		}
 	} else {
 		section("Select Location:") {
@@ -1481,6 +1482,7 @@ def getAppDebugDesc() {
 	return (str != "") ? "${str}" : null
 }
 
+/*
 def getDevChgDesc() {
 	if(!atomicState?.currentDevMap) { currentDevMap(true) }
 	def added = [:]
@@ -1604,6 +1606,7 @@ def currentDevMap(update=false) {
 	}
 	return ""
 }
+*/
 
 /******************************************************************************
 *					  			NEST LOGIN PAGES		  	  		  		  *
@@ -1907,7 +1910,6 @@ def checkIfSwupdated() {
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
-		//getDevChgDesc()
 		if(checkIfSwupdated()) { return }
 		def meta = false
 		def dev = false
@@ -3665,7 +3667,7 @@ def initAppMetricStore() {
 }
 def incMetricCntVal(item) {
 	def data = atomicState?.usageMetricsStore
-	data[item] = data[item]+1 ?: 1
+	data[item] = (data?.item == null) ? 1 : data[item]+1 
 	atomicState?.usageMetricsStore = data
 }
 
@@ -4307,7 +4309,7 @@ def addRemoveDevices(uninst = null) {
 			delete.each { deleteChildDevice(it.deviceNetworkId) }
 		}
 		retVal = true
-		currentDevMap(true)
+		//currentDevMap(true)
 	} catch (ex) {
 		if(ex instanceof physicalgraph.exception.ConflictException) {
 			def msg = "Error: Can't Delete App; Devices are still in use by other SmartApps or Routines.  Please correct."
