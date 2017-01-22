@@ -1804,9 +1804,9 @@ void setThermostatMode(modeStr) {
 void changeFanMode() {
 	def cur = device.currentState("thermostatFanMode")?.value
 	if(cur == "on" || !cur) {
-		setThermostatFanMode("fanAuto", true)
+		setThermostatFanMode("auto", true)
 	} else {
-		setThermostatFanMode("fanOn", true)
+		setThermostatFanMode("on", true)
 	}
 }
 
