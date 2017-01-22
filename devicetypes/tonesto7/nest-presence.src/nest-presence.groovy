@@ -160,7 +160,7 @@ def processEvent(data) {
 			apiStatusEvent((!eventData?.apiIssues ? false : true))
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
-			lastUpdatedEvent()
+			lastUpdatedEvent(true)
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
