@@ -1335,7 +1335,7 @@ def getPollingConfDesc() {
 	pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})" : ""
 	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
-	return ((pollValDesc || pollStrValDesc || pollWEatherValDesc || pollWaitValDesc) ? pStr : "")
+	return ((pollValDesc || pollStrValDesc || pollWeatherValDesc || pollWaitValDesc) ? pStr : "")
 }
 
 // Parent only method
@@ -1770,7 +1770,9 @@ def setPollingState() {
 			LogAction("Polling is ACTIVE", "info", true)
 			atomicState.pollingOn = true
 			def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
+			pollTime = Math.max(pollTime, 60)
 			def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
+			pollTime = Math.max(pollStrTime, 60)
 			def weatherTimer = pollTime
 			if(atomicState?.weatherDevice) { weatherTimer = (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900) }
 			def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
@@ -1840,6 +1842,16 @@ def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
+		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
+		def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
+		if(pollTime < 60 || pollStrTime < 60) {
+			if(atomicState?.pollTock) {
+				atomicState.pollTock = false
+				runIn(30, "pollFollow", [overwrite: true])
+			} else {
+				atomicState.pollTock = true
+			}
+		}
 		def meta = false
 		def dev = false
 		def str = false
@@ -1899,6 +1911,8 @@ def forcedPoll(type = null) {
 	LogAction("forcedPoll($type) received", "warn", true)
 	def lastFrcdPoll = getLastForcedPollSec()
 	def pollWaitVal = !settings?.pollWaitVal ? 10 : settings?.pollWaitVal.toInteger()
+	pollWaitVal = Math.max(pollWaitVal, 10)
+
 	if(lastFrcdPoll > pollWaitVal) { // This limits manual forces to 10 seconds or more
 		atomicState?.lastForcePoll = getDtNow()
 		atomicState?.pollBlocked = false
@@ -2503,7 +2517,7 @@ def ok2PollDevice() {
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 	def val = pollTime/3
-	if(val > 60) { val = 50 }
+	val = Math.max(Math.min(val, 50),25)
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
 }
 
@@ -2512,7 +2526,7 @@ def ok2PollStruct() {
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
 	def val = pollStrTime/3
-	if(val > 60) { val = 50 }
+	val = Math.max(Math.min(val, 50),25)
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
 }
 
@@ -3394,7 +3408,8 @@ def updateWebStuff(now = false) {
 	if(atomicState?.isInstalled) {
 		if(getLastAnalyticUpdSec() > (3600*24)) { sendInstallData() }
 	}
-	if(atomicState?.weatherDevice && getLastWeatherUpdSec() > (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900)) {
+	def wValue = Math.max( (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900), 900)
+	if(atomicState?.weatherDevice && getLastWeatherUpdSec() > wValue) {
 		if(now) {
 			getWeatherConditions(now)
 		} else {
@@ -5148,7 +5163,7 @@ def notifValEnum(allowCust = true) {
 
 def pollValEnum() {
 	def vals = [
-		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
+		30:"30 Seconds", 60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
 		600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
 		1800:"30 Minutes", 2700:"45 Minutes", 3600:"60 Minutes"
 	]
