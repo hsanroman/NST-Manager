@@ -23,22 +23,22 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.4.2"
+                "ver": "4.5.0"
             },
             "thermostat": {
-                "ver": "4.4.1"
+                "ver": "4.5.0"
             },
             "protect": {
-                "ver": "4.4.0"
+                "ver": "4.5.0"
             },
             "camera": {
-                "ver": "2.4.0"
+                "ver": "2.5.0"
             },
             "presence": {
-                "ver": "4.4.0"
+                "ver": "4.5.0"
             },
             "weather": {
-                "ver": "4.4.0"
+                "ver": "4.5.0"
             }
         }
     },

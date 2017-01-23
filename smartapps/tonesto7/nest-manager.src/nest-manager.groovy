@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.4.7" }
-def appVerDate() { "1-19-2017" }
+def appVersion() { "4.5.0" }
+def appVerDate() { "1-23-2017" }
 
 preferences {
 	//startPage
@@ -5126,11 +5126,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":440, "desc":"4.4.0"],
-		"protect":["val":440, "desc":"4.4.0"],
-		"presence":["val":440, "desc":"4.4.0"],
-		"weather":["val":440, "desc":"4.4.0"],
-		"camera":["val":240 , "desc":"2.4.0"],
+		"thermostat":["val":450, "desc":"4.5.0"],
+		"protect":["val":450, "desc":"4.5.0"],
+		"presence":["val":450, "desc":"4.5.0"],
+		"weather":["val":450, "desc":"4.5.0"],
+		"camera":["val":250 , "desc":"2.5.0"],
 	]
 }
 

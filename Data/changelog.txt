@@ -1,3 +1,12 @@
+V4.5.0 (January 23rd, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+ • UPDATED: Did a lot of work on the Device Health Check. It should know work correctly.
+ • FIXED: Lot's and lot's of bugs
+ • FIXED: Lot's and lot's of bugs
+ • FIXED: Lot's and lot's of bugs
+ • FIXED: Lot's and lot's of bugs
+ • UPDATED: Lot's and lot's of bugs
+
 V4.4.2 (January 16th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
  • FIXED: Lot's and lot's of bugs
@@ -8,7 +17,7 @@ V4.4.2 (January 16th, 2017):
 
 V4.4.1 (January 7th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
- • UPDATE: Added the Nest Auth token to appData for easy management
+ • UPDATED: Added the Nest Auth token to appData for easy management
 
 V4.4.0 (January 7th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
@@ -22,11 +31,11 @@ V4.3.1 (December 23rd, 2016):
 
 V4.2.0 (December 12th, 2016):
 ▔▔▔▔▔▔▔▔▔▔▔
- • Updated: Modified the minimum device version removed some unnecessary code.
+ • UPDATED: Modified the minimum device version removed some unnecessary code.
 
 V4.1.0 (November 21st, 2016):
 ▔▔▔▔▔▔▔▔▔▔▔
- • Updated: Modified the minimum device version removed some unnecessary code.
+ • UPDATED: Modified the minimum device version removed some unnecessary code.
 
 V4.1.0 (November 19th, 2016):
 ▔▔▔▔▔▔▔▔▔▔▔
