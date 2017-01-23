@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Smart Comfort & Protection Manager and Automations                   |
+|    Application Name: Nest Manager and Automations                   |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
