@@ -845,42 +845,12 @@ def devNamePage() {
 				atomicState?.thermostats?.each { t ->
 					found = true
 					def d = getChildDevice(getNestTstatDni(t))
-					def dstr = ""
-					if(d) {
-						dstr += "Found: ${d.displayName}"
-						if(d.displayName != getNestTstatLabel(t.value)) {
-							dstr += "$str1 ${getNestTstatLabel(t.value)}"
-						}
-// TODO we can customize labels later
-//						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-					} else {
-						dstr += "New Name: ${getNestTstatLabel(t.value)}"
-					}
-					paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("thermostat_icon.png")
-					if(atomicState.custLabelUsed) {
-						input "tstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
-								image: getAppImg("thermostat_icon.png")
-					}
+					deviceNameFunc(d, getNestTstatLabel(t.value), "tstat_${t?.value}_lbl", "thermostat")
 				}
 				atomicState?.vThermostats?.each { t ->
 					found = true
 					def d = getChildDevice(getNestvStatDni(t))
-					def dstr = ""
-					if(d) {
-						dstr += "Found: ${d.displayName}"
-						if(d.displayName != getNestvStatLabel(t.value)) {
-							dstr += "$str1 ${getNestvStatLabel(t.value)}"
-						}
-// TODO we can customize labels later
-//						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-					} else {
-						dstr += "New Name: ${getNestvStatLabel(t.value)}"
-					}
-					paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("thermostat_icon.png")
-					if(atomicState.custLabelUsed) {
-						input "vtstat_${t.value}_lbl", "text", title: "Custom name for ${t.value}", defaultValue: getNestTstatLabel("${t.value}"), submitOnChange: true,
-								image: getAppImg("thermostat_icon.png")
-					}
+					deviceNameFunc(d, getNestvStatLabel(t.value), "vtstat_${t?.value}_lbl", "thermostat")
 				}
 			}
 		}
@@ -888,23 +858,8 @@ def devNamePage() {
 			section ("Protect Device Names:") {
 				atomicState?.protects?.each { p ->
 					found = true
-					def dstr = ""
-					def d1 = getChildDevice(getNestProtDni(p))
-					if(d1) {
-						dstr += "Found: ${d1.displayName}"
-						if(d1.displayName != getNestProtLabel(p.value)) {
-							dstr += "$str1 ${getNestProtLabel(p.value)}"
-						}
-// TODO we can customize labels later
-//						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-					} else {
-						dstr += "New Name: ${getNestProtLabel(p.value)}"
-					}
-					paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed) ? " " : getAppImg("protect_icon.png")
-					if(atomicState.custLabelUsed) {
-						input "prot_${p.value}_lbl", "text", title: "Custom name for ${p.value}", defaultValue: getNestProtLabel("${p.value}"), submitOnChange: true,
-								image: getAppImg("protect_icon.png")
-					}
+					def d = getChildDevice(getNestProtDni(p))
+					deviceNameFunc(d, getNestProtLabel(p.value), "prot_${p?.value}_lbl", "protect")
 				}
 			}
 		}
@@ -912,23 +867,9 @@ def devNamePage() {
 			section ("Camera Device Names:") {
 				atomicState?.cameras?.each { c ->
 					found = true
-					def dstr = ""
-					def d1 = getChildDevice(getNestCamDni(c))
-					if(d1) {
-						dstr += "Found: ${d1.displayName}"
-						if(d1.displayName != getNestCamLabel(c.value)) {
-							dstr += "$str1 ${getNestCamLabel(c.value)}"
-						}
-// TODO we can customize labels later
-//						else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-					} else {
-						dstr += "New Name: ${getNestCamLabel(c.value)}"
-					}
-					paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed) ? " " : getAppImg("camera_icon.png")
-					if(atomicState.custLabelUsed) {
-						input "cam_${c.value}_lbl", "text", title: "Custom name for ${c.value}", defaultValue: getNestCamLabel("${c.value}"), submitOnChange: true,
-								image: getAppImg("camera_icon.png")
-					}
+					def d = getChildDevice(getNestCamDni(c))
+
+					deviceNameFunc(d, getNestCamLabel(c.value), "cam_${c?.value}_lbl", "camera")
 				}
 			}
 		}
@@ -937,22 +878,8 @@ def devNamePage() {
 				found = true
 				def pLbl = getNestPresLabel()
 				def dni = getNestPresId()
-				def d3 = getChildDevice(dni)
-				def dstr = ""
-				if(d3) {
-					dstr += "Found: ${d3.displayName}"
-					if(d3.displayName != pLbl) {
-						dstr += "$str1 ${pLbl}"
-					}
-// TODO we can customize labels later
-//					else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-				} else {
-					dstr += "New Name: ${pLbl}"
-				}
-				paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed) ? " " : getAppImg("presence_icon.png")
-				if(atomicState.custLabelUsed) {
-					input "presDev_lbl", "text", title: "Custom name for Nest Presence Device", defaultValue: pLbl, submitOnChange: true, image: getAppImg("presence_icon.png")
-				}
+				def d = getChildDevice(dni)
+				deviceNameFunc(d, pLbl, "presDev_lbl", "presence")
 			}
 		}
 		if(atomicState?.weatherDevice) {
@@ -960,22 +887,8 @@ def devNamePage() {
 				found = true
 				def wLbl = getNestWeatherLabel()
 				def dni = getNestWeatherId()
-				def d4 = getChildDevice(dni)
-				def dstr = ""
-				if(d4) {
-					dstr += "Found: ${d4.displayName}"
-					if(d4.displayName != wLbl) {
-						dstr += "$str1 ${wLbl}"
-					}
-// TODO we can customize labels later
-//					else if(atomicState?.custLabelUsed || atomicState?.useAltNames) { dstr += "$str2" }
-				} else {
-					dstr += "New Name: ${wLbl}"
-				}
-				paragraph "${dstr}", state: "complete", image: (atomicState.custLabelUsed) ? " " : getAppImg("weather_icon.png")
-				if(atomicState.custLabelUsed) {
-					input "weathDev_lbl", "text", title: "Custom name for Nest Weather Device", defaultValue: wLbl, submitOnChange: true, image: getAppImg("weather_icon.png")
-				}
+				def d = getChildDevice(dni)
+				deviceNameFunc(d, wLbl, "weathDev_lbl", "weather")
 			}
 		}
 		if(!found) {
@@ -984,6 +897,22 @@ def devNamePage() {
 		atomicState.needChildUpd = true
 		incDevCustNameLoadCnt()
 		devPageFooter("devCustNameLoadCnt", execTime)
+	}
+}
+
+def deviceNameFunc(dev, label, inputStr, devType) {
+	def dstr = ""
+	if(dev) {
+		dstr += "Found: ${dev.displayName}"
+		if(dev.displayName != label) {
+			dstr += "$str1 ${label}"
+		}
+	} else {
+		dstr += "New Name: ${label}"
+	}
+	paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("${devType}_icon.png")
+	if(atomicState.custLabelUsed) {
+		input "${inputStr}", "text", title: "Custom name for ${dev.value}", defaultValue: label, submitOnChange: true, image: getAppImg("${devType}_icon.png")
 	}
 }
 
@@ -5269,23 +5198,23 @@ def nestInfoPage () {
 				}
 			}
 		}
-		// section("View All API Data Received from Nest:") {
-		// 	if(atomicState?.structures) {
-		// 		href "structInfoPage", title: "Nest Location(s) Info", description: "Tap to view", image: getAppImg("nest_structure_icon.png")
-		// 	}
-		// 	if(atomicState?.thermostats) {
-		// 		href "tstatInfoPage", title: "Nest Thermostat(s) Info", description: "Tap to view", image: getAppImg("nest_like.png")
-		// 	}
-		// 	if(atomicState?.protects) {
-		// 		href "protInfoPage", title: "Nest Protect(s) Info", description: "Tap to view", image: getAppImg("protect_icon.png")
-		// 	}
-		// 	if(atomicState?.cameras) {
-		// 		href "camInfoPage", title: "Nest Camera(s) Info", description: "Tap to view", image: getAppImg("camera_icon.png")
-		// 	}
-		// 	if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
-		// 		paragraph "There is nothing to show here", image: getAppImg("instruct_icon.png")
-		// 	}
-		// }
+		section("View All API Data Received from Nest:") {
+			if(atomicState?.structures) {
+				href "structInfoPage", title: "Nest Location(s) Info", description: "Tap to view", image: getAppImg("nest_structure_icon.png")
+			}
+			if(atomicState?.thermostats) {
+				href "tstatInfoPage", title: "Nest Thermostat(s) Info", description: "Tap to view", image: getAppImg("nest_like.png")
+			}
+			if(atomicState?.protects) {
+				href "protInfoPage", title: "Nest Protect(s) Info", description: "Tap to view", image: getAppImg("protect_icon.png")
+			}
+			if(atomicState?.cameras) {
+				href "camInfoPage", title: "Nest Camera(s) Info", description: "Tap to view", image: getAppImg("camera_icon.png")
+			}
+			if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
+				paragraph "There is nothing to show here", image: getAppImg("instruct_icon.png")
+			}
+		}
 		section("Diagnostics") {
 			href "diagPage", title: "View Diagnostic Info", description: null, image: getAppImg("diag_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
@@ -5293,112 +5222,112 @@ def nestInfoPage () {
 	}
 }
 
-// def structInfoPage () {
-// 	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
-// 		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
-// 		section("") {
-// 			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
-// 		}
-// 		atomicState?.structData?.each { struc ->
-// 			if(struc?.key == atomicState?.structures) {
-// 				def str = ""
-// 				def cnt = 0
-// 				section("Location Name: ${struc?.value?.name}") {
-// 					def data = struc?.value.findAll { !(it.key in noShow) }
-// 					data?.sort().each { item ->
-// 						cnt = cnt+1
-// 						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-// 					}
-// 					paragraph "${str}"
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+def structInfoPage () {
+	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
+		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
+		section("") {
+			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
+		}
+		atomicState?.structData?.each { struc ->
+			if(struc?.key == atomicState?.structures) {
+				def str = ""
+				def cnt = 0
+				section("Location Name: ${struc?.value?.name}") {
+					def data = struc?.value.findAll { !(it.key in noShow) }
+					data?.sort().each { item ->
+						cnt = cnt+1
+						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+					}
+					paragraph "${str}"
+				}
+			}
+		}
+	}
+}
 //
-// def tstatInfoPage () {
-// 	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
-// 		def noShow = [ "where_id", "device_id", "structure_id" ]
-// 		section("") {
-// 			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
-// 		}
-// 		atomicState?.thermostats?.sort().each { tstat ->
-// 			def str = ""
-// 			def cnt = 0
-// 			section("Thermostat Name: ${atomicState?.deviceData?.thermostats[tstat?.key]?.name}") {    // was ${tstat?.value}
-// 				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
-// 				data?.sort().each { item ->
-// 					cnt = cnt+1
-// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-// 				}
-// 				paragraph "${str}"
-// 			}
-// 		}
-// 	}
-// }
+def tstatInfoPage () {
+	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
+		def noShow = [ "where_id", "device_id", "structure_id" ]
+		section("") {
+			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
+		}
+		atomicState?.thermostats?.sort().each { tstat ->
+			def str = ""
+			def cnt = 0
+			section("Thermostat Name: ${atomicState?.deviceData?.thermostats[tstat?.key]?.name}") {    // was ${tstat?.value}
+				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+				data?.sort().each { item ->
+					cnt = cnt+1
+					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+				}
+				paragraph "${str}"
+			}
+		}
+	}
+}
 //
-// def protInfoPage () {
-// 	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
-// 		def noShow = [ "where_id", "device_id", "structure_id" ]
-// 		section("") {
-// 			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
-// 		}
-// 		atomicState?.protects.sort().each { prot ->
-// 			def str = ""
-// 			def cnt = 0
-// 			section("Protect Name: ${atomicState?.deviceData?.smoke_co_alarms[prot?.key]?.name}") {   // was ${prot?.value}
-// 				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
-// 				data?.sort().each { item ->
-// 					cnt = cnt+1
-// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-// 				}
-// 				paragraph "${str}"
-// 			}
-// 		}
-// 	}
-// }
-//
-// def camInfoPage () {
-// 	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
-// 		def noShow = [ "where_id", "device_id", "structure_id" ]
-// 		section("") {
-// 			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
-// 		}
-// 		atomicState?.cameras.sort().each { cam ->
-// 			def str = ""
-// 			def evtStr = ""
-// 			def cnt = 0
-// 			def cnt2 = 0
-// 			section("Camera Name: ${atomicState?.deviceData?.cameras[cam?.key]?.name}") {	// was ${cam?.value}
-// 				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
-// 				data?.sort().each { item ->
-// 					if(item?.key != "last_event") {
-// 						if(item?.key in ["app_url", "web_url"]) {
-// 							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to view in Browser", state: "complete"
-// 						} else {
-// 							cnt = cnt+1
-// 							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-// 						}
-// 					} else {
-// 						item?.value?.sort().each { item2 ->
-// 							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
-// 								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to view in Browser", state: "complete"
-// 							}
-// 							else {
-// 								cnt2 = cnt2+1
-// 								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
-// 							}
-// 						}
-// 					}
-// 				}
-// 				paragraph "${str}"
-// 				if(evtStr != "") {
-// 					paragraph "Last Event Data:\n\n${evtStr}"
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+def protInfoPage () {
+	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
+		def noShow = [ "where_id", "device_id", "structure_id" ]
+		section("") {
+			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
+		}
+		atomicState?.protects.sort().each { prot ->
+			def str = ""
+			def cnt = 0
+			section("Protect Name: ${atomicState?.deviceData?.smoke_co_alarms[prot?.key]?.name}") {   // was ${prot?.value}
+				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+				data?.sort().each { item ->
+					cnt = cnt+1
+					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+				}
+				paragraph "${str}"
+			}
+		}
+	}
+}
+
+def camInfoPage () {
+	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
+		def noShow = [ "where_id", "device_id", "structure_id" ]
+		section("") {
+			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
+		}
+		atomicState?.cameras.sort().each { cam ->
+			def str = ""
+			def evtStr = ""
+			def cnt = 0
+			def cnt2 = 0
+			section("Camera Name: ${atomicState?.deviceData?.cameras[cam?.key]?.name}") {	// was ${cam?.value}
+				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
+				data?.sort().each { item ->
+					if(item?.key != "last_event") {
+						if(item?.key in ["app_url", "web_url"]) {
+							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to view in Browser", state: "complete"
+						} else {
+							cnt = cnt+1
+							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+						}
+					} else {
+						item?.value?.sort().each { item2 ->
+							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
+								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to view in Browser", state: "complete"
+							}
+							else {
+								cnt2 = cnt2+1
+								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
+							}
+						}
+					}
+				}
+				paragraph "${str}"
+				if(evtStr != "") {
+					paragraph "Last Event Data:\n\n${evtStr}"
+				}
+			}
+		}
+	}
+}
 
 def alarmTestPage () {
 	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
@@ -5525,7 +5454,7 @@ def diagPage () {
 		}
 		section("Other Data:") {
 			paragraph "API Token Client Version: ${atomicState?.metaData?.client_version ?: "Not Found"}"
-			paragraph "${appName()} Client Id:\n${atomicState?.installationId ?: "Not Found"}"
+			paragraph "Install Id:\n${atomicState?.installationId ?: "Not Found"}"
 			paragraph "Token Number: ${atomicState?.appData?.token?.tokenNum ?: "Not Found"}"
 		}
 	}
@@ -12303,7 +12232,7 @@ def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/S
 def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDevName()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def appLabel()		{ return "Smart Comfort & Protection Manager" }
+def appLabel()		{ return "Nest Manager" }
 def gitBranch()		{ return "master" }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
