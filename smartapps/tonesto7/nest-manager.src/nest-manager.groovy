@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations                   |
+|    Application Name: Smart Comfort and Protection Manager and Automations                   |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -12267,7 +12267,7 @@ def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/S
 def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDevName()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def appLabel()		{ return "Nest Manager" }
+def appLabel()		{ return "Smart Comfort and Protection Manager" }
 def gitBranch()		{ return "master" }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
