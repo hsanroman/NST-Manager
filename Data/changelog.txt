@@ -1,8 +1,8 @@
 V4.5.0 (January 23rd, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
  • UPDATED: Device Health Check for devices should now work correctly.
- • FIXED: 
- • FIXED: 
+ • FIXED: C/F switching
+ • NEW: Fan automation can be limited to "heating" or "cooling" individually for fan operation
  • NEW: Device and Structure name/label changes under Nest app are now updated under SmartThings.
  • UPDATED: Re-wrote the API error logging to give users a clearer understanding of the errors occurring.
  • UPDATED: Code cleanups and consolidation of existing code. 
