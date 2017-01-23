@@ -1335,7 +1335,7 @@ def getPollingConfDesc() {
 	pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})" : ""
 	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})"
-	return ((pollValDesc || pollStrValDesc || pollWEatherValDesc || pollWaitValDesc) ? pStr : "")
+	return ((pollValDesc || pollStrValDesc || pollWeatherValDesc || pollWaitValDesc) ? pStr : "")
 }
 
 // Parent only method
