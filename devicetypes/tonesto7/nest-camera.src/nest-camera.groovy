@@ -1,5 +1,5 @@
 /**
- *  Nest Cam
+ *  Cam
  *	Authors: Anthony S. (@tonesto7)
  *	Contributors: Ben W. (@desertblade), Eric S. (@E_Sch)
  *  A Huge thanks goes out to Greg (@ghesp) for all of your help getting this working.
@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -151,8 +151,8 @@ metadata {
 			state "default", label: 'Test', action:"testBtn"
 		}
 		main "isStreamingStatus"
-		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
-		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails" ])
+		//details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails" ])
+		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml" ])
 	}
 }
 

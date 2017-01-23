@@ -1,5 +1,5 @@
 /**
- *  Nest Protect
+ *  Protect
  *	Author: Anthony S. (@tonesto7)
  *	Co-Authors: Ben W. (@desertblade), Eric S. (@E_Sch)
  *
@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.5.0" }
+def devVer() { return "4.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
