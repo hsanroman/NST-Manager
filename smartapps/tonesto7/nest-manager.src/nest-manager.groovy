@@ -3176,7 +3176,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 		httpPutJson(params) { resp ->
 			def rCode = resp?.status ?: null
-			def errorMsg = resp?.errorMessage ?: null
+			//def errorMsg = resp?.errorMessage ?: null
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
