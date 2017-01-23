@@ -36,7 +36,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.4.6" }
+def appVersion() { "4.4.7" }
 def appVerDate() { "1-19-2017" }
 
 preferences {
@@ -2020,6 +2020,8 @@ def getApiData(type = null) {
 		]
 		if(type == "str") {
 			httpGet(params) { resp ->
+				//def rCode = resp?.status ?: null
+				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
 					atomicState?.lastStrucDataUpd = getDtNow()
 					atomicState.needStrPoll = false
@@ -2033,11 +2035,14 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiStructureData - Received: Resp (${resp?.status})", "error", true)
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
 				}
 			}
 		}
 		else if(type == "dev") {
 			httpGet(params) { resp ->
+				//def rCode = resp?.status ?: null
+				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
 					atomicState?.lastDevDataUpd = getDtNow()
 					atomicState?.needDevPoll = false
@@ -2050,11 +2055,14 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiDeviceData - Received Resp (${resp?.status})", "error", true)
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
 				}
 			}
 		}
 		else if(type == "meta") {
 			httpGet(params) { resp ->
+				//def rCode = resp?.status ?: null
+				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
 					atomicState?.lastMetaDataUpd = getDtNow()
 					atomicState?.needMetaPoll = false
@@ -2069,6 +2077,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiMetaData - Received Resp (${resp?.status})", "error", true)
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
 				}
 			}
 		}
@@ -2131,8 +2140,9 @@ def processResponse(resp, data) {
 	def str = false
 	def dev = false
 	def meta = false
+	def rCode = resp?.status ?: null
+	def errorMsg = resp?.errorMessage ?: null
 	def type = data?.type
-
 	try {
 		if(!type) { return }
 
@@ -2183,16 +2193,10 @@ def processResponse(resp, data) {
 				atomicState.qmetaRequested = false
 			}
 		} else {
-
-			if(resp?.status == 401) {
-				LogAction("Authentication ERROR, Please try refreshing Authentication settings.", "error", true)
-			}
+			apiRespHandler(rCode, errorMsg, "processResponse")
 
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
-			LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
-			if(resp.hasError()) {
-				LogAction("errorData: $resp.errorData  errorMessage: $resp.errorMessage", "error", true)
-			}
+			//LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
 			apiIssueEvent(true)
 			atomicState.needChildUpd = true
 			atomicState.qstrRequested = false
@@ -2207,7 +2211,10 @@ def processResponse(resp, data) {
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
-		log.error "processResponse (type: $type) Exception:", ex
+
+		apiRespHandler(rCode, errorMsg, "processResponse")
+		//log.error "processResponse (type: $type) Exception:", ex
+
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
 		else if(type == "meta") { atomicState?.needMetaPoll = true }
@@ -3014,7 +3021,7 @@ void workQueue() {
 	def allowAsync = false
 	def metstr = "sync"
 	if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
-		allowAsync = true
+		//allowAsync = true
 		metstr = "async"
 	}
 
@@ -3158,6 +3165,8 @@ def nestResponse(resp, data) {
 	def qnum = data?.qnum
 	def command = data?.cmd
 	def result = false
+	def rCode = resp?.status ?: null
+	def errorMsg = resp?.errorMessage ?: null
 	try {
 		if(!command) { cmdProcState(false); return }
 
@@ -3168,7 +3177,6 @@ def nestResponse(resp, data) {
 			queueProcNestApiCmd(newUrl[0], typeId, type, obj, objVal, qnum, command, true)
 			return
 		}
-
 		if(resp?.status == 200) {
 			LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
 			apiIssueEvent(false)
@@ -3178,19 +3186,13 @@ def nestResponse(resp, data) {
 		} else {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
-			if(resp?.status == 400) {
-				LogAction("nestResponse 'Bad Request' Exception: ${resp?.status} ($command)", "error", true)
-			} else {
-				LogAction("processResponse - Received Resp (${resp?.status})", "error", true)
-			}
-			if(resp.hasError()) {
-				LogAction("errorData: $resp.errorData  errorMessage: $resp.errorMessage", "error", true)
-			}
+			apiRespHandler(rCode, errorMsg, "nestResponse")
 		}
 		finishWorkQ(command, result)
 
 	} catch (ex) {
 		log.error "nestResponse (command: $command) Exception:", ex
+		apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "nestResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3200,7 +3202,6 @@ def nestResponse(resp, data) {
 
 def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 	LogTrace("procNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, qnum: ${qnum},  isRedirUri: ${redir}")
-
 	def result = false
 	try {
 		def urlPath = redir ? "" : "/${type}/${typeId}"
@@ -3225,6 +3226,8 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 		//LogTrace("procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}")
 
 		httpPutJson(params) { resp ->
+			def rCode = resp?.status ?: null
+			def errorMsg = resp?.errorMessage ?: null
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
@@ -3232,31 +3235,61 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 					result = true
 				}
 			}
-			else if( resp?.status == 200) {
-				LogAction("procNestApiCmd Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY", "info", true)
+			else if(resp?.status == 200) {
+				LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
 				apiIssueEvent(false)
-				result = true
 				increaseCmdCnt()
 				atomicState?.lastCmdSentStatus = "ok"
-			} else {
-				if(resp?.status == 400) {
-					LogAction("procNestApiCmd 'Bad Request' Exception: ${resp?.status} ($type | $obj:$objVal)", "error", true)
-				} else {
-					LogAction("procNestApiCmd 'Unexpected' Response: ${resp?.status}", "warn", true)
-				}
+				result = true
+			}
+			else {
 				apiIssueEvent(true)
 				atomicState?.lastCmdSentStatus = "failed"
+				result = false
+				apiRespHandler(resp?.status, resp?.data, "nestResponse")
 			}
 		}
 	}
 	catch (ex) {
 		log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
+		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "procNestApiCmd")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
 		cmdProcState(false)
 	}
 	return result
+}
+
+def apiRespHandler(code, errMsg, methodName) {
+	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
+	if (!(code.toInteger() in [200, 307])) {
+		def result = ""
+		switch(code) {
+			case 400:
+				result = "A Bad Request was made to the API"
+				break
+			case 401:
+				result = "Authentication ERROR, Please try refreshing your login under Authentication settings..."
+				break
+			case 403:
+				result = "Forbidden: Your Login Credentials are Invalid..."
+				break
+			case 429:
+				result = "Requests are currently being Blocked due to Rate Limiting..."
+				break
+			case 500:
+				result = "Internal Nest Error:"
+				break
+			case 503:
+				result = "There is currently a Nest Service Issue..."
+				break
+			default:
+				result = "Received Response..."
+				break
+		}
+		LogAction("$methodName | $result | (Status: $code | Error: $errMsg)", "error", true)
+	}
 }
 
 def increaseCmdCnt() {
@@ -3674,7 +3707,7 @@ def initAppMetricStore() {
 }
 def incMetricCntVal(item) {
 	def data = atomicState?.usageMetricsStore
-	data[item] = (data?.item == null) ? 1 : data[item]+1 
+	data[item] = (data?.item == null) ? 1 : data[item]+1
 	atomicState?.usageMetricsStore = data
 }
 
