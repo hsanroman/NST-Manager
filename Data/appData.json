@@ -74,7 +74,7 @@
         "count": 8
     },
     "healthcheck": {
-        "camTimeout": 35,
+        "camTimeout": 120,
         "protWireTimeout": 35,
         "protBattTimeout": 1500,
         "tstatTimeout": 35,
