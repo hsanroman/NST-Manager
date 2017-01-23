@@ -2970,7 +2970,7 @@ void workQueue() {
 	def allowAsync = false
 	def metstr = "sync"
 	if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
-		//allowAsync = true
+		allowAsync = true
 		metstr = "async"
 	}
 
