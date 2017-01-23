@@ -912,7 +912,7 @@ def deviceNameFunc(dev, label, inputStr, devType) {
 	}
 	paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("${devType}_icon.png")
 	if(atomicState.custLabelUsed) {
-		input "${inputStr}", "text", title: "Custom name for ${dev.value}", defaultValue: label, submitOnChange: true, image: getAppImg("${devType}_icon.png")
+		input "${inputStr}", "text", title: "Custom name for ${label}", defaultValue: label, submitOnChange: true, image: getAppImg("${devType}_icon.png")
 	}
 }
 
@@ -2539,10 +2539,14 @@ private getLastProcSeconds() { return atomicState?.cmdLastProcDt ? GetTimeDiffSe
 
 def apiVar() {
 	def api = [
-		rootTypes:	[ struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata" ],
-		cmdObjs:	[ targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
-					targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
-					fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming" ]
+		rootTypes: [
+			struct:"structures", cos:"devices/smoke_co_alarms", tstat:"devices/thermostats", cam:"devices/cameras", meta:"metadata"
+		],
+		cmdObjs: [
+			targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
+			targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
+			fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", hvacMode:"hvac_mode", away:"away", streaming:"is_streaming"
+		]
 	]
 	return api
 }
@@ -2552,6 +2556,24 @@ def setCamStreaming(child, streamOn) {
 	def val = streamOn.toBoolean() ? true : false
 	LogAction("setCamStreaming: Camera${!devId ? "" : " ${devId}"} (${val ? "On" : "Off"})", "debug", true)
 	return sendNestApiCmd(devId, apiVar().rootTypes.cam, apiVar().cmdObjs.streaming, val, devId)
+}
+
+def setCamLabel(child, label, virtual=false) {
+	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
+	def val = label
+	def virt = virtual.toBoolean()
+//  This is not used anywhere.  A command to set label is not available in the dth for a callback
+	LogAction("setCamLabel: Camera${!devId ? "" : " ${devId}"} Label: (${val})", "debug", true)
+	return sendNestApiCmd(devId, apiVar().rootTypes.cam, apiVar().cmdObjs.setLabel, val, devId)
+}
+
+def setProtLabel(child, label, virtual=false) {
+	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
+	def val = label
+	def virt = virtual.toBoolean()
+//  This is not used anywhere.  A command to set label is not available in the dth for a callback
+	LogAction("setProtLabel: Protect${!devId ? "" : " ${devId}"} Label: (${val})", "debug", true)
+	return sendNestApiCmd(devId, apiVar().rootTypes.cos, apiVar().cmdObjs.setLabel, val, devId)
 }
 
 def setStructureAway(child, value, virtual=false) {
@@ -2588,9 +2610,7 @@ def setTstatLabel(child, label, virtual=false) {
 	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
 	def val = label
 	def virt = virtual.toBoolean()
-
 //  This is not used anywhere.  A command to set label is not available in the dth for a callback
-
 	LogAction("setTstatLabel: Thermostat${!devId ? "" : " ${devId}"} Label: (${val})", "debug", true)
 	return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setLabel, val, devId)
 }
