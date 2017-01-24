@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations                   |
+|    Application Name: Nest Manager and Automations                                         |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -36,7 +36,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.0" }
+def appVersion() { "4.5.1" }
 def appVerDate() { "1-23-2017" }
 
 preferences {
@@ -214,7 +214,8 @@ def mainPage() {
 		if(atomicState?.isInstalled) {
 			if(settings?.structures && !atomicState?.structures) { atomicState.structures = settings?.structures }
 			section("Manage Devices & Location:") {
-				def devDesc = getDevicesDesc() ? "Nest Location: ${atomicState?.structName} (${strCapitalize(locationPresence())})\n${getDevicesDesc()}\n\nTap to modify" : "Tap to configure"
+				def t1 = getDevicesDesc()
+				def devDesc = t1 ? "Nest Location: ${atomicState?.structName} (${strCapitalize(locationPresence())})\n${t1}\n\nTap to modify" : "Tap to configure"
 				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
 			//getDevChgDesc()
@@ -223,7 +224,8 @@ def mainPage() {
 			devicesPage()
 		}
 		if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras)) {
-			def autoDesc = getInstAutoTypesDesc() ? "${getInstAutoTypesDesc()}\n\nTap to modify" : null
+			def t1 = getInstAutoTypesDesc()
+			def autoDesc = t1 ? "${t1}\n\nTap to modify" : null
 			section("Manage Automations:") {
 				href "automationsPage", title: "Automations", description: (autoDesc ? autoDesc : "Tap to configure"), state: (autoDesc ? "complete" : null), image: getAppImg("automation_icon.png")
 			}
@@ -373,8 +375,9 @@ def reviewSetupPage() {
 				}
 			}
 			if(!atomicState?.isInstalled && (settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice)) {
-				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to modify" : "Tap to configure"),
-						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
+				def t1 = devCustomizePageDesc()
+				href "devPrefPage", title: "Device Customization", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"),
+						state: (t1 ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
 		//getDevChgDesc()
@@ -382,7 +385,8 @@ def reviewSetupPage() {
 		showVoiceRprtPrefs()
 
 		section("Notifications:") {
-			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null), image: getAppImg("notification_icon.png")
+			def t1 = getAppNotifConfDesc()
+			href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("notification_icon.png")
 		}
 		section("Polling:") {
 			def pollDesc = getPollingConfDesc()
@@ -465,17 +469,20 @@ def prefsPage() {
 	def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))
 	dynamicPage(name: "prefsPage", title: "Application Preferences", nextPage: "", install: false, uninstall: false ) {
 		section("Polling:") {
-			href "pollPrefPage", title: "Polling Preferences", description: "${getPollingConfDesc()}\n\nTap to modify", state: (getPollingConfDesc() != "" ? "complete" : null), image: getAppImg("timer_icon.png")
+			def t1 = getPollingConfDesc()
+			href "pollPrefPage", title: "Polling Preferences", description: "${t1}\n\nTap to modify", state: (t1 != "" ? "complete" : null), image: getAppImg("timer_icon.png")
 		}
 		if(devSelected) {
 			section("Devices:") {
-				href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to modify" : "Tap to configure"),
-						state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
+				def t1 = devCustomizePageDesc()
+				href "devPrefPage", title: "Device Customization", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"),
+						state: (t1 ? "complete" : null), image: getAppImg("device_pref_icon.png")
 			}
 		}
 		showVoiceRprtPrefs()
 		section("Notifications Options:") {
-			href "notifPrefPage", title: "Notifications", description: (getAppNotifConfDesc() ? "${getAppNotifConfDesc()}\n\nTap to modify" : "Tap to configure"), state: (getAppNotifConfDesc() ? "complete" : null),
+			def t1 = getAppNotifConfDesc()
+			href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 					image: getAppImg("notification_icon.png")
 		}
 		showDevSharePrefs()
@@ -484,7 +491,8 @@ def prefsPage() {
 			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view", image: getAppImg("login_icon.png")
 		}
 		section("App and Device Logging:") {
-			href "debugPrefPage", title: "Logging", description: (getAppDebugDesc() ? "${getAppDebugDesc() ?: ""}\n\nTap to modify" : "Tap to configure"), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
+			def t1 = getAppDebugDesc()
+			href "debugPrefPage", title: "Logging", description: (t1 ? "${t1 ?: ""}\n\nTap to modify" : "Tap to configure"), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
 					image: getAppImg("log.png")
 		}
 		section ("Misc. Options:") {
@@ -816,13 +824,14 @@ def notifPrefPage() {
 			} else { atomicState.pushTested = true }
 
 			section(title: "Time Restrictions") {
-				href "setNotificationTimePage", title: "Notification Restrictions", description: (getNotifSchedDesc() ?: "Tap to configure"), params: [pName: ""], state: (getNotifSchedDesc() ? "complete" : null),
+				def t1 = getNotifSchedDesc()
+				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), params: [pName: ""], state: (t1 ? "complete" : null),
 					image: getAppImg("quiet_time_icon.png")
 			}
 			section("Missed Poll Notification:") {
 				input (name: "sendMissedPollMsg", type: "bool", title: "Send Missed Poll Messages?", defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png"))
 				if(sendMissedPollMsg == null || sendMissedPollMsg) {
-					def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
+					//def misPollNotifyWaitValDesc = !misPollNotifyWaitVal ? "Default: 15 Minutes" : misPollNotifyWaitVal
 					input (name: "misPollNotifyWaitVal", type: "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
 					if(misPollNotifyWaitVal) {
 						atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
@@ -846,7 +855,7 @@ def notifPrefPage() {
 			section("App and Device Updates:") {
 				input (name: "sendAppUpdateMsg", type: "bool", title: "Notify on App|Devices Updates?", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png"))
 				if(sendAppUpdateMsg == null || sendAppUpdateMsg) {
-					def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 12 Hours" : updNotifyWaitVal
+					//def updNotifyWaitValDesc = !updNotifyWaitVal ? "Default: 12 Hours" : updNotifyWaitVal
 					input (name: "updNotifyWaitVal", type: "enum", title: "Remind Me Every?", required: false, defaultValue: 43200, metadata: [values:notifValEnum()], submitOnChange: true)
 					if(updNotifyWaitVal) {
 						atomicState.updNotifyWaitVal = !updNotifyWaitVal ? 43200 : updNotifyWaitVal.toInteger()
@@ -1749,6 +1758,15 @@ def getInstAutoTypesDesc() {
 					break
 				case "watchDog":
 					dat["watchDog"] = dat["watchDog"] ? dat["watchDog"]+1 : 1
+ 					if(dat.watchDog > 1) {
+ 						dat.watchDog = dat.watchDog - 1
+ 						LogAction("Deleting Extra Watchdog (${a?.id})", "warn", true)
+ 						deleteChildApp(a)
+ 					}
+ 					break
+ 				default:
+ 					LogAction("Deleting Unknown Automation (${a?.id})", "warn", true)
+ 					deleteChildApp(a)
 					break
 			}
 		}
