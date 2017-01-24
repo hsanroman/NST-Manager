@@ -8348,7 +8348,7 @@ def extTmpTempOk() {
 			}
 		}
 
-		if(!modeAuto && extTemp && retval) {
+		if(!modeAuto && retval) {
 			def desiredTemp = getDesiredTemp(curMode)
 			if(!desiredTemp) {
 				desiredTemp = intTemp
