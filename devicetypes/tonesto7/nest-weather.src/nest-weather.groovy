@@ -51,6 +51,7 @@ metadata {
 		attribute "alert", "string"
 		attribute "alert2", "string"
 		attribute "alert3", "string"
+		attribute "alert4", "string"
 		attribute "alertKeys", "string"
 		attribute "weatherObservedDt", "string"
 	}
@@ -571,7 +572,7 @@ def clearAlerts() {
 	def noneString = ""
 	def cntr = 1
 	def aname = "alert"
-	while (cntr <= 3) {
+	while (cntr <= 4) {
 		sendEvent(name: "${aname}", value: noneString, descriptionText: "${device.displayName} has no current weather alerts")
 
 		state."walert${cntr}" = noneString
@@ -616,6 +617,8 @@ def getWeatherAlerts(weatData) {
 					clearAlerts()
 				}
 				else if (newKeys != oldKeys) {
+					clearAlerts()
+
 					sendEvent(name: "alertKeys", value: newKeys.encodeAsJSON(), displayed: false)
 
 					def totalAlerts = newKeys.size()
@@ -647,13 +650,14 @@ def getWeatherAlerts(weatData) {
 						def walertMessage = pad(alert.message) // message
 
 						// Try to format message some
+						walertMessage = walertMessage.replaceAll(/\.\.\. \.\.\./, '\n ')
 						walertMessage = walertMessage.replaceAll(/\.\.\./, ' ')
-						walertMessage = walertMessage.replaceAll(/\*/, '')
+						walertMessage = walertMessage.replaceAll(/\*/, '\n *')
 						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
 						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
 						walertMessage = walertMessage.replaceAll(/\n\n\n/, '\n\n')
-						walertMessage = walertMessage.replaceAll(/\n\n/, '<br>')
-						walertMessage = walertMessage.replaceAll(/\n/, ' ')
+						walertMessage = walertMessage.replaceAll(/\n\n/, '<br> ')
+						walertMessage = walertMessage.replaceAll(/\n/, '<br> ')
 
 						state."walert${cntr}" = walert
 						state."walertMessage${cntr}" = walertMessage
@@ -666,7 +670,7 @@ def getWeatherAlerts(weatData) {
 						}
 						state.walertCount = cntr
 
-						if(cntr < 3) { cntr += 1 } else { log.error "Many Alerts"; return true }
+						if(cntr < 4) { cntr += 1 } else { log.error "Many Alerts"; return true }
 					}
 					state?.lastWeatherAlertNotif = newWalertNotif
 
