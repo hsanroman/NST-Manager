@@ -331,6 +331,21 @@ def devicesPage() {
 			input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
 			atomicState.weatherDevice = settings?.weatherDevice ?: null
 		}
+		if(atomicState?.isInstalled) {
+			if((atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))) {
+				section("Devices Preferences:") {
+					href "devPrefPage", title: "Device Customization", description: (devCustomizePageDesc() ? "${devCustomizePageDesc()}\n\nTap to modify" : "Tap to configure"),
+							state: (devCustomizePageDesc() ? "complete" : null), image: getAppImg("device_pref_icon.png")
+				}
+			}
+			if(atomicState?.protects) {
+				section("Nest Protect Alarm Simulation:") {
+					if(atomicState?.protects) {
+						href "alarmTestPage", title: "Test Protect Automations\nBy Simulating Alarm Events", required: true , image: getAppImg("test_icon.png"), state: null, description: "Tap to Begin"
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -397,6 +412,50 @@ def showDevSharePrefs() {
 							image: getAppImg("${(settings?.mobileClientType && settings?.mobileClientType != "decline") ? "${settings?.mobileClientType}_icon" : "mobile_device_icon"}.png"))
 			href url: getAppEndpointUrl("renderInstallData"), style:"embedded", title:"View the Data shared with Developer", description: "Tap to view Data", required:false, image: getAppImg("view_icon.png")
 		}
+	}
+}
+
+def infoPage () {
+	def execTime = now()
+	dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
+		section("About this App:") {
+			paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+		}
+		section("Donations:") {
+			href url: textDonateLink(), style:"external", required: false, title:"Donations",
+				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
+		}
+		section("Help and Feedback:") {
+			href url: getHelpPageUrl(), style:"embedded", required:false, title:"View the Projects Wiki",
+				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
+			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
+				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
+			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
+		}
+		section("Credits:") {
+			paragraph title: "Creator:", "Anthony S. (@tonesto7)", state: "complete"
+			paragraph title: "Co-Author:", "Eric S. (@E_Sch)", state: "complete"
+			paragraph title: "Collaborator:", "Ben W. (@desertblade)", state: "complete"
+		}
+		section("App Info:") {
+			href "changeLogPage", title: "View App Revision History", description: "Tap to view", image: getAppImg("change_log_icon.png")
+			paragraph "Current State Usage:\n${getStateSizePerc()}% (${getStateSize()} bytes)", required: true, state: (getStateSizePerc() <= 70 ? "complete" : null),
+					image: getAppImg("progress_bar.png")
+			if(atomicState?.installationId) {
+				paragraph "InstallationID:\n${atomicState?.installationId}"
+			}
+		}
+		if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
+			section("View App and Device Data, and Perform Device Tests:") {
+				href "nestInfoPage", title: "API | Diagnostics | Testing", description: "", image: getAppImg("api_diag_icon.png")
+			}
+		}
+		section("Licensing Info:") {
+			paragraph "${textCopyright()}\n${textLicense()}"
+		}
+		incInfoLoadCnt()
+		devPageFooter("infoLoadCnt", execTime)
 	}
 }
 
@@ -1016,46 +1075,7 @@ def debugPrefPage() {
 	}
 }
 
-def infoPage () {
-	def execTime = now()
-	dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
-		section("About this App:") {
-			paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
-		}
-		section("Donations:") {
-			href url: textDonateLink(), style:"external", required: false, title:"Donations",
-				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
-		}
-		section("Help and Feedback:") {
-			href url: getHelpPageUrl(), style:"embedded", required:false, title:"View the Projects Wiki",
-				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
-			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
-				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
-			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
-			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
-		}
-		section("Credits:") {
-			paragraph title: "Creator:", "Anthony S. (@tonesto7)", state: "complete"
-			paragraph title: "Co-Author:", "Eric S. (@E_Sch)", state: "complete"
-			paragraph title: "Collaborator:", "Ben W. (@desertblade)", state: "complete"
-		}
-		section("App Revision History:") {
-			href "changeLogPage", title: "View App Change Log Info", description: "Tap to view", image: getAppImg("change_log_icon.png")
-		}
-		section("Licensing Info:") {
-			paragraph "${textCopyright()}\n${textLicense()}"
-		}
-		section("App Info:") {
-			paragraph "Current State Usage:\n${getStateSizePerc()}% (${getStateSize()} bytes)", required: true, state: (getStateSizePerc() <= 70 ? "complete" : null),
-					image: getAppImg("progress_bar.png")
-			if(atomicState?.installationId) {
-				paragraph "InstallationID:\n${atomicState?.installationId}"
-			}
-		}
-		incInfoLoadCnt()
-		devPageFooter("infoLoadCnt", execTime)
-	}
-}
+
 
 def formatDt2(tm) {
 	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
@@ -5218,23 +5238,23 @@ def nestInfoPage () {
 				}
 			}
 		}
-		section("View All API Data Received from Nest:") {
-			if(atomicState?.structures) {
-				href "structInfoPage", title: "Nest Location(s) Info", description: "Tap to view", image: getAppImg("nest_structure_icon.png")
-			}
-			if(atomicState?.thermostats) {
-				href "tstatInfoPage", title: "Nest Thermostat(s) Info", description: "Tap to view", image: getAppImg("nest_like.png")
-			}
-			if(atomicState?.protects) {
-				href "protInfoPage", title: "Nest Protect(s) Info", description: "Tap to view", image: getAppImg("protect_icon.png")
-			}
-			if(atomicState?.cameras) {
-				href "camInfoPage", title: "Nest Camera(s) Info", description: "Tap to view", image: getAppImg("camera_icon.png")
-			}
-			if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
-				paragraph "There is nothing to show here", image: getAppImg("instruct_icon.png")
-			}
-		}
+		// section("View All API Data Received from Nest:") {
+		// 	if(atomicState?.structures) {
+		// 		href "structInfoPage", title: "Nest Location(s) Info", description: "Tap to view", image: getAppImg("nest_structure_icon.png")
+		// 	}
+		// 	if(atomicState?.thermostats) {
+		// 		href "tstatInfoPage", title: "Nest Thermostat(s) Info", description: "Tap to view", image: getAppImg("nest_like.png")
+		// 	}
+		// 	if(atomicState?.protects) {
+		// 		href "protInfoPage", title: "Nest Protect(s) Info", description: "Tap to view", image: getAppImg("protect_icon.png")
+		// 	}
+		// 	if(atomicState?.cameras) {
+		// 		href "camInfoPage", title: "Nest Camera(s) Info", description: "Tap to view", image: getAppImg("camera_icon.png")
+		// 	}
+		// 	if(!atomicState?.structures && !atomicState?.thermostats && !atomicState?.protects && !atomicState?.cameras) {
+		// 		paragraph "There is nothing to show here", image: getAppImg("instruct_icon.png")
+		// 	}
+		// }
 		section("Diagnostics") {
 			href "diagPage", title: "View Diagnostic Info", description: null, image: getAppImg("diag_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
@@ -5242,112 +5262,112 @@ def nestInfoPage () {
 	}
 }
 
-def structInfoPage () {
-	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
-		section("") {
-			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
-		}
-		atomicState?.structData?.each { struc ->
-			if(struc?.key == atomicState?.structures) {
-				def str = ""
-				def cnt = 0
-				section("Location Name: ${struc?.value?.name}") {
-					def data = struc?.value.findAll { !(it.key in noShow) }
-					data?.sort().each { item ->
-						cnt = cnt+1
-						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-					}
-					paragraph "${str}"
-				}
-			}
-		}
-	}
-}
+// def structInfoPage () {
+// 	dynamicPage(name: "structInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "wheres", "cameras", "thermostats", "smoke_co_alarms", "structure_id" ]
+// 		section("") {
+// 			paragraph "Locations", state: "complete", image: getAppImg("nest_structure_icon.png")
+// 		}
+// 		atomicState?.structData?.each { struc ->
+// 			if(struc?.key == atomicState?.structures) {
+// 				def str = ""
+// 				def cnt = 0
+// 				section("Location Name: ${struc?.value?.name}") {
+// 					def data = struc?.value.findAll { !(it.key in noShow) }
+// 					data?.sort().each { item ->
+// 						cnt = cnt+1
+// 						str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 					}
+// 					paragraph "${str}"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 //
-def tstatInfoPage () {
-	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
-		}
-		atomicState?.thermostats?.sort().each { tstat ->
-			def str = ""
-			def cnt = 0
-			section("Thermostat Name: ${atomicState?.deviceData?.thermostats[tstat?.key]?.name}") {    // was ${tstat?.value}
-				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					cnt = cnt+1
-					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-				}
-				paragraph "${str}"
-			}
-		}
-	}
-}
+// def tstatInfoPage () {
+// 	dynamicPage(name: "tstatInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Thermostats", state: "complete", image: getAppImg("nest_like.png")
+// 		}
+// 		atomicState?.thermostats?.sort().each { tstat ->
+// 			def str = ""
+// 			def cnt = 0
+// 			section("Thermostat Name: ${atomicState?.deviceData?.thermostats[tstat?.key]?.name}") {    // was ${tstat?.value}
+// 				def data = atomicState?.deviceData?.thermostats[tstat?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					cnt = cnt+1
+// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 				}
+// 				paragraph "${str}"
+// 			}
+// 		}
+// 	}
+// }
 //
-def protInfoPage () {
-	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
-		}
-		atomicState?.protects.sort().each { prot ->
-			def str = ""
-			def cnt = 0
-			section("Protect Name: ${atomicState?.deviceData?.smoke_co_alarms[prot?.key]?.name}") {   // was ${prot?.value}
-				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					cnt = cnt+1
-					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-				}
-				paragraph "${str}"
-			}
-		}
-	}
-}
+// def protInfoPage () {
+// 	dynamicPage(name: "protInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Protects", state: "complete", image: getAppImg("protect_icon.png")
+// 		}
+// 		atomicState?.protects.sort().each { prot ->
+// 			def str = ""
+// 			def cnt = 0
+// 			section("Protect Name: ${atomicState?.deviceData?.smoke_co_alarms[prot?.key]?.name}") {   // was ${prot?.value}
+// 				def data = atomicState?.deviceData?.smoke_co_alarms[prot?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					cnt = cnt+1
+// 					str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 				}
+// 				paragraph "${str}"
+// 			}
+// 		}
+// 	}
+// }
 
-def camInfoPage () {
-	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
-		def noShow = [ "where_id", "device_id", "structure_id" ]
-		section("") {
-			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
-		}
-		atomicState?.cameras.sort().each { cam ->
-			def str = ""
-			def evtStr = ""
-			def cnt = 0
-			def cnt2 = 0
-			section("Camera Name: ${atomicState?.deviceData?.cameras[cam?.key]?.name}") {	// was ${cam?.value}
-				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
-				data?.sort().each { item ->
-					if(item?.key != "last_event") {
-						if(item?.key in ["app_url", "web_url"]) {
-							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to view in Browser", state: "complete"
-						} else {
-							cnt = cnt+1
-							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
-						}
-					} else {
-						item?.value?.sort().each { item2 ->
-							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
-								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to view in Browser", state: "complete"
-							}
-							else {
-								cnt2 = cnt2+1
-								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
-							}
-						}
-					}
-				}
-				paragraph "${str}"
-				if(evtStr != "") {
-					paragraph "Last Event Data:\n\n${evtStr}"
-				}
-			}
-		}
-	}
-}
+// def camInfoPage () {
+// 	dynamicPage(name: "camInfoPage", refreshInterval: 30, install: false) {
+// 		def noShow = [ "where_id", "device_id", "structure_id" ]
+// 		section("") {
+// 			paragraph "Cameras", state: "complete", image: getAppImg("camera_icon.png")
+// 		}
+// 		atomicState?.cameras.sort().each { cam ->
+// 			def str = ""
+// 			def evtStr = ""
+// 			def cnt = 0
+// 			def cnt2 = 0
+// 			section("Camera Name: ${atomicState?.deviceData?.cameras[cam?.key]?.name}") {	// was ${cam?.value}
+// 				def data = atomicState?.deviceData?.cameras[cam?.key].findAll { !(it.key in noShow) }
+// 				data?.sort().each { item ->
+// 					if(item?.key != "last_event") {
+// 						if(item?.key in ["app_url", "web_url"]) {
+// 							href url: item?.value, style:"external", required: false, title: item?.key.toString().replaceAll("\\_", " ").capitalize(), description:"Tap to view in Browser", state: "complete"
+// 						} else {
+// 							cnt = cnt+1
+// 							str += "${(cnt <= 1) ? "" : "\n\n"}• ${item?.key?.toString()}: (${item?.value})"
+// 						}
+// 					} else {
+// 						item?.value?.sort().each { item2 ->
+// 							if(item2?.key in ["app_url", "web_url", "image_url", "animated_image_url"]) {
+// 								href url: item2?.value, style:"external", required: false, title: "LastEvent: ${item2?.key.toString().replaceAll("\\_", " ").capitalize()}", description:"Tap to view in Browser", state: "complete"
+// 							}
+// 							else {
+// 								cnt2 = cnt2+1
+// 								evtStr += "${(cnt2 <= 1) ? "" : "\n\n"}  • (LastEvent) ${item2?.key?.toString()}: (${item2?.value})"
+// 							}
+// 						}
+// 					}
+// 				}
+// 				paragraph "${str}"
+// 				if(evtStr != "") {
+// 					paragraph "Last Event Data:\n\n${evtStr}"
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 def alarmTestPage () {
 	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
@@ -6364,6 +6384,7 @@ def initAutoApp() {
 		schedList?.each { scd ->
 			sLbl = "schMot_${scd}_"
 			atomicState."schedule${cnt}SwEnabled" = null
+			atomicState."schedule${cnt}PresEnabled" = null
 			atomicState."schedule${cnt}MotionEnabled" = null
 			atomicState."schedule${cnt}SensorEnabled" = null
 
@@ -6379,6 +6400,8 @@ def initAutoApp() {
 					ttc: settings["${sLbl}restrictionTimeToCustom"],
 					tto: settings["${sLbl}restrictionTimeToOffset"],
 					w: settings["${sLbl}restrictionDOW"],
+					p1: buildDeviceNameList(settings["${sLbl}restrictionPresHome"], "and"),
+					p0: buildDeviceNameList(settings["${sLbl}restrictionPresAway"], "and"),
 					s1: buildDeviceNameList(settings["${sLbl}restrictionSwitchOn"], "and"),
 					s0: buildDeviceNameList(settings["${sLbl}restrictionSwitchOff"], "and"),
 					ctemp: roundTemp(settings["${sLbl}CoolTemp"]),
@@ -6389,6 +6412,8 @@ def initAutoApp() {
 					mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
 					mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
 					mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
+					mpresHome: settings["${sLbl}Motion"] ? settings["${sLbl}MPresHome"] : null,
+					mpresAway: settings["${sLbl}Motion"] ? settings["${sLbl}MPresAway"] : null,
 					mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
 					mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
 				])
@@ -6398,6 +6423,7 @@ def initAutoApp() {
 			LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
 			atomicState."sched${cnt}restrictions" = newscd
 			atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0)  ? true : false
+			atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0)  ? true : false
 			atomicState."schedule${cnt}MotionEnabled" = (newscd?.m0) ? true : false
 			atomicState."schedule${cnt}SensorEnabled" = (newscd?.sen0) ? true : false
 			//atomicState."schedule${cnt}FanCtrlEnabled" = (newscd?.fan0) ? true : false
@@ -6686,6 +6712,7 @@ def subscribeToEvents() {
 			def schedList = getScheduleList()
 			def sLbl
 			def cnt = 1
+			def prList = []
 			def swlist = []
 			def mtlist = []
 			schedList?.each { scd ->
@@ -6711,6 +6738,28 @@ def subscribeToEvents() {
 								} else {
 									swlist.push(sw)
 									subscribe(sw, "switch", automationGenericEvt)
+								}
+							}
+						}
+					}
+					if(atomicState?."schedule${cnt}PresEnabled") {
+						if(restrict?.p1) {
+							for(pr in settings["${sLbl}restrictionPresHome"]) {
+								if(prlist?.contains(pr)) {
+									//log.trace "found $pr"
+								} else {
+									prlist.push(pr)
+									subscribe(pr, "presence", automationGenericEvt)
+								}
+							}
+						}
+						if(restrict?.p0) {
+							for(pr in settings["${sLbl}restrictionPresAway"]) {
+								if(prlist?.contains(pr)) {
+									//log.trace "found $pr"
+								} else {
+									prlist.push(pr)
+									subscribe(pr, "presence", automationGenericEvt)
 								}
 							}
 						}
@@ -7119,7 +7168,10 @@ def automationMotionEvt(evt) {
 				}
 			}
 		}
-
+		if(settings["${sLbl}MPresHome"] || settings["${sLbl}MPresAway"]) {
+			if(settings["${sLbl}MPresHome"]) { if(!isSomebodyHome(settings["${sLbl}MPresHome"])) { dorunIn = false } }
+			if(settings["${sLbl}MPresAway"]) { if(isSomebodyHome(settings["${sLbl}MPresAway"])) { dorunIn = false } }
+		}
 		if(dorunIn) {
 			LogAction(" Motion: [ Scheduling for Delay: ($delay) | Schedule ${mySched} ]", "trace", true)
 			delay = delay > 20 ? delay : 20
@@ -9537,6 +9589,22 @@ private checkRestriction(cnt) {
 					}
 				}
 			}
+			if (settings["${sLbl}restrictionPresHome"]) {
+				for(pr in settings["${sLbl}restrictionPresHome"]) {
+					if (!isPresenceHome(pr)) {
+						restriction = "presence ${pr} being ${pr.currentValue("presence")}"
+						break
+					}
+				}
+			}
+			if (!restriction && settings["${sLbl}restrictionPresAway"]) {
+				for(pr in settings["${sLbl}restrictionPresAway"]) {
+					if (isPresenceHome(pr)) {
+						restriction = "presence ${pr} being ${pr.currentValue("presence")}"
+						break
+					}
+				}
+			}
 		}
 	} else {
 		restriction = "an inactive schedule"
@@ -9982,7 +10050,7 @@ def schMotModePage() {
 				str += (atomicState?.schMotTstatHasFan) ? "\n• FanMode: (${strCapitalize(tstat?.currentThermostatFanMode)})" : "\n• No Fan on HVAC system"
 				str += "\n• Presence: (${strCapitalize(getTstatPresence(tstat))})"
 				def safetyTemps = getSafetyTemps(tstat)
-					str +=  safetyTemps ? "\n• Safefy Temps: \n     └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
+					str +=  safetyTemps ? "\n• Safefy Temps:\n  └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
 					str +=  "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
 				paragraph "${str}", title: "${tstat.displayName} Zone Status", state: (str != "" ? "complete" : null), image: getAppImg("info_icon2.png")
 
@@ -10749,6 +10817,8 @@ def editSchedule(schedData) {
 				}
 				input "${sLbl}MHvacMode", "enum", title: "Set Hvac Mode with Motion:", required: false, description: "No change set", metadata: [values:tModeHvacEnum(canHeat,canCool)], multiple: false, image: getAppImg("hvac_mode_icon.png")
 				//input "${sLbl}MRestrictionMode", "mode", title: "Ignore in these modes", description: "Any location mode", required: false, multiple: true, image: getAppImg("mode_icon.png")
+				input "${sLbl}MPresHome", "capability.presenceSensor", title: "Only act when these people are home", description: "Always", required: false, multiple: true, image: getAppImg("nest_dev_pres_icon.png")
+				input "${sLbl}MPresAway", "capability.presenceSensor", title: "Only act when these people are away", description: "Always", required: false, multiple: true, image: getAppImg("nest_dev_away_icon.png")
 				input "${sLbl}MDelayValOn", "enum", title: "Delay Motion Setting Changes", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()], multiple: false, image: getAppImg("delay_time_icon.png")
 				input "${sLbl}MDelayValOff", "enum", title: "Delay disabling Motion Settings", required: false, defaultValue: 1800, metadata: [values:longTimeSecEnum()], multiple: false, image: getAppImg("delay_time_icon.png")
 			}
@@ -10776,6 +10846,8 @@ def editSchedule(schedData) {
 					input "${sLbl}restrictionTimeToOffset", "number", title: "Offset (+/- minutes)", range: "*..*", required: true, multiple: false, defaultValue: 0, image: getAppImg("offset_icon.png")
 				}
 			}
+			input "${sLbl}restrictionPresHome", "capability.presenceSensor", title: "Only execute when these People are home", description: "Always", required: false, multiple: true, image: getAppImg("nest_dev_pres_icon.png")
+			input "${sLbl}restrictionPresAway", "capability.presenceSensor", title: "Only execute when these People are away", description: "Always", required: false, multiple: true, image: getAppImg("nest_dev_away_icon.png")
 			input "${sLbl}restrictionSwitchOn", "capability.switch", title: "Only execute when these switches are all on", description: "Always", required: false, multiple: true, image: getAppImg("switch_on_icon.png")
 			input "${sLbl}restrictionSwitchOff", "capability.switch", title: "Only execute when these switches are all off", description: "Always", required: false, multiple: true, image: getAppImg("switch_off_icon.png")
 		}
@@ -10801,15 +10873,16 @@ def getScheduleDesc(num = null) {
 			schNum = scd?.key
 			schData = scd?.value
 			def sLbl = "schMot_${schNum}_"
-			def isRestrict = (schData?.m || schData?.tf || schData?.tfc || schData?.tfo || schData?.tt || schData?.ttc || schData?.tto || schData?.w || schData?.s1 || schData?.s0)
+			def isRestrict = (schData?.m || schData?.tf || schData?.tfc || schData?.tfo || schData?.tt || schData?.ttc || schData?.tto || schData?.w || schData?.s1 || schData?.s0 || schData?.p1 || schData?.p0)
 			def isTimeRes = (schData?.tf || schData?.tfc || schData?.tfo || schData?.tt || schData?.ttc || schData?.tto)
 			def isDayRes = schData?.w
 			def isTemp = (schData?.ctemp || schData?.htemp || schData?.hvacm)
 			def isSw = (schData?.s1 || schData?.s0)
+			def isPres = (schData?.p1 || schData.p0)
 			def isMot = schData?.m0
 			def isRemSen = schData?.sen0
 			def isFanEn = schData?.fan0
-			def resPreBar = isSw || isTemp ? "│" : " "
+			def resPreBar = isSw || isPres || isTemp ? "│" : " "
 			def tempPreBar = isMot || isRemSen ? "│" : "   "
 			def motPreBar = isRemSen
 
@@ -10831,9 +10904,13 @@ def getScheduleDesc(num = null) {
 			def timeDesc = getScheduleTimeDesc(schData?.tf, schData?.tfc, schData?.tfo, schData?.tt, schData?.ttc, schData?.tto, (isSw || isDayRes))
 			str += isTimeRes ?	"\n │ ${isDayRes || isSw ? "├" : "└"} ${timeDesc}" : ""
 			str += isDayRes ?	"\n │ ${schData?.s1 ? "├" : "└"} Days:${getSchRestrictDoWOk(schNum) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
-			str += isDayRes ?	"\n │ ${isSw ? "│" :"    "} └ ${dayStr}" : ""
+			str += isDayRes ?	"\n │ ${(isSw || isPres) ? "│" :"    "} └ ${dayStr}" : ""
+			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "├" : "└"} Presence Home:${isPresenceHome(settings["${sLbl}restrictionPresHome"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
+			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "│" : "   "} └ (${schData?.p1.size()} Selected)" : ""
+			str += schData?.p0 ?	"\n │ ${isSw ? "├" : "└"} Presence Away:${!isSomebodyHome(settings["${sLbl}restrictionPresAway"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
+			str += schData?.p0 ? 	"\n │ ${isSw ? "│" : "   "} └ (${schData?.p0.size()} Selected)" : ""
 			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "├" : "└"} Switches On:${isSwitchOn(settings["${sLbl}restrictionSwitchOn"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
-			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "│" : "    "} └ (${schData?.s1.size()} Selected)" : ""
+			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "│" : "   "} └ (${schData?.s1.size()} Selected)" : ""
 			str += schData?.s0 ?	"\n │ └ Switches Off:${!isSwitchOn(settings["${sLbl}restrictionSwitchOff"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.s0 ? 	"\n │      └ (${schData?.s0.size()} Selected)" : ""
 
@@ -10983,6 +11060,8 @@ def updateScheduleStateMap() {
 					ttc: settings["${sLbl}restrictionTimeToCustom"],
 					tto: settings["${sLbl}restrictionTimeToOffset"],
 					w: settings["${sLbl}restrictionDOW"],
+					p1: deviceInputToList(settings["${sLbl}restrictionPresHome"]),
+					p0: deviceInputToList(settings["${sLbl}restrictionPresAway"]),
 					s1: deviceInputToList(settings["${sLbl}restrictionSwitchOn"]),
 					s0: deviceInputToList(settings["${sLbl}restrictionSwitchOff"]),
 					ctemp: roundTemp(settings["${sLbl}CoolTemp"]),
@@ -10993,6 +11072,8 @@ def updateScheduleStateMap() {
 					mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
 					mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
 					mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
+					mpresHome: settings["${sLbl}Motion"] ? settings["${sLbl}MPresHome"] : null,
+					mpresAway: settings["${sLbl}Motion"] ? settings["${sLbl}MPresAway"] : null,
 					mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
 					mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
 				])
@@ -11125,46 +11206,37 @@ def storeExecutionHistory(val, method = null) {
 			atomicState?.lastExecutionTime = val ?: null
 			def list = atomicState?.evalExecutionHistory ?: []
 			def listSize = 30
-			if(list?.size() < listSize) {
-				list.push(val)
-			}
-			else if(list?.size() > listSize) {
-				def nSz = (list?.size()-listSize) + 1
-				def nList = list?.drop(nSz)
-				nList?.push(val)
-				list = nList
-			}
-			else if(list?.size() == listSize) {
-				def nList = list?.drop(1)
-				nList?.push(val)
-				list = nList
-			}
+			addToList(val, list, listSize)
 			if(list) { atomicState?.evalExecutionHistory = list }
 		}
 		if(!(method in ["watchDogCheck", "checkNestMode"])) {
 			def list = atomicState?.detailExecutionHistory ?: []
 			def listSize = 30
-			def newVal = [ val, method ]
-			if(list?.size() < listSize) {
-				list.push(newVal)
-			}
-			else if(list?.size() > listSize) {
-				def nSz = (list?.size()-listSize) + 1
-				def nList = list?.drop(nSz)
-				nList?.push(newVal)
-				list = nList
-			}
-			else if(list?.size() == listSize) {
-				def nList = list?.drop(1)
-				nList?.push(newVal)
-				list = nList
-			}
+			addToList([val, method], list, listSize)
 			if(list) { atomicState?.detailExecutionHistory = list }
 		}
 	} catch (ex) {
 		log.error "storeExecutionHistory Exception:", ex
 		parent?.sendExceptionData(ex, "storeExecutionHistory", true, getAutoType())
 	}
+}
+
+def addToList(val, list, listSize) {
+	if(list?.size() < listSize) {
+		list.push(val)
+	}
+	else if(list?.size() > listSize) {
+		def nSz = (list?.size()-listSize) + 1
+		def nList = list?.drop(nSz)
+		nList?.push(val)
+		list = nList
+	}
+	else if(list?.size() == listSize) {
+		def nList = list?.drop(1)
+		nList?.push(val)
+		list = nList
+	}
+	return list
 }
 
 def getAverageValue(items) {
@@ -11984,6 +12056,14 @@ def isPresenceHome(presSensor) {
 		}
 	}
 	return res
+}
+
+def isSomebodyHome(sensors) {
+	if(sensors) {
+		def cnts = sensors?.findAll { it?.currentPresence == "present" }
+		return cnts ? true : false
+	}
+	return false
 }
 
 def getTstatPresence(tstat) {
