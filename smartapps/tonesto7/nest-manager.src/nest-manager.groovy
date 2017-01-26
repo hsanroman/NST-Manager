@@ -3797,23 +3797,22 @@ def reqSchedInfoRprt(child, report=true) {
 		def str = ""
 		def chldSch = getChildApps()?.find { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState() && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
 		if(chldSch) {
+
+			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp()
+			def reqSenCoolSetPoint = chldSch?.getRemSenCoolSetTemp()
+			def curZoneTemp = chldSch?.getRemoteSenTemp()
+			def tempSrc = chldSch?.getRemSenTempSrc()
+
+			def tempSrcStr = tempSrc
+			def schedData
+			def schedMotionActive
 			def actNum = chldSch?.getCurrentSchedule()
-			def tempScaleStr = " degrees"
+			if(actNum) {
+				schedData = chldSch?.getSchedData(actNum) ?: null
+				schedMotionActive = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
+				tempSrcStr = (tempSrc == "Schedule") ? "Schedule ${actNum}" : tempSrc
+			}
 
-			def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
-			def canCool = tstat?.currentCanCool.toString() == "true" ? true : false
-			def curMode = tstat?.currentnestThermostatMode.toString()
-			def curOper = tstat?.currentThermostatOperatingState.toString()
-			def curHum = tstat?.currentHumidity.toString()
-			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp() ?: null
-			def reqSenCoolSetPoint = chldSch?.getRemSenCoolSetTemp() ?: null
-			def curZoneTemp = chldSch?.getRemoteSenTemp() ?: null
-
-			def schedData = chldSch?.getSchedData(actNum) ?: null
-			def schedMotionActive = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
-
-			def tempSrc = chldSch?.getRemSenTempSrc() ?: null
-			def tempSrcStr = (actNum && tempSrc == "Schedule") ? "Schedule ${actNum}" : tempSrc
 			if(!report) {
 				if(actNum) {
 					def useMot = (schedMotionActive && (schedData?.mctemp || schedData?.mhtemp)) ? true : false
@@ -3821,6 +3820,12 @@ def reqSchedInfoRprt(child, report=true) {
 					return ["scdNum":actNum, "label":schedData?.lbl, "reqSenHeatSetPoint":reqSenHeatSetPoint, "reqSenCoolSetPoint":reqSenCoolSetPoint, "curZoneTemp":curZoneTemp, "tempSrc":tempSrc, "tempSrcDesc":tempSrcStr]
 				} else { return null }
 			} else {
+				def tempScaleStr = " degrees"
+				def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
+				def canCool = tstat?.currentCanCool.toString() == "true" ? true : false
+				def curMode = tstat?.currentnestThermostatMode.toString()
+				def curOper = tstat?.currentThermostatOperatingState.toString()
+				def curHum = tstat?.currentHumidity.toString()
 				def schedDesc = schedVoiceDesc(actNum, schedData, schedMotionActive) ?: null
 				str += schedDesc ?: " There are No Schedules currently Active. "
 
