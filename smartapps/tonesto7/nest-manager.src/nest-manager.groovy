@@ -3848,13 +3848,18 @@ def reqSchedInfoRprt(child, report=true) {
 					}
 				}
 
+				if(curMode in ["eco"]) {
+			//if in eco mode, should read temps from thermostat vs. the automation
+					reqSenHeatSetPoint = getTstatSetpoint(tstat, "heat")
+					reqSenCoolSetPoint = getTstatSetpoint(tstat, "cool")
+				}
 				str += " The HVAC is currently "
 				str += curOper == "idle" ? " sitting idle " : " ${curOper} "
 				str += " in ${curMode} mode"
 				str += curMode in ["auto", "heat", "cool", "eco"] ? " with " : ". "
-				str += canHeat && curMode in ["auto", "heat"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
+				str += canHeat && curMode in ["auto", "heat", "eco"] ? "the Heat set to ${reqSenHeatSetPoint}${tempScaleStr}" : ""
 				str += canHeat && canCool && curMode == "auto" ? " and " : ". "
-				str += canCool && curMode in ["auto", "cool"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
+				str += canCool && curMode in ["auto", "cool", "eco"] ? "the cool set to ${reqSenCoolSetPoint}${tempScaleStr}.  " : ""
 
 				if (str != "") {
 					LogAction("reqSchedInfoRprt: Sending voice report for [$str] to (${tstat})", "info", false)
