@@ -6571,7 +6571,7 @@ def automationRestorePage(params) {
 		section("Restoring Automations:") {
 			if(params.backup) {
 				paragraph "Restoring Automations..."
-				automationRestore(params?.backup, params?.autoId)
+				automationRestoreAlt(params?.backup, params?.autoId)
 			} else {
 				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
 			}
@@ -6596,6 +6596,7 @@ def automationRestoreAlt(data, id=null) {
 			log.debug "Automation Type: ${setData?.automationTypeFlag}"
 
 			log.debug "Restoring: ($appLbl) Automation Settings...."
+			log.debug "sData: $sData"
 			addChildApp(textNamespace(), appName(), appLbl?.toString(), sData)
 		}
 	}
@@ -6616,6 +6617,7 @@ def automationRestore(data, id=null) {
 
 			log.debug "Restoring: ($appLbl) Automation Settings...."
 			addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
+			//addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:["schMotTstat":["type": "capability.thermostat", "value": ["4pba68Pk3xsf9SMCvsmI_sn7UfMulpEX"] ] ])
 		}
 	}
 }
