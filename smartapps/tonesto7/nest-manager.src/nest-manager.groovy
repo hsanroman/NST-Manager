@@ -1733,7 +1733,13 @@ def getInstAutoTypesDesc() {
 	def disItems = []
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
-		def dis = a?.getIsAutomationDisabled()
+		try {
+			def dis = a?.getIsAutomationDisabled()
+		}
+		catch(ex) {
+			dis = null
+			type = "old"
+		}
 		if(dis) {
 			disItems.push(a?.label.toString())
 			dat["disabled"] = dat["disabled"] ? dat["disabled"]+1 : 1
