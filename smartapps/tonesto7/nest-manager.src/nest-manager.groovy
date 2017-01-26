@@ -611,19 +611,16 @@ def automationSchedulePage() {
 		}
 		def schMap = []
 		getChildApps()?.each {
-			def actSch = it?.getScheduleDesc()
-			if (actSch?.size()) {
-				def schInfo = it?.getScheduleDesc()
+			def schInfo = it?.getScheduleDesc()
+			if (schInfo?.size()) {
 				def curSch = it?.getCurrentSchedule()
-				if (schInfo?.size()) {
-					section("${it?.label}") {
-						schInfo?.each { schItem ->
-							def schNum = schItem?.key
-							def schDesc = schItem?.value
-							def schInUse = (curSch?.toInteger() == schNum?.toInteger()) ? true : false
-							if(schNum && schDesc) {
-								paragraph "${schDesc}", state: schInUse ? "complete" : ""
-							}
+				section("${it?.label}") {
+					schInfo?.each { schItem ->
+						def schNum = schItem?.key
+						def schDesc = schItem?.value
+						def schInUse = (curSch?.toInteger() == schNum?.toInteger()) ? true : false
+						if(schNum && schDesc) {
+							paragraph "${schDesc}", state: schInUse ? "complete" : ""
 						}
 					}
 				}
@@ -3798,8 +3795,10 @@ def reqSchedInfoRprt(child, report=true) {
 	def tstat = getChildDevice(child.device.deviceNetworkId)
 	if (tstat) {
 		def str = ""
-		def chldSch = getChildApps()?.find { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState() && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
+		def chldSch = getChildApps()?.find { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
 		if(chldSch) {
+			def actNum = chldSch?.getCurrentSchedule()
+			if(!actNum && !report) { return null }
 
 			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp()
 			def reqSenCoolSetPoint = chldSch?.getRemSenCoolSetTemp()
@@ -3809,7 +3808,7 @@ def reqSchedInfoRprt(child, report=true) {
 			def tempSrcStr = tempSrc
 			def schedData
 			def schedMotionActive
-			def actNum = chldSch?.getCurrentSchedule()
+
 			if(actNum) {
 				schedData = chldSch?.getSchedData(actNum)
 				schedMotionActive = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
