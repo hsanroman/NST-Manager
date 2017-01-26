@@ -234,11 +234,14 @@ def mainPage() {
 			section("Manage Nest Login, Notification, and Polling Preferences:") {
 				def descStr = ""
 				def sz = descStr.size()
-				descStr += getAppNotifConfDesc() ?: ""
+				def t1 = getAppNotifConfDesc()
+				descStr += t1 ?: ""
 				if(descStr.size() != sz) { descStr += "\n\n"; sz = descStr.size() }
-				descStr += getAppDebugDesc() ?: ""
+				t1 = getAppDebugDesc()
+				descStr += t1 ?: ""
 				if(descStr.size() != sz) { descStr += "\n\n"; sz = descStr.size() }
-				descStr += getPollingConfDesc() ?: ""
+				t1 = getPollingConfDesc()
+				descStr += t1 ?: ""
 				if(descStr.size() != sz) { descStr += "\n\n"; sz = descStr.size() }
 				def prefDesc = (descStr != "") ? "" : "Tap to configure"
 				href "prefsPage", title: "App | Device\nPreferences", description: prefDesc, state: (descStr ? "complete" : ""), image: getAppImg("settings_icon.png")
@@ -608,7 +611,7 @@ def automationSchedulePage() {
 		}
 		def schMap = []
 		getChildApps()?.each {
-			def actSch = it?.getScheduleDesc() ?: null
+			def actSch = it?.getScheduleDesc()
 			if (actSch?.size()) {
 				def schInfo = it?.getScheduleDesc()
 				def curSch = it?.getCurrentSchedule()
@@ -3808,9 +3811,9 @@ def reqSchedInfoRprt(child, report=true) {
 			def schedMotionActive
 			def actNum = chldSch?.getCurrentSchedule()
 			if(actNum) {
-				schedData = chldSch?.getSchedData(actNum) ?: null
+				schedData = chldSch?.getSchedData(actNum)
 				schedMotionActive = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
-				tempSrcStr = (tempSrc == "Schedule") ? "Schedule ${actNum}" : tempSrc
+				tempSrcStr = (tempSrc == "Schedule") ? "Schedule ${actNum} Sensor" : tempSrc
 			}
 
 			if(!report) {
@@ -3826,7 +3829,7 @@ def reqSchedInfoRprt(child, report=true) {
 				def curMode = tstat?.currentnestThermostatMode.toString()
 				def curOper = tstat?.currentThermostatOperatingState.toString()
 				def curHum = tstat?.currentHumidity.toString()
-				def schedDesc = schedVoiceDesc(actNum, schedData, schedMotionActive) ?: null
+				def schedDesc = schedVoiceDesc(actNum, schedData, schedMotionActive)
 				str += schedDesc ?: " There are No Schedules currently Active. "
 
 				if(getVoiceRprtPrefs()?.vRprtZone == true) {
