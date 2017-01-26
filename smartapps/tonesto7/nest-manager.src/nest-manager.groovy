@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.1" }
-def appVerDate() { "1-23-2017" }
+def appVersion() { "4.5.2" }
+def appVerDate() { "1-26-2017" }
 
 preferences {
 	//startPage
@@ -104,6 +104,9 @@ preferences {
 	//shared pages
 	page(name: "setNotificationPage")
 	page(name: "setNotificationTimePage")
+	page(name: "backupSendDataPage")
+	page(name: "backupRemoveDataPage")
+	page(name: "backupPage")
 }
 
 
@@ -494,6 +497,11 @@ def prefsPage() {
 		section("Manage Nest Login:") {
 			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view", image: getAppImg("login_icon.png")
 		}
+		if(appSettings?.devOpt == "true") {
+			section("Backup Data (Experimental):") {
+				href "backupPage", title: "Manage Backup Data", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+			}
+		}
 		section("App and Device Logging:") {
 			def t1 = getAppDebugDesc()
 			href "debugPrefPage", title: "Logging", description: (t1 ? "${t1 ?: ""}\n\nTap to modify" : "Tap to configure"), state: ((isAppDebug() || isChildDebug()) ? "complete" : null),
@@ -589,6 +597,9 @@ def automationsPage() {
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
+				if(appSettings?.devOpt == "true") {
+					href "restoreAutomationsPage", title: "Manage Automation Backups...", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+				}
 			}
 		}
 		incAutoLoadCnt()
@@ -631,45 +642,45 @@ def automationSchedulePage() {
 	}
 }
 
-def automationStatisticsPage() {
-	def execTime = now()
-	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refreshes every 20 sec.)", refreshInterval: 20, uninstall: false) {
-		def cApps = getChildApps()
-		if(cApps) {
-			cApps?.sort()?.each { chld ->
-				def autoType = chld?.getAutomationType()
-				section(" ") {
-					paragraph "${chld?.label}", state: "complete", image: getAutoIcon(autoType)
-					def data = chld?.getAutomationStats()
-					def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
-						tf.setTimeZone(getTimeZone())
-					def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
-					def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
-					def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
-					def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
-					def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
-					def lastExecVal = data?.lastExecVal ?: null
-					def execAvgVal = data?.execAvgVal ?: null
-
-					def str = ""
-					str += lastModDt ? "• Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
-					str += lastEvtDt ? "\n\n• Last Event:" : ""
-					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  │ Device:\n  │└ " : "\n  ├ Device: "}${data?.lastEvent?.displayName}" : ""
-					str += lastEvtDt ? "\n  ├ Type: (${strCapitalize(data?.lastEvent?.name)})" : ""
-					str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
-					str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
-					str += lastEvalDt ? "\n\n• Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
-					str += lastSchedDt ? "\n\n• Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
-					str += lastActionDt ? "\n\n• Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
-					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
-					paragraph "${str}", state: "complete"
-				}
-			}
-		}
-		incViewAutoStatLoadCnt()
-		devPageFooter("viewAutoStatLoadCnt", execTime)
-	}
-}
+// def automationStatisticsPage() {
+// 	def execTime = now()
+// 	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refreshes every 20 sec.)", refreshInterval: 20, uninstall: false) {
+// 		def cApps = getChildApps()
+// 		if(cApps) {
+// 			cApps?.sort()?.each { chld ->
+// 				def autoType = chld?.getAutomationType()
+// 				section(" ") {
+// 					paragraph "${chld?.label}", state: "complete", image: getAutoIcon(autoType)
+// 					def data = chld?.getAutomationStats()
+// 					def tf = new SimpleDateFormat("M/d/yyyy - h:mm a")
+// 						tf.setTimeZone(getTimeZone())
+// 					def lastModDt = data?.lastUpdatedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastUpdatedDt.toString())) : null
+// 					def lastEvtDt = data?.lastEvent?.date ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvent?.date.toString())) : null
+// 					def lastActionDt = data?.lastActionData?.dt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastActionData?.dt.toString())) : null
+// 					def lastEvalDt = data?.lastEvalDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastEvalDt.toString())) : null
+// 					def lastSchedDt = data?.lastSchedDt ? tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", data?.lastSchedDt.toString())) : null
+// 					def lastExecVal = data?.lastExecVal ?: null
+// 					def execAvgVal = data?.execAvgVal ?: null
+//
+// 					def str = ""
+// 					str += lastModDt ? "• Last Modified:\n  └ (${lastModDt})" : "\n • Last Modified: (Not Available)"
+// 					str += lastEvtDt ? "\n\n• Last Event:" : ""
+// 					str += lastEvtDt ? "${(data?.lastEvent?.displayName.length() > 20) ? "\n  │ Device:\n  │└ " : "\n  ├ Device: "}${data?.lastEvent?.displayName}" : ""
+// 					str += lastEvtDt ? "\n  ├ Type: (${strCapitalize(data?.lastEvent?.name)})" : ""
+// 					str += lastEvtDt ? "\n  ├ Value: (${data?.lastEvent?.value}${data?.lastEvent?.unit ? "${data?.lastEvent?.unit}" : ""})" : ""
+// 					str += lastEvtDt ? "\n  └ DateTime: (${lastEvtDt})" : "\n\n • Last Event: (Not Available)"
+// 					str += lastEvalDt ? "\n\n• Last Evaluation:\n  └ (${lastEvalDt})" : "\n\n • Last Evaluation: (Not Available)"
+// 					str += lastSchedDt ? "\n\n• Last Schedule:\n  └ (${lastSchedDt})" : "\n\n • Last Schedule: (Not Available)"
+// 					str += lastActionDt ? "\n\n• Last Action:\n  ├ DateTime: (${lastActionDt})\n  └ Action: ${data?.lastActionData?.actionDesc}" : "\n\n • Last Action: (Not Available)"
+// 					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
+// 					paragraph "${str}", state: "complete"
+// 				}
+// 			}
+// 		}
+// 		incViewAutoStatLoadCnt()
+// 		devPageFooter("viewAutoStatLoadCnt", execTime)
+// 	}
+// }
 
 def locDesiredClear() {
 	LogAction("locDesiredClear", "info", true)
@@ -789,21 +800,21 @@ def automationGlobalPrefsPage() {
 	}
 }
 
-def automationKickStartPage() {
-	dynamicPage(name: "automationKickStartPage", title: "This Page runs Update() on all installed Nest Automations", nextPage: "automationsPage", install: false, uninstall: false) {
-		def cApps = getChildApps()
-		section("Running Update All Automations:") {
-			if(cApps) {
-				cApps?.sort()?.each { chld ->
-					chld?.update()
-					paragraph "${chld?.label}\n\nUpdate() Completed Successfully!", state: "complete"
-				}
-			} else {
-				paragraph "No Automations Found"
-			}
-		}
-	}
-}
+// def automationKickStartPage() {
+// 	dynamicPage(name: "automationKickStartPage", title: "This Page runs Update() on all installed Nest Automations", nextPage: "automationsPage", install: false, uninstall: false) {
+// 		def cApps = getChildApps()
+// 		section("Running Update All Automations:") {
+// 			if(cApps) {
+// 				cApps?.sort()?.each { chld ->
+// 					chld?.update()
+// 					paragraph "${chld?.label}\n\nUpdate() Completed Successfully!", state: "complete"
+// 				}
+// 			} else {
+// 				paragraph "No Automations Found"
+// 			}
+// 		}
+// 	}
+// }
 
 def notifPrefPage() {
 	def execTime = now()
@@ -1086,8 +1097,6 @@ def debugPrefPage() {
 	}
 }
 
-
-
 def formatDt2(tm) {
 	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
@@ -1095,117 +1104,118 @@ def formatDt2(tm) {
 	return tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", tm.toString()))
 }
 
-def remoteDiagPage () {
-	def execTime = now()
-	dynamicPage(name: "remoteDiagPage", title: "Send Logs to the Developer", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
-		def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag == true ? true : false
-		def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
-		//log.debug "diagAllowed: $diagAllowed | diagDevAuth: $diagDevAuth"
-		section() {
-			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-			def tf = new SimpleDateFormat(formatVal)
-			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-			paragraph title: "How will this work?", "Once enabled this SmartApp will send manager and automation logs the developers Firebase database for review.  Turn off to remove all data from the remote site."
-			paragraph "This will automatically turn off 2 hours"
-			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("diagnostic_icon.png"))
-		}
-		if(diagAllowed && settings?.enRemDiagLogging) {
-			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
-				LogAction("Remote Diagnostic Logs activated", "info", true)
-				clearRemDiagData()
-				chkRemDiagClientId()
-				atomicState?.enRemDiagLogging = true
-				atomicState?.remDiagLogActivatedDt = getDtNow()
-				sendSetAndStateToFirebase()
-			}
-		} else {
-			if(atomicState?.remDiagLogActivatedDt != null && (!diagAllowed || !settings?.enRemDiagLogging)) {
-				LogAction("Remote Diagnostic Logs deactivated", "info", true)
-				atomicState?.enRemDiagLogging = false
-				clearRemDiagData()
-				atomicState?.remDiagLogActivatedDt = null	// require toggle off then on again to force back on after timeout
-			}
-		}
-		section() {
-			if(atomicState?.enRemDiagLogging) {
-				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing",
-						required: true,state: null
-				def str = diagDevAuth ? "This ClientId is Authorized by Developer to stream logs to the remote server." : "This client is not authorized to stream logs. Please contact the developer if you have issues"
-				paragraph str, required: true, state: (diagDevAuth ? "complete" : null)
-			}
-		}
-		section() {
-			if(atomicState?.remDiagLogDataStore?.size() >= 0) {
-				def str = ""
-				str += "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
-				if(atomicState?.remDiagDataSentDt) { str += "\n\nLast Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)} | (${getLastRemDiagSentSec()} sec ago)" }
-				if(atomicState?.remDiagLogSentCnt) { str += "\n\nLogs sent to DB: (${atomicState?.remDiagLogSentCnt})" }
-				paragraph str, state: "complete"
-			}
-		}
-		incRemDiagLoadCnt()
-		devPageFooter("remDiagLoadCnt", execTime)
-	}
-}
-
-void chkRemDiagClientId() {
-	if(!atomicState?.remDiagClientId || atomicState?.remDiagClientId != atomicState?.installationId) { atomicState?.remDiagClientId = atomicState?.installationId	}
-}
-
-def clearRemDiagData(force=false) {
-	if(!settings?.enRemDiagLogging || force) {
-		if(atomicState?.remDiagClientId && removeRemDiagData()) { atomicState?.remDiagClientId = null }
-	}
-	atomicState?.remDiagLogDataStore = null
-	//atomicState?.remDiagLogActivatedDt = null	// NOT done to have force off then on to re-enable
-	atomicState?.remDiagDataSentDt = null
-	atomicState?.remDiagLogSentCnt = null
-	LogAction("Cleared Diag data", "info", true)
-}
+// def remoteDiagPage () {
+// 	def execTime = now()
+// 	dynamicPage(name: "remoteDiagPage", title: "Send Logs to the Developer", refreshInterval: (atomicState?.enRemDiagLogging ? 30 : 0), install: false) {
+// 		def diagAllowed = atomicState?.appData?.database?.allowRemoteDiag == true ? true : false
+// 		def diagDevAuth = (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients) ? true : false
+// 		//log.debug "diagAllowed: $diagAllowed | diagDevAuth: $diagDevAuth"
+// 		section() {
+// 			def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+// 			def tf = new SimpleDateFormat(formatVal)
+// 			if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+// 			paragraph title: "How will this work?", "Once enabled this SmartApp will send manager and automation logs the developers Firebase database for review.  Turn off to remove all data from the remote site."
+// 			paragraph "This will automatically turn off 2 hours"
+// 			input (name: "enRemDiagLogging", type: "bool", title: "Enable Remote Diag?", required: false, defaultValue: (atomicState?.enRemDiagLogging ?: false), submitOnChange: true, image: getAppImg("diagnostic_icon.png"))
+// 		}
+// 		if(diagAllowed && settings?.enRemDiagLogging) {
+// 			if(!atomicState?.enRemDiagLogging && atomicState?.remDiagLogActivatedDt == null) {
+// 				LogAction("Remote Diagnostic Logs activated", "info", true)
+// 				clearRemDiagData()
+// 				chkRemDiagClientId()
+// 				atomicState?.enRemDiagLogging = true
+// 				atomicState?.remDiagLogActivatedDt = getDtNow()
+// 				sendSetAndStateToFirebase()
+// 			}
+// 		} else {
+// 			if(atomicState?.remDiagLogActivatedDt != null && (!diagAllowed || !settings?.enRemDiagLogging)) {
+// 				LogAction("Remote Diagnostic Logs deactivated", "info", true)
+// 				atomicState?.enRemDiagLogging = false
+// 				clearRemDiagData()
+// 				atomicState?.remDiagLogActivatedDt = null	// require toggle off then on again to force back on after timeout
+// 			}
+// 		}
+// 		section() {
+// 			if(atomicState?.enRemDiagLogging) {
+// 				href url: getAppEndpointUrl("renderInstallId"), style:"embedded", title:"Provide this ID to Developer", description:"${atomicState?.remDiagClientId}\nTap to Allow Sharing",
+// 						required: true,state: null
+// 				def str = diagDevAuth ? "This ClientId is Authorized by Developer to stream logs to the remote server." : "This client is not authorized to stream logs. Please contact the developer if you have issues"
+// 				paragraph str, required: true, state: (diagDevAuth ? "complete" : null)
+// 			}
+// 		}
+// 		section() {
+// 			if(atomicState?.remDiagLogDataStore?.size() >= 0) {
+// 				def str = ""
+// 				str += "Current Logs in the Data Store: (${atomicState?.remDiagLogDataStore?.size()})"
+// 				if(atomicState?.remDiagDataSentDt) { str += "\n\nLast Sent Data to DB:\n${formatDt2(atomicState?.remDiagDataSentDt)} | (${getLastRemDiagSentSec()} sec ago)" }
+// 				if(atomicState?.remDiagLogSentCnt) { str += "\n\nLogs sent to DB: (${atomicState?.remDiagLogSentCnt})" }
+// 				paragraph str, state: "complete"
+// 			}
+// 		}
+// 		incRemDiagLoadCnt()
+// 		devPageFooter("remDiagLoadCnt", execTime)
+// 	}
+// }
+//
+// void chkRemDiagClientId() {
+// 	if(!atomicState?.remDiagClientId || atomicState?.remDiagClientId != atomicState?.installationId) { atomicState?.remDiagClientId = atomicState?.installationId	}
+// }
+//
+// def clearRemDiagData(force=false) {
+// 	if(!settings?.enRemDiagLogging || force) {
+// 		if(atomicState?.remDiagClientId && removeRemDiagData()) { atomicState?.remDiagClientId = null }
+// 	}
+// 	atomicState?.remDiagLogDataStore = null
+// 	//atomicState?.remDiagLogActivatedDt = null	// NOT done to have force off then on to re-enable
+// 	atomicState?.remDiagDataSentDt = null
+// 	atomicState?.remDiagLogSentCnt = null
+// 	LogAction("Cleared Diag data", "info", true)
+// }
+//
 
 def saveLogtoRemDiagStore(String msg, String type, String logSrcType=null) {
-	//LogTrace("saveLogtoRemDiagStore($msg, $type, $logSrcType)")
-	if(parent) { return }
-	if(atomicState?.appData?.database?.allowRemoteDiag && (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
-		if(atomicState?.enRemDiagLogging) {
-			if(getStateSizePerc() >= 90) {
-				// this is log.xxxx to avoid looping/recursion
-				log.warn "saveLogtoRemDiagStore: remoteDiag log storage suspended state size is ${getStateSizePerc()}%"
-				return
-			}
-			def data = atomicState?.remDiagLogDataStore ?: []
-			def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
-			data << item
-			atomicState?.remDiagLogDataStore = data
-			if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
-				sendRemDiagData()
-				atomicState?.remDiagLogDataStore = []
-			}
-		}
-	}
-	if(atomicState?.enRemDiagLogging) {
-		def turnOff = false
-		def reasonStr = ""
-		if(getRemDiagActSec() > (3600 * 2)) {
-			turnOff = true
-			reasonStr += "was active for last 2 hours "
-		}
-		if(!atomicState?.appData?.database?.allowRemoteDiag || !(atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
-			turnOff = true
-			reasonStr += "appData does not allow"
-		}
-		if(turnOff) {
-			atomicState?.enRemDiagLogging = false
-			LogAction("Remote Diagnostics disabled ${reasonStr}", "info", true)
-			def cApps = getChildApps()
-			if(cApps) {
-				cApps?.sort()?.each { chld ->
-					chld?.update()
-				}
-			}
-			clearRemDiagData()
-		}
-	}
+// 	//LogTrace("saveLogtoRemDiagStore($msg, $type, $logSrcType)")
+// 	if(parent) { return }
+// 	if(atomicState?.appData?.database?.allowRemoteDiag && (atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
+// 		if(atomicState?.enRemDiagLogging) {
+// 			if(getStateSizePerc() >= 90) {
+// 				// this is log.xxxx to avoid looping/recursion
+// 				log.warn "saveLogtoRemDiagStore: remoteDiag log storage suspended state size is ${getStateSizePerc()}%"
+// 				return
+// 			}
+// 			def data = atomicState?.remDiagLogDataStore ?: []
+// 			def item = ["dt":getDtNow().toString(), "type":type, "src":(logSrcType ?: "Not Set"), "msg":msg]
+// 			data << item
+// 			atomicState?.remDiagLogDataStore = data
+// 			if(atomicState?.remDiagLogDataStore?.size() > 20 || getLastRemDiagSentSec() > 600 || getStateSizePerc() >= 75) {
+// 				sendRemDiagData()
+// 				atomicState?.remDiagLogDataStore = []
+// 			}
+// 		}
+// 	}
+// 	if(atomicState?.enRemDiagLogging) {
+// 		def turnOff = false
+// 		def reasonStr = ""
+// 		if(getRemDiagActSec() > (3600 * 2)) {
+// 			turnOff = true
+// 			reasonStr += "was active for last 2 hours "
+// 		}
+// 		if(!atomicState?.appData?.database?.allowRemoteDiag || !(atomicState?.remDiagClientId in atomicState?.appData?.clientRemDiagAuth?.clients)) {
+// 			turnOff = true
+// 			reasonStr += "appData does not allow"
+// 		}
+// 		if(turnOff) {
+// 			atomicState?.enRemDiagLogging = false
+// 			LogAction("Remote Diagnostics disabled ${reasonStr}", "info", true)
+// 			def cApps = getChildApps()
+// 			if(cApps) {
+// 				cApps?.sort()?.each { chld ->
+// 					chld?.update()
+// 				}
+// 			}
+// 			clearRemDiagData()
+// 		}
+// 	}
 }
 
 /*
@@ -1219,30 +1229,30 @@ def genRandId(int length){
 }
 */
 
-def sendRemDiagData() {
-	def data = atomicState?.remDiagLogDataStore
-	if(data?.size()) {
-		chkRemDiagClientId()
-		if(atomicState?.remDiagClientId) {
-			def json = new groovy.json.JsonOutput().toJson(data)
-			sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
-			def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
-			atomicState?.remDiagLogSentCnt = lsCnt
-			atomicState?.remDiagDataSentDt = getDtNow()
-		}
-	}
-}
+// def sendRemDiagData() {
+// 	def data = atomicState?.remDiagLogDataStore
+// 	if(data?.size()) {
+// 		chkRemDiagClientId()
+// 		if(atomicState?.remDiagClientId) {
+// 			def json = new groovy.json.JsonOutput().toJson(data)
+// 			sendFirebaseData(json, "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json", "post", "Remote Diag Logs")
+// 			def lsCnt = !atomicState?.remDiagLogSentCnt ? data?.size() : atomicState?.remDiagLogSentCnt+data?.size()
+// 			atomicState?.remDiagLogSentCnt = lsCnt
+// 			atomicState?.remDiagDataSentDt = getDtNow()
+// 		}
+// 	}
+// }
+//
+// def sendSetAndStateToFirebase() {
+// 	chkRemDiagClientId()
+// 	if(atomicState?.remDiagClientId) {
+// 		sendFirebaseData(createManagerBackupDataJson(), "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json", "put", "Remote Diag Logs")
+// 		atomicState?.remDiagDataSentDt = getDtNow()
+// 	}
+// }
 
-def sendSetAndStateToFirebase() {
-	chkRemDiagClientId()
-	if(atomicState?.remDiagClientId) {
-		sendFirebaseData(createManagerBackupDataJson(), "${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json", "put", "Remote Diag Logs")
-		atomicState?.remDiagDataSentDt = getDtNow()
-	}
-}
-
-def getRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getRemDiagActSec").toInteger() }
-def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
+// def getRemDiagActSec() { return !atomicState?.remDiagLogActivatedDt ? 100000 : GetTimeDiffSeconds(atomicState?.remDiagLogActivatedDt, null, "getRemDiagActSec").toInteger() }
+// def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : GetTimeDiffSeconds(atomicState?.remDiagDataSentDt, null, "getLastRemDiagSentSec").toInteger() }
 
 def changeLogPage () {
 	def execTime = now()
@@ -1568,6 +1578,12 @@ def currentDevMap(update=false) {
 }
 */
 
+
+
+
+
+
+
 /******************************************************************************
 *					  			NEST LOGIN PAGES		  	  		  		  *
 *******************************************************************************/
@@ -1617,7 +1633,7 @@ def installed() {
 }
 
 def updated() {
-	LogAction("Updated with settings: ${settings}", "debug", true)
+	LogAction("${app.label} Updated..."/*with settings: ${settings}*/, "debug", true)
 	initialize()
 	sendNotificationEvent("${textAppName()} has updated settings")
 	if(parent) {
@@ -3628,11 +3644,15 @@ def webResponse(resp, data) {
 	return result
 }
 
-def getWebData(path, content, label) {
+def getWebData(path, content, label, text=true) {
 	try {
 		LogAction("Getting ${label} data", "info", true)
 		httpGet([ uri: path, contentType: "$content" ]) { resp ->
-			return resp?.data?.text.toString()
+			if(resp.data) {
+				if(text) {
+					return resp?.data?.text.toString()
+				} else { return resp?.data }
+			}
 		}
 	}
 	catch (ex) {
@@ -4319,7 +4339,7 @@ def addRemoveDevices(uninst = null) {
 			}
 			if(atomicState?.vThermostats) {
 				nVstats = atomicState?.vThermostats.collect { dni ->
-					//LogAction("vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
+					//LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
 					def d6 = getChildDevice(getNestvStatDni(dni).toString())
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
@@ -4631,7 +4651,7 @@ def callback() {
 				fail()
 			}
 		}
-		else { LogAction("callback() oauthState != oauthInitState", "error", true) }
+		else { LogAction("callback() oauthState != atomicState.oauthInitState", "error", true) }
 	}
 	catch (ex) {
 		log.error "Callback Exception:", ex
@@ -5082,9 +5102,12 @@ def getObjType(obj) {
 	else if(obj instanceof List) {return "List"}
 	else if(obj instanceof ArrayList) {return "ArrayList"}
 	else if(obj instanceof Integer) {return "Integer"}
+	else if(obj instanceof BigInteger) {return "BigInteger"}
 	else if(obj instanceof Long) {return "Long"}
 	else if(obj instanceof Boolean) {return "Boolean"}
+	else if(obj instanceof BigDecimal) {return "BigDecimal"}
 	else if(obj instanceof Float) {return "Float"}
+	else if(obj instanceof Byte) {return "Byte"}
 	else { return "unknown"}
 }
 
@@ -5519,12 +5542,12 @@ def diagPage () {
 			paragraph "Current State Usage:\n${getStateSizePerc()}% (${getStateSize()} bytes)", required: true, state: (getStateSizePerc() <= 70 ? "complete" : null),
 					image: getAppImg("progress_bar.png")
 		}
-		section("View App & Device Data") {
-			href "managAppDataPage", title:"Manager App Data", description:"Tap to view", image: getAppImg("nest_manager.png")
+		//section("View App & Device Data") {
+			//href "managAppDataPage", title:"Manager App Data", description:"Tap to view", image: getAppImg("nest_manager.png")
 			//href "childAppDataPage", title:"Automation App Data", description:"Tap to view", image: getAppImg("automation_icon.png")
 			//href "childDevDataPage", title:"Device Data", description:"Tap to view", image: getAppImg("thermostat_icon.png")
 			//href "appParamsDataPage", title:"AppData File", description:"Tap to view", image: getAppImg("view_icon.png")
-		}
+		//}
 		if(settings?.optInAppAnalytics || settings?.optInSendExceptions) {
 			section("Analytics Data") {
 				if(settings?.optInAppAnalytics) {
@@ -5552,41 +5575,41 @@ def diagPage () {
 	}
 }
 
-def managAppDataPage() {
-	def rVal = (settings?.managAppPageRfsh) ? (settings?.managAppDataRfshVal ? settings?.managAppDataRfshVal.toInteger() : 30) : null
-	dynamicPage(name: "managAppDataPage", refreshInterval:rVal, install: false) {
-		if(!atomicState?.diagManagAppStateFilters) { atomicState?.diagManagAppStateFilters = ["diagManagAppStateFilters"] }
-		section("${app.label}:") {
-			if(settings?.managAppPageShowSet == true || settings?.managAppPageShowSet == null) {
-				paragraph title: "Settings Data", "${getMapDescStr(getSettings())}"
-			}
-			if(settings?.managAppPageShowState == true || settings?.managAppPageShowState == null) {
-				def data = getState()?.findAll { !(it?.key in atomicState?.diagManagAppStateFilters) }
-				paragraph title: "State Data", "${getMapDescStr(data)}"
-			}
-			if(settings?.managAppPageShowMeta == true || settings?.managAppPageShowMeta == null) {
-				paragraph title: "MetaData", "${getMapDescStr(getMetadata())}"
-			}
-		}
-		section("Data Filters:") {
-			paragraph "Show the following items in the results:"
-			input "managAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
-			if(settings?.managAppPageShowState) {
-				input(name: "managAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
-				atomicState?.diagManagAppStateFilters = settings?.managAppDataStateFilter ?: []
-			}
-			input "managAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
-			input "managAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
-		}
-		section("Page Options:") {
-			input "managAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
-			if(settings?.managAppPageRfsh) {
-				input "managAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
-			}
-			paragraph "Changing this may require you to leave the page and come back"
-		}
-	}
-}
+// def managAppDataPage() {
+// 	def rVal = (settings?.managAppPageRfsh) ? (settings?.managAppDataRfshVal ? settings?.managAppDataRfshVal.toInteger() : 30) : null
+// 	dynamicPage(name: "managAppDataPage", refreshInterval:rVal, install: false) {
+// 		if(!atomicState?.diagManagAppStateFilters) { atomicState?.diagManagAppStateFilters = ["diagManagAppStateFilters"] }
+// 		section("${app.label}:") {
+// 			if(settings?.managAppPageShowSet == true || settings?.managAppPageShowSet == null) {
+// 				paragraph title: "Settings Data", "${getMapDescStr(getSettings())}"
+// 			}
+// 			if(settings?.managAppPageShowState == true || settings?.managAppPageShowState == null) {
+// 				def data = getState()?.findAll { !(it?.key in atomicState?.diagManagAppStateFilters) }
+// 				paragraph title: "State Data", "${getMapDescStr(data)}"
+// 			}
+// 			if(settings?.managAppPageShowMeta == true || settings?.managAppPageShowMeta == null) {
+// 				paragraph title: "MetaData", "${getMapDescStr(getMetadata())}"
+// 			}
+// 		}
+// 		section("Data Filters:") {
+// 			paragraph "Show the following items in the results:"
+// 			input "managAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
+// 			if(settings?.managAppPageShowState) {
+// 				input(name: "managAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
+// 				atomicState?.diagManagAppStateFilters = settings?.managAppDataStateFilter ?: []
+// 			}
+// 			input "managAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
+// 			input "managAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
+// 		}
+// 		section("Page Options:") {
+// 			input "managAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+// 			if(settings?.managAppPageRfsh) {
+// 				input "managAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
+// 			}
+// 			paragraph "Changing this may require you to leave the page and come back"
+// 		}
+// 	}
+// }
 
 // def childAppDataPage() {
 // 	def rVal = (settings?.childAppPageRfsh && settings?.childAppDataPageDev) ? (settings?.childAppDataRfshVal ? settings?.childAppDataRfshVal.toInteger() : 30) : null
@@ -5714,130 +5737,130 @@ def managAppDataPage() {
 // 	}
 // }
 
-def getMapDescStr(data) {
-	def str = ""
-	def cnt = 1
-	data?.sort()?.each { par ->
-		if(par?.value instanceof Map || par?.value instanceof List || par?.value instanceof ArrayList) {
-			str += "${cnt>1 ? "\n\n" : ""} • ${par?.key.toString()}:"
-			if(par?.value instanceof Map) {
-				def map2 = par?.value
-				def cnt2 = 1
-				map2?.sort()?.each { par2 ->
-					if(par2?.value instanceof Map) { //This handles second level maps
-						def map3 = par2?.value
-						def cnt3 = 1
-						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
-						map3?.sort()?.each { par3 ->
-							if(par3?.value instanceof Map) { //This handles third level maps
-								def map4 = par3?.value
-								def cnt4 = 1
-								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
-								map4?.sort()?.each { par4 ->
-									if(par4?.value instanceof Map) { //This handles fourth level maps
-										def map5 = par4?.value
-										def cnt5 = 1
-										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}:"
-										map5?.sort()?.each { par5 ->
-											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < map5?.size() ? "├" : "└"} ${par5}"
-											cnt5 = cnt5+1
-										}
-									}
-									else if(par4?.value instanceof List || par?.value instanceof ArrayList) { //This handles forth level lists
-										def list4 = par4?.value?.collect {it}
-										def cnt5 = 1
-										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "└"} ${par4?.key.toString()}:"
-										list4?.each { par5 ->
-											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < list4?.size() ? "├" : "└"} ${par5}"
-											cnt5 = cnt5+1
-										}
-									} else {
-										str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size()  ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}: (${par4?.value})"
-									}
-									cnt4 = cnt4+1
-								}
-							}
-							else if(par3?.value instanceof List || par?.value instanceof ArrayList) { //This handles third level lists
-								def list3 = par3?.value?.collect {it}
-								def cnt4 = 1
-								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
-								list3?.each { par4 ->
-									str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < list3?.size() ? "├" : "└"} ${par4}"
-									cnt4 = cnt4+1
-								}
-							} else {
-								str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
-							}
-							cnt3 = cnt3+1
-						}
-						cnt2 = cnt2+1
-					} else {
-						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
-						cnt2 = cnt2+1
-					}
-				}
-			}
-			if(par?.value instanceof List || par?.value instanceof ArrayList) {
-				def list2 = par?.value?.collect {it}
-				def cnt2 = 1
-				list2?.each { par2 ->
-					str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
-					cnt2 = cnt2+1
-				}
-			}
-		} //else {
-		// 	str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
-		// }
-		cnt = cnt+1
-	}
-	//log.debug "str: $str"
-	return str != "" ? str : "No Data was returned"
-}
-
-def getChildStateKeys(type) {
-	def data = []
-	def objs
-	switch (type) {
-		case "device":
-			objs = getAllChildDevices()
-			break
-		case "childapp":
-			objs = getAllChildApps()
-			break
-		default:
-			objs = app
-			break
-	}
-	if(objs) {
-		objs?.each { obj ->
-			def	items = obj?.getState().findAll { it }
-			items?.each { item ->
-				if(!data?.contains(item?.key.toString())) {
-					data?.push(item?.key.toString())
-				}
-			}
-		}
-	}
-	data = data?.sort()
-	//log.debug "data: $data"
-	return data
-}
-
-def buildDevInputMap() {
-	def devMap = [:]
-	getAllChildDevices()?.each {
-		devMap[[it?.deviceNetworkId].join('.')] = it?.label
-	}
-	return devMap
-}
-
-def buildChildAppInputMap() {
-	def appMap = [:]
-	getAllChildApps()?.each {
-		appMap[[it?.getId()].join('.')] = it?.getLabel()
-	}
-	return appMap
-}
+// def getMapDescStr(data) {
+// 	def str = ""
+// 	def cnt = 1
+// 	data?.sort()?.each { par ->
+// 		if(par?.value instanceof Map || par?.value instanceof List || par?.value instanceof ArrayList) {
+// 			str += "${cnt>1 ? "\n\n" : ""} • ${par?.key.toString()}:"
+// 			if(par?.value instanceof Map) {
+// 				def map2 = par?.value
+// 				def cnt2 = 1
+// 				map2?.sort()?.each { par2 ->
+// 					if(par2?.value instanceof Map) { //This handles second level maps
+// 						def map3 = par2?.value
+// 						def cnt3 = 1
+// 						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
+// 						map3?.sort()?.each { par3 ->
+// 							if(par3?.value instanceof Map) { //This handles third level maps
+// 								def map4 = par3?.value
+// 								def cnt4 = 1
+// 								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+// 								map4?.sort()?.each { par4 ->
+// 									if(par4?.value instanceof Map) { //This handles fourth level maps
+// 										def map5 = par4?.value
+// 										def cnt5 = 1
+// 										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}:"
+// 										map5?.sort()?.each { par5 ->
+// 											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < map5?.size() ? "├" : "└"} ${par5}"
+// 											cnt5 = cnt5+1
+// 										}
+// 									}
+// 									else if(par4?.value instanceof List || par?.value instanceof ArrayList) { //This handles forth level lists
+// 										def list4 = par4?.value?.collect {it}
+// 										def cnt5 = 1
+// 										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "└"} ${par4?.key.toString()}:"
+// 										list4?.each { par5 ->
+// 											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < list4?.size() ? "├" : "└"} ${par5}"
+// 											cnt5 = cnt5+1
+// 										}
+// 									} else {
+// 										str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size()  ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}: (${par4?.value})"
+// 									}
+// 									cnt4 = cnt4+1
+// 								}
+// 							}
+// 							else if(par3?.value instanceof List || par?.value instanceof ArrayList) { //This handles third level lists
+// 								def list3 = par3?.value?.collect {it}
+// 								def cnt4 = 1
+// 								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+// 								list3?.each { par4 ->
+// 									str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < list3?.size() ? "├" : "└"} ${par4}"
+// 									cnt4 = cnt4+1
+// 								}
+// 							} else {
+// 								str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
+// 							}
+// 							cnt3 = cnt3+1
+// 						}
+// 						cnt2 = cnt2+1
+// 					} else {
+// 						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
+// 						cnt2 = cnt2+1
+// 					}
+// 				}
+// 			}
+// 			if(par?.value instanceof List || par?.value instanceof ArrayList) {
+// 				def list2 = par?.value?.collect {it}
+// 				def cnt2 = 1
+// 				list2?.each { par2 ->
+// 					str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
+// 					cnt2 = cnt2+1
+// 				}
+// 			}
+// 		} //else {
+// 		// 	str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
+// 		// }
+// 		cnt = cnt+1
+// 	}
+// 	//log.debug "str: $str"
+// 	return str != "" ? str : "No Data was returned"
+// }
+//
+// def getChildStateKeys(type) {
+// 	def data = []
+// 	def objs
+// 	switch (type) {
+// 		case "device":
+// 			objs = getAllChildDevices()
+// 			break
+// 		case "childapp":
+// 			objs = getAllChildApps()
+// 			break
+// 		default:
+// 			objs = app
+// 			break
+// 	}
+// 	if(objs) {
+// 		objs?.each { obj ->
+// 			def	items = obj?.getState().findAll { it }
+// 			items?.each { item ->
+// 				if(!data?.contains(item?.key.toString())) {
+// 					data?.push(item?.key.toString())
+// 				}
+// 			}
+// 		}
+// 	}
+// 	data = data?.sort()
+// 	//log.debug "data: $data"
+// 	return data
+// }
+//
+// def buildDevInputMap() {
+// 	def devMap = [:]
+// 	getAllChildDevices()?.each {
+// 		devMap[[it?.deviceNetworkId].join('.')] = it?.label
+// 	}
+// 	return devMap
+// }
+//
+// def buildChildAppInputMap() {
+// 	def appMap = [:]
+// 	getAllChildApps()?.each {
+// 		appMap[[it?.getId()].join('.')] = it?.getLabel()
+// 	}
+// 	return appMap
+// }
 
 // def feedbackPage() {
 // 	def fbData = atomicState?.lastFeedbackData
@@ -6012,11 +6035,11 @@ def removeInstallData() {
 	return removeFirebaseData("installData/clients/${atomicState?.installationId}.json")
 }
 
-def removeRemDiagData(childId) {
-	LogAction("Removing Remote Diags", "info", true)
-	removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json")
-	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json")
-}
+// def removeRemDiagData(childId) {
+// 	LogAction("Removing Remote Diags", "info", true)
+// 	removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}.json")
+// 	return removeFirebaseData("${getDbRemDiagPath()}/clients/${atomicState?.remDiagClientId}/setandstate.json")
+// }
 
 def sendInstallSlackNotif() {
 	def cltType = !settings?.mobileClientType ? "Not Configured" : settings?.mobileClientType?.toString()
@@ -6388,6 +6411,12 @@ def mainAutoPage(params) {
 				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 				atomicState?.showDebug = showDebug
 			}
+			if(getDevOpt()) {
+				section("Backup Data (Experimental):") {
+					href "backupPage", title: "Manage Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to configure...",
+					image: getAppImg("backup_icon.png"), state: atomicState?.lastBackupDt ? "complete" : null
+				}
+			}
 			section("Automation Name:") {
 				if(autoType == "watchDog") {
 					paragraph "${app?.label}"
@@ -6415,10 +6444,270 @@ def automationNestModeEnabled(val) {
 	return atomicState?.automationNestModeEnabled ?: false
 }
 
+def backupPage() {
+	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
+		def lastDt = atomicState?.lastBackupDt
+		section("") {
+			href "backupSendDataPage", title: "${lastDt ? "Update" : "Send"} Backup Data", description: "${lastDt ? "Last Backup:\n${lastDt}\n\n" : ""}Tap to Backup...",
+					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
+			if(lastDt) {
+				href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
+			}
+		}
+	}
+}
+
+def backupSendDataPage() {
+	return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
+		section("") {
+			paragraph "Sending Backup Data to Firebase..."
+			if(parent) {
+				if(backupConfigToFirebase()) {
+					atomicState?.lastBackupDt = getDtNow()
+					paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
+				}
+			} else { paragraph "Nothing Sent.  This is for Automation Children Only!!!" }
+		}
+	}
+}
+
+def backupRemoveDataPage() {
+	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
+		section("") {
+			paragraph "Removing Backed Up App Data from Firebase..."
+			if(parent) {
+				if(removeAutomationBackupData(app.id)) {
+					atomicState?.lastBackupDt = null
+					paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
+				}
+			}
+		}
+	}
+}
+
+def createAutoBackupJson() {
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
+	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
+	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+	def stateData = [:]
+	def settingsData = [:]
+	def resData = [:]
+	stData?.sort().each { item ->
+		stateData[item?.key] = item?.value
+	}
+	def inputTypeData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+	def excDevice = ["schMotTstat"]
+	setData?.sort().each { item ->
+		def itemVal = item?.value
+		if(itemVal instanceof List || itemVal in excDevice) {
+			def tmp = []
+			itemVal?.each {
+				tmp.push("$it")
+			}
+			settingsData[item?.key] = tmp
+		} else {
+			if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
+				settingsData[item?.key] = itemVal
+			} else {
+				settingsData[item?.key] = itemVal?.toString()
+			}
+		}
+	}
+	settingsData["automationTypeFlag"] = getAutoType().toString()
+	settingsData["backedUpData"] = true
+	resData["${app.id}"] = [:]
+	def data = [:]
+	data["appLabel"] = app.label
+	data["stateData"] = stateData
+	data["settingsData"] = settingsData
+	data["backupDt"] = getDtNow()
+	resData["${app.id}"] = data
+	//log.debug "resData: $resData"
+	def resultJson = new groovy.json.JsonOutput().toJson(resData)
+	//log.debug "resultJson: $resultJson"
+	return resultJson
+}
+
+def backupConfigToFirebase() {
+	def data = createAutoBackupJson()
+	return parent?.sendAutomationBackupData(data)
+}
+
+def sendAutomationBackupData(data) {
+	try {
+		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
+	} catch (ex) {
+		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
+	}
+}
+
+def removeAutomationBackupData(childId) {
+	return removeFirebaseData("backupData/clients/${parent?.atomicState?.installationId}/automationApps/${childId}.json")
+}
+
+def restoreAutomationsPage() {
+	def backupData = getAutomationBackupData()
+	//log.debug "backupData: $backupData"
+	dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
+		if(backupData) {
+			section("Available Automations") {
+				paragraph "Automations Backed Up: (${backupData?.size()})"
+				backupData?.each { bd ->
+					//log.debug "bd: ${bd}"
+					href "automationRestorePage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
+							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
+				}
+			}
+			section("Restore All:") {
+				href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
+			}
+		}
+	}
+}
+
+def automationRestorePage(params) {
+	dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
+		section("Restoring Automations:") {
+			if(params.backup) {
+				paragraph "Restoring Automations..."
+				automationRestore(params?.backup, params?.autoId)
+			} else {
+				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
+			}
+		}
+	}
+}
+
+def automationRestoreAlt(data, id=null) {
+	if(data) {
+		data?.each { bApp ->
+			if(id && id.toString() != bApp?.key.toString()) { return }
+			def appLbl = bApp?.value?.appLabel.toString()
+			log.debug "Automation AppId: ${bApp?.key}"
+
+			def setData = bApp?.value?.settingsData
+			def sData = buildRestoreSettingsMap()
+			sData?.settings["restoreId"] = ["type":"text", "value":bApp?.key]
+			sData?.settings["restoredFromBackup"] = ["type":"bool", "value":true]
+			sData?.settings["restoreCompleted"] = ["type":"bool", "value":false]
+			sData?.settings["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
+			//log.debug "settingsData: $setData"
+			log.debug "Automation Type: ${setData?.automationTypeFlag}"
+
+			log.debug "Restoring: ($appLbl) Automation Settings...."
+			addChildApp(textNamespace(), appName(), appLbl?.toString(), sData)
+		}
+	}
+}
+
+def automationRestore(data, id=null) {
+	if(data) {
+		data?.each { bApp ->
+			if(id && id.toString() != bApp?.key.toString()) { return }
+			def appLbl = bApp?.value?.appLabel.toString()
+			log.debug "Automation AppId: ${bApp?.key}"
+			def setData = bApp?.value?.settingsData
+			setData["restoreId"] = bApp?.key
+			setData["restoredFromBackup"] = true
+			setData["restoreCompleted"] = false
+			//log.debug "settingsData: $setData"
+			log.debug "Automation Type: ${setData?.automationTypeFlag}"
+
+			log.debug "Restoring: ($appLbl) Automation Settings...."
+			addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
+		}
+	}
+}
+
+
+
+def buildRestoreSettingsMap(restoreId) {
+	def result = [:]
+	result["settings"] = [:]
+	def newData = getAutomationBackupData().find { it?.key?.toString() == restoreId?.toString() }
+	def newValue = newData?.value
+	//log.debug "newValue: $newValue"
+	if(newValue?.settingsData) {
+		def inputTypeData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+		newValue?.settingsData?.each { sKey ->
+			def statInpt = inputTypeData?.staticInputs.find { it?.key.toString() == sKey?.key.toString() }.collect { it?.value }
+			def dynInpt = inputTypeData?.dynamicInputs.find { sKey?.key.toString().contains(it?.key.toString()) }.collect { it?.value }
+			def inptType = statInpt[0] ?: (dynInpt[0] ?: null)
+			if(!inptType) {
+				log.debug "The ${sKey?.key} Setting is missing a type: ($inptType)"
+			} else {
+				result?.settings[sKey?.key] = ["type":inptType, "value":sKey?.value]
+				//child?.settingUpdate(sKey?.key, inptType, sKey?.value)
+			}
+		}
+	}
+	//log.debug "result: $result"
+	return result
+}
+
+void callRestoreSetAndState(child, restId) {
+	log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
+	if(restId) {
+
+		def newData = getAutomationBackupData().find { it?.key?.toString() == restId?.toString() }
+		def newValue = newData?.value
+		//log.debug "newValue: $newValue"
+		if(newValue?.settingsData) {
+			def inputTypeData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+			newValue?.settingsData?.each { sKey ->
+				def statInpt = inputTypeData?.staticInputs.find { it?.key.toString() == sKey?.key.toString() }.collect { it?.value }
+				def dynInpt = inputTypeData?.dynamicInputs.find { sKey?.key.toString().contains(it?.key.toString()) }.collect { it?.value }
+				def inptName = sKey?.key
+				def inptType = statInpt[0] ?: (dynInpt[0] ?: null)
+				def inptVal = sKey?.value
+				if(!inptType) {
+					log.debug "The ${inptName} Setting is missing a type: ($inptType)"
+				} else {
+					if(inptType?.toString().contains("capability.")) {
+						inptVal = inptVal.toList()
+					}
+					child?.settingUpdate(inptName, inptType, inptVal)
+				}
+			}
+		}
+		if(newValue?.stateData) {
+			newValue?.stateData?.each { sKey ->
+				child?.stateUpdate(sKey?.key, sKey?.value)
+			}
+		}
+		//log.debug "bAppData: ${bApp?.value.settingsData}"
+	}
+}
+
+void settingUpdate(name, type, value) {
+	log.trace "settingUpdate($name, $type, $value)"
+	try {
+		if(name != null && value != null) {
+			//log.debug "app: ${app.label} | setting: [ $name:[type:$type, value:$value] ]"
+			app?.updateSetting("$name", [type: "$type", value: value])
+		}
+	} catch(e) { }
+}
+
+def stateUpdate(key, value) {
+	atomicState?."${key}" = value
+}
+
+//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
+
+def getAutomationBackupData() {
+	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
+}
+
 def initAutoApp() {
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
+	} else if (settings["automationTypeFlag"]) {
+		log.debug "automationType: ${settings?.automationTypeFlag}"
+		parent?.callRestoreSetAndState(app, settings?.restoreId?.toString())
 	}
+
 	def autoType = getAutoType()
 	if(autoType == "nMode") {
 		parent.automationNestModeEnabled(true)
@@ -7215,7 +7504,7 @@ def automationMotionEvt(evt) {
 							atomicState."${sLbl}MotionInActiveDt" = getDtNow()
 						}
 					}
-					LogAction("Updating Schedule Motion Sensor State: [ Schedule: (${cnt}) | Previous Active: (${oldActive}) | Current Status: ({$newActive}) ]", "trace", true)
+					LogAction("Updating Schedule Motion Sensor State: [ Schedule: (${cnt}) | Previous Active: (${oldActive}) | Current Status: ($newActive) ]", "trace", true)
 					if(cnt == mySched) { dorunIn = true }
 				}
 			}
@@ -7232,9 +7521,9 @@ def automationMotionEvt(evt) {
 		} else {
 			def str = "Event | Skipping Motion Check: "
 			if(mySched) {
-				str += "motion sensor not in used in active schedule (${mySched})"
+				str += "Motion Sensor is Not Used in Active Schedule (${mySched} - ${getSchedLbl(getCurrentSchedule())})"
 			} else {
-				str += "no active schedule"
+				str += "No Active Schedule"
 			}
 			LogAction(str, "info", true)
 		}
@@ -7386,7 +7675,7 @@ private remSenCheck() {
 		if( !settings?.remSensorDay || !remSenTstat) {
 			noGoDesc += !settings?.remSensorDay ? "Missing Required Sensor Selections" : ""
 			noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
-			LogAction("Remote Sensor NOT Evaluating; Status: ${noGoDesc}", "warn", true)
+			LogAction("Remote Sensor NOT Evaluating Status: ${noGoDesc}", "warn", true)
 		} else {
 			//log.info "remSenCheck:  Evaluating Event"
 
