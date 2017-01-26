@@ -6042,7 +6042,7 @@ def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 				exData = ["methodName":methodName, "appVersion":(appVersion() ?: "Not Available"),"errorMsg":exString, "errorDt":getDtNow().toString()]
 			}
 			def results = new groovy.json.JsonOutput().toJson(exData)
-			sendFirebaseData(results, "${getDbExceptPath()}/${appType}/${methodName}.json", "post", "Exception")
+			sendFirebaseData(results, "${getDbExceptPath()}/${appType}/${methodName}/${atomicState?.installationId}.json", "post", "Exception")
 		}
 	}
 }
@@ -6060,7 +6060,7 @@ def sendChildExceptionData(devType, devVer, ex, methodName) {
 	if(settings?.optInSendExceptions || settings?.optInSendExceptions == null) {
 		def exData = ["deviceType":devType, "devVersion":(devVer ?: "Not Available"), "methodName":methodName, "errorMsg":exString, "errorDt":getDtNow().toString()]
 		def results = new groovy.json.JsonOutput().toJson(exData)
-		sendFirebaseData(results, "${getDbExceptPath()}/${devType}/${methodName}.json", "post", "Exception")
+		sendFirebaseData(results, "${getDbExceptPath()}/${devType}/${methodName}/${atomicState?.installationId}.json", "post", "Exception")
 	}
 }
 
