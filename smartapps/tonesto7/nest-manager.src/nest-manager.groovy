@@ -1027,7 +1027,7 @@ def devPrefPage() {
 		}
 		if(atomicState?.weatherDevice) {
 			section("Weather Device:") {
-				t1 = getWeatherConfDesc()
+				def t1 = getWeatherConfDesc()
 				href "custWeatherPage", title: "Customize Weather Location?", description: (t1 ? "${t1}\n\nTap to modify" : ""), state: (t1 ? "complete":""), image: getAppImg("weather_icon_grey.png")
 				input ("weathAlertNotif", "bool", title: "Notify on Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
 			}
