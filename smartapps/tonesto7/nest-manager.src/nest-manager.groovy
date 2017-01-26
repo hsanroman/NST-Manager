@@ -1709,13 +1709,13 @@ def initWatchdogApp() {
 		def cnt = 1
 		watDogApp?.each { chld ->
 			if(cnt == 1) {
-				cnt = cnt+1
 				//LogAction("Running Update Command on Watchdog", "warn", true)
 				chld.update()
 			} else if (cnt > 1) {
 				LogAction("Deleting Extra Watchdog (${chld?.id})", "warn", true)
 				deleteChildApp(chld)
 			}
+			cnt = cnt+1
 		}
 	}
 }
@@ -1733,12 +1733,20 @@ def getInstAutoTypesDesc() {
 	def disItems = []
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
+		def ver
+		def dis
 		try {
-			def dis = a?.getIsAutomationDisabled()
+			dis = a?.getIsAutomationDisabled()
+			ver = a?.appVersion()
 		}
 		catch(ex) {
 			dis = null
+			ver = null
 			type = "old"
+		}
+		if(ver != appVersion()) {
+			LogAction("Bad child app version ${ver}", "error", true)
+			//appUpdateNotify()
 		}
 		if(dis) {
 			disItems.push(a?.label.toString())
@@ -4311,7 +4319,7 @@ def addRemoveDevices(uninst = null) {
 			}
 			if(atomicState?.vThermostats) {
 				nVstats = atomicState?.vThermostats.collect { dni ->
-					//LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
+					//LogAction("vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
 					def d6 = getChildDevice(getNestvStatDni(dni).toString())
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
@@ -4393,7 +4401,7 @@ def getMyLockId() {
 
 def addRemoveVthermostat(tstatdni, tval, myID) {
 	def odevId = tstatdni
-	LogAction("addRemoveVthermostat() tstat: ${tstatdni}   devid: ${odevId}   tval: ${tval}   myID: ${myID} atomicState.vThermostats: ${atomicState?.vThermostats} ", "trace", true)
+	LogAction("addRemoveVthermostat() tstat: ${tstatdni}   devid: ${odevId}   tval: ${tval}   myID: ${myID} vThermostats: ${atomicState?.vThermostats} ", "trace", true)
 
 	if(parent || !myID || tval == null) {
 		LogAction("got called BADLY ${parent}  ${myID}  ${tval}", "warn", true)
@@ -4455,7 +4463,7 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 			def newlist = [:]
 			def vtstat
 			vtstat = vtlist.collect { dni ->
-				//LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()} devId: ${devId}", "debug", true)
+				//LogAction("vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()} devId: ${devId}", "debug", true)
 				def ttkey = dni.key.toString()
 				if(ttkey == devId) { ; /*log.trace "skipping $dni"*/ }
 				else { newlist[ttkey] = dni.value }
@@ -4623,7 +4631,7 @@ def callback() {
 				fail()
 			}
 		}
-		else { LogAction("callback() oauthState != atomicState.oauthInitState", "error", true) }
+		else { LogAction("callback() oauthState != oauthInitState", "error", true) }
 	}
 	catch (ex) {
 		log.error "Callback Exception:", ex
@@ -6903,7 +6911,7 @@ def heartbeatAutomation() {
 		val = 220
 	}
 	if(getLastAutomationSchedSec() > val) {
-		LogAction("${autoType} Heartbeat run requested", "trace", false)
+		LogAction("${autoType} Heartbeat run", "trace", false)
 		runAutomationEval()
 	}
 }
@@ -7378,7 +7386,7 @@ private remSenCheck() {
 		if( !settings?.remSensorDay || !remSenTstat) {
 			noGoDesc += !settings?.remSensorDay ? "Missing Required Sensor Selections" : ""
 			noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
-			LogAction("Remote Sensor NOT EvaluatingEvaluation Status: ${noGoDesc}", "warn", true)
+			LogAction("Remote Sensor NOT Evaluating; Status: ${noGoDesc}", "warn", true)
 		} else {
 			//log.info "remSenCheck:  Evaluating Event"
 
@@ -7398,7 +7406,7 @@ private remSenCheck() {
 				// check that requested setpoints make sense & notify
 				def coolheatDiff = Math.abs(reqSenCoolSetPoint - reqSenHeatSetPoint)
 				if( !((reqSenCoolSetPoint > reqSenHeatSetPoint) && (coolheatDiff >= 2)) ) {
-					LogAction("remSenCheck: Invalid Requested Setpoints with auto mode: (${reqSenCoolSetPoint})/(${reqSenHeatSetPoint}, ${threshold})", "warn", true)
+					LogAction("remSenCheck: Invalid Setpoints with auto mode: (${reqSenCoolSetPoint})/(${reqSenHeatSetPoint}, ${threshold})", "warn", true)
 					storeExecutionHistory((now() - execTime), "remSenCheck")
 					return
 				}
@@ -8299,7 +8307,7 @@ def getDesiredTemp(curMode) {
 	if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0  }
 	if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
 
-	LogAction("getDesiredTemp: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} atomicState.extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+	LogAction("getDesiredTemp: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
 
 	return desiredTemp
 }
@@ -8328,7 +8336,7 @@ def extTmpTempOk() {
 
 		def modeAuto = ((curMode == "auto") || (curMode == "eco" && canHeat && canCool)) ? true : false
 
-		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | atomicState.extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
+		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
 		def retval = true
 		def tempOk = true
