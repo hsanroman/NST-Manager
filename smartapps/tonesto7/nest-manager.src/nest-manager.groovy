@@ -54,10 +54,10 @@ preferences {
 	page(name: "prefsPage")
 	page(name: "infoPage")
 	page(name: "nestInfoPage")
-	page(name: "structInfoPage")
-	page(name: "tstatInfoPage")
-	page(name: "protInfoPage")
-	page(name: "camInfoPage")
+	//page(name: "structInfoPage")
+	//page(name: "tstatInfoPage")
+	//page(name: "protInfoPage")
+	//page(name: "camInfoPage")
 	page(name: "pollPrefPage")
 	page(name: "debugPrefPage")
 	page(name: "notifPrefPage")
@@ -98,8 +98,8 @@ preferences {
 	page(name: "schMotSchedulePage")
 	page(name: "scheduleConfigPage")
 	page(name: "tstatConfigAutoPage")
-	page(name: "restoreAutomationsPage")
-	page(name: "automationRestorePage")
+	//page(name: "restoreAutomationsPage")
+	//page(name: "automationRestorePage")
 
 	//shared pages
 	page(name: "setNotificationPage")
@@ -5521,12 +5521,12 @@ def diagPage () {
 			paragraph "Current State Usage:\n${getStateSizePerc()}% (${getStateSize()} bytes)", required: true, state: (getStateSizePerc() <= 70 ? "complete" : null),
 					image: getAppImg("progress_bar.png")
 		}
-		section("View App & Device Data") {
-			href "managAppDataPage", title:"Manager App Data", description:"Tap to view", image: getAppImg("nest_manager.png")
+		//section("View App & Device Data") {
+			//href "managAppDataPage", title:"Manager App Data", description:"Tap to view", image: getAppImg("nest_manager.png")
 			//href "childAppDataPage", title:"Automation App Data", description:"Tap to view", image: getAppImg("automation_icon.png")
 			//href "childDevDataPage", title:"Device Data", description:"Tap to view", image: getAppImg("thermostat_icon.png")
 			//href "appParamsDataPage", title:"AppData File", description:"Tap to view", image: getAppImg("view_icon.png")
-		}
+		//}
 		if(settings?.optInAppAnalytics || settings?.optInSendExceptions) {
 			section("Analytics Data") {
 				if(settings?.optInAppAnalytics) {
@@ -5554,41 +5554,41 @@ def diagPage () {
 	}
 }
 
-def managAppDataPage() {
-	def rVal = (settings?.managAppPageRfsh) ? (settings?.managAppDataRfshVal ? settings?.managAppDataRfshVal.toInteger() : 30) : null
-	dynamicPage(name: "managAppDataPage", refreshInterval:rVal, install: false) {
-		if(!atomicState?.diagManagAppStateFilters) { atomicState?.diagManagAppStateFilters = ["diagManagAppStateFilters"] }
-		section("${app.label}:") {
-			if(settings?.managAppPageShowSet == true || settings?.managAppPageShowSet == null) {
-				paragraph title: "Settings Data", "${getMapDescStr(getSettings())}"
-			}
-			if(settings?.managAppPageShowState == true || settings?.managAppPageShowState == null) {
-				def data = getState()?.findAll { !(it?.key in atomicState?.diagManagAppStateFilters) }
-				paragraph title: "State Data", "${getMapDescStr(data)}"
-			}
-			if(settings?.managAppPageShowMeta == true || settings?.managAppPageShowMeta == null) {
-				paragraph title: "MetaData", "${getMapDescStr(getMetadata())}"
-			}
-		}
-		section("Data Filters:") {
-			paragraph "Show the following items in the results:"
-			input "managAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
-			if(settings?.managAppPageShowState) {
-				input(name: "managAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
-				atomicState?.diagManagAppStateFilters = settings?.managAppDataStateFilter ?: []
-			}
-			input "managAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
-			input "managAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
-		}
-		section("Page Options:") {
-			input "managAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
-			if(settings?.managAppPageRfsh) {
-				input "managAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
-			}
-			paragraph "Changing this may require you to leave the page and come back"
-		}
-	}
-}
+// def managAppDataPage() {
+// 	def rVal = (settings?.managAppPageRfsh) ? (settings?.managAppDataRfshVal ? settings?.managAppDataRfshVal.toInteger() : 30) : null
+// 	dynamicPage(name: "managAppDataPage", refreshInterval:rVal, install: false) {
+// 		if(!atomicState?.diagManagAppStateFilters) { atomicState?.diagManagAppStateFilters = ["diagManagAppStateFilters"] }
+// 		section("${app.label}:") {
+// 			if(settings?.managAppPageShowSet == true || settings?.managAppPageShowSet == null) {
+// 				paragraph title: "Settings Data", "${getMapDescStr(getSettings())}"
+// 			}
+// 			if(settings?.managAppPageShowState == true || settings?.managAppPageShowState == null) {
+// 				def data = getState()?.findAll { !(it?.key in atomicState?.diagManagAppStateFilters) }
+// 				paragraph title: "State Data", "${getMapDescStr(data)}"
+// 			}
+// 			if(settings?.managAppPageShowMeta == true || settings?.managAppPageShowMeta == null) {
+// 				paragraph title: "MetaData", "${getMapDescStr(getMetadata())}"
+// 			}
+// 		}
+// 		section("Data Filters:") {
+// 			paragraph "Show the following items in the results:"
+// 			input "managAppPageShowState", "bool", title: "State Data?", defaultValue: false, submitOnChange: true
+// 			if(settings?.managAppPageShowState) {
+// 				input(name: "managAppDataStateFilter", title: "Select Items to Ignore", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:getChildStateKeys()])
+// 				atomicState?.diagManagAppStateFilters = settings?.managAppDataStateFilter ?: []
+// 			}
+// 			input "managAppPageShowSet", "bool", title: "Settings Data?", defaultValue: false, submitOnChange: true
+// 			input "managAppPageShowMeta", "bool", title: "MetaData?", defaultValue: false, submitOnChange: true
+// 		}
+// 		section("Page Options:") {
+// 			input "managAppPageRfsh", "bool", title: "Enable Auto-Refresh?", defaultValue: false, submitOnChange: true
+// 			if(settings?.managAppPageRfsh) {
+// 				input "managAppDataRfshVal", "number", title: "Refresh Every xx seconds?", defaultValue: 30, submitOnChange: true
+// 			}
+// 			paragraph "Changing this may require you to leave the page and come back"
+// 		}
+// 	}
+// }
 
 // def childAppDataPage() {
 // 	def rVal = (settings?.childAppPageRfsh && settings?.childAppDataPageDev) ? (settings?.childAppDataRfshVal ? settings?.childAppDataRfshVal.toInteger() : 30) : null
@@ -5716,130 +5716,130 @@ def managAppDataPage() {
 // 	}
 // }
 
-def getMapDescStr(data) {
-	def str = ""
-	def cnt = 1
-	data?.sort()?.each { par ->
-		if(par?.value instanceof Map || par?.value instanceof List || par?.value instanceof ArrayList) {
-			str += "${cnt>1 ? "\n\n" : ""} • ${par?.key.toString()}:"
-			if(par?.value instanceof Map) {
-				def map2 = par?.value
-				def cnt2 = 1
-				map2?.sort()?.each { par2 ->
-					if(par2?.value instanceof Map) { //This handles second level maps
-						def map3 = par2?.value
-						def cnt3 = 1
-						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
-						map3?.sort()?.each { par3 ->
-							if(par3?.value instanceof Map) { //This handles third level maps
-								def map4 = par3?.value
-								def cnt4 = 1
-								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
-								map4?.sort()?.each { par4 ->
-									if(par4?.value instanceof Map) { //This handles fourth level maps
-										def map5 = par4?.value
-										def cnt5 = 1
-										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}:"
-										map5?.sort()?.each { par5 ->
-											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < map5?.size() ? "├" : "└"} ${par5}"
-											cnt5 = cnt5+1
-										}
-									}
-									else if(par4?.value instanceof List || par?.value instanceof ArrayList) { //This handles forth level lists
-										def list4 = par4?.value?.collect {it}
-										def cnt5 = 1
-										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "└"} ${par4?.key.toString()}:"
-										list4?.each { par5 ->
-											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < list4?.size() ? "├" : "└"} ${par5}"
-											cnt5 = cnt5+1
-										}
-									} else {
-										str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size()  ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}: (${par4?.value})"
-									}
-									cnt4 = cnt4+1
-								}
-							}
-							else if(par3?.value instanceof List || par?.value instanceof ArrayList) { //This handles third level lists
-								def list3 = par3?.value?.collect {it}
-								def cnt4 = 1
-								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
-								list3?.each { par4 ->
-									str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < list3?.size() ? "├" : "└"} ${par4}"
-									cnt4 = cnt4+1
-								}
-							} else {
-								str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
-							}
-							cnt3 = cnt3+1
-						}
-						cnt2 = cnt2+1
-					} else {
-						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
-						cnt2 = cnt2+1
-					}
-				}
-			}
-			if(par?.value instanceof List || par?.value instanceof ArrayList) {
-				def list2 = par?.value?.collect {it}
-				def cnt2 = 1
-				list2?.each { par2 ->
-					str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
-					cnt2 = cnt2+1
-				}
-			}
-		} //else {
-		// 	str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
-		// }
-		cnt = cnt+1
-	}
-	//log.debug "str: $str"
-	return str != "" ? str : "No Data was returned"
-}
-
-def getChildStateKeys(type) {
-	def data = []
-	def objs
-	switch (type) {
-		case "device":
-			objs = getAllChildDevices()
-			break
-		case "childapp":
-			objs = getAllChildApps()
-			break
-		default:
-			objs = app
-			break
-	}
-	if(objs) {
-		objs?.each { obj ->
-			def	items = obj?.getState().findAll { it }
-			items?.each { item ->
-				if(!data?.contains(item?.key.toString())) {
-					data?.push(item?.key.toString())
-				}
-			}
-		}
-	}
-	data = data?.sort()
-	//log.debug "data: $data"
-	return data
-}
-
-def buildDevInputMap() {
-	def devMap = [:]
-	getAllChildDevices()?.each {
-		devMap[[it?.deviceNetworkId].join('.')] = it?.label
-	}
-	return devMap
-}
-
-def buildChildAppInputMap() {
-	def appMap = [:]
-	getAllChildApps()?.each {
-		appMap[[it?.getId()].join('.')] = it?.getLabel()
-	}
-	return appMap
-}
+// def getMapDescStr(data) {
+// 	def str = ""
+// 	def cnt = 1
+// 	data?.sort()?.each { par ->
+// 		if(par?.value instanceof Map || par?.value instanceof List || par?.value instanceof ArrayList) {
+// 			str += "${cnt>1 ? "\n\n" : ""} • ${par?.key.toString()}:"
+// 			if(par?.value instanceof Map) {
+// 				def map2 = par?.value
+// 				def cnt2 = 1
+// 				map2?.sort()?.each { par2 ->
+// 					if(par2?.value instanceof Map) { //This handles second level maps
+// 						def map3 = par2?.value
+// 						def cnt3 = 1
+// 						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}:"
+// 						map3?.sort()?.each { par3 ->
+// 							if(par3?.value instanceof Map) { //This handles third level maps
+// 								def map4 = par3?.value
+// 								def cnt4 = 1
+// 								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+// 								map4?.sort()?.each { par4 ->
+// 									if(par4?.value instanceof Map) { //This handles fourth level maps
+// 										def map5 = par4?.value
+// 										def cnt5 = 1
+// 										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}:"
+// 										map5?.sort()?.each { par5 ->
+// 											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < map5?.size() ? "├" : "└"} ${par5}"
+// 											cnt5 = cnt5+1
+// 										}
+// 									}
+// 									else if(par4?.value instanceof List || par?.value instanceof ArrayList) { //This handles forth level lists
+// 										def list4 = par4?.value?.collect {it}
+// 										def cnt5 = 1
+// 										str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "└"} ${par4?.key.toString()}:"
+// 										list4?.each { par5 ->
+// 											str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < map4?.size() ? "│" : "    "}${cnt5 < list4?.size() ? "├" : "└"} ${par5}"
+// 											cnt5 = cnt5+1
+// 										}
+// 									} else {
+// 										str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size()  ? "│" : "    "}${cnt4 < map4?.size() ? "├" : "└"} ${par4?.key.toString()}: (${par4?.value})"
+// 									}
+// 									cnt4 = cnt4+1
+// 								}
+// 							}
+// 							else if(par3?.value instanceof List || par?.value instanceof ArrayList) { //This handles third level lists
+// 								def list3 = par3?.value?.collect {it}
+// 								def cnt4 = 1
+// 								str += "\n   ${cnt2 < map2?.size() ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}:"
+// 								list3?.each { par4 ->
+// 									str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "│" : "    "}${cnt4 < list3?.size() ? "├" : "└"} ${par4}"
+// 									cnt4 = cnt4+1
+// 								}
+// 							} else {
+// 								str += "\n   ${cnt2 < map2?.size()  ? "│" : "    "}${cnt3 < map3?.size() ? "├" : "└"} ${par3?.key.toString()}: (${par3?.value})"
+// 							}
+// 							cnt3 = cnt3+1
+// 						}
+// 						cnt2 = cnt2+1
+// 					} else {
+// 						str += "\n   ${cnt2 < map2?.size() ? "├" : "└"} ${par2?.key.toString()}: (${par2?.value})"
+// 						cnt2 = cnt2+1
+// 					}
+// 				}
+// 			}
+// 			if(par?.value instanceof List || par?.value instanceof ArrayList) {
+// 				def list2 = par?.value?.collect {it}
+// 				def cnt2 = 1
+// 				list2?.each { par2 ->
+// 					str += "\n   ${cnt2 < list2?.size() ? "├" : "└"} ${par2}"
+// 					cnt2 = cnt2+1
+// 				}
+// 			}
+// 		} //else {
+// 		// 	str += "${cnt>1 ? "\n\n" : "\n"} • ${par?.key.toString()}: (${par?.value})"
+// 		// }
+// 		cnt = cnt+1
+// 	}
+// 	//log.debug "str: $str"
+// 	return str != "" ? str : "No Data was returned"
+// }
+//
+// def getChildStateKeys(type) {
+// 	def data = []
+// 	def objs
+// 	switch (type) {
+// 		case "device":
+// 			objs = getAllChildDevices()
+// 			break
+// 		case "childapp":
+// 			objs = getAllChildApps()
+// 			break
+// 		default:
+// 			objs = app
+// 			break
+// 	}
+// 	if(objs) {
+// 		objs?.each { obj ->
+// 			def	items = obj?.getState().findAll { it }
+// 			items?.each { item ->
+// 				if(!data?.contains(item?.key.toString())) {
+// 					data?.push(item?.key.toString())
+// 				}
+// 			}
+// 		}
+// 	}
+// 	data = data?.sort()
+// 	//log.debug "data: $data"
+// 	return data
+// }
+//
+// def buildDevInputMap() {
+// 	def devMap = [:]
+// 	getAllChildDevices()?.each {
+// 		devMap[[it?.deviceNetworkId].join('.')] = it?.label
+// 	}
+// 	return devMap
+// }
+//
+// def buildChildAppInputMap() {
+// 	def appMap = [:]
+// 	getAllChildApps()?.each {
+// 		appMap[[it?.getId()].join('.')] = it?.getLabel()
+// 	}
+// 	return appMap
+// }
 
 // def feedbackPage() {
 // 	def fbData = atomicState?.lastFeedbackData
