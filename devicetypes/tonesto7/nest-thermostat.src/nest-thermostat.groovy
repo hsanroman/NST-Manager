@@ -436,7 +436,7 @@ void processEvent(data) {
 			operatingStateEvent(eventData?.data?.hvac_state.toString())
 			fanModeEvent(eventData?.data?.fan_timer_active.toString())
 			if(!eventData?.data?.last_connection) { lastCheckinEvent(null,null) }
-			else { lastCheckinEvent(eventData?.data?.last_connection, results?.is_online.toString()) }
+			else { lastCheckinEvent(eventData?.data?.last_connection, eventData?.data?.is_online.toString()) }
 			sunlightCorrectionEnabledEvent(eventData?.data?.sunlight_correction_enabled)
 			sunlightCorrectionActiveEvent(eventData?.data?.sunlight_correction_active)
 			timeToTargetEvent(eventData?.data?.time_to_target, eventData?.data?.time_to_target_training)
