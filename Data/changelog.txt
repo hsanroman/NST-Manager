@@ -3,7 +3,10 @@ V4.5.1 (January 26th, 2017):
  • NEW: Added Presence sensors as a restriction for Thermostat schedules and schedule motion triggers.
  • FIXED: Manager will cleanup old invalid automation installs.
  • FIXED: Commented out non-critical code because we are at the absolute max code size for a single smart app.
- • FIXED: Bugs fixes, optimizations. FIXED: Bugs fixes, optimizations.
+ • FIXED: Bugs fixes, optimizations.
+ • FIXED: Remote Sensor allows smaller settings of temperature threshold
+ • FIXED: Weather DTH display / updating of multiple weather Alerts
+ • FIXED: Thermostat DTH incorrectly displaying offline status when online
 
 V4.5.0 (January 23rd, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
