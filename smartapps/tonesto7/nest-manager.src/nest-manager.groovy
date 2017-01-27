@@ -290,7 +290,7 @@ def donationPage() {
 def devicesPage() {
 	def structs = getNestStructures()
 	def structDesc = !structs?.size() ? "No Locations Found" : "Found (${structs?.size()}) Locations"
-	LogAction("${structDesc} (${structs})", "info", false)
+	//LogAction("${structDesc} (${structs})", "info", false)
 	if (atomicState?.thermostats || atomicState?.protects || atomicState?.vThermostats || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice ) {  // if devices are configured, you cannot change the structure until they are removed
 		section("Location:") {
 			paragraph "Location: ${structs[atomicState?.structures]}\n${(structs.size() > 1) ? "\n(Remove All Devices to Change!)" : ""}", image: getAppImg("nest_structure_icon.png")
@@ -307,15 +307,15 @@ def devicesPage() {
 
 		def stats = getNestThermostats()
 		def statDesc = stats.size() ? "Found (${stats.size()}) Thermostats" : "No Thermostats"
-		LogAction("${statDesc} (${stats})", "info", false)
+		//LogAction("${statDesc} (${stats})", "info", false)
 
 		def coSmokes = getNestProtects()
 		def coDesc = coSmokes.size() ? "Found (${coSmokes.size()}) Protects" : "No Protects"
-		LogAction("${coDesc} (${coSmokes})", "info", false)
+		//LogAction("${coDesc} (${coSmokes})", "info", false)
 
 		def cams = getNestCameras()
 		def camDesc = cams.size() ? "Found (${cams.size()}) Cameras" : "No Cameras"
-		LogAction("${camDesc} (${cams})", "info", false)
+		//LogAction("${camDesc} (${cams})", "info", false)
 
 		section("Select Devices:") {
 			if(!stats?.size() && !coSmokes.size() && !cams?.size()) { paragraph "No Devices were found" }
@@ -683,7 +683,7 @@ def automationSchedulePage() {
 // }
 
 def locDesiredClear() {
-	LogAction("locDesiredClear", "info", true)
+	//LogAction("locDesiredClear", "info", true)
 	def list = [ "locDesiredHeatTemp", "locDesiredCoolTemp","locDesiredComfortDewpointMax", "locDesiredTempScale", "locDesiredButton" ]
 	list.each { item ->
 		app.updateSetting(item.toString(), "")
@@ -1074,14 +1074,16 @@ def debugPrefPage() {
 			input (name: "appDebug", type: "bool", title: "Show ${appName()} Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(appDebug) {
 				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
-				LogAction("Debug Logs Enabled", "info", false)
+				//LogAction("Debug Logs Enabled", "info", false)
 			}
-			else { LogAction("Debug Logs Disabled", "info", false) }
+			else { /* LogAction("Debug Logs Disabled", "info", false)*/ }
 		}
 		section ("Child Device Logs") {
 			input (name: "childDebug", type: "bool", title: "Show Device Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+/*
 			if(childDebug) { LogAction("Device Debug Logs Enabled", "info", false) }
 			else { LogAction("Device Debug Logs Disabled", "info", false) }
+*/
 		}
 		section("Remote Diagnostics:") {
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
@@ -1837,7 +1839,7 @@ def setPollingState() {
 		atomicState.pollingOn = false
 	} else {
 		if(!atomicState?.pollingOn) {
-			LogAction("Polling is ACTIVE", "info", true)
+			//LogAction("Polling is ACTIVE", "info", true)
 			atomicState.pollingOn = true
 			def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 			def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
@@ -7691,7 +7693,8 @@ private remSenCheck() {
 
 			def reqSenHeatSetPoint = getRemSenHeatSetTemp()
 			def reqSenCoolSetPoint = getRemSenCoolSetTemp()
-			def threshold = !remSenTempDiffDegrees ? 2.0 : Math.min(Math.max(remSenTempDiffDegrees.toDouble(),1.0), 4.0)
+			def theMin = getTemperatureScale() == "C" ? 0.3 : 0.6
+			def threshold = !remSenTempDiffDegrees ? 2.0 : Math.min(Math.max(remSenTempDiffDegrees.toDouble(),theMin), 4.0)
 
 			if(hvacMode in ["auto"]) {
 				// check that requested setpoints make sense & notify
