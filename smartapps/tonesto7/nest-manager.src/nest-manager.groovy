@@ -98,13 +98,13 @@ preferences {
 	page(name: "schMotSchedulePage")
 	page(name: "scheduleConfigPage")
 	page(name: "tstatConfigAutoPage")
-	page(name: "restoreAutomationsPage")
-	page(name: "automationRestorePage")
+	page(name: "manageBackRestorePage")
+	page(name: "restoreStubPage")
 
 	//shared pages
 	page(name: "setNotificationPage")
 	page(name: "setNotificationTimePage")
-	page(name: "backupSendDataPage")
+	page(name: "backupStubDataPage")
 	page(name: "backupRemoveDataPage")
 	page(name: "backupPage")
 }
@@ -597,8 +597,10 @@ def automationsPage() {
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
+			}
+			section("Automation Backups:") {
 				if(appSettings?.devOpt == "true") {
-					href "restoreAutomationsPage", title: "Manage Automation Backups...", description: "Tap to configure...", image: getAppImg("backup_icon.png")
+					href "manageBackRestorePage", title: "Manage Automation Backups...", description: "", image: getAppImg("backup_icon.png")
 				}
 			}
 		}
@@ -3663,7 +3665,7 @@ def getWebData(path, content, label, text=true) {
 		} else {
 			log.error "getWebData($path, $content, $label) Exception:", ex
 		}
-		sendExceptionData(ex, "getWebData")
+		//sendExceptionData(ex, "getWebData")
 		return "${label} info not found"
 	}
 }
@@ -6446,99 +6448,62 @@ def automationNestModeEnabled(val) {
 	return atomicState?.automationNestModeEnabled ?: false
 }
 
-def backupPage() {
-	return dynamicPage(name: "backupPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-		def lastDt = atomicState?.lastBackupDt
-		section("") {
-			href "backupSendDataPage", title: "${lastDt ? "Update" : "Send"} Backup Data", description: "${lastDt ? "Last Backup:\n${lastDt}\n\n" : ""}Tap to Backup...",
-					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
-			if(lastDt) {
-				href "backupRemoveDataPage", title: "Remove Backup Data", description: "Tap to Remove...", image: getAppImg("uninstall_icon.png")
-			}
-		}
-	}
-}
-
-def backupSendDataPage() {
-	return dynamicPage(name: "backupSendDataPage", title: "", nextPage: "", install: false) {
-		section("") {
-			paragraph "Sending Backup Data to Firebase..."
-			if(parent) {
-				if(backupConfigToFirebase()) {
-					atomicState?.lastBackupDt = getDtNow()
-					paragraph "Successfully Sent ${app?.label.toString().capitalize()} Back Up Data"
-				}
-			} else { paragraph "Nothing Sent.  This is for Automation Children Only!!!" }
-		}
-	}
-}
-
-def backupRemoveDataPage() {
-	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: !parent ? "prefsPage" : "mainAutoPage", install: false) {
-		section("") {
-			paragraph "Removing Backed Up App Data from Firebase..."
-			if(parent) {
-				if(removeAutomationBackupData(app.id)) {
-					atomicState?.lastBackupDt = null
-					paragraph "Successfully Deleted...\n${app?.label.toString().capitalize()} Backup Data"
-				}
-			}
-		}
-	}
-}
-
 def createAutoBackupJson() {
 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
 	def stateData = [:]
 	def settingsData = [:]
-	def resData = [:]
+
 	stData?.sort().each { item ->
 		stateData[item?.key] = item?.value
 	}
-	def inputTypeData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
-	def excDevice = ["schMotTstat"]
 	setData?.sort().each { item ->
 		def itemVal = item?.value
-		if(itemVal instanceof List || itemVal in excDevice) {
-			def tmp = []
-			itemVal?.each {
-				tmp.push("$it")
-			}
-			settingsData[item?.key] = tmp
-		} else {
-			if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
-				settingsData[item?.key] = itemVal
-			} else {
-				settingsData[item?.key] = itemVal?.toString()
+		def itemData = []
+		def tmpList = []
+		def idThese = ["capability", "mode", "phone", "contact"]
+		//if(itemVal instanceof List)
+		inputData?.inputs?.each { ty ->
+			if( ty?.key.toString() == item?.key.toString()) {
+				if(idThese?.any { ty?.value.contains(it) } ) {
+					itemVal?.each { obj ->
+						def oId = obj?.getId()
+						if(oId) { tmpList << oId.toString() }
+					}
+					itemData = ["type": ty?.value.toString(), "value": tmpList]
+					return
+				}
+				else if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
+					itemData = ["type": ty?.value.toString(), "value": itemVal]
+				}
+				else { itemData = ["type": ty?.value.toString(), "value": itemVal.toString()] }
 			}
 		}
+		settingsData[item?.key] = itemData
 	}
 	settingsData["automationTypeFlag"] = getAutoType().toString()
 	settingsData["backedUpData"] = true
-	resData["${app.id}"] = [:]
 	def data = [:]
 	data["appLabel"] = app.label
 	data["stateData"] = stateData
 	data["settingsData"] = settingsData
 	data["backupDt"] = getDtNow()
-	resData["${app.id}"] = data
-	//log.debug "resData: $resData"
-	def resultJson = new groovy.json.JsonOutput().toJson(resData)
+	def resultJson = new groovy.json.JsonOutput().toJson(data)
 	//log.debug "resultJson: $resultJson"
 	return resultJson
 }
 
 def backupConfigToFirebase() {
 	def data = createAutoBackupJson()
-	return parent?.sendAutomationBackupData(data)
+	return parent?.sendAutomationBackupData(data, app.id)
 }
 
-def sendAutomationBackupData(data) {
+def sendAutomationBackupData(data, appId) {
 	try {
-		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps.json")
+		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps/${appId}.json")
 	} catch (ex) {
 		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
 	}
@@ -6548,32 +6513,86 @@ def removeAutomationBackupData(childId) {
 	return removeFirebaseData("backupData/clients/${parent?.atomicState?.installationId}/automationApps/${childId}.json")
 }
 
-def restoreAutomationsPage() {
-	def backupData = getAutomationBackupData()
-	//log.debug "backupData: $backupData"
-	dynamicPage(name: "restoreAutomationsPage", title: "", nextPage: "", install: false) {
-		if(backupData) {
+//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
+
+def getAutomationBackupData() {
+	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
+}
+
+def manageBackRestorePage() {
+	dynamicPage(name: "manageBackRestorePage", title: "", nextPage: "", install: false) {
+		def backupData = getAutomationBackupData()
+		// log.debug "backupData: $backupData"
+		def lastDt = atomicState?.lastBackupDt
+		section("") {
+			href "backupStubDataPage", title: "${lastDt ? "Update All Automation Backup Data" : "Backup All Automation Data"}", description: "${lastDt ? "Last Backup:\n${lastDt}" : ""}",
+					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
+			if(lastDt) {
+				href "backupRemoveDataPage", title: "Remove All Backup Data", description: "", image: getAppImg("uninstall_icon.png")
+			}
+		}
+		if(backupData instanceof List || backupData instanceof Map) {
 			section("Available Automations") {
-				paragraph "Automations Backed Up: (${backupData?.size()})"
+				paragraph "Automations Backed Up: (${backupData ? backupData?.size() : 0})"
 				backupData?.each { bd ->
-					//log.debug "bd: ${bd}"
-					href "automationRestorePage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
+					href "restoreStubPage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
 							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
 				}
 			}
 			section("Restore All:") {
-				href "automationRestorePage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
+				href "restoreStubPage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
 			}
 		}
 	}
 }
 
-def automationRestorePage(params) {
-	dynamicPage(name: "automationRestorePage", title: "", nextPage: "", install: false) {
+def backupStubDataPage() {
+	return dynamicPage(name: "backupStubDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
+		section("") {
+			paragraph "Sending Backup Data to Firebase..."
+			if(!parent) {
+				def cApps = getChildApps()
+				cApps?.each { ca ->
+					if(ca?.backupConfigToFirebase()) {
+						ca?.state?.lastBackupDt = getDtNow()
+						paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
+						atomicState?.lastBackupDt = getDtNow()
+					}
+				}
+				paragraph "Done Backing Up Data to Firebase...", state: "complete"
+			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
+		}
+	}
+}
+
+def backupRemoveDataPage() {
+	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
+		section("") {
+			paragraph "Removing Backed Up App Data from Firebase..."
+			if(!parent) {
+				def cApps = getChildApps()
+				cApps?.each { ca ->
+					if(ca?.removeAutomationBackupData(ca?.id)) {
+						ca?.state?.lastBackupDt = null
+						paragraph "Successfully Deleted...\n${ca?.label.toString().capitalize()} Backup Data"
+						atomicState?.lastBackupDt = null
+					}
+				}
+				paragraph "Done Removing Data from Firebase...", state: "complete"
+			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
+		}
+	}
+}
+
+def restoreStubPage(params) {
+	dynamicPage(name: "restoreStubPage", title: "", nextPage: "manageBackRestorePage", install: false) {
 		section("Restoring Automations:") {
 			if(params.backup) {
 				paragraph "Restoring Automations..."
-				automationRestoreAlt(params?.backup, params?.autoId)
+				if(automationRestoreAlt(params?.backup, params?.autoId)) {
+					paragraph "Successfully Restored...\nAutomation App"
+				}
+				paragraph "We are Done Restoring the Application...", state: "complete"
 			} else {
 				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
 			}
@@ -6582,72 +6601,29 @@ def automationRestorePage(params) {
 }
 
 def automationRestoreAlt(data, id=null) {
-	if(data) {
-		data?.each { bApp ->
-			if(id && id.toString() != bApp?.key.toString()) { return }
-			def appLbl = bApp?.value?.appLabel.toString()
-			log.debug "Automation AppId: ${bApp?.key}"
+	try {
+		if(data) {
+			data?.each { bApp ->
+				if(id && id.toString() != bApp?.key.toString()) { return }
+				def appLbl = bApp?.value?.appLabel.toString()
+				log.debug "Automation AppId: ${bApp?.key}"
 
-			def setData = bApp?.value?.settingsData
-			def sData = buildRestoreSettingsMap()
-			sData?.settings["restoreId"] = ["type":"text", "value":bApp?.key]
-			sData?.settings["restoredFromBackup"] = ["type":"bool", "value":true]
-			sData?.settings["restoreCompleted"] = ["type":"bool", "value":false]
-			sData?.settings["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
-			//log.debug "settingsData: $setData"
-			log.debug "Automation Type: ${setData?.automationTypeFlag}"
+				def setData = bApp?.value?.settingsData
+				//def sData = buildRestoreSettingsMap()
+				setData["restoreId"] = ["type":"text", "value":bApp?.key]
+				setData["restoredFromBackup"] = ["type":"bool", "value":true]
+				setData["restoreCompleted"] = ["type":"bool", "value":false]
+				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
+				log.debug "Automation Type: ${setData?.automationTypeFlag}"
 
-			log.debug "Restoring: ($appLbl) Automation Settings...."
-			log.debug "sData: $sData"
-			addChildApp(textNamespace(), appName(), appLbl?.toString(), sData)
-		}
-	}
-}
-
-def automationRestore(data, id=null) {
-	if(data) {
-		data?.each { bApp ->
-			if(id && id.toString() != bApp?.key.toString()) { return }
-			def appLbl = bApp?.value?.appLabel.toString()
-			log.debug "Automation AppId: ${bApp?.key}"
-			def setData = bApp?.value?.settingsData
-			setData["restoreId"] = bApp?.key
-			setData["restoredFromBackup"] = true
-			setData["restoreCompleted"] = false
-			//log.debug "settingsData: $setData"
-			log.debug "Automation Type: ${setData?.automationTypeFlag}"
-
-			log.debug "Restoring: ($appLbl) Automation Settings...."
-			addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
-			//addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:["schMotTstat":["type": "capability.thermostat", "value": ["4pba68Pk3xsf9SMCvsmI_sn7UfMulpEX"] ] ])
-		}
-	}
-}
-
-
-
-def buildRestoreSettingsMap(restoreId) {
-	def result = [:]
-	result["settings"] = [:]
-	def newData = getAutomationBackupData().find { it?.key?.toString() == restoreId?.toString() }
-	def newValue = newData?.value
-	//log.debug "newValue: $newValue"
-	if(newValue?.settingsData) {
-		def inputTypeData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
-		newValue?.settingsData?.each { sKey ->
-			def statInpt = inputTypeData?.staticInputs.find { it?.key.toString() == sKey?.key.toString() }.collect { it?.value }
-			def dynInpt = inputTypeData?.dynamicInputs.find { sKey?.key.toString().contains(it?.key.toString()) }.collect { it?.value }
-			def inptType = statInpt[0] ?: (dynInpt[0] ?: null)
-			if(!inptType) {
-				log.debug "The ${sKey?.key} Setting is missing a type: ($inptType)"
-			} else {
-				result?.settings[sKey?.key] = ["type":inptType, "value":sKey?.value]
-				//child?.settingUpdate(sKey?.key, inptType, sKey?.value)
+				log.debug "Restoring: ($appLbl) Automation Settings...."
+				// log.debug "setData: $setData"
+				addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
+				return true
 			}
 		}
-	}
-	//log.debug "result: $result"
-	return result
+	} catch (ex) { }
+	return false
 }
 
 void callRestoreSetAndState(child, restId) {
@@ -6698,11 +6674,7 @@ def stateUpdate(key, value) {
 	atomicState?."${key}" = value
 }
 
-//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
 
-def getAutomationBackupData() {
-	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
-}
 
 def initAutoApp() {
 	if(settings["watchDogFlag"]) {
