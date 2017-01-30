@@ -22,9 +22,9 @@ definition(
 	author: "${textAuthor()}",
 	description: "${textDesc()}",
 	category: "Convenience",
-	iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
-	iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
-	iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
+	iconUrl: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager.png",
+	iconX2Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager%402x.png",
+	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager%403x.png",
 	singleInstance: true,
 	oauth: true )
 
@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.1" }
-def appVerDate() { "1-23-2017" }
+def appVersion() { "4.5.3" }
+def appVerDate() { "1-30-2017" }
 
 preferences {
 	//startPage
@@ -98,8 +98,8 @@ preferences {
 	page(name: "schMotSchedulePage")
 	page(name: "scheduleConfigPage")
 	page(name: "tstatConfigAutoPage")
-	page(name: "restoreAutomationsPage")
-	page(name: "automationRestorePage")
+	page(name: "manageBackRestorePage")
+	page(name: "restoreStubPage")
 
 	//shared pages
 	page(name: "setNotificationPage")
@@ -689,7 +689,7 @@ def locDesiredClear() {
 	//LogAction("locDesiredClear", "info", true)
 	def list = [ "locDesiredHeatTemp", "locDesiredCoolTemp","locDesiredComfortDewpointMax", "locDesiredTempScale", "locDesiredButton" ]
 	list.each { item ->
-		app.updateSetting(item.toString(), "")
+		settingUpdate(item.toString(), "")
 	}
 	if(atomicState?.thermostats && settings?.clearLocDesired) {
 		atomicState?.thermostats?.each { ts ->
@@ -697,15 +697,15 @@ def locDesiredClear() {
 			def canHeat = dev?.currentState("canHeat")?.stringValue == "false" ? false : true
 			def canCool = dev?.currentState("canCool")?.stringValue == "false" ? false : true
 			if(canHeat) {
-				app.updateSetting("${dev?.deviceNetworkId}_safety_temp_min", "")
+				settingUpdate("${dev?.deviceNetworkId}_safety_temp_min", "")
 			}
 			if(canCool) {
-				app.updateSetting("${dev?.deviceNetworkId}_safety_temp_max", "")
+				settingUpdate("${dev?.deviceNetworkId}_safety_temp_max", "")
 			}
-			app.updateSetting("${dev?.deviceNetworkId}_comfort_dewpoint_max", "")
+			settingUpdate("${dev?.deviceNetworkId}_comfort_dewpoint_max", "")
 		}
 	}
-	app.updateSetting("clearLocDesired", false)
+	settingUpdate("clearLocDesired", false)
 }
 
 def getGlobTitleStr(typ) {
@@ -3609,7 +3609,7 @@ def getWeatherDeviceInst() {
 
 def getWebFileData(now = true) {
 	//LogTrace("getWebFileData")
-	def params = [ uri: "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Data/appData.json", contentType: 'application/json' ]
+	def params = [ uri: "https://raw.githubusercontent.com/${gitPath()}/Data/appData.json", contentType: 'application/json' ]
 	def result = false
 	try {
 		def allowAsync = false
@@ -4780,7 +4780,7 @@ def connectionStatus(message, redirectUrl = null) {
 			<div class="container">
 				<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/st-logo%402x.png" alt="SmartThings logo" />
 				<img src="https://s3.amazonaws.com/smartapp-icons/Partner/support/connected-device-icn%402x.png" alt="connected device icon" />
-				<img src="https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png" alt="nest icon" width="215" height="215"/>
+				<img src="https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager.png" alt="nest icon" width="215" height="215"/>
 				${message}
 			</div>
 		</body>
@@ -5042,7 +5042,7 @@ def stateCleanup() {
 	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
 	sdata.each { item ->
 		if(settings?."${item}" != null) {
-			app.updateSetting("${item.toString()}", "")   // clear settings
+			settingUpdate("${item.toString()}", "")   // clear settings
 		}
 	}
 }
@@ -6664,7 +6664,7 @@ def postChildRestore(childId, remove=false) {
 				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
 				deleteChildApp(ca)
 			} else {
-				ca?.settingUpdate("disableAutomationreq", "bool", true)
+				ca?.settingUpdate("disableAutomationreq", true, "bool")
 				ca?.stateUpdate("disableAutomation", true)
 				ca?.update()
 			}
@@ -6681,18 +6681,18 @@ void callRestoreState(child, restId) {
 			newValue?.stateData?.each { sKey ->
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
-			settingUpdate("restoreCompleted","bool", true)
+			settingUpdate("restoreCompleted", true, "bool")
 		}
 	}
 }
 
-void settingUpdate(name, type, value) {
-	log.trace "settingUpdate($name, $type, $value)"
+void settingUpdate(name, value, type=null) {
+	LogAction("settingUpdate($name, $type, $value)...", "trace", false)
 	try {
-		if(name != null && value != null) {
-			//log.debug "app: ${app.label} | setting: [ $name:[type:$type, value:$value] ]"
+		if(name && value && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
+		else if (name && value && type == null){ app?.updateSetting(name.toString(), value) }
 	} catch(e) { }
 }
 
@@ -12684,7 +12684,9 @@ def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDe
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "Nest Manager" }
+def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
+def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
@@ -12703,14 +12705,9 @@ def textModified()  { return "Updated: ${appVerDate()}" }
 def textAuthor()    { return "${appAuthor()}" }
 def textNamespace() { return "${appNamespace()}" }
 def textVerInfo()   { return "${appVerInfo()}" }
-def appVerInfo() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Data/changelog.txt", "text/plain; charset=UTF-8", "changelog") }
-def textLicense() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/app_license.txt", "text/plain; charset=UTF-8", "license") }
+def appVerInfo() 	{ return getWebData("https://raw.githubusercontent.com/${gitPath()}/Data/changelog.txt", "text/plain; charset=UTF-8", "changelog") }
+def textLicense() 	{ return getWebData("https://raw.githubusercontent.com/${gitPath()}/app_license.txt", "text/plain; charset=UTF-8", "license") }
 def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
 def textCopyright() { return "Copyright© 2017 - Anthony S." }
 def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
-
-def appVersion() { "4.5.3" }
-def appVerDate() { "1-30-2017" }
-	page(name: "manageBackRestorePage")
-	page(name: "restoreStubPage")
