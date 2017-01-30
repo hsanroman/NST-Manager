@@ -6513,7 +6513,6 @@ def createAutoBackupJson() {
 def backupConfigToFirebase() {
 	//log.trace "backupConfigToFirebase..."
 	def data = createAutoBackupJson()
-	//log.debug "backup data: $data"
 	return parent?.sendAutomationBackupData(data, app.id)
 }
 
@@ -6568,10 +6567,14 @@ def backupStubDataPage() {
 			if(!parent) {
 				def cApps = getChildApps()
 				cApps?.each { ca ->
-					if(ca?.backupConfigToFirebase()) {
-						ca?.state?.lastBackupDt = getDtNow()
-						paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
-						atomicState?.lastBackupDt = getDtNow()
+					if (ca?.settings?.restoreId) {
+						return
+					} else {
+						if(ca?.backupConfigToFirebase()) {
+							ca?.state?.lastBackupDt = getDtNow()
+							paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
+							atomicState?.lastBackupDt = getDtNow()
+						}
 					}
 				}
 				paragraph "Done Backing Up Data to Firebase...", state: "complete"
@@ -6621,20 +6624,17 @@ def automationRestore(data, id=null) {
 			data?.each { bApp ->
 				if(id && id.toString() != bApp?.key.toString()) { return }
 				def appLbl = bApp?.value?.appLabel.toString()
-				log.debug "Automation AppId: ${bApp?.key}"
-
+				//log.debug "Automation AppId: ${bApp?.key}"
 				def setData = bApp?.value?.settingsData
-				//def sData = buildRestoreSettingsMap()
 				setData["restoreId"] = ["type":"text", "value":bApp?.key]
 				setData["restoredFromBackup"] = ["type":"bool", "value":true]
 				setData["restoreCompleted"] = ["type":"bool", "value":false]
 				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
-				log.debug "Automation Type: ${setData?.automationTypeFlag}"
 
-				log.debug "Restoring: ($appLbl) Automation Settings...."
+				log.debug "Restoring [${setData?.automationTypeFlag}] Automation Named: ($appLbl)...."
 				// log.debug "setData: $setData"
 				addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
-				disableChildAutomation(bApp?.key)
+				postChildRestore(bApp?.key)
 				return true
 			}
 		}
@@ -6642,13 +6642,18 @@ def automationRestore(data, id=null) {
 	return false
 }
 
-def disableChildAutomation(childId) {
+def postChildRestore(childId, remove=false) {
 	def cApp = getChildApps()
 	cApp?.each { ca ->
 		if(ca?.getId() == childId) {
-			ca?.settingUpdate("disableAutomationreq", "bool", true)
-			ca?.stateUpdate("disableAutomation", true)
-			ca?.update()
+			if(remove == true) {
+				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
+				deleteChildApp(ca)
+			} else {
+				ca?.settingUpdate("disableAutomationreq", "bool", true)
+				ca?.stateUpdate("disableAutomation", true)
+				ca?.update()
+			}
 		}
 	}
 }
