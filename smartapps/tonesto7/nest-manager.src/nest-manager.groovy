@@ -7691,14 +7691,14 @@ def getRemoteSenTemp() {
 
 def fixTempSetting(Double temp) {
 	def newtemp = temp
-	if(temp) {
+	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (temp - 32) * 5/9 as Double)
+				newtemp = roundTemp( (newtemp - 32.0) * (5/9) as Double)
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((temp * 9/5) + 32)).toInteger()
+				newtemp = roundTemp( ((newtemp * (9/5) as Double) + 32.0) ).toInteger()
 			}
 		}
 	}
