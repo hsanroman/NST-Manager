@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.5.3" }
-def appVerDate() { "1-27-2017" }
+def appVerDate() { "1-30-2017" }
 
 preferences {
 	//startPage
@@ -3293,7 +3293,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 def apiRespHandler(code, errMsg, methodName) {
 	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
-	if (!(code.toInteger() in [200, 307])) {
+	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
 		switch(code) {
 			case 400:
@@ -6348,61 +6348,63 @@ def mainAutoPage(params) {
 				if(disableAutomationreq) {
 					paragraph "This Automation is currently disabled!\nTurn it back on to to make changes or resume operation", required: true, state: null, image: getAppImg("instruct_icon.png")
 				}
-				if(autoType == "nMode" && !atomicState?.disableAutomation) {
-					//paragraph title:"Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:", ""
-					def nDesc = ""
-					nDesc += isNestModesConfigured() ? "Nest Mode:\n • Status: (${strCapitalize(getNestLocPres())})" : ""
-					if(((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes))) {
-						nDesc += nModeHomeModes ? "\n • Home Modes: (${nModeHomeModes.size()})" : ""
-						nDesc += nModeAwayModes ? "\n • Away Modes: (${nModeAwayModes.size()})" : ""
-					}
-					nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
-					nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
-					nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
-					nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
-					nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
-					def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
-					href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
-				}
-
-				if(autoType == "schMot" && !atomicState?.disableAutomation) {
-					//paragraph title:"Thermostat Automation:", ""
-					def sDesc = ""
-					sDesc += settings?.schMotTstat ? "${settings?.schMotTstat?.label}" : ""
-					//sDesc += settings?.schMotTstat ? getTstatModeDesc() : ""
-
-					if(settings?.schMotWaterOff) {
-						sDesc += "\n • Turn Off if Leak Detected"
-					}
-					if(settings?.schMotContactOff) {
-						sDesc += "\n • Set ECO if Contact Open"
-					}
-					if(settings?.schMotExternalTempOff) {
-						sDesc += "\n • Set ECO based on External Temp"
-					}
-					if(settings?.schMotRemoteSensor) {
-						sDesc += "\n • Use Remote Temp Sensors"
-					}
-					if(isTstatSchedConfigured()) {
-						sDesc += "\n • Setpoint Schedules Created"
-					}
-					if(settings?.schMotOperateFan) {
-						sDesc += "\n • Control Fans with HVAC"
+				if(!atomicState?.disableAutomation) {
+					if(autoType == "nMode") {
+						//paragraph title:"Set Nest Presence Based on ST Modes, Presence Sensor, or Switches:", ""
+						def nDesc = ""
+						nDesc += isNestModesConfigured() ? "Nest Mode:\n • Status: (${strCapitalize(getNestLocPres())})" : ""
+						if(((!nModePresSensor && !nModeSwitch) && (nModeAwayModes && nModeHomeModes))) {
+							nDesc += nModeHomeModes ? "\n • Home Modes: (${nModeHomeModes.size()})" : ""
+							nDesc += nModeAwayModes ? "\n • Away Modes: (${nModeAwayModes.size()})" : ""
+						}
+						nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
+						nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
+						nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
+						nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
+								"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
+						def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
+						href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")
 					}
 
-					sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
-					def sModeDesc = isSchMotConfigured() ? "${sDesc}" : null
-					href "schMotModePage", title: "Thermostat Automation Config", description: sModeDesc ?: "Tap to configure", state: (sModeDesc ? "complete" : null), image: getAppImg("thermostat_automation_icon.png")
-				}
+					if(autoType == "schMot") {
+						//paragraph title:"Thermostat Automation:", ""
+						def sDesc = ""
+						sDesc += settings?.schMotTstat ? "${settings?.schMotTstat?.label}" : ""
+						//sDesc += settings?.schMotTstat ? getTstatModeDesc() : ""
 
-				if(autoType == "watchDog" && !atomicState?.disableAutomation) {
-					//paragraph title:"Watch your Nest Location for Events:", ""
-					def watDesc = ""
-					watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc("watchDog")) ?
-							"\n\nVoice Notifications:${getVoiceNotifConfigDesc("watchDog")}" : ""
-					def watDogDesc = isWatchdogConfigured() ? "${watDesc}" : null
-					href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
+						if(settings?.schMotWaterOff) {
+							sDesc += "\n • Turn Off if Leak Detected"
+						}
+						if(settings?.schMotContactOff) {
+							sDesc += "\n • Set ECO if Contact Open"
+						}
+						if(settings?.schMotExternalTempOff) {
+							sDesc += "\n • Set ECO based on External Temp"
+						}
+						if(settings?.schMotRemoteSensor) {
+							sDesc += "\n • Use Remote Temp Sensors"
+						}
+						if(isTstatSchedConfigured()) {
+							sDesc += "\n • Setpoint Schedules Created"
+						}
+						if(settings?.schMotOperateFan) {
+							sDesc += "\n • Control Fans with HVAC"
+						}
+
+						sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
+						def sModeDesc = isSchMotConfigured() ? "${sDesc}" : null
+						href "schMotModePage", title: "Thermostat Automation Config", description: sModeDesc ?: "Tap to configure", state: (sModeDesc ? "complete" : null), image: getAppImg("thermostat_automation_icon.png")
+					}
+
+					if(autoType == "watchDog") {
+						//paragraph title:"Watch your Nest Location for Events:", ""
+						def watDesc = ""
+						watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc("watchDog")) ?
+								"\n\nVoice Notifications:${getVoiceNotifConfigDesc("watchDog")}" : ""
+						def watDogDesc = isWatchdogConfigured() ? "${watDesc}" : null
+						href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
+					}
 				}
 			}
 			section("Automation Options:") {
@@ -6420,12 +6422,6 @@ def mainAutoPage(params) {
 				}
 				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 				atomicState?.showDebug = showDebug
-			}
-			if(getDevOpt()) {
-				section("Backup Data (Experimental):") {
-					href "backupPage", title: "Manage Backup Data", description: "${atomicState?.lastBackupDt ? "Last Backup:\n${atomicState?.lastBackupDt}\n\n" : ""}Tap to configure...",
-					image: getAppImg("backup_icon.png"), state: atomicState?.lastBackupDt ? "complete" : null
-				}
 			}
 			section("Automation Name:") {
 				if(autoType == "watchDog") {
@@ -6638,11 +6634,23 @@ def automationRestore(data, id=null) {
 				log.debug "Restoring: ($appLbl) Automation Settings...."
 				// log.debug "setData: $setData"
 				addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
+				disableChildAutomation(bApp?.key)
 				return true
 			}
 		}
 	} catch (ex) { }
 	return false
+}
+
+def disableChildAutomation(childId) {
+	def cApp = getChildApps()
+	cApp?.each { ca ->
+		if(ca?.getId() == childId) {
+			ca?.settingUpdate("disableAutomationreq", "bool", true)
+			ca?.stateUpdate("disableAutomation", true)
+			ca?.update()
+		}
+	}
 }
 
 void callRestoreState(child, restId) {
@@ -6687,87 +6695,93 @@ def initAutoApp() {
 	}
 	unschedule()
 	unsubscribe()
-	automationsInst()
+	def autoDisabled = getIsAutomationDisabled()
 
-	if(autoType == "schMot" && isSchMotConfigured()) {
-		def schedList = getScheduleList()
-		def timersActive = false
-		def sLbl
-		def cnt = 1
-		def numact = 0
-		schedList?.each { scd ->
-			sLbl = "schMot_${scd}_"
-			atomicState."schedule${cnt}SwEnabled" = null
-			atomicState."schedule${cnt}PresEnabled" = null
-			atomicState."schedule${cnt}MotionEnabled" = null
-			atomicState."schedule${cnt}SensorEnabled" = null
+	if(!autoDisabled) {
+		automationsInst()
 
-			def newscd = []
-			def act = settings["${sLbl}SchedActive"]
-			if(act) {
-				newscd = cleanUpMap([
-					m: settings["${sLbl}restrictionMode"],
-					tf: settings["${sLbl}restrictionTimeFrom"],
-					tfc: settings["${sLbl}restrictionTimeFromCustom"],
-					tfo: settings["${sLbl}restrictionTimeFromOffset"],
-					tt: settings["${sLbl}restrictionTimeTo"],
-					ttc: settings["${sLbl}restrictionTimeToCustom"],
-					tto: settings["${sLbl}restrictionTimeToOffset"],
-					w: settings["${sLbl}restrictionDOW"],
-					p1: buildDeviceNameList(settings["${sLbl}restrictionPresHome"], "and"),
-					p0: buildDeviceNameList(settings["${sLbl}restrictionPresAway"], "and"),
-					s1: buildDeviceNameList(settings["${sLbl}restrictionSwitchOn"], "and"),
-					s0: buildDeviceNameList(settings["${sLbl}restrictionSwitchOff"], "and"),
-					ctemp: roundTemp(settings["${sLbl}CoolTemp"]),
-					htemp: roundTemp(settings["${sLbl}HeatTemp"]),
-					hvacm: settings["${sLbl}HvacMode"],
-					sen0: settings["schMotRemoteSensor"] ? buildDeviceNameList(settings["${sLbl}remSensor"], "and") : null,
-					m0: buildDeviceNameList(settings["${sLbl}Motion"], "and"),
-					mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
-					mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
-					mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
-					mpresHome: settings["${sLbl}Motion"] ? settings["${sLbl}MPresHome"] : null,
-					mpresAway: settings["${sLbl}Motion"] ? settings["${sLbl}MPresAway"] : null,
-					mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
-					mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
-				])
+		if(autoType == "schMot" && isSchMotConfigured()) {
+			def schedList = getScheduleList()
+			def timersActive = false
+			def sLbl
+			def cnt = 1
+			def numact = 0
+			schedList?.each { scd ->
+				sLbl = "schMot_${scd}_"
+				atomicState."schedule${cnt}SwEnabled" = null
+				atomicState."schedule${cnt}PresEnabled" = null
+				atomicState."schedule${cnt}MotionEnabled" = null
+				atomicState."schedule${cnt}SensorEnabled" = null
 
-				numact += 1
+				def newscd = []
+				def act = settings["${sLbl}SchedActive"]
+				if(act) {
+					newscd = cleanUpMap([
+						m: settings["${sLbl}restrictionMode"],
+						tf: settings["${sLbl}restrictionTimeFrom"],
+						tfc: settings["${sLbl}restrictionTimeFromCustom"],
+						tfo: settings["${sLbl}restrictionTimeFromOffset"],
+						tt: settings["${sLbl}restrictionTimeTo"],
+						ttc: settings["${sLbl}restrictionTimeToCustom"],
+						tto: settings["${sLbl}restrictionTimeToOffset"],
+						w: settings["${sLbl}restrictionDOW"],
+						p1: buildDeviceNameList(settings["${sLbl}restrictionPresHome"], "and"),
+						p0: buildDeviceNameList(settings["${sLbl}restrictionPresAway"], "and"),
+						s1: buildDeviceNameList(settings["${sLbl}restrictionSwitchOn"], "and"),
+						s0: buildDeviceNameList(settings["${sLbl}restrictionSwitchOff"], "and"),
+						ctemp: roundTemp(settings["${sLbl}CoolTemp"]),
+						htemp: roundTemp(settings["${sLbl}HeatTemp"]),
+						hvacm: settings["${sLbl}HvacMode"],
+						sen0: settings["schMotRemoteSensor"] ? buildDeviceNameList(settings["${sLbl}remSensor"], "and") : null,
+						m0: buildDeviceNameList(settings["${sLbl}Motion"], "and"),
+						mctemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MCoolTemp"]) : null,
+						mhtemp: settings["${sLbl}Motion"] ? roundTemp(settings["${sLbl}MHeatTemp"]) : null,
+						mhvacm: settings["${sLbl}Motion"] ? settings["${sLbl}MHvacMode"] : null,
+						mpresHome: settings["${sLbl}Motion"] ? settings["${sLbl}MPresHome"] : null,
+						mpresAway: settings["${sLbl}Motion"] ? settings["${sLbl}MPresAway"] : null,
+						mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
+						mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
+					])
+
+					numact += 1
+				}
+				//LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
+				atomicState."sched${cnt}restrictions" = newscd
+				atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0)  ? true : false
+				atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0)  ? true : false
+				atomicState."schedule${cnt}MotionEnabled" = (newscd?.m0) ? true : false
+				atomicState."schedule${cnt}SensorEnabled" = (newscd?.sen0) ? true : false
+				//atomicState."schedule${cnt}FanCtrlEnabled" = (newscd?.fan0) ? true : false
+				atomicState."schedule${cnt}TimeActive" = (newscd?.tf || newscd?.tfc || newscd?.tfo || newscd?.tt || newscd?.ttc || newscd?.tto || newscd?.w) ? true : false
+
+				atomicState."${sLbl}MotionActiveDt" = null
+				atomicState."${sLbl}MotionInActiveDt" = null
+
+				def newact = isMotionActive(settings["${sLbl}Motion"])
+				if(newact) { atomicState."${sLbl}MotionActiveDt" = getDtNow() }
+				else { atomicState."${sLbl}MotionInActiveDt" = getDtNow() }
+
+				atomicState."${sLbl}oldMotionActive" = newact
+				atomicState?."motion${cnt}UseMotionSettings" = null 		// clear automation state of schedule in use motion state
+				atomicState?."motion${cnt}LastisBtwn" = false
+
+				timersActive = (timersActive || atomicState."schedule${cnt}TimeActive") ? true : false
+
+				cnt += 1
 			}
-			LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
-			atomicState."sched${cnt}restrictions" = newscd
-			atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0)  ? true : false
-			atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0)  ? true : false
-			atomicState."schedule${cnt}MotionEnabled" = (newscd?.m0) ? true : false
-			atomicState."schedule${cnt}SensorEnabled" = (newscd?.sen0) ? true : false
-			//atomicState."schedule${cnt}FanCtrlEnabled" = (newscd?.fan0) ? true : false
-			atomicState."schedule${cnt}TimeActive" = (newscd?.tf || newscd?.tfc || newscd?.tfo || newscd?.tt || newscd?.ttc || newscd?.tto || newscd?.w) ? true : false
-
-			atomicState."${sLbl}MotionActiveDt" = null
-			atomicState."${sLbl}MotionInActiveDt" = null
-
-			def newact = isMotionActive(settings["${sLbl}Motion"])
-			if(newact) { atomicState."${sLbl}MotionActiveDt" = getDtNow() }
-			else { atomicState."${sLbl}MotionInActiveDt" = getDtNow() }
-
-			atomicState."${sLbl}oldMotionActive" = newact
-			atomicState?."motion${cnt}UseMotionSettings" = null 		// clear automation state of schedule in use motion state
-			atomicState?."motion${cnt}LastisBtwn" = false
-
-			timersActive = (timersActive || atomicState."schedule${cnt}TimeActive") ? true : false
-
-			cnt += 1
+			atomicState.scheduleTimersActive = timersActive
+			atomicState.lastSched = null  // clear automation state of schedule in use
+			atomicState.scheduleSchedActiveCount = numact
 		}
-		atomicState.scheduleTimersActive = timersActive
-		atomicState.lastSched = null  // clear automation state of schedule in use
-		atomicState.scheduleSchedActiveCount = numact
-	}
 
-	subscribeToEvents()
-	scheduler()
+		subscribeToEvents()
+		scheduler()
+	}
 	app.updateLabel(getAutoTypeLabel())
 	atomicState?.lastAutomationSchedDt = null
-	heartbeatAutomation()
+	if(!autoDisabled) {
+		heartbeatAutomation()
+	}
 	//if(settings["backedUpData"] && atomicState?.restoreCompleted) { }
 
 	state.remove("motionnullLastisBtwn")
@@ -7057,7 +7071,7 @@ def subscribeToEvents() {
 						}
 					}
 					if(atomicState?."schedule${cnt}PresEnabled") {
-						if(restrict?.p1) {
+						if(restrict?.p1 && settings["${sLbl}restrictionPresHome"]) {
 							for(pr in settings["${sLbl}restrictionPresHome"]) {
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
@@ -7067,7 +7081,7 @@ def subscribeToEvents() {
 								}
 							}
 						}
-						if(restrict?.p0) {
+						if(restrict?.p0 && settings["${sLbl}restrictionPresAway"]) {
 							for(pr in settings["${sLbl}restrictionPresAway"]) {
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
@@ -7904,9 +7918,11 @@ def getTstatSetpoint(tstat, type) {
 	if(tstat) {
 		if(type == "cool") {
 			def coolSp = tstat?.currentCoolingSetpoint
+			log.debug "getTstatSetpoint(cool): $coolSp"
 			return coolSp ? coolSp.toDouble() : 0
 		} else {
 			def heatSp = tstat?.currentHeatingSetpoint
+			log.debug "getTstatSetpoint(heat): $heatSp"
 			return heatSp ? heatSp.toDouble() : 0
 		}
 	}
