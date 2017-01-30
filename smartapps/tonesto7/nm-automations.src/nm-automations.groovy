@@ -1,42 +1,33 @@
- /********************************************************************************************
-|    Application Name: NM Automations                                          |
+/********************************************************************************************
+|    Application Name: NM Automations                                          				|
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
 |                                                                                           |
 |    License Info: https://github.com/tonesto7/nest-manager/blob/master/app_license.txt     |
-|                                                                                           |
-|    NOTE: I really hope that we don't have a ton of forks being released to the community, |
-|    and that we can collaborate to make the smartapp and devices that will accommodate     |
-|    every use case                                                                         |
-|*******************************************************************************************|*/
+|********************************************************************************************/
 
 import groovy.json.*
 import java.text.SimpleDateFormat
-import java.security.MessageDigest
 
 definition(
-	name: "${textAppName()}",
-	namespace: "${textNamespace()}",
-	author: "${textAuthor()}",
-	description: "${textDesc()}",
+	name: "${appName()}",
+	namespace: "${appNamespace()}",
+	author: "${appAuthor()}",
+	parent: "${appNamespace()}:${appParentName()}",
+	description: "${appDesc()}",
 	category: "Convenience",
-	iconUrl: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager.png",
-	iconX2Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%402x.png",
-	iconX3Url: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_manager%403x.png",
-	singleInstance: true,
-	oauth: true )
+	iconUrl: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
+	iconX2Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
+	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
+)
 
 {
-	appSetting "clientId"
-	appSetting "clientSecret"
 	appSetting "devOpt"
 }
 
-include 'asynchttp_v1'
-
-def appVersion() { "4.5.3" }
+def appVersion() { "4.5.4" }
 def appVerDate() { "1-30-2017" }
 
 preferences {
@@ -81,27 +72,6 @@ def startPage() {
 	}
 }
 
-def getGlobTitleStr(typ) {
-	return "Desired Default ${typ} Temp (°${getTemperatureScale()})"
-}
-
-def formatDt2(tm) {
-	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-	def tf = new SimpleDateFormat(formatVal)
-	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-	return tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", tm.toString()))
-}
-/*
-def genRandId(int length){
-	String alphabet = new String("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
-	int n = alphabet.length()
-	String result = new String()
-	Random r = new Random()
-	for (int i=0; i<length; i++) { result = result + alphabet.charAt(r.nextInt(n)) }
-	return result
-}
-*/
-
 def changeLogPage () {
 	def execTime = now()
 	dynamicPage(name: "changeLogPage", title: "App Revision History:", install: false) {
@@ -126,20 +96,6 @@ def uninstallPage() {
 	}
 }
 
-def getDevOpt() {
-	appSettings?.devOpt = "true" ? true : false
-}
-
-def devPageFooter(var, eTime) {
-	def res = []
-	if(getDevOpt()) {
-		res += 	section() {
-					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
-				}
-	}
-	return res?.size() ? res : ""
-}
-
 
 /******************************************************************************
  *#########################	NATIVE ST APP METHODS ############################*
@@ -148,13 +104,13 @@ def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
 	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
 	initialize()
-	sendNotificationEvent("${textAppName()} installed")
+	sendNotificationEvent("${appName()} installed")
 }
 
 def updated() {
 	LogAction("${app.label} Updated..."/*with settings: ${settings}*/, "debug", true)
 	initialize()
-	sendNotificationEvent("${textAppName()} has updated settings")
+	sendNotificationEvent("${appName()} has updated settings")
 	atomicState?.lastUpdatedDt = getDtNow()
 }
 
@@ -203,8 +159,8 @@ def helpHandler() {
 }
 
 def incMetricCntVal(item) {
-	def data = atomicState?.usageMetricsStore
-	data[item] = (data?.item == null) ? 1 : data[item]+1
+	def data = atomicState?.usageMetricsStore ?: [:]
+	data[item] = (data[item] == null) ? 1 : data[item].toInteger()+1
 	atomicState?.usageMetricsStore = data
 }
 
@@ -219,78 +175,7 @@ def getMyLockId() {
 	if(parent) { return atomicState?.myID } else { return null }
 }
 
-def toJson(Map m) {
-	return new org.json.JSONObject(m).toString()
-}
 
-def toQueryString(Map m) {
-	return m.collect { k, v -> "${k}=${URLEncoder.encode(v.toString())}" }.sort().join("&")
-}
-
-/************************************************************************************************
-|									LOGGING AND Diagnostic										|
-*************************************************************************************************/
-def LogTrace(msg, logSrc=null) {
-	def trOn = advAppDebug ? true : false
-	if(trOn) {
-		def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
-		Logger(msg, "trace", theLogSrc)
-	}
-}
-
-def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
-	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
-	def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
-	if(showAlways) { Logger(msg, type, theLogSrc) }
-	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
-}
-
-def Logger(msg, type, logSrc=null) {
-	if(msg && type) {
-		def labelstr = ""
-		if(atomicState?.debugAppendAppName == null) {
-			def tval = parent ? parent?.settings?.debugAppendAppName : settings?.debugAppendAppName
-			atomicState?.debugAppendAppName = (tval || tval == null) ? true : false
-		}
-		if(atomicState?.debugAppendAppName) { labelstr = "${app.label} | " }
-		def themsg = "${labelstr}${msg}"
-		switch(type) {
-			case "debug":
-				log.debug "${themsg}"
-				break
-			case "info":
-				log.info "||| ${themsg}"
-				break
-			case "trace":
-				log.trace "|| ${themsg}"
-				break
-			case "error":
-				log.error "| ${themsg}"
-				break
-			case "warn":
-				log.warn "|| ${themsg}"
-				break
-			default:
-				log.debug "${themsg}"
-				break
-		}
-		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
-		if(!parent) { saveLogtoRemDiagStore(themsg, type, logSrc) }
-		else {
-			if(atomicState?.enRemDiagLogging == null) {
-				atomicState?.enRemDiagLogging = parent?.state?.enRemDiagLogging
-				if(atomicState?.enRemDiagLogging == null) {
-					atomicState?.enRemDiagLogging = false
-				}
-				//log.debug "set enRemDiagLogging to ${atomicState?.enRemDiagLogging}"
-			}
-			if(atomicState?.enRemDiagLogging) {
-				parent.saveLogtoRemDiagStore(themsg, type, logSrc)
-			}
-		}
-	}
-	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg} | logSrc: ${logSrc}" }
-}
 
 def fixState() {
 	def result = false
@@ -409,251 +294,6 @@ LogAction("finishFixState found remote sensor configured", "info", true)
 	}
 }
 
-//Things that I need to clear up on updates go here
-//IMPORTANT: This must be run in it's own thread, and exit after running as the cleanup occurs on exit
-def stateCleanup() {
-	LogAction("stateCleanup", "trace", true)
-
-	def data = [ "exLogs", "pollValue", "pollStrValue", "pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updateMsgNotif", "updChildOnNewOnly", "disAppIcons",
-		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
-		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
-		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug" ]
-	data.each { item ->
-		state.remove(item?.toString())
-	}
-
-	if(!atomicState?.cmdQlist) {
-		data = [ "cmdQ2", "cmdQ3", "cmdQ4", "cmdQ5", "cmdQ6", "cmdQ7", "cmdQ8", "cmdQ9", "cmdQ10", "cmdQ11", "cmdQ12", "cmdQ13", "cmdQ14", "cmdQ15", "lastCmdSentDt2", "lastCmdSentDt3",
-			"lastCmdSentDt4", "lastCmdSentDt5", "lastCmdSentDt6", "lastCmdSentDt7", "lastCmdSentDt8", "lastCmdSentDt9", "lastCmdSentDt10", "lastCmdSentDt11", "lastCmdSentDt12", "lastCmdSentDt13",
-			"lastCmdSentDt14", "lastCmdSentDt15", "recentSendCmd2", "recentSendCmd3", "recentSendCmd4", "recentSendCmd5", "recentSendCmd6", "recentSendCmd7", "recentSendCmd8", "recentSendCmd9",
-			"recentSendCmd10", "recentSendCmd11", "recentSendCmd12", "recentSendCmd13", "recentSendCmd14", "recentSendCmd15" ]
-		data.each { item ->
-			state.remove(item?.toString())
-		}
-	}
-	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
-	sdata.each { item ->
-		if(settings?."${item}" != null) {
-			app.updateSetting("${item.toString()}", "")   // clear settings
-		}
-	}
-}
-
-/******************************************************************************
-*								STATIC METHODS								  *
-*******************************************************************************/
-
-def getAutoAppChildName()   { return getChildName("Nest Automations") }
-def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
-
-def getChildName(str)     	{ return "${str}${appDevName()}" }
-
-def getServerUrl()			{ return "https://graph.api.smartthings.com" }
-def getShardUrl()			{ return getApiServerUrl() }
-def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
-def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
-def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
-def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
-
-def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
-def getUse24Time()      	{ return useMilitaryTime ? true : false }
-
-//Returns app State Info
-def getStateSize()      { return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
-
-def debugStatus() { return !appDebug ? "Off" : "On" }
-def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
-def isAppDebug() { return !appDebug ? false : true }
-def isChildDebug() { return !childDebug ? false : true }
-
-def getLocationModes() {
-	def result = []
-	location?.modes.sort().each {
-		if(it) { result.push("${it}") }
-	}
-	return result
-}
-
-def getDaysSinceInstall() {
-	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.installData.dt)
-	def stop = new Date()
-	if(start && stop) {
-		return (stop - start)
-	}
-	return 0
-}
-
-def getObjType(obj) {
-	if(obj instanceof String) {return "String"}
-	else if(obj instanceof Map) {return "Map"}
-	else if(obj instanceof List) {return "List"}
-	else if(obj instanceof ArrayList) {return "ArrayList"}
-	else if(obj instanceof Integer) {return "Integer"}
-	else if(obj instanceof BigInteger) {return "BigInteger"}
-	else if(obj instanceof Long) {return "Long"}
-	else if(obj instanceof Boolean) {return "Boolean"}
-	else if(obj instanceof BigDecimal) {return "BigDecimal"}
-	else if(obj instanceof Float) {return "Float"}
-	else if(obj instanceof Byte) {return "Byte"}
-	else { return "unknown"}
-}
-
-def preStrObj() { [1:"•", 2:"│", 3:"├", 4:"└", 5:"    "] }
-
-def getShowHelp() { return atomicState?.showHelp == false ? false : true }
-
-def getTimeZone() {
-	def tz = null
-	if(location?.timeZone) { tz = location?.timeZone }
-	else { tz = getNestTimeZone() ? TimeZone.getTimeZone(getNestTimeZone()) : null }
-	if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone not found", "warn", true) }
-	return tz
-}
-
-def formatDt(dt) {
-	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
-	else {
-		LogAction("SmartThings TimeZone is not set; Please open your ST location and Press Save", "warn", true)
-	}
-	return tf.format(dt)
-}
-
-def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
-	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
-	if((strtDate && !stpDate) || (strtDate && stpDate)) {
-		//if(strtDate?.contains("dtNow")) { return 10000 }
-		def now = new Date()
-		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
-		def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
-		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
-		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
-		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
-		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
-		return diff
-	} else { return null }
-}
-
-def daysOk(days) {
-	if(days) {
-		def dayFmt = new SimpleDateFormat("EEEE")
-		if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
-		return days.contains(dayFmt.format(new Date())) ? false : true
-	} else { return true }
-}
-
-def time2Str(time) {
-	if(time) {
-		def t = timeToday(time, getTimeZone())
-		def f = new java.text.SimpleDateFormat("h:mm a")
-		f.setTimeZone(getTimeZone() ?: timeZone(time))
-		f.format(t)
-	}
-}
-
-def epochToTime(tm) {
-	def tf = new SimpleDateFormat("h:mm a")
-		tf?.setTimeZone(getTimeZone())
-	return tf.format(tm)
-}
-
-def getDtNow() {
-	def now = new Date()
-	return formatDt(now)
-}
-
-def modesOk(modeEntry) {
-	def res = true
-	if(modeEntry) {
-		modeEntry?.each { m ->
-			if(m.toString() == location?.mode.toString()) { res = false }
-		}
-	}
-	return res
-}
-
-def isInMode(modeList) {
-	if(modeList) {
-		//log.debug "mode (${location.mode}) in list: ${modeList} | result: (${location?.mode in modeList})"
-		return location.mode.toString() in modeList
-	}
-	return false
-}
-
-def notifValEnum(allowCust = true) {
-	def valsC = [
-		60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes",
-		3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
-	]
-	def vals = [
-		60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
-		1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
-	]
-	return allowCust ? valsC : vals
-}
-
-def pollValEnum() {
-	def vals = [
-		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
-		600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
-		1800:"30 Minutes", 2700:"45 Minutes", 3600:"60 Minutes"
-	]
-	return vals
-}
-
-def waitValEnum() {
-	def vals = [
-		1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
-		8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds"
-	]
-	return vals
-}
-
-def strCapitalize(str) {
-	return str ? str?.toString().capitalize() : null
-}
-
-def getInputEnumLabel(inputName, enumName) {
-	def result = "Not Set"
-	if(input && enumName) {
-		enumName.each { item ->
-			if(item?.key.toString() == inputName?.toString()) {
-				result = item?.value
-			}
-		}
-	}
-	return result
-}
-
-def generateMD5_A(String s) {
-	MessageDigest digest = MessageDigest.getInstance("MD5")
-	digest.update(s.bytes)
-	return digest.digest().toString()
-}
-
-def minDevVer2Str(val) {
-	def str = ""
-	def list = []
-	str += "v"
-	val?.each {
-		list.add(it)
-	}
-}
-
-/*
-def b64Action(String str, dec=false) {
-	if (str) {
-		if(dec) {
-			return (String) str?.bytes?.decodeBase64()
-		} else {
-			return (String) str?.bytes?.encodeBase64(true)
-		}
-	}
-}
-*/
-
 def selectAutoPage() {
 	//LogTrace("selectAutoPage()")
 	if(!atomicState?.automationType) {
@@ -694,6 +334,8 @@ def mainAutoPage(params) {
 			section() {
 				if(disableAutomationreq) {
 					paragraph "This Automation is currently disabled!\nTurn it back on to to make changes or resume operation", required: true, state: null, image: getAppImg("instruct_icon.png")
+				} else {
+					if(atomicState?.disableAutomation) { paragraph "This Automation is still disabled!\nPress Next and Done to Activate this Automation Again", state: "complete", image: getAppImg("instruct_icon.png") }
 				}
 				if(!atomicState?.disableAutomation) {
 					if(autoType == "nMode") {
@@ -757,15 +399,8 @@ def mainAutoPage(params) {
 			section("Automation Options:") {
 				if(atomicState?.isInstalled && (isNestModesConfigured() || isWatchdogConfigured() || isSchMotConfigured())) {
 					//paragraph title:"Enable/Disable this Automation", ""
-					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: disableAutomation, submitOnChange: true, image: getAppImg("disable_icon.png")
-					if(!atomicState?.disableAutomation && disableAutomationreq) {
-						LogAction("Automation Disabled at (${getDtNow()})", "info", true)
-						atomicState?.disableAutomationDt = getDtNow()
-					} else if(atomicState?.disableAutomation && !disableAutomationreq) {
-						LogAction("Automation Enabled at (${getDtNow()})", "info", true)
-						atomicState?.disableAutomationDt = null
-					}
-					atomicState.disableAutomation = disableAutomationreq
+					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: atomicState?.disableAutomation, submitOnChange: true, image: getAppImg("disable_icon.png")
+					setAutomationStatus(settings?.disableAutomationreq)
 				}
 				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 				atomicState?.showDebug = showDebug
@@ -784,6 +419,17 @@ def mainAutoPage(params) {
 			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible\n\nThis Automation will be removed completely")
 		}
 	}
+}
+
+def setAutomationStatus(disabled) {
+	if(!atomicState?.disableAutomation && disabled) {
+		LogAction("Automation Disabled at (${getDtNow()})", "info", true)
+		atomicState?.disableAutomationDt = getDtNow()
+	} else if(atomicState?.disableAutomation && !disabled) {
+		LogAction("Automation Enabled at (${getDtNow()})", "info", true)
+		atomicState?.disableAutomationDt = null
+	}
+	atomicState?.disableAutomation = disabled
 }
 
 // parent only method
@@ -875,157 +521,17 @@ def removeAutomationBackupData(childId) {
 	return removeFirebaseData("backupData/clients/${parent?.atomicState?.installationId}/automationApps/${childId}.json")
 }
 
-//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
-
 def getAutomationBackupData() {
 	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
 }
 
-def manageBackRestorePage() {
-	dynamicPage(name: "manageBackRestorePage", title: "", nextPage: "", install: false) {
-		def lastDt = atomicState?.lastBackupDt
-		section("") {
-			href "backupStubDataPage", title: "${lastDt ? "Update All Automation Backup Data" : "Backup All Automation Data"}", description: "${lastDt ? "Last Backup:\n${lastDt}" : ""}",
-					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
-			if(lastDt) {
-				href "backupRemoveDataPage", title: "Remove All Backup Data", description: "", image: getAppImg("uninstall_icon.png")
-			}
-		}
-		def backupData = getAutomationBackupData()
-		if(backupData instanceof List || backupData instanceof Map) {
-			section("Available Automations") {
-				paragraph "Automations Backed Up: (${backupData ? backupData?.size() : 0})"
-				backupData?.each { bd ->
-					href "restoreStubPage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
-							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
-				}
-			}
-			section("Restore All:") {
-				href "restoreStubPage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
-			}
-		}
-	}
-}
-
-def backupStubDataPage() {
-	return dynamicPage(name: "backupStubDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-		section("") {
-			paragraph "Sending Backup Data to Firebase..."
-			if(!parent) {
-				def cApps = getChildApps()
-				cApps?.each { ca ->
-					if (ca?.settings?.restoreId) {
-						return
-					} else {
-						if(ca?.backupConfigToFirebase()) {
-							ca?.state?.lastBackupDt = getDtNow()
-							paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
-							atomicState?.lastBackupDt = getDtNow()
-						}
-					}
-				}
-				paragraph "Done Backing Up Data to Firebase...", state: "complete"
-			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-		}
-	}
-}
-
-def backupRemoveDataPage() {
-	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-		section("") {
-			paragraph "Removing Backed Up App Data from Firebase..."
-			if(!parent) {
-				def cApps = getChildApps()
-				cApps?.each { ca ->
-					if(ca?.removeAutomationBackupData(ca?.id)) {
-						ca?.state?.lastBackupDt = null
-						paragraph "Successfully Deleted...\n${ca?.label.toString().capitalize()} Backup Data", required: true, state: null
-						atomicState?.lastBackupDt = null
-					}
-				}
-				paragraph "Done Removing Data from Firebase...", state: "complete"
-			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-		}
-	}
-}
-
-def restoreStubPage(params) {
-	dynamicPage(name: "restoreStubPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-		section("Restoring Automations:") {
-			if(params.backup) {
-				paragraph "Restoring Automations..."
-				if(automationRestore(params?.backup, params?.autoId)) {
-					paragraph "Successfully Restored...\nAutomation App"
-				}
-				paragraph "We are Done Restoring the Application...", state: "complete"
-			} else {
-				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
-			}
-		}
-	}
-}
-
-def automationRestore(data, id=null) {
-	try {
-		if(data) {
-			data?.each { bApp ->
-				if(id && id.toString() != bApp?.key.toString()) { return }
-				def appLbl = bApp?.value?.appLabel.toString()
-				//log.debug "Automation AppId: ${bApp?.key}"
-				def setData = bApp?.value?.settingsData
-				setData["restoreId"] = ["type":"text", "value":bApp?.key]
-				setData["restoredFromBackup"] = ["type":"bool", "value":true]
-				setData["restoreCompleted"] = ["type":"bool", "value":false]
-				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
-
-				log.debug "Restoring [${setData?.automationTypeFlag}] Automation Named: ($appLbl)...."
-				// log.debug "setData: $setData"
-				addChildApp(textNamespace(), appName(), appLbl?.toString(), [settings:setData])
-				postChildRestore(bApp?.key)
-				return true
-			}
-		}
-	} catch (ex) { }
-	return false
-}
-
-def postChildRestore(childId, remove=false) {
-	def cApp = getChildApps()
-	cApp?.each { ca ->
-		if(ca?.getId() == childId) {
-			if(remove == true) {
-				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
-				deleteChildApp(ca)
-			} else {
-				ca?.settingUpdate("disableAutomationreq", "bool", true)
-				ca?.stateUpdate("disableAutomation", true)
-				ca?.update()
-			}
-		}
-	}
-}
-
-void callRestoreState(child, restId) {
-	log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
-	if(restId) {
-		def newData = getAutomationBackupData().find { it?.key?.toString() == restId?.toString() }
-		def newValue = newData?.value
-		if(newValue?.stateData) {
-			newValue?.stateData?.each { sKey ->
-				child?.stateUpdate(sKey?.key, sKey?.value)
-			}
-			settingUpdate("restoreCompleted","bool", true)
-		}
-	}
-}
-
 void settingUpdate(name, type, value) {
-	log.trace "settingUpdate($name, $type, $value)"
+	LogAction("settingUpdate($name, $type, $value)...", "trace", false)
 	try {
-		if(name != null && value != null) {
-			//log.debug "app: ${app.label} | setting: [ $name:[type:$type, value:$value] ]"
+		if(name && value && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
+		else if (name && value && type == null){ app?.updateSetting(name, value) }
 	} catch(e) { }
 }
 
@@ -1039,6 +545,7 @@ def initAutoApp() {
 	} else if (settings["automationTypeFlag"]) {
 		log.debug "automationType: ${settings?.automationTypeFlag}"
 		parent?.callRestoreState(app, settings?.restoreId?.toString())
+		atomicState?.newAutomationFile = true
 	}
 
 	def autoType = getAutoType()
@@ -1175,7 +682,7 @@ def getCurAppLbl() { return app?.label?.toString() }
 def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
-	def appLbl = getCurAppLbl()
+	def appLbl = getCurAppLbl().toString()
 	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
@@ -1253,7 +760,7 @@ def getAutoIcon(type) {
 }
 
 def automationsInst() {
-	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
+	atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
 	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
 	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
 
@@ -7006,18 +6513,348 @@ def parseDt(format, dt) {
 	return result
 }
 
+def getDevOpt() {
+	appSettings?.devOpt = "true" ? true : false
+}
+
+def devPageFooter(var, eTime) {
+	def res = []
+	if(getDevOpt()) {
+		res += 	section() {
+					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
+				}
+	}
+	return res?.size() ? res : ""
+}
+
+
 def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
+
+
+//Things that I need to clear up on updates go here
+//IMPORTANT: This must be run in it's own thread, and exit after running as the cleanup occurs on exit
+def stateCleanup() {
+	LogAction("stateCleanup", "trace", true)
+
+	def data = [ "exLogs", "pollValue", "pollStrValue", "pollWaitVal", "tempChgWaitVal", "cmdDelayVal", "testedDhInst", "missedPollNotif", "updateMsgNotif", "updChildOnNewOnly", "disAppIcons",
+		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
+		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
+		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug" ]
+	data.each { item ->
+		state.remove(item?.toString())
+	}
+
+	if(!atomicState?.cmdQlist) {
+		data = [ "cmdQ2", "cmdQ3", "cmdQ4", "cmdQ5", "cmdQ6", "cmdQ7", "cmdQ8", "cmdQ9", "cmdQ10", "cmdQ11", "cmdQ12", "cmdQ13", "cmdQ14", "cmdQ15", "lastCmdSentDt2", "lastCmdSentDt3",
+			"lastCmdSentDt4", "lastCmdSentDt5", "lastCmdSentDt6", "lastCmdSentDt7", "lastCmdSentDt8", "lastCmdSentDt9", "lastCmdSentDt10", "lastCmdSentDt11", "lastCmdSentDt12", "lastCmdSentDt13",
+			"lastCmdSentDt14", "lastCmdSentDt15", "recentSendCmd2", "recentSendCmd3", "recentSendCmd4", "recentSendCmd5", "recentSendCmd6", "recentSendCmd7", "recentSendCmd8", "recentSendCmd9",
+			"recentSendCmd10", "recentSendCmd11", "recentSendCmd12", "recentSendCmd13", "recentSendCmd14", "recentSendCmd15" ]
+		data.each { item ->
+			state.remove(item?.toString())
+		}
+	}
+	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
+	sdata.each { item ->
+		if(settings?."${item}" != null) {
+			app.updateSetting("${item.toString()}", "")   // clear settings
+		}
+	}
+}
+
+/******************************************************************************
+*								STATIC METHODS								  *
+*******************************************************************************/
+
+def getAutoAppChildName()   { return getChildName("Nest Automations") }
+def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
+
+def getChildName(str)     	{ return "${str}${appDevName()}" }
+
+def getServerUrl()			{ return "https://graph.api.smartthings.com" }
+def getShardUrl()			{ return getApiServerUrl() }
+def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
+def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
+def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/${gitPath()}/Images/App/$imgName" : "" }
+def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/${gitPath()}/Images/Devices/$imgName" : "" }
+
+def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
+def getUse24Time()      	{ return useMilitaryTime ? true : false }
+
+//Returns app State Info
+def getStateSize()      { return state?.toString().length() }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+
+def debugStatus() { return !appDebug ? "Off" : "On" }
+def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
+def isAppDebug() { return !appDebug ? false : true }
+def isChildDebug() { return !childDebug ? false : true }
+
+def getLocationModes() {
+	def result = []
+	location?.modes.sort().each {
+		if(it) { result.push("${it}") }
+	}
+	return result
+}
+
+def getDaysSinceInstall() {
+	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", atomicState?.installData.dt)
+	def stop = new Date()
+	if(start && stop) {
+		return (stop - start)
+	}
+	return 0
+}
+
+def getObjType(obj) {
+	if(obj instanceof String) {return "String"}
+	else if(obj instanceof Map) {return "Map"}
+	else if(obj instanceof List) {return "List"}
+	else if(obj instanceof ArrayList) {return "ArrayList"}
+	else if(obj instanceof Integer) {return "Integer"}
+	else if(obj instanceof BigInteger) {return "BigInteger"}
+	else if(obj instanceof Long) {return "Long"}
+	else if(obj instanceof Boolean) {return "Boolean"}
+	else if(obj instanceof BigDecimal) {return "BigDecimal"}
+	else if(obj instanceof Float) {return "Float"}
+	else if(obj instanceof Byte) {return "Byte"}
+	else { return "unknown"}
+}
+
+def preStrObj() { [1:"•", 2:"│", 3:"├", 4:"└", 5:"    "] }
+
+def getShowHelp() { return atomicState?.showHelp == false ? false : true }
+
+def getTimeZone() {
+	def tz = null
+	if(location?.timeZone) { tz = location?.timeZone }
+	else { tz = getNestTimeZone() ? TimeZone.getTimeZone(getNestTimeZone()) : null }
+	if(!tz) { LogAction("getTimeZone: Hub or Nest TimeZone not found", "warn", true) }
+	return tz
+}
+
+def formatDt(dt) {
+	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	else {
+		LogAction("SmartThings TimeZone is not set; Please open your ST location and Press Save", "warn", true)
+	}
+	return tf.format(dt)
+}
+
+def getGlobTitleStr(typ) {
+	return "Desired Default ${typ} Temp (°${getTemperatureScale()})"
+}
+
+def formatDt2(tm) {
+	def formatVal = settings?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def tf = new SimpleDateFormat(formatVal)
+	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }
+	return tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", tm.toString()))
+}
+/*
+def genRandId(int length){
+	String alphabet = new String("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+	int n = alphabet.length()
+	String result = new String()
+	Random r = new Random()
+	for (int i=0; i<length; i++) { result = result + alphabet.charAt(r.nextInt(n)) }
+	return result
+}
+*/
+
+def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
+	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
+	if((strtDate && !stpDate) || (strtDate && stpDate)) {
+		//if(strtDate?.contains("dtNow")) { return 10000 }
+		def now = new Date()
+		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+		def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+		def diff = (int) (long) (stop - start) / 1000
+		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+		return diff
+	} else { return null }
+}
+
+def daysOk(days) {
+	if(days) {
+		def dayFmt = new SimpleDateFormat("EEEE")
+		if(getTimeZone()) { dayFmt.setTimeZone(getTimeZone()) }
+		return days.contains(dayFmt.format(new Date())) ? false : true
+	} else { return true }
+}
+
+def time2Str(time) {
+	if(time) {
+		def t = timeToday(time, getTimeZone())
+		def f = new java.text.SimpleDateFormat("h:mm a")
+		f.setTimeZone(getTimeZone() ?: timeZone(time))
+		f.format(t)
+	}
+}
+
+def epochToTime(tm) {
+	def tf = new SimpleDateFormat("h:mm a")
+		tf?.setTimeZone(getTimeZone())
+	return tf.format(tm)
+}
+
+def getDtNow() {
+	def now = new Date()
+	return formatDt(now)
+}
+
+def modesOk(modeEntry) {
+	def res = true
+	if(modeEntry) {
+		modeEntry?.each { m ->
+			if(m.toString() == location?.mode.toString()) { res = false }
+		}
+	}
+	return res
+}
+
+def isInMode(modeList) {
+	if(modeList) {
+		//log.debug "mode (${location.mode}) in list: ${modeList} | result: (${location?.mode in modeList})"
+		return location.mode.toString() in modeList
+	}
+	return false
+}
+
+def notifValEnum(allowCust = true) {
+	def valsC = [
+		60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes", 1800:"30 Minutes",
+		3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 1000000:"Custom"
+	]
+	def vals = [
+		60:"1 Minute", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
+		1800:"30 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours"
+	]
+	return allowCust ? valsC : vals
+}
+
+def pollValEnum() {
+	def vals = [
+		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
+		600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
+		1800:"30 Minutes", 2700:"45 Minutes", 3600:"60 Minutes"
+	]
+	return vals
+}
+
+def waitValEnum() {
+	def vals = [
+		1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
+		8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds"
+	]
+	return vals
+}
+
+def strCapitalize(str) {
+	return str ? str?.toString().capitalize() : null
+}
+
+def getInputEnumLabel(inputName, enumName) {
+	def result = "Not Set"
+	if(input && enumName) {
+		enumName.each { item ->
+			if(item?.key.toString() == inputName?.toString()) {
+				result = item?.value
+			}
+		}
+	}
+	return result
+}
+
+def toJson(Map m) {
+	return new org.json.JSONObject(m).toString()
+}
+
+def toQueryString(Map m) {
+	return m.collect { k, v -> "${k}=${URLEncoder.encode(v.toString())}" }.sort().join("&")
+}
+
+/************************************************************************************************
+|									LOGGING AND Diagnostic										|
+*************************************************************************************************/
+def LogTrace(msg, logSrc=null) {
+	def trOn = advAppDebug ? true : false
+	if(trOn) {
+		def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
+		Logger(msg, "trace", theLogSrc)
+	}
+}
+
+def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
+	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
+	def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
+	if(showAlways) { Logger(msg, type, theLogSrc) }
+	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
+}
+
+def Logger(msg, type, logSrc=null) {
+	if(msg && type) {
+		def labelstr = ""
+		if(atomicState?.debugAppendAppName == null) {
+			def tval = parent ? parent?.settings?.debugAppendAppName : settings?.debugAppendAppName
+			atomicState?.debugAppendAppName = (tval || tval == null) ? true : false
+		}
+		if(atomicState?.debugAppendAppName) { labelstr = "${app.label} | " }
+		def themsg = "${labelstr}${msg}"
+		switch(type) {
+			case "debug":
+				log.debug "${themsg}"
+				break
+			case "info":
+				log.info "||| ${themsg}"
+				break
+			case "trace":
+				log.trace "|| ${themsg}"
+				break
+			case "error":
+				log.error "| ${themsg}"
+				break
+			case "warn":
+				log.warn "|| ${themsg}"
+				break
+			default:
+				log.debug "${themsg}"
+				break
+		}
+		//log.debug "Logger remDiagTest: $msg | $type | $logSrc"
+		if(parent) {
+			if(atomicState?.enRemDiagLogging == null) {
+				atomicState?.enRemDiagLogging = parent?.state?.enRemDiagLogging
+				if(atomicState?.enRemDiagLogging == null) {
+					atomicState?.enRemDiagLogging = false
+				}
+				//log.debug "set enRemDiagLogging to ${atomicState?.enRemDiagLogging}"
+			}
+			if(atomicState?.enRemDiagLogging) {
+				parent.saveLogtoRemDiagStore(themsg, type, logSrc)
+			}
+		}
+	}
+	else { log.error "${labelstr}Logger Error - type: ${type} | msg: ${msg} | logSrc: ${logSrc}" }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /******************************************************************************
 |				Application Help and License Info Variables		  			  |
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-def appName()		{ return "NM Automations" }
+def appName()		{ return "${appLabel()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NM Automations" }
+def appParentName()	{ return "Nest Manager" }
+def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
+def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
@@ -7025,20 +6862,12 @@ def appInfoDesc()	{
 	def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
 	def beta = betaMarker() ? "" : ""
 	def str = ""
-	str += "${textAppName()}"
+	str += "${appName()}"
 	str += isAppUpdateAvail() ? "\n• ${textVersion()} (Latest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
 	str += "\n• ${textModified()}"
 	return str
 }
-def textAppName()   { return "${appName()}" }
 def textVersion()   { return "Version: ${appVersion()}" }
 def textModified()  { return "Updated: ${appVerDate()}" }
-def textAuthor()    { return "${appAuthor()}" }
-def textNamespace() { return "${appNamespace()}" }
-def textVerInfo()   { return "${appVerInfo()}" }
-def appVerInfo() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Data/changelog.txt", "text/plain; charset=UTF-8", "changelog") }
-def textLicense() 	{ return getWebData("https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/app_license.txt", "text/plain; charset=UTF-8", "license") }
-def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
-def textCopyright() { return "Copyright© 2017 - Anthony S." }
-def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
+def appDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
