@@ -3275,7 +3275,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 def apiRespHandler(code, errMsg, methodName) {
 	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
-	if (!(code.toInteger() in [200, 307])) {
+	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
 		switch(code) {
 			case 400:
