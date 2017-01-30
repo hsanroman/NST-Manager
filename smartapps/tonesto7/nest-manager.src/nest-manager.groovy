@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.2" }
-def appVerDate() { "1-26-2017" }
+def appVersion() { "4.5.3" }
+def appVerDate() { "1-27-2017" }
 
 preferences {
 	//startPage
@@ -4558,6 +4558,7 @@ def removeTestDevs() {
 
 def preReqCheck() {
 	//LogTrace("preReqCheckTest()")
+	generateInstallId()
 	if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 	if(!location?.timeZone || !location?.zipCode) {
 		atomicState.preReqTested = false
@@ -6453,52 +6454,131 @@ def automationNestModeEnabled(val) {
 	return atomicState?.automationNestModeEnabled ?: false
 }
 
-def createAutoBackupJson() {
+// def createAutoBackupJson() {
+// 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
+// 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
+// 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+// 	def stateData = [:]
+// 	def settingsData = [:]
+//
+// 	stData?.sort().each { item ->
+// 		stateData[item?.key] = item?.value
+// 	}
+// 	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+// 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+// 	setData?.sort().each { item ->
+// 		log.debug "item: $item"
+// 		def itemVal = item?.value
+// 		def itemData = []
+// 		def tmpList = []
+// 		def idThese = ["capability", "mode", "phone", "contact"]
+// 		//if(itemVal instanceof List)
+// 		inputData?.inputs?.each { ty ->
+// 			if( ty?.key.toString() == item?.key.toString()) {
+// 				if(idThese?.any { ty?.value.contains(it) } ) {
+// 					itemVal?.each { obj ->
+// 						def oId = obj?.getId()
+// 						if(oId) { tmpList << oId.toString() }
+// 					}
+// 					itemData = ["type": ty?.value.toString(), "value": tmpList]
+// 					return
+// 				}
+// 				else if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
+// 					itemData = ["type": ty?.value.toString(), "value": itemVal]
+// 				}
+// 				else { itemData = ["type": ty?.value.toString(), "value": itemVal.toString()] }
+// 			}
+// 		}
+// 		//log.debug "Out: ${item?.key}: $itemData"
+// 		settingsData[item?.key] = itemData
+// 	}
+// 	settingsData["automationTypeFlag"] = getAutoType().toString()
+// 	settingsData["backedUpData"] = true
+// 	def data = [:]
+// 	data["appLabel"] = app.label
+// 	data["stateData"] = stateData
+// 	data["settingsData"] = settingsData
+// 	data["backupDt"] = getDtNow()
+// 	def resultJson = new groovy.json.JsonOutput().toJson(data)
+// 	//log.debug "resultJson: $resultJson"
+// 	return resultJson
+// }
+
+def buildSettingsMap() {
 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
-	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
-	def stateData = [:]
-	def settingsData = [:]
-
-	stData?.sort().each { item ->
-		stateData[item?.key] = item?.value
-	}
 	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+	def settingsMap = [:]
 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
 	setData?.sort().each { item ->
+		log.debug "item: $item"
 		def itemVal = item?.value
-		def itemData = []
-		def tmpList = []
-		def idThese = ["capability", "mode", "phone", "contact"]
-		//if(itemVal instanceof List)
-		inputData?.inputs?.each { ty ->
-			if( ty?.key.toString() == item?.key.toString()) {
-				if(idThese?.any { ty?.value.contains(it) } ) {
-					itemVal?.each { obj ->
-						def oId = obj?.getId()
-						if(oId) { tmpList << oId.toString() }
-					}
-					itemData = ["type": ty?.value.toString(), "value": tmpList]
-					return
-				}
-				else if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
-					itemData = ["type": ty?.value.toString(), "value": itemVal]
-				}
-				else { itemData = ["type": ty?.value.toString(), "value": itemVal.toString()] }
-			}
-		}
-		settingsData[item?.key] = itemData
+		def itemType = inputData?.inputs?.find { item?.key.toString().contains(it?.key.toString()) }
+		//log.debug "itemType: $itemType"
+		settingsMap[item?.key] = ["type":itemType?.value, "value":itemVal]
 	}
-	settingsData["automationTypeFlag"] = getAutoType().toString()
-	settingsData["backedUpData"] = true
-	def data = [:]
-	data["appLabel"] = app.label
-	data["stateData"] = stateData
-	data["settingsData"] = settingsData
-	data["backupDt"] = getDtNow()
-	def resultJson = new groovy.json.JsonOutput().toJson(data)
-	//log.debug "resultJson: $resultJson"
-	return resultJson
+	return settingsMap
+}
+
+def createAutoBackupJson() {
+
+	//def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
+	//def stateData = [:]
+
+	// stData?.sort().each { item ->
+	// 	stateData[item?.key] = item?.value
+	// }
+	def settingsData = [:]
+	log.debug "SettingsMap: ${buildSettingsMap()}"
+	// setData?.sort().each { item ->
+	// 	//log.debug "item: $item"
+	// 	def itemVal = item?.value
+	// 	def itemData = []
+	// 	def tmpList = []
+	// 	def idThese = ["capability", "mode"/*, "phone"*/, "contact"]
+	// 	def setObj = [:]
+	// 	def itemType = inputData?.inputs?.find { item?.key.toString().contains(it?.key.toString()) }//.collect { (item?.key):["type": it?.value] }
+	// 	//log.debug "itemType: $itemType"
+	// 	setObj[item?.key] = ["type":itemType?.value]
+	// 	//log.debug "type: ${setObj?."${item?.key}".type}"
+	// 	if(idThese?.any { setObj?."${item?.key}".type.value.contains(it) } ) {
+	// 		itemVal?.each { obj ->
+	// 			def oId = obj?.getId()
+	// 			if(oId) { tmpList << oId.toString() }
+	// 		}
+	// 		setObj?."${item?.key}"["value"] =  tmpList
+	// 		//itemData = ["type": ty?.value.toString(), "value": tmpList]
+	// 	}
+	// 	// if( setObj?."${item?.key}".type in idThese) {
+		// 	//def obj = itemVal*.id
+		// 	def data = getObjType(itemVal)
+		// 	log.debug "[${item?.key}] | Type: ${setObj?."${item?.key}".type} | ObjType: $data | ids: ${itemVal*.id}"
+		// 	//itemVal?.each { obj ->
+		// 		//log.debug "type: ${setObj?."${item?.key}".type} | obj: $obj | id: ${obj?.getId()}"
+		// 		//def oId = obj?.getId()
+		// 		//if(oId) { tmpList << oId.toString() }
+		// 	//}
+		// 	setObj?."${item?.key}"["value"] =  tmpList
+		// }
+	// 	else if(itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
+	// 		setObj?."${item?.key}"["value"] = itemVal
+	// 	}
+	// 	else { setObj?."${item?.key}"["value"] = itemVal.toString() }
+	//
+	// 	//log.debug "setObj: $setObj"
+	// 	//log.debug "Out: ${item?.key}: $itemData"
+	// 	settingsData[item?.key] = setObj
+	// }
+	// settingsData["automationTypeFlag"] = getAutoType().toString()
+	// settingsData["backedUpData"] = true
+	// def data = [:]
+	// data["appLabel"] = app.label
+	// //data["stateData"] = stateData
+	// data["settingsData"] = settingsData
+	// data["backupDt"] = getDtNow()
+	// def resultJson = new groovy.json.JsonOutput().toJson(data)
+	// //log.debug "resultJson: $resultJson"
+	// return resultJson
 }
 
 def backupConfigToFirebase() {
