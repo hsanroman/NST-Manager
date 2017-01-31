@@ -2834,7 +2834,8 @@ def ok2PollDevice() {
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 	def val = pollTime/3
-	if(val > 60) { val = 50 }
+	val = Math.max(Math.min(val.toInteger(), 50),25)
+	//if(val > 60) { val = 50 }
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
 }
 
@@ -2843,7 +2844,8 @@ def ok2PollStruct() {
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
 	def val = pollStrTime/3
-	if(val > 60) { val = 50 }
+	val = Math.max(Math.min(val.toInteger(), 50),25)
+	//if(val > 60) { val = 50 }
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
 }
 
@@ -8669,7 +8671,7 @@ def extTmpTempOk() {
 		def dpOk = (curDp < dpLimit) ? true : false
 		if(!dpOk) { retval = false }
 
-		def str = "enough different (${tempDiff})"
+		def str
 
 /*
 		def modeEco = (curMode in ["eco"]) ? true : false
@@ -8699,6 +8701,8 @@ def extTmpTempOk() {
 			}
 		}
 
+		def tempDiff
+
 		if(!modeAuto && retval) {
 			def desiredTemp = getDesiredTemp(curMode)
 			if(!desiredTemp) {
@@ -8706,7 +8710,8 @@ def extTmpTempOk() {
 				LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
 				retval = false
 			} else {
-				def tempDiff = Math.abs(extTemp - desiredTemp)
+				tempDiff = Math.abs(extTemp - desiredTemp)
+				str = "enough different (${tempDiff})"
 				//LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
 
 				if(diffThresh && tempDiff < diffThresh) {
@@ -12344,14 +12349,16 @@ def getComfortHumidity(tstat) {
 */
 
 def getComfortDewpoint(tstat, usedefault=true) {
-	def maxDew = tstat?.currentState("comfortDewpointMax")?.doubleValue ?: 0.0
+	def maxDew = tstat?.currentState("comfortDewpointMax")?.doubleValue
+	maxDew = maxDew ?: 0.0
 	if(maxDew == 0.0) {
 		if(usedefault) {
 			maxDew = (getTemperatureScale() == "C") ? 19 : 66
 			return maxDew.toDouble()
 		}
+		return null
 	}
-	return null
+	return maxDew
 }
 
 def getSafetyTempsOk(tstat) {
@@ -12368,11 +12375,13 @@ def getSafetyTempsOk(tstat) {
 }
 
 def getGlobalDesiredHeatTemp() {
-	return parent?.settings?.locDesiredHeatTemp?.toDouble() ?: null
+	def t0 = parent?.settings?.locDesiredHeatTemp?.toDouble()
+	return t0 ?: null
 }
 
 def getGlobalDesiredCoolTemp() {
-	return parent?.settings?.locDesiredCoolTemp?.toDouble() ?: null
+	def t0 = parent?.settings?.locDesiredCoolTemp?.toDouble()
+	return t0 ?: null
 }
 
 def getClosedContacts(contacts) {
