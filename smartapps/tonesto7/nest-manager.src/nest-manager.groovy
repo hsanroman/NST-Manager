@@ -6877,7 +6877,7 @@ def getAutoTypeLabel() {
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
 
 	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location Watchdog - ${location.name}"}
+	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
@@ -12720,7 +12720,8 @@ def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDe
 def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def autoAppName()	{ return (versionStr2Int(appVersion()) > 453) ? "NM Automations" : "Nest Automations" }
+def useNewAutoFile(){ return false }
+def autoAppName()	{ return (versionStr2Int(appVersion()) > 453 && useNewAutoFile) ? "NM Automations" : "Nest Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
