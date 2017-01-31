@@ -446,7 +446,7 @@ def automationNestModeEnabled(val) {
 def buildSettingsMap() {
 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
-	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+	def inputData = parent?.getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
 	def settingsMap = [:]
 	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
 	setData?.sort().each { item ->
@@ -491,8 +491,8 @@ def createAutoBackupJson() {
 		//log.debug "${item?.key}: ${setData[item?.key]}"
 		setData[item?.key].value = setObj
 	}
-	setData["automationTypeFlag"] = getAutoType().toString()
-	setData["backedUpData"] = true
+	//setData["automationTypeFlag"] = getAutoType().toString()
+	//setData["backedUpData"] = true
 	def data = [:]
 	data["appLabel"] = app.label
 	data["stateData"] = stateData
@@ -509,29 +509,13 @@ def backupConfigToFirebase() {
 	return parent?.sendAutomationBackupData(data, app.id)
 }
 
-def sendAutomationBackupData(data, appId) {
-	try {
-		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps/${appId}.json")
-	} catch (ex) {
-		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
-	}
-}
-
-def removeAutomationBackupData(childId) {
-	return removeFirebaseData("backupData/clients/${parent?.atomicState?.installationId}/automationApps/${childId}.json")
-}
-
-def getAutomationBackupData() {
-	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
-}
-
-void settingUpdate(name, type, value) {
-	LogAction("settingUpdate($name, $type, $value)...", "trace", false)
+void settingUpdate(name, value, type=null) {
+	LogAction("settingUpdate($name, $value, $type)...", "trace", true)
 	try {
 		if(name && value && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
-		else if (name && value && type == null){ app?.updateSetting(name, value) }
+		else if (name && value && type == null) { app?.updateSetting(name.toString(), value) }
 	} catch(e) { }
 }
 
@@ -542,9 +526,9 @@ def stateUpdate(key, value) {
 def initAutoApp() {
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
-	} else if (settings["automationTypeFlag"]) {
+	} else if (settings["automationTypeFlag"] && settings["restoreCompleted"] != true) {
 		log.debug "automationType: ${settings?.automationTypeFlag}"
-		parent?.callRestoreState(app, settings?.restoreId?.toString())
+		parent?.callRestoreState(app, settings["restoreId"])
 		atomicState?.newAutomationFile = true
 	}
 
@@ -1235,7 +1219,7 @@ def watchDogAlarmActions(dev, dni, actType) {
 			break
 		case "eco":
 			if(settings["watDogNotifMissedEco"] == null || settings["watDogNotifMissedEco"] == true) {
-				evtNotifMsg = "Nest home away Mode is away and thermostat is not in ECO on ${dev}."
+				evtNotifMsg = "Nest Location Home/Away Mode is 'Away' and thermostat [${dev}] is not in ECO."
 				evtVoiceMsg = evtNotifMsg
 			} else {return}
 			break
@@ -6862,7 +6846,7 @@ def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
-def gitRepo()		{ return "tonesto7/nest-manager"}
+def gitRepo()		{ return "tonesto7/nest-manager-dev"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
