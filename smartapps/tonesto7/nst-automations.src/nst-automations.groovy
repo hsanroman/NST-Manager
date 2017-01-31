@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: NM Automations                                          				|
+|    Application Name: NST Automations                                          				|
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -682,13 +682,14 @@ def getCurAppLbl() { return app?.label?.toString() }
 def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
-	def appLbl = getCurAppLbl().toString()
+	def appLbl = getCurAppLbl()
 	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
-	def dis = atomicState?.disableAutomation ? "\n(Disabled)" : ""
+	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
+
 	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
+	else if(type == "watchDog")	{ typeLabel = "Nest Location Watchdog - ${location.name}"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
@@ -6521,7 +6522,7 @@ def parseDt(format, dt) {
 }
 
 def getDevOpt() {
-	appSettings?.devOpt = "true" ? true : false
+	appSettings?.devOpt.toString() == "true" ? true : false
 }
 
 def devPageFooter(var, eTime) {
@@ -6857,7 +6858,7 @@ def Logger(msg, type, logSrc=null) {
 def appName()		{ return "${appLabel()}" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def appLabel()		{ return "NM Automations" }
+def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }

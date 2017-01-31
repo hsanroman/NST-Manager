@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: Nest Manager and Automations                                         |
+|    Application Name: NST Manager				                                            |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -10,7 +10,7 @@
 |    NOTE: I really hope that we don't have a ton of forks being released to the community, |
 |    and that we can collaborate to make the smartapp and devices that will accommodate     |
 |    every use case                                                                         |
-|*******************************************************************************************|*/
+*********************************************************************************************/
 
 import groovy.json.*
 import java.text.SimpleDateFormat
@@ -595,7 +595,7 @@ def automationsPage() {
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
 			section("Automation Backups:") {
-				if(appSettings?.devOpt == "true") {
+				if(getDevOpt()) {
 					href "manageBackRestorePage", title: "Manage Automation Backups...", description: "", image: getAppImg("backup_icon.png")
 				}
 			}
@@ -1287,7 +1287,7 @@ def uninstallPage() {
 }
 
 def getDevOpt() {
-	appSettings?.devOpt = "true" ? true : false
+	appSettings?.devOpt.toString() == "true" ? true : false
 }
 
 def devPageFooter(var, eTime) {
@@ -1906,7 +1906,7 @@ def checkIfSwupdated() {
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		if(allowMigration) {
 			if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete) || forceMigration) {
-				runIn(5, "processAutomationMigration", [overwrite: true]) }
+				runIn(5, "processAutomationMigration", [overwrite: true])
 			}
 		} else {
 			def cApps = getChildApps()
@@ -5307,7 +5307,7 @@ def getPresenceChildName()  { return getChildName("Nest Presence") }
 def getWeatherChildName()   { return getChildName("Nest Weather") }
 def getCameraChildName()    { return getChildName("Nest Camera") }
 
-def getAutoAppChildName()   { return getChildName("Nest Automations") }
+def getAutoAppChildName()   { return getChildName(autoAppName()) }
 def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
 
 def getChildName(str)     	{ return "${str}${appDevName()}" }
@@ -5724,94 +5724,94 @@ def b64Action(String str, dec=false) {
 // 	}
 // }
 
-def alarmTestPage () {
-	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
-		if(atomicState?.protects) {
-			section("Select Carbon/Smoke Device to Test:") {
-				input(name: "alarmCoTestDevice", title:"Select the Protect to Test", type: "enum", required: false, multiple: false, submitOnChange: true,
-						metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png"))
-			}
-			if(settings?.alarmCoTestDevice) {
-				section("Select the Event to Generate:") {
-					input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
-					input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
-					input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
-				}
-				if(settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke) {
-					section("Execute Selected Tests from Above:") {
-						if(!atomicState?.isAlarmCoTestActive) {
-							paragraph "WARNING: If protect devices are used by Smart Home Monitor (SHM) SHM will not see these as a test and will trigger any action/alarms you have configured",
-									required: true, state: null
-						}
-						if(settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimLowBatt) {
-							href "simulateTestEventPage", title: "Simulate Smoke Event", params: ["testType":"smoke"], description: "Tap to Execute Test", required: true, state: null
-						}
-
-						if(settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimLowBatt) {
-							href "simulateTestEventPage", title: "Simulate Carbon Event", params: ["testType":"co"], description: "Tap to Execute Test", required: true, state: null
-						}
-
-						if(settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
-							href "simulateTestEventPage", title: "Simulate Battery Event", params: ["testType":"battery"], description: "Tap to Execute Test", required: true, state: null
-						}
-					}
-				}
-
-				if(atomicState?.isAlarmCoTestActive && (settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke)) {
-					section("Instructions") {
-						paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null
-					}
-				}
-				if(!settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
-					atomicState?.isAlarmCoTestActive = false
-					atomicState?.curProtTestPageData = null
-				}
-			}
-		}
-	}
-}
-
-def simulateTestEventPage(params) {
-	def pName = getAutoType()
-	def testType
-	if(params?.testType) {
-		atomicState.curProtTestType = params?.testType
-		testType = params?.testType
-	} else {
-		testType = atomicState?.curProtTestType
-	}
-	dynamicPage(name: "simulateTestEventPage", refreshInterval: 10, install: false, uninstall: false) {
-		if(settings?.alarmCoTestDevice) {
-			def dev = getChildDevice(settings?.alarmCoTestDevice)
-			def testText
-			if(dev) {
-				section("Testing ${dev}") {
-					def isRun = false
-					if(!atomicState?.isAlarmCoTestActive) {
-						atomicState?.isAlarmCoTestActive = true
-						if(testType == "co") {
-							testText = "Carbon 'Detected'"
-							dev?.runCoTest()
-						}
-						else if(testType == "smoke") {
-							testText = "Smoke 'Detected'"
-							dev?.runSmokeTest()
-						}
-						else if(testType == "battery") {
-							testText = "Battery 'Replace'"
-							dev?.runBatteryTest()
-						}
-						def mystr = "Sending ${testText} Event to '$dev'"
-						LogAction("${mystr}", "info", true)
-						paragraph "${mystr}", state: "complete"
-					} else {
-						paragraph "Skipping; Test is already Running", required: true, state: null
-					}
-				}
-			}
-		}
-	}
-}
+// def alarmTestPage () {
+// 	dynamicPage(name: "alarmTestPage", install: false, uninstall: false) {
+// 		if(atomicState?.protects) {
+// 			section("Select Carbon/Smoke Device to Test:") {
+// 				input(name: "alarmCoTestDevice", title:"Select the Protect to Test", type: "enum", required: false, multiple: false, submitOnChange: true,
+// 						metadata: [values:atomicState?.protects], image: getAppImg("protect_icon.png"))
+// 			}
+// 			if(settings?.alarmCoTestDevice) {
+// 				section("Select the Event to Generate:") {
+// 					input "alarmCoTestDeviceSimSmoke", "bool", title: "Simulate a Smoke Event?", defaultValue: false, submitOnChange: true, image: getDevImg("smoke_emergency.png")
+// 					input "alarmCoTestDeviceSimCo", "bool", title: "Simulate a Carbon Event?", defaultValue: false, submitOnChange: true, image: getDevImg("co_emergency.png")
+// 					input "alarmCoTestDeviceSimLowBatt", "bool", title: "Simulate a Low Battery Event?", defaultValue: false, submitOnChange: true, image: getDevImg("battery_low.png")
+// 				}
+// 				if(settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke) {
+// 					section("Execute Selected Tests from Above:") {
+// 						if(!atomicState?.isAlarmCoTestActive) {
+// 							paragraph "WARNING: If protect devices are used by Smart Home Monitor (SHM) SHM will not see these as a test and will trigger any action/alarms you have configured",
+// 									required: true, state: null
+// 						}
+// 						if(settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimLowBatt) {
+// 							href "simulateTestEventPage", title: "Simulate Smoke Event", params: ["testType":"smoke"], description: "Tap to Execute Test", required: true, state: null
+// 						}
+//
+// 						if(settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimLowBatt) {
+// 							href "simulateTestEventPage", title: "Simulate Carbon Event", params: ["testType":"co"], description: "Tap to Execute Test", required: true, state: null
+// 						}
+//
+// 						if(settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
+// 							href "simulateTestEventPage", title: "Simulate Battery Event", params: ["testType":"battery"], description: "Tap to Execute Test", required: true, state: null
+// 						}
+// 					}
+// 				}
+//
+// 				if(atomicState?.isAlarmCoTestActive && (settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke)) {
+// 					section("Instructions") {
+// 						paragraph "FYI: Clear ALL Selected Tests to Reset for New Alarm Test", required: true, state: null
+// 					}
+// 				}
+// 				if(!settings?.alarmCoTestDeviceSimLowBatt && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimSmoke) {
+// 					atomicState?.isAlarmCoTestActive = false
+// 					atomicState?.curProtTestPageData = null
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+//
+// def simulateTestEventPage(params) {
+// 	def pName = getAutoType()
+// 	def testType
+// 	if(params?.testType) {
+// 		atomicState.curProtTestType = params?.testType
+// 		testType = params?.testType
+// 	} else {
+// 		testType = atomicState?.curProtTestType
+// 	}
+// 	dynamicPage(name: "simulateTestEventPage", refreshInterval: 10, install: false, uninstall: false) {
+// 		if(settings?.alarmCoTestDevice) {
+// 			def dev = getChildDevice(settings?.alarmCoTestDevice)
+// 			def testText
+// 			if(dev) {
+// 				section("Testing ${dev}") {
+// 					def isRun = false
+// 					if(!atomicState?.isAlarmCoTestActive) {
+// 						atomicState?.isAlarmCoTestActive = true
+// 						if(testType == "co") {
+// 							testText = "Carbon 'Detected'"
+// 							dev?.runCoTest()
+// 						}
+// 						else if(testType == "smoke") {
+// 							testText = "Smoke 'Detected'"
+// 							dev?.runSmokeTest()
+// 						}
+// 						else if(testType == "battery") {
+// 							testText = "Battery 'Replace'"
+// 							dev?.runBatteryTest()
+// 						}
+// 						def mystr = "Sending ${testText} Event to '$dev'"
+// 						LogAction("${mystr}", "info", true)
+// 						paragraph "${mystr}", state: "complete"
+// 					} else {
+// 						paragraph "Skipping; Test is already Running", required: true, state: null
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 def diagPage () {
 	dynamicPage(name: "diagPage", install: false) {
@@ -6874,9 +6874,10 @@ def getAutoTypeLabel() {
 	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
-	def dis = atomicState?.disableAutomation ? "\n(Disabled)" : ""
+	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
+
 	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
+	else if(type == "watchDog")	{ typeLabel = "Nest Location Watchdog - ${location.name}"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
@@ -7119,7 +7120,7 @@ def subscribeToEvents() {
 					}
 					if(atomicState?."schedule${cnt}PresEnabled") {
 						if(restrict?.p1 && settings["${sLbl}restrictionPresHome"]) {
-							for(pr in settings["${sLbl}restrictionPresHome"]) {
+							settings["${sLbl}restrictionPresHome"]?.each { pr ->
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
 								} else {
@@ -7129,7 +7130,7 @@ def subscribeToEvents() {
 							}
 						}
 						if(restrict?.p0 && settings["${sLbl}restrictionPresAway"]) {
-							for(pr in settings["${sLbl}restrictionPresAway"]) {
+							settings["${sLbl}restrictionPresAway"].each { pr ->
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
 								} else {
