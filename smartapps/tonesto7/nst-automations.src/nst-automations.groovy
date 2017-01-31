@@ -931,7 +931,7 @@ def subscribeToEvents() {
 						}
 					}
 					if(atomicState?."schedule${cnt}PresEnabled") {
-						if(restrict?.p1 && settings["${sLbl}restrictionPresHome"]) {
+						if(restrict?.p1) {
 							for(pr in settings["${sLbl}restrictionPresHome"]) {
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
@@ -941,7 +941,7 @@ def subscribeToEvents() {
 								}
 							}
 						}
-						if(restrict?.p0 && settings["${sLbl}restrictionPresAway"]) {
+						if(restrict?.p0) {
 							for(pr in settings["${sLbl}restrictionPresAway"]) {
 								if(prlist?.contains(pr)) {
 									//log.trace "found $pr"
@@ -5022,7 +5022,7 @@ def editSchedule(schedData) {
 		def timeFrom = settings["${sLbl}restrictionTimeFrom"]
 		def timeTo = settings["${sLbl}restrictionTimeTo"]
 		def showTime = (timeFrom || timeTo || settings?."${sLbl}restrictionTimeFromCustom" || settings?."${sLbl}restrictionTimeToCustom") ? true : false
-		def myShow = !(settings["${sLbl}restrictionMode"] || settings["${sLbl}restrictionDOW"] || showTime || settings["${sLbl}restrictionSwitchOn"] || settings["${sLbl}restrictionSwitchOff"] )
+		def myShow = !(settings["${sLbl}restrictionMode"] || settings["${sLbl}restrictionDOW"] || showTime || settings["${sLbl}restrictionSwitchOn"] || settings["${sLbl}restrictionSwitchOff"] || settings["${sLbl}restrictionPresHome"] || settings["${sLbl}restrictionPresAway"] )
 		section("(${schedData?.secData?.schName ?: "Schedule ${cnt}"}) Schedule Restrictions:                                          ", hideable: true, hidden: myShow) {
 			paragraph "Restrict when this Schedule is in use", title: "(Optional)"
 			input "${sLbl}restrictionMode", "mode", title: "Only execute in these modes", description: "Any location mode", required: false, multiple: true, image: getAppImg("mode_icon.png")
@@ -5084,26 +5084,28 @@ def getScheduleDesc(num = null) {
 			str += schData?.lbl ? " • ${schData?.lbl}${(actSchedNum?.toInteger() == schNum?.toInteger()) ? " (In Use)" : " (Not In Use)"}" : ""
 
 			//restriction section
-			str += isRestrict ? "\n ${isSw || isTemp ? "├" : "└"} Restrictions:" : ""
+			str += isRestrict ? "\n ${isSw || isPres || isTemp ? "├" : "└"} Restrictions:" : ""
 			def mLen = schData?.m ? schData?.m?.toString().length() : 0
 			def mStr = ""
 			def mdSize = 1
 			schData?.m?.each { md ->
-				mStr += md ? "\n ${isSw || isTemp ? "│ ${(isDayRes || isTimeRes || isSw) ? "│" : "    "}" : "   "} ${mdSize < schData?.m.size() ? "├" : "└"} ${md.toString()}" : ""
+				mStr += md ? "\n ${isSw || isPres || isTemp ? "│ ${(isDayRes || isTimeRes || isPres || isSw) ? "│" : "    "}" : "   "} ${mdSize < schData?.m.size() ? "├" : "└"} ${md.toString()}" : ""
 				mdSize = mdSize+1
 			}
 			str += schData?.m ? "\n ${resPreBar} ${(isTimeRes || schData?.w) ? "├" : "└"} Mode${schData?.m?.size() > 1 ? "s" : ""}:${isInMode(schData?.m) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.m ? "$mStr" : ""
 
 			def dayStr = getAbrevDay(schData?.w)
-			def timeDesc = getScheduleTimeDesc(schData?.tf, schData?.tfc, schData?.tfo, schData?.tt, schData?.ttc, schData?.tto, (isSw || isDayRes))
-			str += isTimeRes ?	"\n │ ${isDayRes || isSw ? "├" : "└"} ${timeDesc}" : ""
-			str += isDayRes ?	"\n │ ${schData?.s1 ? "├" : "└"} Days:${getSchRestrictDoWOk(schNum) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
-			str += isDayRes ?	"\n │ ${(isSw || isPres) ? "│" :"    "} └ ${dayStr}" : ""
+			def timeDesc = getScheduleTimeDesc(schData?.tf, schData?.tfc, schData?.tfo, schData?.tt, schData?.ttc, schData?.tto, (isSw || isPres || isDayRes))
+			str += isTimeRes ?	"\n │ ${isDayRes || isPres || isSw ? "├" : "└"} ${timeDesc}" : ""
+			str += isDayRes ?	"\n │ ${isSw || isPres ? "├" : "└"} Days:${getSchRestrictDoWOk(schNum) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
+			str += isDayRes ?	"\n │ ${isSw || isPres ? "│" :"    "} └ ${dayStr}" : ""
+
 			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "├" : "└"} Presence Home:${isSomebodyHome(settings["${sLbl}restrictionPresHome"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "│" : "   "} └ (${schData?.p1.size()} Selected)" : ""
 			str += schData?.p0 ?	"\n │ ${isSw ? "├" : "└"} Presence Away:${!isSomebodyHome(settings["${sLbl}restrictionPresAway"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.p0 ? 	"\n │ ${isSw ? "│" : "   "} └ (${schData?.p0.size()} Selected)" : ""
+
 			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "├" : "└"} Switches On:${isSwitchOn(settings["${sLbl}restrictionSwitchOn"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "│" : "   "} └ (${schData?.s1.size()} Selected)" : ""
 			str += schData?.s0 ?	"\n │ └ Switches Off:${!isSwitchOn(settings["${sLbl}restrictionSwitchOff"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
