@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "4.5.4" }
-def appVerDate() { "1-30-2017" }
+def appVerDate() { "1-31-2017" }
 
 preferences {
 	//startPage
@@ -689,7 +689,7 @@ def getAutoTypeLabel() {
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
 
 	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location Watchdog - ${location.name}"}
+	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
 	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {

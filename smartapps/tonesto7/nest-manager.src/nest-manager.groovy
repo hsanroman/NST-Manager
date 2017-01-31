@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.5.4" }
-def appVerDate() { "1-30-2017" }
+def appVerDate() { "1-31-2017" }
 
 preferences {
 	//startPage
@@ -1726,9 +1726,10 @@ def uninstManagerApp() {
 def initWatchdogApp() {
 	LogTrace("initWatchdogApp")
 	def watDogApp = getChildApps()?.findAll { it?.getAutomationType() == "watchDog" }
+	log.debug "autoAppName: ${autoAppName()}"
 	if(watDogApp?.size() < 1) {
-		LogAction("Installing Nest Watchdog App", "info", true)
-		addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag: true]])
+		LogAction("Installing Watchdog App", "info", true)
+		addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
 	} else if (watDogApp?.size() >= 1) {
 		def cnt = 1
 		watDogApp?.each { chld ->
@@ -12503,7 +12504,6 @@ def setMultipleTstatMode(tstats, mode) {
 }
 
 def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
-
 	def retVal = false
 	def setStr = "No thermostat device"
 	def heatFirst
@@ -12721,7 +12721,7 @@ def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def useNewAutoFile(){ return false }
-def autoAppName()	{ return (versionStr2Int(appVersion()) > 453 && useNewAutoFile) ? "NM Automations" : "Nest Automations" }
+def autoAppName()	{ return (versionStr2Int(appVersion()) > 453 && useNewAutoFile == true) ? "NST Automations" : "Nest Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
