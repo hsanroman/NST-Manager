@@ -175,8 +175,6 @@ def getMyLockId() {
 	if(parent) { return atomicState?.myID } else { return null }
 }
 
-
-
 def fixState() {
 	def result = false
 	LogAction("fixState", "info", false)
@@ -432,28 +430,13 @@ def setAutomationStatus(disabled) {
 	atomicState?.disableAutomation = disabled
 }
 
-// parent only method
-def automationNestModeEnabled(val) {
-	LogAction("automationNestModeEnabled: val: $val", "info", false)
-	if(val == null) {
-		return atomicState?.automationNestModeEnabled ?: false
-	} else {
-		atomicState.automationNestModeEnabled = val.toBoolean()
-	}
-	return atomicState?.automationNestModeEnabled ?: false
-}
-
 def buildSettingsMap() {
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
-	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def inputData = parent?.getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
 	def settingsMap = [:]
-	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+	def setData = getSettings()?.sort()?.findAll { it }
 	setData?.sort().each { item ->
-		//log.debug "item: $item"
 		def itemVal = item?.value
 		def itemType = inputData?.inputs?.find { item?.key.toString().contains(it?.key.toString()) }
-		//log.debug "itemType: $itemType"
 		settingsMap[item?.key] = ["type":itemType?.value, "value":itemVal]
 	}
 	//log.debug "buildSettingsMap: $settingsMap"
@@ -462,7 +445,8 @@ def buildSettingsMap() {
 
 def createAutoBackupJson() {
 	//log.trace "createAutoBackupJson..."
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData"]
+	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
 	def stateData = [:]
 	stData?.sort().each { item ->
@@ -470,7 +454,6 @@ def createAutoBackupJson() {
 	}
 	def setData = buildSettingsMap()
 	setData?.sort().each { item ->
-		//log.debug "item: $item"
 		def itemVal = item?.value?.value
 		def itemType = item?.value?.type
 		def tmpList = []
@@ -490,7 +473,6 @@ def createAutoBackupJson() {
 		setData[item?.key].value = setObj
 	}
 	setData["automationTypeFlag"] = getAutoType().toString()
-	//setData["backedUpData"] = true
 	def data = [:]
 	data["appLabel"] = app.label
 	data["stateData"] = stateData
@@ -502,13 +484,12 @@ def createAutoBackupJson() {
 }
 
 def backupConfigToFirebase() {
-	//log.trace "backupConfigToFirebase..."
 	def data = createAutoBackupJson()
 	return parent?.sendAutomationBackupData(data, app.id)
 }
 
 void settingUpdate(name, value, type=null) {
-	LogAction("settingUpdate($name, $value, $type)...", "trace", true)
+	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
 	try {
 		if(name && value && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
@@ -522,12 +503,18 @@ def stateUpdate(key, value) {
 }
 
 def initAutoApp() {
-	def restComplete = settings["restoreCompleted"] == true ? true : false
+	def restoreId = settings["restoreId"]
+	def restoreComplete = settings["restoreCompleted"] == true ? true : false
+
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
-	} else if (settings["automationTypeFlag"] && !restComplete) {
-		log.debug "automationType: ${settings?.automationTypeFlag}"
-		parent?.callRestoreState(app, settings["restoreId"])
+	}
+	else if (restoreId != null && restoreComplete == false) {
+		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
+		if(parent?.callRestoreState(app, restoreId)) {
+			parent?.removeAutomationBackupData(restoreId)
+			settingUpdate("restoreCompleted", true, "bool")
+		}
 		atomicState?.newAutomationFile = true
 	}
 
@@ -539,10 +526,11 @@ def initAutoApp() {
 	unsubscribe()
 	def autoDisabled = getIsAutomationDisabled()
 
-	if(!autoDisabled && restComplete) {
+	if(!autoDisabled && (restoreId && restComplete == false ? false : true)) {
 		automationsInst()
 
 		if(autoType == "schMot" && isSchMotConfigured()) {
+			updateScheduleStateMap()
 			def schedList = getScheduleList()
 			def timersActive = false
 			def sLbl
@@ -584,7 +572,6 @@ def initAutoApp() {
 						mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
 						mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
 					])
-
 					numact += 1
 				}
 				//LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
@@ -4051,6 +4038,7 @@ def setTstatTempCheck() {
 		def samemode = lastMode == curMode ? true : false
 
 		def mySched = getCurrentSchedule()
+		log.debug "mySched: $mySched"
 		def noSched = (mySched == null) ? true : false
 
 		def previousSched = atomicState?.lastSched
@@ -4461,7 +4449,7 @@ def getSchedData(num) {
 	def schData = atomicState?.activeSchedData
 	schData?.each { sch ->
 		//log.debug "sch: $sch"
-		if(num?.toInteger() == sch?.key.toInteger()) {
+		if(num == sch?.key) {
 			//log.debug "Data:(${sch?.value})"
 			resData = sch?.value
 		}
@@ -5258,14 +5246,12 @@ def updateScheduleStateMap() {
 					mdelayOn: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOn"] : null,
 					mdelayOff: settings["${sLbl}Motion"] ? settings["${sLbl}MDelayValOff"] : null
 				])
-
 				numAct += 1
 				actSchedules?."${scdNum}" = newScd
 				//LogAction("updateScheduleMap [ ScheduleNum: $scdNum | PrefixLbl: $sLbl | SchedActive: $schActive | NewSchedData: $newScd ]", "info", true)
 			}
 		}
 		atomicState.activeSchedData = actSchedules
-		//atomicState.scheduleSchedActiveCount = numAct
 	}
 }
 
@@ -6846,7 +6832,7 @@ def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
-def gitRepo()		{ return "tonesto7/nest-manager"}
+def gitRepo()		{ return "tonesto7/nest-manager-dev"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }

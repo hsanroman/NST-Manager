@@ -899,112 +899,112 @@ def notifPrefPage() {
 	}
 }
 
-def devNamePage() {
-	def execTime = now()
-	def pagelbl = atomicState?.isInstalled ? "Device Labels" : "Custom Device Labels"
-	dynamicPage(name: "devNamePage", title: pageLbl, nextPage: "", install: false) {
-		def altName = (atomicState?.useAltNames) ? true : false
-		def custName = (atomicState?.custLabelUsed) ? true : false
-		section("Settings:") {
-//			if(atomicState?.isInstalled) {
-//				paragraph "Changes to device names are only allowed with new devices before they are installed.  Existing devices can only be edited in the devices settings page in the mobile app or in the IDE."
-//			} else {
-				if(!useCustDevNames) {
-					input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
-				}
-				if(!useAltNames) {
-					input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
-				}
-				atomicState.useAltNames = settings?.useAltNames ? true : false
-				atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
-//			}
-			if(atomicState?.custLabelUsed) {
-				paragraph "Custom Labels Are Active", state: "complete"
-			}
-			if(atomicState?.useAltNames) {
-				paragraph "Using Location Name as Prefix is Active", state: "complete"
-			}
-			//paragraph "Current Device Handler Names", image: ""
-		}
-		def str1 = "\n\nName is not set to default.\nDefault name is:"
-//		def str2 = "\n\nName cannot be customized"
-
-		def found = false
-		if(atomicState?.thermostats || atomicState?.vThermostats) {
-			section ("Thermostat Device(s):") {
-				atomicState?.thermostats?.each { t ->
-					found = true
-					def d = getChildDevice(getNestTstatDni(t))
-					deviceNameFunc(d, getNestTstatLabel(t.value), "tstat_${t?.value}_lbl", "thermostat")
-				}
-				atomicState?.vThermostats?.each { t ->
-					found = true
-					def d = getChildDevice(getNestvStatDni(t))
-					deviceNameFunc(d, getNestvStatLabel(t.value), "vtstat_${t?.value}_lbl", "thermostat")
-				}
-			}
-		}
-		if(atomicState?.protects) {
-			section ("Protect Device Names:") {
-				atomicState?.protects?.each { p ->
-					found = true
-					def d = getChildDevice(getNestProtDni(p))
-					deviceNameFunc(d, getNestProtLabel(p.value), "prot_${p?.value}_lbl", "protect")
-				}
-			}
-		}
-		if(atomicState?.cameras) {
-			section ("Camera Device Names:") {
-				atomicState?.cameras?.each { c ->
-					found = true
-					def d = getChildDevice(getNestCamDni(c))
-
-					deviceNameFunc(d, getNestCamLabel(c.value), "cam_${c?.value}_lbl", "camera")
-				}
-			}
-		}
-		if(atomicState?.presDevice) {
-			section ("Presence Device Name:") {
-				found = true
-				def pLbl = getNestPresLabel()
-				def dni = getNestPresId()
-				def d = getChildDevice(dni)
-				deviceNameFunc(d, pLbl, "presDev_lbl", "presence")
-			}
-		}
-		if(atomicState?.weatherDevice) {
-			section ("Weather Device Name:") {
-				found = true
-				def wLbl = getNestWeatherLabel()
-				def dni = getNestWeatherId()
-				def d = getChildDevice(dni)
-				deviceNameFunc(d, wLbl, "weathDev_lbl", "weather")
-			}
-		}
-		if(!found) {
-			paragraph "No Devices Selected"
-		}
-		atomicState.needChildUpd = true
-		incDevCustNameLoadCnt()
-		devPageFooter("devCustNameLoadCnt", execTime)
-	}
-}
-
-def deviceNameFunc(dev, label, inputStr, devType) {
-	def dstr = ""
-	if(dev) {
-		dstr += "Found: ${dev.displayName}"
-		if(dev.displayName != label) {
-			dstr += "$str1 ${label}"
-		}
-	} else {
-		dstr += "New Name: ${label}"
-	}
-	paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("${devType}_icon.png")
-	if(atomicState.custLabelUsed) {
-		input "${inputStr}", "text", title: "Custom name for ${label}", defaultValue: label, submitOnChange: true, image: getAppImg("${devType}_icon.png")
-	}
-}
+// def devNamePage() {
+// 	def execTime = now()
+// 	def pagelbl = atomicState?.isInstalled ? "Device Labels" : "Custom Device Labels"
+// 	dynamicPage(name: "devNamePage", title: pageLbl, nextPage: "", install: false) {
+// 		def altName = (atomicState?.useAltNames) ? true : false
+// 		def custName = (atomicState?.custLabelUsed) ? true : false
+// 		section("Settings:") {
+// //			if(atomicState?.isInstalled) {
+// //				paragraph "Changes to device names are only allowed with new devices before they are installed.  Existing devices can only be edited in the devices settings page in the mobile app or in the IDE."
+// //			} else {
+// 				if(!useCustDevNames) {
+// 					input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
+// 				}
+// 				if(!useAltNames) {
+// 					input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
+// 				}
+// 				atomicState.useAltNames = settings?.useAltNames ? true : false
+// 				atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
+// //			}
+// 			if(atomicState?.custLabelUsed) {
+// 				paragraph "Custom Labels Are Active", state: "complete"
+// 			}
+// 			if(atomicState?.useAltNames) {
+// 				paragraph "Using Location Name as Prefix is Active", state: "complete"
+// 			}
+// 			//paragraph "Current Device Handler Names", image: ""
+// 		}
+// 		def str1 = "\n\nName is not set to default.\nDefault name is:"
+// //		def str2 = "\n\nName cannot be customized"
+//
+// 		def found = false
+// 		if(atomicState?.thermostats || atomicState?.vThermostats) {
+// 			section ("Thermostat Device(s):") {
+// 				atomicState?.thermostats?.each { t ->
+// 					found = true
+// 					def d = getChildDevice(getNestTstatDni(t))
+// 					deviceNameFunc(d, getNestTstatLabel(t.value), "tstat_${t?.value}_lbl", "thermostat")
+// 				}
+// 				atomicState?.vThermostats?.each { t ->
+// 					found = true
+// 					def d = getChildDevice(getNestvStatDni(t))
+// 					deviceNameFunc(d, getNestvStatLabel(t.value), "vtstat_${t?.value}_lbl", "thermostat")
+// 				}
+// 			}
+// 		}
+// 		if(atomicState?.protects) {
+// 			section ("Protect Device Names:") {
+// 				atomicState?.protects?.each { p ->
+// 					found = true
+// 					def d = getChildDevice(getNestProtDni(p))
+// 					deviceNameFunc(d, getNestProtLabel(p.value), "prot_${p?.value}_lbl", "protect")
+// 				}
+// 			}
+// 		}
+// 		if(atomicState?.cameras) {
+// 			section ("Camera Device Names:") {
+// 				atomicState?.cameras?.each { c ->
+// 					found = true
+// 					def d = getChildDevice(getNestCamDni(c))
+//
+// 					deviceNameFunc(d, getNestCamLabel(c.value), "cam_${c?.value}_lbl", "camera")
+// 				}
+// 			}
+// 		}
+// 		if(atomicState?.presDevice) {
+// 			section ("Presence Device Name:") {
+// 				found = true
+// 				def pLbl = getNestPresLabel()
+// 				def dni = getNestPresId()
+// 				def d = getChildDevice(dni)
+// 				deviceNameFunc(d, pLbl, "presDev_lbl", "presence")
+// 			}
+// 		}
+// 		if(atomicState?.weatherDevice) {
+// 			section ("Weather Device Name:") {
+// 				found = true
+// 				def wLbl = getNestWeatherLabel()
+// 				def dni = getNestWeatherId()
+// 				def d = getChildDevice(dni)
+// 				deviceNameFunc(d, wLbl, "weathDev_lbl", "weather")
+// 			}
+// 		}
+// 		if(!found) {
+// 			paragraph "No Devices Selected"
+// 		}
+// 		atomicState.needChildUpd = true
+// 		incDevCustNameLoadCnt()
+// 		devPageFooter("devCustNameLoadCnt", execTime)
+// 	}
+// }
+//
+// def deviceNameFunc(dev, label, inputStr, devType) {
+// 	def dstr = ""
+// 	if(dev) {
+// 		dstr += "Found: ${dev.displayName}"
+// 		if(dev.displayName != label) {
+// 			dstr += "$str1 ${label}"
+// 		}
+// 	} else {
+// 		dstr += "New Name: ${label}"
+// 	}
+// 	paragraph "${dstr}", state: "complete", image: (atomicState?.custLabelUsed) ? " " : getAppImg("${devType}_icon.png")
+// 	if(atomicState.custLabelUsed) {
+// 		input "${inputStr}", "text", title: "Custom name for ${label}", defaultValue: label, submitOnChange: true, image: getAppImg("${devType}_icon.png")
+// 	}
+// }
 
 // Parent only method
 def setNotificationTimePage() {
@@ -1715,7 +1715,9 @@ def uninstManagerApp() {
 			if(removeInstallData()) {
 				atomicState?.installationId = null
 			}
+			//If any client related data exists on firebase it will be removed
 			clearRemDiagData(true)
+			clearAllAutomationBackupData()
 			//Revokes Smartthings endpoint token
 			revokeAccessToken()
 			//Revokes Nest Auth Token
@@ -1887,6 +1889,7 @@ private gcd(input = []) {
 def onAppTouch(event) {
 	runIn(3, "cleanRestAutomationTest",[overwrite: true])
 	//poll(true)
+	//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
 }
 
 def refresh(child = null) {
@@ -1988,9 +1991,9 @@ def pollWatcher(evt) {
 // 	}
 // }
 
-
+// This is only here to allow testing.  It will be removed after testing is complete
 def cleanRestAutomationTest() {
-	log.trace "cleanRestAutomationTest..."
+	//log.trace "cleanRestAutomationTest..."
 	def cApps = getChildApps()
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
@@ -1998,9 +2001,7 @@ def cleanRestAutomationTest() {
 	cApps.each { ca ->
 		def restId = ca?.getSettingVal("restoreId")
 		if(restId != null) {
-			//log.debug "restored app found: ${ca?.getId()} | Removing (${ca?.label})"
 			deleteChildApp(ca)
-			//removeAutomationBackupData(restId)
 		}
 		else {
 	 		ca?.settingUpdate("disableAutomationreq", "false", "bool")
@@ -2015,7 +2016,7 @@ def cleanRestAutomationTest() {
 }
 
 def checkIfSwupdated() {
-	checkMigrationRequired()
+	checkMigrationRequired() // This is only here to allow testing.  It will be removed after testing is complete
 	if(atomicState?.swVersion != appVersion()) {
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
@@ -2032,12 +2033,11 @@ def checkIfSwupdated() {
 }
 
 def checkMigrationRequired() {
-	def allowMigration = false
-	def forceMigration = false
+	def allowMigration = true
+	def forceMigration = true
 	if(atomicState?.migrationInProgress == true) { return true }
 	if((forceMigration && allowMigration) || (atomicState?.swVersion != appVersion())) {
 		if(allowMigration) {
-			log.debug "checkIfSwupdated: Checking If Migration can proceed..."
 			if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
 				log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
 				runIn(5, "doAutoMigrationProcess", [overwrite: true])
@@ -2046,23 +2046,25 @@ def checkMigrationRequired() {
 	}
 }
 
+/* NOTE:
+	This is method creates the settings map with these items [type, value] so it can be easily restored.
+	The input reference data used is stored on our firebase
+*/
 def buildSettingsMap() {
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
-	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
 	def settingsMap = [:]
-	def setData = getSettings()?.sort()?.findAll { !(it.key in noShow) }
+	def setData = getSettings()?.sort()?.findAll { it }
 	setData?.sort().each { item ->
 		def itemType = inputData?.inputs?.find { item?.key.toString().contains(it?.key.toString()) }
 		settingsMap[item?.key] = ["type":itemType?.value, "value":item?.value]
 	}
-	//log.debug "buildSettingsMap: $settingsMap"
 	return settingsMap
 }
 
 def createAutoBackupJson() {
 	//log.trace "createAutoBackupJson..."
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory"]
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData"]
+	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
 	def stateData = [:]
 	stData?.sort().each { item ->
@@ -2101,12 +2103,14 @@ def createAutoBackupJson() {
 	return resultJson
 }
 
+// This is only necessary in the manager code to allow the backup to be created for migration to the new automation file
 def backupConfigToFirebase() {
 	//log.trace "backupConfigToFirebase..."
 	def data = createAutoBackupJson()
 	return parent?.sendAutomationBackupData(data, app.id)
 }
 
+//Manager only
 def sendAutomationBackupData(data, appId) {
 	try {
 		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps/${appId}.json", null, "Automation ($appId) Backup", true)
@@ -2120,7 +2124,10 @@ def removeAutomationBackupData(childId, lbl=null) {
 	return removeFirebaseData("backupData/clients/${atomicState?.installationId}/automationApps/${childId}.json")
 }
 
-//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
+def clearAllAutomationBackupData() {
+	LogAction("cleanAllAutomationBackupData()...", "trace", true)
+	return removeFirebaseData("backupData/clients/${atomicState?.installationId}.json")
+}
 
 def getAutomationBackupData() {
 	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
@@ -2134,28 +2141,22 @@ def backupAutomation(child) {
 	return false
 }
 
+/* NOTE:
+	This is the actually automation restore method for installing the automations from the backups
+*/
 def automationRestore(data, id=null) {
 	try {
 		if(data) {
 			data?.each { bApp ->
 				if(id && id.toString() != bApp?.key.toString()) { return }
 				def appLbl = bApp?.value?.appLabel.toString()
-				//log.debug "Automation AppId: ${bApp?.key}"
 				def setData = bApp?.value?.settingsData
-				// def cApps = getChildAllApps()
-				// cApps?.each { ca ->
-				// 	def restId = ca?.getSettingVal("restoreId")
-				// 	if(restId && restId == bApp?.key) {
-				// 		log.debug "Existing child found. Skipping"
-				// 		return
-				// 	}
-				// }
 				setData["restoreId"] = ["type":"text", "value":bApp?.key]
 				setData["restoredFromBackup"] = ["type":"bool", "value":true]
 				setData["restoreCompleted"] = ["type":"bool", "value":false]
 				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
 
-				log.debug "Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)...."
+				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), "${newAutoName()}", "${appLbl} (NST)", [settings:setData])
 				postChildRestore(bApp?.key, false)
@@ -2166,6 +2167,10 @@ def automationRestore(data, id=null) {
 	return false
 }
 
+/* NOTE:
+	This is only called by the child when the setting["restoreCompleted"] is not true.
+	It's purpose is finalize the restore setting values and disable/or remove the old automations
+*/
 def postChildRestore(childId, remove=false) {
 	//log.trace "postChildRestore(childId: $childId, remove: $remove)"
 	def cApp = getChildApps()
@@ -2184,20 +2189,24 @@ def postChildRestore(childId, remove=false) {
 	}
 }
 
-void callRestoreState(child, restId) {
+/* NOTE:
+	This is called by the child immediately after the addChildApp( ) creates the app from backup
+*/
+def callRestoreState(child, restId) {
 	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
 	if(restId) {
 		def data = getAutomationBackupData()
-		log.debug "callRestoreState data: $data"
+		//log.debug "callRestoreState data: $data"
 		def newData = data.find { it?.key?.toString() == restId?.toString() }
 		if(newData?.value?.stateData) {
 			newData?.value?.stateData?.each { sKey ->
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
-			settingUpdate("restoreCompleted", true, "bool")
-			removeAutomationBackupData(restId)
+			//child?.settingUpdate("restoreCompleted", true, "bool")
+			return true
 		}
 	}
+	return false
 }
 
 void doAutoMigrationProcess() {
@@ -2212,29 +2221,33 @@ void doAutoMigrationProcess() {
 			log.debug "backed up ${ca?.label}"
 		}
 		runIn(8, "processAutoRestore", [overwrite:true])
-		log.debug "scheduled restore process..."
+		LogAction("Scheduled restore process for (8 seconds)...", "info", true)
 	} else {
-		log.debug "There are no automations to restore."
-		finishMigrationProcess()
+		LogAction("There are no automations to restore.", "warn", true)
+		finishMigrationProcess(false)
 	}
 }
 
 void processAutoRestore() {
 	def backupData = getAutomationBackupData()
 	if(backupData instanceof List || backupData instanceof Map) {
-		log.info "Starting Restoration of Child Automations Using New File..."
+		//log.info "Starting Restoration of Child Automations Using New File..."
 		automationRestore(backupData)
 	}
 	runIn(7, "finishMigrationProcess", [overwrite:true])
 	log.debug "Scheduling finishMigrationProcess..."
 }
 
-void finishMigrationProcess() {
+void finishMigrationProcess(result=true) {
 	atomicState?.autoMigrationComplete = true
 	atomicState?.pollBlocked = false
 	atomicState?.migrationInProgress = false
-	log.debug "Auto Migration Process is complete..."
-	update() //This should hopefully fix the polling
+	if(result) {
+		LogAction("Auto Migration Process is complete...", "info", true)
+	} else { LogAction("Auto Migration did not complete...", "warn", true) }
+	// This will perform a cleanup of any backup data that wasn't removed
+	clearAllAutomationBackupData()
+	app.update()
 }
 
 def poll(force = false, type = null) {
@@ -5311,7 +5324,7 @@ LogAction("finishFixState found remote sensor configured", "info", true)
 }
 
 void settingUpdate(name, value, type=null) {
-	LogAction("settingUpdate($name, $value, $type)...", "trace", true)
+	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
 	try {
 		if(name && value && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
