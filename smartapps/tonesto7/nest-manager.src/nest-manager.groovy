@@ -562,7 +562,8 @@ def pollPrefPage() {
 def automationsPage() {
 	def execTime = now()
 	return dynamicPage(name: "automationsPage", title: "Installed Automations", nextPage: !parent ? "" : "automationsPage", install: false) {
-		def autoApp = findChildAppByName( appName() )
+		def autoApp = findChildAppByName( autoAppName() )
+		def oldAutoApp = findChildAppByName( appName() )
 		def autoAppInst = isAutoAppInst()
 		if(autoApp) { /*Nothing to add here yet*/ }
 		else {
@@ -571,7 +572,12 @@ def automationsPage() {
 			}
 		}
 		section("") {
-			app(name: "autoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation", image: getAppImg("automation_icon.png"))
+			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation", image: getAppImg("automation_icon.png"))
+		}
+		if(oldAutoApp) {
+			section("") {
+				app(name: "oldAutoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation", image: getAppImg("automation_icon.png"))
+			}
 		}
 		if(autoAppInst) {
 			// section("Automation Details:") {
@@ -594,11 +600,17 @@ def automationsPage() {
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
-			section("Automation Backups:") {
-				if(getDevOpt()) {
-					href "manageBackRestorePage", title: "Manage Automation Backups...", description: "", image: getAppImg("backup_icon.png")
-				}
-			}
+			// section("Automation Backups:") {
+			// 	if(getDevOpt()) {
+			// 		href "manageBackRestorePage", title: "Manage Automation Backups...", description: "", image: getAppImg("backup_icon.png")
+			// 	}
+			// }
+			// def cApps = getChildApps()
+			// cApps?.each { ca ->
+			// 	if(ca?.id == "6f9f966c-cd3c-4472-8d4d-26d3a10a9f78") {
+			// 		backupAutomation(ca)
+			// 	}
+			// }
 		}
 		incAutoLoadCnt()
 		devPageFooter("autoLoadCnt", execTime)
@@ -1586,12 +1598,6 @@ def currentDevMap(update=false) {
 }
 */
 
-
-
-
-
-
-
 /******************************************************************************
 *					  			NEST LOGIN PAGES		  	  		  		  *
 *******************************************************************************/
@@ -1726,7 +1732,6 @@ def uninstManagerApp() {
 def initWatchdogApp() {
 	LogTrace("initWatchdogApp")
 	def watDogApp = getChildApps()?.findAll { it?.getAutomationType() == "watchDog" }
-	log.debug "autoAppName: ${autoAppName()}"
 	if(watDogApp?.size() < 1) {
 		LogAction("Installing Watchdog App", "info", true)
 		addChildApp(appNamespace(), appName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
@@ -12793,7 +12798,7 @@ def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDe
 def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def useNewAutoFile(){ return false }
+def useNewAutoFile(){ return true }
 def newAutoName()	{ return "NST Automations" }
 def autoAppName()	{ return (versionStr2Int(appVersion()).toInteger() >= 454 && useNewAutoFile() == true) ? "NST Automations" : "Nest Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
