@@ -20,15 +20,15 @@ definition(
 	category: "Convenience",
 	iconUrl: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
 	iconX2Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
-	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png",
+	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/automation_icon.png"
 )
 
 {
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.5.5" }
-def appVerDate() { "1-31-2017" }
+def appVersion() { "4.5.6" }
+def appVerDate() { "2-1-2017" }
 
 preferences {
 	//startPage
@@ -476,11 +476,9 @@ def createAutoBackupJson() {
 		def tmpList = []
 		def getIds4These = ["phone", "contact"]
 		def setObj = null
-		if(getIds4These?.any { itemType?.contains("capability") }) {
-			setObj = settings[item?.key].collect { it?.getId() }
-		}
-		else if (itemType in getIds4These) {
-			setObj = settings[item?.key].collect { it?.getId() }
+		if(itemType?.contains("capability") || itemType in getIds4These) {
+			if(itemVal instanceof List) { setObj = settings[item?.key].collect { it?.getId() } }
+			else { setObj = settings[item?.key].getId() }
 		}
 		else {
 			if(itemType == "mode" || itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
@@ -488,10 +486,10 @@ def createAutoBackupJson() {
 			}
 			else { setObj = itemVal.toString() }
 		}
-		//log.debug "${item?.key}: ${setData[item?.key]}"
+		//log.debug "setting item ${item?.key}: ${getObjType(itemVal)} | result: $setObj"
 		setData[item?.key].value = setObj
 	}
-	//setData["automationTypeFlag"] = getAutoType().toString()
+	setData["automationTypeFlag"] = getAutoType().toString()
 	//setData["backedUpData"] = true
 	def data = [:]
 	data["appLabel"] = app.label
@@ -524,9 +522,10 @@ def stateUpdate(key, value) {
 }
 
 def initAutoApp() {
+	def restComplete = settings["restoreCompleted"] == true ? true : false
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
-	} else if (settings["automationTypeFlag"] && settings["restoreCompleted"] != true) {
+	} else if (settings["automationTypeFlag"] && !restComplete) {
 		log.debug "automationType: ${settings?.automationTypeFlag}"
 		parent?.callRestoreState(app, settings["restoreId"])
 		atomicState?.newAutomationFile = true
@@ -540,7 +539,7 @@ def initAutoApp() {
 	unsubscribe()
 	def autoDisabled = getIsAutomationDisabled()
 
-	if(!autoDisabled) {
+	if(!autoDisabled && restComplete) {
 		automationsInst()
 
 		if(autoType == "schMot" && isSchMotConfigured()) {
@@ -672,9 +671,9 @@ def getAutoTypeLabel() {
 	def newLbl
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
 
-	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
-	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
+	if(type == "nMode")	{ typeLabel = "${newName} (NestMode) (NST)" }
+	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog (NST)"}
+	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label}) (NST)" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
 		if(appLbl.contains("\n(Disabled)")) {
@@ -814,8 +813,8 @@ def subscribeToEvents() {
 					if(d1) {
 						LogAction("Found: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
 
-					subscribe(d1, "nestThermostatMode", automationGenericEvt)
-					subscribe(d1, "presence", automationGenericEvt)
+						subscribe(d1, "nestThermostatMode", automationGenericEvt)
+						subscribe(d1, "presence", automationGenericEvt)
 					}
 					return d1
 				}
@@ -884,7 +883,7 @@ def subscribeToEvents() {
 			def schedList = getScheduleList()
 			def sLbl
 			def cnt = 1
-			def prList = []
+			def prlist = []
 			def swlist = []
 			def mtlist = []
 			schedList?.each { scd ->
@@ -1762,11 +1761,11 @@ def getTstatSetpoint(tstat, type) {
 	if(tstat) {
 		if(type == "cool") {
 			def coolSp = tstat?.currentCoolingSetpoint
-			log.debug "getTstatSetpoint(cool): $coolSp"
+			//log.debug "getTstatSetpoint(cool): $coolSp"
 			return coolSp ? coolSp.toDouble() : 0
 		} else {
 			def heatSp = tstat?.currentHeatingSetpoint
-			log.debug "getTstatSetpoint(heat): $heatSp"
+			//log.debug "getTstatSetpoint(heat): $heatSp"
 			return heatSp ? heatSp.toDouble() : 0
 		}
 	}
@@ -4197,6 +4196,7 @@ def schMotModePage() {
 		def tempScaleStr = "°${tempScale}"
 		section("Configure Thermostat") {
 			input name: "schMotTstat", type: "capability.thermostat", title: "Select Thermostat?", multiple: false, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
+			log.debug "schMotTstat: ${schMotTstat}"
 			def tstat = settings?.schMotTstat
 			def tstatMir = settings?.schMotTstatMir
 			if(tstat) {
@@ -6846,7 +6846,7 @@ def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
-def gitRepo()		{ return "tonesto7/nest-manager-dev"}
+def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }

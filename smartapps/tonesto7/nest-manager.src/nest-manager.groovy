@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.5" }
-def appVerDate() { "1-31-2017" }
+def appVersion() { "4.5.6" }
+def appVerDate() { "2-1-2017" }
 
 preferences {
 	//startPage
@@ -572,7 +572,7 @@ def automationsPage() {
 			}
 		}
 		section("") {
-			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation", image: getAppImg("automation_icon.png"))
+			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
 		}
 		if(oldAutoApp) {
 			section("") {
@@ -1990,7 +1990,7 @@ def pollWatcher(evt) {
 
 
 def cleanRestAutomationTest() {
-	//log.trace "cleanRestAutomationTest..."
+	log.trace "cleanRestAutomationTest..."
 	def cApps = getChildApps()
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
@@ -2015,6 +2015,7 @@ def cleanRestAutomationTest() {
 }
 
 def checkIfSwupdated() {
+	checkMigrationRequired()
 	if(atomicState?.swVersion != appVersion()) {
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
@@ -2024,17 +2025,17 @@ def checkIfSwupdated() {
 			}
 		}
 		updated()
-		checkMigrationRequired()
+		//checkMigrationRequired()
 		return true
 	}
 	return false
 }
 
 def checkMigrationRequired() {
-	def allowMigration = false
-	def forceMigration = false
+	def allowMigration = true
+	def forceMigration = true
 	if(atomicState?.migrationInProgress == true) { return true }
-	if((forceMigration && allowMigration) || atomicState?.swVersion != appVersion()) {
+	if((forceMigration && allowMigration) || (atomicState?.swVersion != appVersion())) {
 		if(allowMigration) {
 			log.debug "checkIfSwupdated: Checking If Migration can proceed..."
 			if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
@@ -2075,11 +2076,9 @@ def createAutoBackupJson() {
 		def tmpList = []
 		def getIds4These = ["phone", "contact"]
 		def setObj = null
-		if(itemType?.contains("capability")) {
-			setObj = settings[item?.key].collect { it?.getId() }
-		}
-		else if (itemType in getIds4These) {
-			setObj = settings[item?.key].collect { it?.getId() }
+		if(itemType?.contains("capability") || itemType in getIds4These) {
+			if(itemVal instanceof List) { setObj = settings[item?.key].collect { it?.getId() } }
+			else { setObj = settings[item?.key].getId() }
 		}
 		else {
 			if(itemType == "mode" || itemVal instanceof Integer || itemVal instanceof Double || itemVal instanceof Boolean || itemVal instanceof Float || itemVal instanceof Long || itemVal instanceof BigDecimal) {
@@ -2087,7 +2086,7 @@ def createAutoBackupJson() {
 			}
 			else { setObj = itemVal.toString() }
 		}
-		//log.debug "${item?.key}: ${setData[item?.key]}"
+		//log.debug "setting item ${item?.key}: ${getObjType(itemVal)} | result: $setObj"
 		setData[item?.key].value = setObj
 	}
 	setData["automationTypeFlag"] = getAutoType().toString()
@@ -2158,7 +2157,7 @@ def automationRestore(data, id=null) {
 
 				log.debug "Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)...."
 				// log.debug "setData: $setData"
-				addChildApp(appNamespace(), "${newAutoName()}", appLbl?.toString(), [settings:setData])
+				addChildApp(appNamespace(), "${newAutoName()}", "${appLbl} (NST)", [settings:setData])
 				postChildRestore(bApp?.key, false)
 			}
 			return true
@@ -5446,7 +5445,7 @@ def getDaysSinceInstall() {
 	return 0
 }
 
-def getObjType(obj) {
+def getObjType(obj, retType=false) {
 	if(obj instanceof String) {return "String"}
 	else if(obj instanceof Map) {return "Map"}
 	else if(obj instanceof List) {return "List"}
@@ -6821,6 +6820,7 @@ def initAutoApp() {
 	unsubscribe()
 	def autoDisabled = getIsAutomationDisabled()
 
+	app.updateLabel(getAutoTypeLabel())
 	if(!autoDisabled) {
 		automationsInst()
 
@@ -6901,7 +6901,7 @@ def initAutoApp() {
 		subscribeToEvents()
 		scheduler()
 	}
-	app.updateLabel(getAutoTypeLabel())
+
 	atomicState?.lastAutomationSchedDt = null
 	if(!autoDisabled) {
 		heartbeatAutomation()
@@ -7165,7 +7165,7 @@ def subscribeToEvents() {
 			def schedList = getScheduleList()
 			def sLbl
 			def cnt = 1
-			def prList = []
+			def prlist = []
 			def swlist = []
 			def mtlist = []
 			schedList?.each { scd ->
