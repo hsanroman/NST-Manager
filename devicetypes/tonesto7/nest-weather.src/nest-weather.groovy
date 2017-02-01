@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.1" }
+def devVer() { return "4.5.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -256,7 +256,7 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			lastUpdatedEvent()
+			//lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
 		//return null
@@ -339,11 +339,12 @@ def lastUpdatedEvent(sendEvt=false) {
 	def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
+	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
 }
 
@@ -504,6 +505,7 @@ def getWeatherConditions(Map weatData) {
 					def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", obsrDt?.toString()))
 					if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
 						sendEvent(name: "weatherObservedDt", value: newDt)
+						lastUpdatedEvent(true)
 					}
 					//log.debug "newDt: $newDt"
 				}
