@@ -36,7 +36,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.4" }
+def appVersion() { "4.5.5" }
 def appVerDate() { "1-31-2017" }
 
 preferences {
@@ -1729,7 +1729,7 @@ def initWatchdogApp() {
 	log.debug "autoAppName: ${autoAppName()}"
 	if(watDogApp?.size() < 1) {
 		LogAction("Installing Watchdog App", "info", true)
-		addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
+		addChildApp(appNamespace(), appName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
 	} else if (watDogApp?.size() >= 1) {
 		def cnt = 1
 		watDogApp?.each { chld ->
@@ -2010,28 +2010,34 @@ def cleanRestAutomationTest() {
 }
 
 def checkIfSwupdated() {
+	if(atomicState?.swVersion != appVersion()) {
+		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
+		def cApps = getChildApps()
+		if(cApps) {
+			cApps?.sort()?.each { chld ->
+				chld?.update()
+			}
+		}
+		updated()
+		checkMigrationRequired()
+		return true
+	}
+	return false
+}
+
+def checkMigrationRequired() {
 	def allowMigration = false
 	def forceMigration = false
+	if(atomicState?.migrationInProgress == true) { return true }
 	if((forceMigration && allowMigration) || atomicState?.swVersion != appVersion()) {
-		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		if(allowMigration) {
 			log.debug "checkIfSwupdated: Checking If Migration can proceed..."
 			if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
 				log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
 				runIn(5, "doAutoMigrationProcess", [overwrite: true])
 			}
-		} else {
-			def cApps = getChildApps()
-			if(cApps) {
-				cApps?.sort()?.each { chld ->
-					chld?.update()
-				}
-			}
-			updated()
 		}
-		return true
 	}
-	return false
 }
 
 def buildSettingsMap() {
@@ -2149,7 +2155,6 @@ def automationRestore(data, id=null) {
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), "${newAutoName()}", appLbl?.toString(), [settings:setData])
 				postChildRestore(bApp?.key, false)
-				removeAutomationBackupData(bApp?.key, appLbl)
 			}
 			return true
 		}
@@ -2186,6 +2191,7 @@ void callRestoreState(child, restId) {
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
 			settingUpdate("restoreCompleted", true, "bool")
+			removeAutomationBackupData(restId)
 		}
 	}
 }
@@ -2230,7 +2236,6 @@ void finishMigrationProcess() {
 def poll(force = false, type = null) {
 	if(isPollAllowed()) {
 		//unschedule("postCmd")
-		if(atomicState?.migrationInProgress == true) { return }
 		if(checkIfSwupdated()) { return }
 		def meta = false
 		def dev = false
