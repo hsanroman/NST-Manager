@@ -2032,8 +2032,8 @@ def checkIfSwupdated() {
 }
 
 def checkMigrationRequired() {
-	def allowMigration = true
-	def forceMigration = true
+	def allowMigration = false
+	def forceMigration = false
 	if(atomicState?.migrationInProgress == true) { return true }
 	if((forceMigration && allowMigration) || (atomicState?.swVersion != appVersion())) {
 		if(allowMigration) {
