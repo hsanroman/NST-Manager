@@ -169,7 +169,7 @@ def authPage() {
 	setStateVar(true)
 	if(atomicState?.newSetupComplete && (atomicState?.appData?.updater?.versions?.app?.ver.toString() == appVersion())) {
 		def result = ((atomicState?.appData?.updater?.setupVersion && !atomicState?.setupVersion) || (atomicState?.setupVersion?.toInteger() < atomicState?.appData?.updater?.setupVersion?.toInteger())) ? true : false
-		if(result) { atomicState?.newSetupComplete = null }
+		if (result) { atomicState?.newSetupComplete = null }
 	}
 
 	def description
@@ -1639,7 +1639,7 @@ def nestTokenResetPage() {
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
 	if(!parent) {
-		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false]
+		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false, "usingNewAutoFile":useNewAutoFile()]
 		sendInstallSlackNotif()
 	}
 	initialize()
@@ -2033,15 +2033,11 @@ def checkIfSwupdated() {
 }
 
 def checkMigrationRequired() {
-	def allowMigration = false
-	def forceMigration = false
-	if(atomicState?.migrationInProgress == true) { return true }
-	if((forceMigration && allowMigration) || (atomicState?.swVersion != appVersion())) {
-		if(allowMigration) {
-			if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
-				log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
-				runIn(5, "doAutoMigrationProcess", [overwrite: true])
-			}
+	if(atomicState?.migrationInProgress == true || atomicState?.installData?.usingNewAutoFile) { return true }
+	if(allowMigration()) {
+		if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
+			log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
+			runIn(5, "doAutoMigrationProcess", [overwrite: true])
 		}
 	}
 }
@@ -2247,6 +2243,7 @@ void finishMigrationProcess(result=true) {
 	} else { LogAction("Auto Migration did not complete...", "warn", true) }
 	// This will perform a cleanup of any backup data that wasn't removed
 	clearAllAutomationBackupData()
+	atomicState?.installData["usingNewAutoFile"] = true
 	app.update()
 }
 
@@ -12819,6 +12816,8 @@ def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
+def keepBackups()	{ return false }
+def allowMigration(){ return false }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
 	def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
