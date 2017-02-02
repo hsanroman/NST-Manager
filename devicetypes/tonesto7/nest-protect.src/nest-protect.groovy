@@ -793,7 +793,12 @@ def getCssData() {
 }
 
 def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
-
+def disclaimerMsg() {
+	if(!state?.disclaimerMsgShown) {
+		state.disclaimerMsgShown = true
+		return """<div class="orangeAlertBanner">Safety Disclaimer!\nUsing your Nest Protect with SmartThings will not allow for realtime alerts of Fire and Carbon Monoxide!!!</div>"""
+	} else { return "" }
+}
 def getInfoHtml() {
 	try {
 		def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
@@ -828,6 +833,7 @@ def getInfoHtml() {
 				</style>
 			</head>
 			<body>
+			  ${disclaimerMsg()}
 			  ${testModeHTML}
 			  ${clientBl}
 			  ${updateAvail}
