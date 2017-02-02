@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.5.1"}
+def devVer() { return "4.5.2"}
 
 // for the UI
 metadata {
@@ -948,15 +948,15 @@ def checkSafetyTemps() {
 	def curRangeStr = device.currentState("safetyTempExceeded")?.toString()
 	def curInRange = !curRangeStr?.toBoolean()
 	def inRange = true
-	if(curMinTemp && curMaxTemp) {
-		if((curMinTemp > curTemp || curMaxTemp < curTemp)) { inRange = false }
-	}
-	//Logger("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} curInRange: ${curInRange} inRange: ${inRange}")
-	if (curRangeStr == null || inRange != curInRange) {
-		sendEvent(name:'safetyTempExceeded', value: (inRange ? "false" : "true"),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
-		Logger("UPDATED | Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
+	if(curMinTemp && curMinTemp > curTemp) { inRange = false }
+	if(curMaxTemp && curMaxTemp < curTemp) { inRange = false }
+	def t0 = !(inRange.toBoolean())
+	Logger("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} exceeded: ${t0.toBoolean()}  curInRange: ${curInRange} inRange: ${inRange}")
+	if(curRangeStr == null || inRange != curInRange) {
+		sendEvent(name:'safetyTempExceeded', value: ${t0.toBoolean()},  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+		Logger("UPDATED | Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
 	} else {
-		LogAction("Safety Temperature Exceeded is (${inRange ? "false" : "true"}) | Current Temp: (${curTemp}${state?.tempUnit})")
+		LogAction("Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
 	}
 }
 
