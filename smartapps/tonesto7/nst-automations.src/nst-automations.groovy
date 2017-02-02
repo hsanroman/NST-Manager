@@ -6832,7 +6832,7 @@ def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
-def gitRepo()		{ return "tonesto7/nest-manager-dev"}
+def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }

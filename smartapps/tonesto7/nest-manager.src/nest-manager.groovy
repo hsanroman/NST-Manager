@@ -22,9 +22,9 @@ definition(
 	author: "${appAuthor()}",
 	description: "${textDesc()}",
 	category: "Convenience",
-	iconUrl: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager.png",
-	iconX2Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager%402x.png",
-	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nest_manager%403x.png",
+	iconUrl: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nst_manager_icon.png",
+	iconX2Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nst_manager_icon%402x.png",
+	iconX3Url: "https://raw.githubusercontent.com/${gitPath()}/Images/App/nst_manager_icon%403x.png",
 	singleInstance: true,
 	oauth: true )
 
@@ -187,7 +187,7 @@ def authPage() {
 		LogAction("AuthToken not found: Directing to Login Page", "info", true)
 		return dynamicPage(name: "authPage", title: "Login Page", nextPage: "mainPage", install: false, uninstall: false) {
 			section("") {
-				paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+				paragraph appInfoDesc(), image: getAppImg("nst_manager_icon%402x.png", true)
 			}
 			section(""){
 				paragraph "Tap 'Login to Nest' below to authorize SmartThings to your Nest Account.\n\nAfter login you will be taken to the 'Works with Nest' page. Read the info and if you 'Agree' press the 'Accept' button."
@@ -206,7 +206,7 @@ def mainPage() {
 	def setupComplete = (!atomicState?.newSetupComplete || !atomicState.isInstalled) ? false : true
 	return dynamicPage(name: "mainPage", title: "", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
 		section("") {
-			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nest_manager%402x.png", true)
+			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
 						description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in Browser", state: "complete", image: getAppImg("update_icon.png")
@@ -431,7 +431,7 @@ def infoPage () {
 	def execTime = now()
 	dynamicPage(name: "infoPage", title: "Help, Info and Instructions", install: false) {
 		section("About this App:") {
-			paragraph appInfoDesc(), image: getAppImg("nest_manager%402x.png", true)
+			paragraph appInfoDesc(), image: getAppImg("nst_manager_icon%402x.png", true)
 		}
 		section("Donations:") {
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
