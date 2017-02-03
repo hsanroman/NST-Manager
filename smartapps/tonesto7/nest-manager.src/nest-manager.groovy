@@ -1873,9 +1873,15 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	runIn(3, "cleanRestAutomationTest",[overwrite: true])
 	//poll(true)
-	//log.debug "test: ${app.installedSmartAppDataService.getSettingsWithType()}"  Keep this for later experimentation :)
+	/*NOTE:
+		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
+		which will remove any New migrated automations and restore the originals back to active
+		and clear the flags that marked the migration complete.
+		FYI:
+		If allowMigration() is set to true it will attempt to run a migration
+	*/
+	runIn(3, "cleanRestAutomationTest",[overwrite: true])
 }
 
 def refresh(child = null) {
@@ -1977,8 +1983,13 @@ def pollWatcher(evt) {
 // 	}
 // }
 
-// This is only here to allow testing.  It will be removed after testing is complete
+
 def cleanRestAutomationTest() {
+	/* NOTE:
+		This is only here to allow testing.
+		It will be removed after testing is complete
+	*/
+
 	//log.trace "cleanRestAutomationTest..."
 	def cApps = getChildApps()
 	atomicState?.pollBlocked = true
@@ -2018,6 +2029,12 @@ def checkIfSwupdated() {
 	return false
 }
 
+/* NOTE:
+	MIGRATION Pre-Check
+	This will be called as part of the version change logic.
+	It looks to see if the file version is greater than a set number and that the atomicState.autoMigrationComplete is false or null,
+	If the to are ok it schedules the "doAutoMigrationProcess" method for 5 seconds.
+*/
 def checkMigrationRequired() {
 	if(atomicState?.migrationInProgress == true || atomicState?.installData?.usingNewAutoFile) { return }
 	if(allowMigration()) {
@@ -2043,6 +2060,9 @@ def buildSettingsMap() {
 	return settingsMap
 }
 
+/* NOTE:
+	This is method creates the JSON that is sent to Firebase with the Settings and State data
+*/
 def createAutoBackupJson() {
 	//log.trace "createAutoBackupJson..."
 	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData"]
@@ -2115,6 +2135,33 @@ def getAutomationBackupData() {
 	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
 }
 
+/* NOTE: MIGRATION STEP 1
+	This is the process that is called to kick off the backup/restore process.
+	It set the state values of pollBlocked and migrationInProgress to true to prevent any polling
+*/
+void doAutoMigrationProcess() {
+	log.trace "doAutoMigrationProcess..."
+	atomicState?.pollBlocked = true
+	atomicState?.migrationInProgress = true
+
+	def cApps = getChildApps()
+	if(cApps) {
+		cApps?.each { ca ->
+			if(backupAutomation(ca)) {
+				log.debug "backed up ${ca?.label}"
+			} else { log.debug "skipping backup of the new style automation" }
+		}
+		runIn(8, "processAutoRestore", [overwrite:true])
+		LogAction("Scheduled restore process for (8 seconds)...", "info", true)
+	} else {
+		LogAction("There are no automations to restore.", "warn", true)
+		finishMigrationProcess(false)
+	}
+}
+
+/* NOTE: MIGRATION STEP 2
+	This is the process calls the backupConfigToFirebase method on every child
+*/
 def backupAutomation(child) {
 	if(child?.settings?.restoredFromBackup != null) { return false }
 	if(child?.backupConfigToFirebase()) {
@@ -2124,8 +2171,22 @@ def backupAutomation(child) {
 	return false
 }
 
-/* NOTE:
-	This is the actually automation restore method for installing the automations from the backups
+/* NOTE: MIGRATION STEP 3
+	This process calls the automationRestore method with all of the backup data to restore
+*/
+void processAutoRestore() {
+	def backupData = getAutomationBackupData()
+	if(backupData instanceof List || backupData instanceof Map) {
+		automationRestore(backupData)
+	}
+	// runIn(7, "finishMigrationProcess", [overwrite:true])
+	// log.debug "Scheduling finishMigrationProcess..."
+}
+
+/* NOTE: MIGRATION STEP 4
+	This is the actual automation restore method for installing the automations from the backups
+	It loops through each backed up automation id and creates the map to send and creates the new automation
+	using the new file.
 */
 def automationRestore(data, id=null) {
 	log.trace "automationRestore..."
@@ -2143,17 +2204,42 @@ def automationRestore(data, id=null) {
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
-				postChildRestore(bApp?.key, keepBackups())
+				//postChildRestore(bApp?.key, keepBackups())
 			}
+			runIn(10, "finishMigrationProcess", [overwrite:true])
+			log.debug "Scheduling finishMigrationProcess for (10 seconds)..."
 			return true
 		}
 	} catch (ex) { }
 	return false
 }
 
-/* NOTE:
-	This is only called by the child when the setting["restoreCompleted"] is not true.
-	It's purpose is finalize the restore setting values and disable/or remove the old automations
+/* NOTE: MIGRATION 5
+	This is called by the child automations initAutoApp() method after the addChildApp()
+	creates that app from backup.  On the first initialazation of the child it calls the
+	parent to restore the stateData from backup
+*/
+def callRestoreState(child, restId) {
+	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
+	if(restId) {
+		def data = getAutomationBackupData()
+		//log.debug "callRestoreState data: $data"
+		def newData = data.find { it?.key?.toString() == restId?.toString() }
+		if(newData?.value?.stateData) {
+			newData?.value?.stateData?.each { sKey ->
+				child?.stateUpdate(sKey?.key, sKey?.value)
+			}
+			//child?.settingUpdate("restoreCompleted", true, "bool")
+			return true
+		}
+	}
+	return false
+}
+
+/* NOTE: MIGRATION STEP 6
+	This is called by the child once it's state data has been restored and it's purpose is
+	finalize the restore setting values and disable/or remove the old automations.
+	The removal is controlled by the method keepBackups().
 */
 def postChildRestore(childId, keepBackups=true) {
 	//log.trace "postChildRestore(childId: $childId, remove: $remove)"
@@ -2173,66 +2259,24 @@ def postChildRestore(childId, keepBackups=true) {
 	}
 }
 
-/* NOTE:
-	This is called by the child immediately after the addChildApp( ) creates the app from backup
+/* NOTE: MIGRATION 7
+	This is the final part of the migration process. It's supposed to if Successful restore polling state,
+	and mark the migration complete.  Otherwise it leaves them set so the migration will try again after the
+	update is called.
 */
-def callRestoreState(child, restId) {
-	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
-	if(restId) {
-		def data = getAutomationBackupData()
-		//log.debug "callRestoreState data: $data"
-		def newData = data.find { it?.key?.toString() == restId?.toString() }
-		if(newData?.value?.stateData) {
-			newData?.value?.stateData?.each { sKey ->
-				child?.stateUpdate(sKey?.key, sKey?.value)
-			}
-			//child?.settingUpdate("restoreCompleted", true, "bool")
-			return true
-		}
-	}
-	return false
-}
-
-void doAutoMigrationProcess() {
-	log.trace "doAutoMigrationProcess..."
-	atomicState?.pollBlocked = true
-	atomicState?.migrationInProgress = true
-
-	def cApps = getChildApps()
-	if(cApps) {
-		cApps?.each { ca ->
-			if(backupAutomation(ca)) {
-				log.debug "backed up ${ca?.label}"
-			} else { log.debug "skipping new automation backup" }
-		}
-		runIn(8, "processAutoRestore", [overwrite:true])
-		LogAction("Scheduled restore process for (8 seconds)...", "info", true)
-	} else {
-		LogAction("There are no automations to restore.", "warn", true)
-		finishMigrationProcess(false)
-	}
-}
-
-void processAutoRestore() {
-	def backupData = getAutomationBackupData()
-	if(backupData instanceof List || backupData instanceof Map) {
-		//log.info "Starting Restoration of Child Automations Using New File..."
-		automationRestore(backupData)
-	}
-	runIn(7, "finishMigrationProcess", [overwrite:true])
-	log.debug "Scheduling finishMigrationProcess..."
-}
-
 void finishMigrationProcess(result=true) {
-	atomicState?.autoMigrationComplete = true
-	atomicState?.pollBlocked = false
-	atomicState?.migrationInProgress = false
+	// atomicState?.autoMigrationComplete = true
+	// atomicState?.pollBlocked = false
+	// atomicState?.migrationInProgress = false
 	if(result) {
+		atomicState?.autoMigrationComplete = true
+		atomicState?.pollBlocked = false
+		atomicState?.migrationInProgress = false
 		LogAction("Auto Migration Process is complete...", "info", true)
+		atomicState?.installData["usingNewAutoFile"] = true
 	} else { LogAction("Auto Migration did not complete...", "warn", true) }
 	// This will perform a cleanup of any backup data that wasn't removed
 	if(keepBackups() == false) { clearAllAutomationBackupData() }
-	atomicState?.installData["usingNewAutoFile"] = true
 	app.update()
 }
 

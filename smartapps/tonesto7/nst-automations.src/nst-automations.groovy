@@ -512,7 +512,9 @@ def initAutoApp() {
 	else if (restoreId != null && restoreComplete == false) {
 		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
 		if(parent?.callRestoreState(app, restoreId)) {
-			if(parent?.keepBackups == true) { parent?.removeAutomationBackupData(restoreId) }
+			def kBackups = parent?.keepBackups()
+			parent?.postChildRestore(restoreId, kBackups)
+			if(kBackups != true) { parent?.removeAutomationBackupData(restoreId) }
 			settingUpdate("restoreCompleted", true, "bool")
 		}
 		atomicState?.newAutomationFile = true
