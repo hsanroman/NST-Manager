@@ -219,8 +219,8 @@ def mainPage() {
 			if(settings?.structures && !atomicState?.structures) { atomicState.structures = settings?.structures }
 			section("Manage Devices & Location:") {
 				def t1 = getDevicesDesc()
-				def devDesc = t1 ? "Nest Location: ${atomicState?.structName} (${strCapitalize(locationPresence())})\n${t1}\n\nTap to modify" : "Tap to configure"
-				href "deviceSelectPage", title: "Devices & Location", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
+				def devDesc = t1 ? "Current Status: (${strCapitalize(locationPresence())})\n${t1}\n\nTap to modify devices" : "Tap to configure"
+				href "deviceSelectPage", title: "Location: ${atomicState?.structName}", description: devDesc, state: "complete", image: getAppImg("thermostat_icon.png")
 			}
 			//getDevChgDesc()
 		}
@@ -294,7 +294,7 @@ def devicesPage() {
 	//LogAction("${structDesc} (${structs})", "info", false)
 	if (atomicState?.thermostats || atomicState?.protects || atomicState?.vThermostats || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice ) {  // if devices are configured, you cannot change the structure until they are removed
 		section("Location:") {
-			paragraph "Location: ${structs[atomicState?.structures]}\n${(structs.size() > 1) ? "\n(Remove All Devices to Change!)" : ""}", image: getAppImg("nest_structure_icon.png")
+			paragraph "Nest Location Name: ${structs[atomicState?.structures]}${(structs.size() > 1) ? "\n(Remove All Devices to Change!)" : ""}", image: getAppImg("nest_structure_icon.png")
 		}
 	} else {
 		section("Select Location:") {
@@ -630,9 +630,12 @@ def automationSchedulePage() {
 			paragraph "$str", state: "complete"
 		}
 		def schMap = []
+		def schSize = 0
 		getChildApps()?.each {
+			if(it?.getStateVal("newAutomationFile") == null) { return }
 			def schInfo = it?.getScheduleDesc()
 			if (schInfo?.size()) {
+				schSize = schSize+1
 				def curSch = it?.getCurrentSchedule()
 				section("${it?.label}") {
 					schInfo?.each { schItem ->
@@ -646,6 +649,11 @@ def automationSchedulePage() {
 				}
 			}
 		}
+		if(schSize < 1) {
+			section("") {
+				paragraph "There is No Schedule Data to Display"
+			}
+		}
 		incViewAutoSchedLoadCnt()
 		devPageFooter("viewAutoSchedLoadCnt", execTime)
 	}
@@ -655,8 +663,11 @@ def automationStatisticsPage() {
 	def execTime = now()
 	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refreshes every 20 sec.)", refreshInterval: 20, uninstall: false) {
 		def cApps = getChildApps()
+		def aSize = 0
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
+				if(chld?.getStateVal("newAutomationFile") == null) { return }
+				aSize = aSize+1
 				def autoType = chld?.getAutomationType()
 				section(" ") {
 					paragraph "${chld?.label}", state: "complete", image: getAutoIcon(autoType)
@@ -684,6 +695,11 @@ def automationStatisticsPage() {
 					str += lastExecVal ? "\n\n• Execution Info:\n  ${execAvgVal ? "├" : "└"} Last Time: (${lastExecVal} ms)${execAvgVal ? "\n  └ Avg. Time: (${execAvgVal} ms)" : ""}" : "\n\n • Execution Info: (Not Available)"
 					paragraph "${str}", state: "complete"
 				}
+			}
+		}
+		if(aSize < 1) {
+			section("") {
+				paragraph "There is No Statistic Data to Display"
 			}
 		}
 		incViewAutoStatLoadCnt()
@@ -1060,13 +1076,24 @@ def devPrefPage() {
 def custWeatherPage() {
 	def execTime = now()
 	dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
+		def objs = [:]
 		section("Set Custom Weather Location") {
-			def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]"
+			def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
 			href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
 					description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
+			input ("useCustWeatherLoc", "bool", title: "Use the selected search item as the location", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
+			if(settings?.useCustWeatherLoc) {
+				input("custLocSearchStr", "text", title: "Enter a query to search ()", required: false, defaultValue: null, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+				if(settings?.custLocSearchStr != null || settings?.custLocSearchStr != "") {
+					objs = getWeatherQueryResults(settings?.custLocSearchStr.toString())
+					if(objs?.size() > 0) {
+						input(name: "custWeatherResultItems", title:"Search Results (Found: ${objs?.size()})", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:objs],
+								image: getAppImg("search_icon.png"))
+					}
+				}
+			}
 			def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-			input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: defZip, submitOnChange: true,
-					image: getAppImg("weather_icon_grey.png"))
+			input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
 			paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
 			atomicState.lastWeatherUpdDt = 0
 			atomicState?.lastForecastUpdDt = 0
@@ -1074,6 +1101,18 @@ def custWeatherPage() {
 		incCustWeathLoadCnt()
 		devPageFooter("custWeathLoadCnt", execTime)
 	}
+}
+
+def getWeatherQueryResults(query) {
+	LogTrace("Getting Weather Query Results for '$query'")
+	def objMap = [:]
+	def params = [uri: "http://autocomplete.wunderground.com/aq?query=${query.toString().encodeAsURL()}", contentType:"application/json", requestContentType:"application/json"]
+	def data = getWebData(params, "weather location query", false)
+	data?.RESULTS?.each { res ->
+		log.debug "item: ${res?.name} | Zip: ${res?.zmw}"
+		objMap[["zmw:${res?.zmw}"].join('.')] = res?.name.toString()
+	}
+	return objMap
 }
 
 def debugPrefPage() {
@@ -1281,6 +1320,90 @@ def uninstallPage() {
 	}
 }
 
+// def backupRemoveDataPage() {
+// 	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
+// 		section("") {
+// 			paragraph "Removing Backed Up App Data from Firebase..."
+// 			if(!parent) {
+// 				def cApps = getChildApps()
+// 				cApps?.each { ca ->
+// 					if(removeAutomationBackupData(ca?.id)) {
+// 						ca?.state?.lastBackupDt = null
+// 						paragraph "Successfully Deleted...\n${ca?.label.toString().capitalize()} Backup Data", required: true, state: null
+// 						atomicState?.lastBackupDt = null
+// 					}
+// 				}
+// 				paragraph "Done Removing Data from Firebase...", state: "complete"
+// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
+// 		}
+// 	}
+// }
+//
+// def restoreStubPage(params) {
+// 	dynamicPage(name: "restoreStubPage", title: "", nextPage: "manageBackRestorePage", install: false) {
+// 		section("Restoring Automations:") {
+// 			if(params.backup) {
+// 				paragraph "Restoring Automations..."
+// 				if(automationRestore(params?.backup, params?.autoId)) {
+// 					paragraph "Successfully Restored...\nAutomation App"
+// 				}
+// 				paragraph "We are Done Restoring the Application...", state: "complete"
+// 			} else {
+// 				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
+// 			}
+// 		}
+// 	}
+// }
+
+// def manageBackRestorePage() {
+// 	dynamicPage(name: "manageBackRestorePage", title: "", nextPage: "", install: false) {
+// 		def lastDt = atomicState?.lastBackupDt
+// 		section("") {
+// 			href "backupStubDataPage", title: "${lastDt ? "Update All Automation Backup Data" : "Backup All Automation Data"}", description: "${lastDt ? "Last Backup:\n${lastDt}" : ""}",
+// 					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
+// 			if(lastDt) {
+// 				href "backupRemoveDataPage", title: "Remove All Backup Data", description: "", image: getAppImg("uninstall_icon.png")
+// 			}
+// 		}
+// 		def backupData = getAutomationBackupData()
+// 		if(backupData instanceof List || backupData instanceof Map) {
+// 			section("Available Automations") {
+// 				paragraph "Automations Backed Up: (${backupData ? backupData?.size() : 0})"
+// 				backupData?.each { bd ->
+// 					href "restoreStubPage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
+// 							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
+// 				}
+// 			}
+// 			section("Restore All:") {
+// 				href "restoreStubPage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
+// 			}
+// 		}
+// 	}
+// }
+//
+// def backupStubDataPage() {
+// 	return dynamicPage(name: "backupStubDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
+// 		section("") {
+// 			paragraph "Sending Backup Data to Firebase..."
+// 			if(!parent) {
+// 				def cApps = getChildApps()
+// 				cApps?.each { ca ->
+// 					if (ca?.settings?.restoreId) {
+// 						return
+// 					} else {
+// 						if(backupAutomation(ca)) {
+// 							paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
+// 						}
+// 						atomicState?.lastBackupDt = getDtNow()
+// 					}
+// 				}
+// 				paragraph "Done Backing Up Data to Firebase...", state: "complete"
+// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
+// 		}
+// 	}
+// }
+
+
 def getDevOpt() {
 	appSettings?.devOpt.toString() == "true" ? true : false
 }
@@ -1417,18 +1540,18 @@ def getAppNotifConfDesc() {
 def getWeatherConfDesc() {
 	def str = ""
 	def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-	str += custLocStr ? "• Weather Location:\n   └ Custom (${custLocStr})" : " • Weather Location:\n   └ Hub Location (${defZip})"
+	str += settings?.custLocStr ? "• Weather Location:\n   └ Custom (${settings?.custLocStr})" : " • Weather Location:\n   └ Hub Location (${defZip})"
 	return (str != "") ? "${str}" : null
 }
 
 def devCustomizePageDesc() {
-	def tempChgWaitValDesc = (!tempChgWaitVal || tempChgWaitVal == 4) ? "" : tempChgWaitVal
-	def wstr = weathAlertNotif ? "Enabled" : "Disabled"
+	def tempChgWaitValDesc = (!settings?.tempChgWaitVal || settings?.tempChgWaitVal == 4) ? "" : settings?.tempChgWaitVal
+	def wstr = settings?.weathAlertNotif ? "Enabled" : "Disabled"
 	def str = "Device Customizations:"
-	str += "\n• Man. Temp Change Delay:\n   └ (${getInputEnumLabel(tempChgWaitVal ?: 4, waitValEnum())})"
+	str += "\n• Man. Temp Change Delay:\n   └ (${getInputEnumLabel(settings?.tempChgWaitVal ?: 4, waitValEnum())})"
 	str += "\n${getWeatherConfDesc()}"
 	str += "\n• Weather Alerts: (${wstr})"
-	return ((tempChgWaitValDesc || custLocStr || weathAlertNotif) ? str : "")
+	return ((tempChgWaitValDesc || settings?.custLocStr || settings?.weathAlertNotif) ? str : "")
 }
 
 def getDevicesDesc() {
@@ -1878,8 +2001,7 @@ def onAppTouch(event) {
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
 		which will remove any New migrated automations and restore the originals back to active
 		and clear the flags that marked the migration complete.
-		FYI:
-		If allowMigration() is set to true it will attempt to run a migration
+		FYI: If allowMigration() is set to true it will attempt to run a migration
 	*/
 	runIn(3, "cleanRestAutomationTest",[overwrite: true])
 }
@@ -1900,96 +2022,11 @@ def pollWatcher(evt) {
 	if(isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
 
-// def backupRemoveDataPage() {
-// 	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("") {
-// 			paragraph "Removing Backed Up App Data from Firebase..."
-// 			if(!parent) {
-// 				def cApps = getChildApps()
-// 				cApps?.each { ca ->
-// 					if(removeAutomationBackupData(ca?.id)) {
-// 						ca?.state?.lastBackupDt = null
-// 						paragraph "Successfully Deleted...\n${ca?.label.toString().capitalize()} Backup Data", required: true, state: null
-// 						atomicState?.lastBackupDt = null
-// 					}
-// 				}
-// 				paragraph "Done Removing Data from Firebase...", state: "complete"
-// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-// 		}
-// 	}
-// }
-//
-// def restoreStubPage(params) {
-// 	dynamicPage(name: "restoreStubPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("Restoring Automations:") {
-// 			if(params.backup) {
-// 				paragraph "Restoring Automations..."
-// 				if(automationRestore(params?.backup, params?.autoId)) {
-// 					paragraph "Successfully Restored...\nAutomation App"
-// 				}
-// 				paragraph "We are Done Restoring the Application...", state: "complete"
-// 			} else {
-// 				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
-// 			}
-// 		}
-// 	}
-// }
-
-// def manageBackRestorePage() {
-// 	dynamicPage(name: "manageBackRestorePage", title: "", nextPage: "", install: false) {
-// 		def lastDt = atomicState?.lastBackupDt
-// 		section("") {
-// 			href "backupStubDataPage", title: "${lastDt ? "Update All Automation Backup Data" : "Backup All Automation Data"}", description: "${lastDt ? "Last Backup:\n${lastDt}" : ""}",
-// 					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
-// 			if(lastDt) {
-// 				href "backupRemoveDataPage", title: "Remove All Backup Data", description: "", image: getAppImg("uninstall_icon.png")
-// 			}
-// 		}
-// 		def backupData = getAutomationBackupData()
-// 		if(backupData instanceof List || backupData instanceof Map) {
-// 			section("Available Automations") {
-// 				paragraph "Automations Backed Up: (${backupData ? backupData?.size() : 0})"
-// 				backupData?.each { bd ->
-// 					href "restoreStubPage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
-// 							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
-// 				}
-// 			}
-// 			section("Restore All:") {
-// 				href "restoreStubPage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
-// 			}
-// 		}
-// 	}
-// }
-//
-// def backupStubDataPage() {
-// 	return dynamicPage(name: "backupStubDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("") {
-// 			paragraph "Sending Backup Data to Firebase..."
-// 			if(!parent) {
-// 				def cApps = getChildApps()
-// 				cApps?.each { ca ->
-// 					if (ca?.settings?.restoreId) {
-// 						return
-// 					} else {
-// 						if(backupAutomation(ca)) {
-// 							paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
-// 						}
-// 						atomicState?.lastBackupDt = getDtNow()
-// 					}
-// 				}
-// 				paragraph "Done Backing Up Data to Firebase...", state: "complete"
-// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-// 		}
-// 	}
-// }
-
-
 def cleanRestAutomationTest() {
 	/* NOTE:
 		This is only here to allow testing.
 		It will be removed after testing is complete
 	*/
-
 	//log.trace "cleanRestAutomationTest..."
 	def cApps = getChildApps()
 	atomicState?.pollBlocked = true
@@ -2050,7 +2087,7 @@ def checkMigrationRequired() {
 	The input reference data used is stored on our firebase
 */
 def buildSettingsMap() {
-	def inputData = getWebData("https://st-nest-manager.firebaseio.com/restoreInputData.json", "application/json", "inputType", false)
+	def inputData = getWebData([uri: "https://st-nest-manager.firebaseio.com/restoreInputData.json", contentType:"application/json"], "inputType", false)
 	def settingsMap = [:]
 	def setData = getSettings()?.sort()?.findAll { it }
 	setData?.sort().each { item ->
@@ -2132,7 +2169,7 @@ def clearAllAutomationBackupData() {
 }
 
 def getAutomationBackupData() {
-	return getWebData("https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", "application/json", "getAutomationBackup", false)
+	return getWebData([uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", contentType:"application/json"], "getAutomationBackup", false)
 }
 
 /* NOTE: MIGRATION STEP 1
@@ -2179,8 +2216,6 @@ void processAutoRestore() {
 	if(backupData instanceof List || backupData instanceof Map) {
 		automationRestore(backupData)
 	}
-	// runIn(7, "finishMigrationProcess", [overwrite:true])
-	// log.debug "Scheduling finishMigrationProcess..."
 }
 
 /* NOTE: MIGRATION STEP 4
@@ -2241,12 +2276,12 @@ def callRestoreState(child, restId) {
 	finalize the restore setting values and disable/or remove the old automations.
 	The removal is controlled by the method keepBackups().
 */
-def postChildRestore(childId, keepBackups=true) {
+def postChildRestore(childId) {
 	//log.trace "postChildRestore(childId: $childId, remove: $remove)"
 	def cApp = getChildApps()
 	cApp?.each { ca ->
 		if(ca?.getId() == childId) {
-			if(keepBackups == false) {
+			if(keepBackups() == false) {
 				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
 				deleteChildApp(ca)
 			} else {
@@ -2765,7 +2800,7 @@ def updateChildData(force = false) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
 						LogTrace("UpdateChildData >> Weather id: ${devId}")
 						it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
-										"allowDbException":allowDbException, "weathAlertNotif":weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
+										"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
 										"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag ])
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
@@ -3867,8 +3902,8 @@ def getWeatherConditions(force = false) {
 			def curAstronomy = ""
 			def curAlerts = ""
 			def err = false
-			if(custLocStr) {
-				loc = custLocStr
+			if(settings?.custLocStr) {
+				loc = settings?.custLocStr
 				curWeather = getWeatherFeature("conditions", loc)
 				curAlerts = getWeatherFeature("alerts", loc)
 			} else {
@@ -3876,8 +3911,8 @@ def getWeatherConditions(force = false) {
 				curAlerts = getWeatherFeature("alerts")
 			}
 			if(getLastForecastUpdSec() > (1800)) {
-				if(custLocStr) {
-					loc = custLocStr
+				if(settings?.custLocStr) {
+					loc = settings?.custLocStr
 					curForecast = getWeatherFeature("forecast", loc)
 					curAstronomy = getWeatherFeature("astronomy", loc)
 				} else {
@@ -4020,10 +4055,10 @@ def webResponse(resp, data) {
 	return result
 }
 
-def getWebData(path, content, label, text=true) {
+def getWebData(params, desc, text=true) {
 	try {
-		LogAction("Getting ${label} data", "info", true)
-		httpGet([ uri: path, contentType: "$content" ]) { resp ->
+		LogAction("Getting ${desc} data", "info", true)
+		httpGet(params) { resp ->
 			if(resp.data) {
 				if(text) {
 					return resp?.data?.text.toString()
@@ -4033,9 +4068,9 @@ def getWebData(path, content, label, text=true) {
 	}
 	catch (ex) {
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			LogAction("${label} file not found", "warn", true)
+			LogAction("${desc} file not found", "warn", true)
 		} else {
-			log.error "getWebData($path, $content, $label) Exception:", ex
+			log.error "getWebData(params: $params, desc: $desc, text: $text) Exception:", ex
 		}
 		//sendExceptionData(ex, "getWebData")
 		return "${label} info not found"
@@ -4576,7 +4611,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
 	def devt = appDevName()
-	def wLbl = custLocStr ? custLocStr.toString() : "${getStZipCode()}"
+	def wLbl = settings?.custLocStr ? settings?.custLocStr.toString() : "${getStZipCode()}"
 	def defName = "Nest Weather${devt} (${wLbl})"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
 	if(atomicState?.custLabelUsed) {
@@ -5442,6 +5477,7 @@ def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=N
 def getIssuePageUrl()		{ return "https://github.com/tonesto7/nest-manager/issues" }
 def slackMsgWebHookUrl()	{ return "https://hooks.slack.com/services/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" }
 def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
+def weatherApiKey()			{ return "b82aba1bb9a9d7f1" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
@@ -12870,8 +12906,8 @@ def textVersion()   { return "Version: ${appVersion()}" }
 def textModified()  { return "Updated: ${appVerDate()}" }
 
 def textVerInfo()   { return "${appVerInfo()}" }
-def appVerInfo() 	{ return getWebData("https://raw.githubusercontent.com/${gitPath()}/Data/changelog.txt", "text/plain; charset=UTF-8", "changelog") }
-def textLicense() 	{ return getWebData("https://raw.githubusercontent.com/${gitPath()}/app_license.txt", "text/plain; charset=UTF-8", "license") }
+def appVerInfo() 	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
+def textLicense() 	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/app_license.txt", contentType: "text/plain; charset=UTF-8"], "license") }
 def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
 def stIdeLink()     { return "https://graph.api.smartthings.com" }
 def textCopyright() { return "Copyright© 2017 - Anthony S." }

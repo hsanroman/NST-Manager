@@ -121,6 +121,7 @@ def uninstalled() {
 
 def initialize() {
 	//LogTrace("initialize")
+	if(!atomicState?.newAutomationFile) { atomicState?.newAutomationFile = true }
 	def settingsReset = parent?.settings?.resetAllData
 	if(atomicState?.resetAllData || settingsReset) {
 		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
@@ -505,19 +506,16 @@ def stateUpdate(key, value) {
 def initAutoApp() {
 	def restoreId = settings["restoreId"]
 	def restoreComplete = settings["restoreCompleted"] == true ? true : false
-
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
 	}
 	else if (restoreId != null && restoreComplete == false) {
 		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
 		if(parent?.callRestoreState(app, restoreId)) {
-			def kBackups = parent?.keepBackups()
-			parent?.postChildRestore(restoreId, kBackups)
-			if(kBackups != true) { parent?.removeAutomationBackupData(restoreId) }
+			parent?.postChildRestore(restoreId)
+			if(parent?.keepBackups() != true) { parent?.removeAutomationBackupData(restoreId) }
 			settingUpdate("restoreCompleted", true, "bool")
 		}
-		atomicState?.newAutomationFile = true
 	}
 
 	def autoType = getAutoType()
@@ -1206,7 +1204,7 @@ def watchDogAlarmActions(dev, dni, actType) {
 			evtVoiceMsg = evtNotifMsg
 			break
 		case "eco":
-			if(settings["watDogNotifMissedEco"] == null || settings["watDogNotifMissedEco"] == true) {
+			if(settings["watDogNotifMissedEco"] == true) {
 				evtNotifMsg = "Nest Location Home/Away Mode is 'Away' and thermostat [${dev}] is not in ECO."
 				evtVoiceMsg = evtNotifMsg
 			} else {return}
