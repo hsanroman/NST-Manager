@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.5.6" }
-def appVerDate() { "2-1-2017" }
+def appVersion() { "4.5.7" }
+def appVerDate() { "2-2-2017" }
 
 preferences {
 	//startPage
@@ -512,7 +512,7 @@ def initAutoApp() {
 	else if (restoreId != null && restoreComplete == false) {
 		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
 		if(parent?.callRestoreState(app, restoreId)) {
-			parent?.removeAutomationBackupData(restoreId)
+			if(parent?.keepBackups == true) { parent?.removeAutomationBackupData(restoreId) }
 			settingUpdate("restoreCompleted", true, "bool")
 		}
 		atomicState?.newAutomationFile = true
