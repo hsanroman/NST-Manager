@@ -584,7 +584,7 @@ def automationsPage() {
 				if(schEn?.size()) {
 					href "automationSchedulePage", title: "View Automation Schedule(s)", description: "", image: getAppImg("schedule_icon.png")
 				}
-				//href "automationStatisticsPage", title: "View Automation Statistics", description: "", image: getAppImg("app_analytics_icon.png")
+				href "automationStatisticsPage", title: "View Automation Statistics", description: "", image: getAppImg("app_analytics_icon.png")
 			}
 			section("Advanced Options: (Tap + to Show)                                                          ", hideable: true, hidden: true) {
 				def descStr = ""
@@ -10076,9 +10076,9 @@ private formatHour(h) {
 // 	return restriction
 // }
 //
-// def getActiveScheduleState() {
-// 	return atomicState?.activeSchedData ?: null
-// }
+def getActiveScheduleState() {
+	return atomicState?.activeSchedData ?: null
+}
 //
 // def getSchRestrictDoWOk(cnt) {
 // 	def apprestrict = atomicState?.activeSchedData
