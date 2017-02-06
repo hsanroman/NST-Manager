@@ -1061,13 +1061,13 @@ def custWeatherPage() {
 	def execTime = now()
 	dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
 		def objs = [:]
-		section("Set Custom Weather Location") {
-			def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
-			href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
-					description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
-			input ("useCustWeatherLoc", "bool", title: "Use the selected search item as the location", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
-			if(settings?.useCustWeatherLoc) {
-				input("custLocSearchStr", "text", title: "Enter a query to search ()", required: false, defaultValue: null, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+		def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
+		section("Select the Search method:") {
+			input ("useCustWeatherLoc", "bool", title: "Use semi-automated search?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
+		}
+		if(settings?.useCustWeatherLoc) {
+			section("Set Custom Weather Location") {
+				input("custLocSearchStr", "text", title: "Enter a location to search\nZipcode/City are valid", description: "The results will be available in the input below...", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
 				if(settings?.custLocSearchStr != null || settings?.custLocSearchStr != "") {
 					objs = getWeatherQueryResults(settings?.custLocSearchStr.toString())
 					if(objs?.size() > 0) {
@@ -1076,12 +1076,17 @@ def custWeatherPage() {
 					}
 				}
 			}
-			def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-			input("custLocStr", "text", title: "Set Custom Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
-			paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
-			atomicState.lastWeatherUpdDt = 0
-			atomicState?.lastForecastUpdDt = 0
+		} else {
+			section("Manually Enter a Location:") {
+				href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
+						description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
+				input("custLocStr", "text", title: "Manaually Set Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+				def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
+				paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+			}
 		}
+		atomicState.lastWeatherUpdDt = 0
+		atomicState?.lastForecastUpdDt = 0
 		incCustWeathLoadCnt()
 		devPageFooter("custWeathLoadCnt", execTime)
 	}
@@ -1524,8 +1529,18 @@ def getAppNotifConfDesc() {
 def getWeatherConfDesc() {
 	def str = ""
 	def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-	str += settings?.custLocStr ? "• Weather Location:\n   └ Custom (${settings?.custLocStr})" : " • Weather Location:\n   └ Hub Location (${defZip})"
+	str += "• Weather Location:\n   └ ${getCustWeatherLoc() ? "Custom (${getCustWeatherLoc(true)})" : "Hub Location (${defZip})"}"
 	return (str != "") ? "${str}" : null
+}
+
+def getCustWeatherLoc(desc=false) {
+	def res = null
+	if(settings?.useCustWeatherLoc == true && settings?.custWeatherResultItems != null) {
+		res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
+	} else if(settings?.useCustWeatherLoc == false && settings?.custLocStr != null) {
+		res = settings?.custLocStr
+	}
+	return res
 }
 
 def devCustomizePageDesc() {
@@ -1535,7 +1550,7 @@ def devCustomizePageDesc() {
 	str += "\n• Man. Temp Change Delay:\n   └ (${getInputEnumLabel(settings?.tempChgWaitVal ?: 4, waitValEnum())})"
 	str += "\n${getWeatherConfDesc()}"
 	str += "\n• Weather Alerts: (${wstr})"
-	return ((tempChgWaitValDesc || settings?.custLocStr || settings?.weathAlertNotif) ? str : "")
+	return ((tempChgWaitValDesc || getCustWeatherLoc() || settings?.weathAlertNotif) ? str : "")
 }
 
 def getDevicesDesc() {
@@ -3886,8 +3901,9 @@ def getWeatherConditions(force = false) {
 			def curAstronomy = ""
 			def curAlerts = ""
 			def err = false
-			if(settings?.custLocStr) {
-				loc = settings?.custLocStr
+			def custLoc = getCustWeatherLoc()
+			if(custLoc) {
+				loc = custLoc
 				curWeather = getWeatherFeature("conditions", loc)
 				curAlerts = getWeatherFeature("alerts", loc)
 			} else {
@@ -3895,8 +3911,8 @@ def getWeatherConditions(force = false) {
 				curAlerts = getWeatherFeature("alerts")
 			}
 			if(getLastForecastUpdSec() > (1800)) {
-				if(settings?.custLocStr) {
-					loc = settings?.custLocStr
+				if(custLoc) {
+					loc = custLoc
 					curForecast = getWeatherFeature("forecast", loc)
 					curAstronomy = getWeatherFeature("astronomy", loc)
 				} else {
@@ -4595,7 +4611,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
 	def devt = appDevName()
-	def wLbl = settings?.custLocStr ? settings?.custLocStr.toString() : "${getStZipCode()}"
+	def wLbl = getCustWeatherLoc() ? getCustWeatherLoc().toString() : "${getStZipCode()}"
 	def defName = "Nest Weather${devt} (${wLbl})"
 	if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
 	if(atomicState?.custLabelUsed) {
