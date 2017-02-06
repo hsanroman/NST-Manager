@@ -642,11 +642,6 @@ def automationsPage() {
 		section("") {
 			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
 		}
-		// if(oldAutoApp) {
-		// 	section("") {
-		// 		app(name: "oldAutoApp", appName: appName(), namespace: "tonesto7", multiple: true, title: "Create New Automation", image: getAppImg("automation_icon.png"))
-		// 	}
-		// }
 		if(autoAppInst) {
 			section("Automation Details:") {
 				def schEn = getChildApps()?.findAll { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState()) }
