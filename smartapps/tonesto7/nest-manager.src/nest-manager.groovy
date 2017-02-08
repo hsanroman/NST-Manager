@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.5.8" }
-def appVerDate() { "2-5-2017" }
+def appVerDate() { "2-6-2017" }
 
 preferences {
 	//startPage
@@ -88,12 +88,12 @@ preferences {
 	page(name: "restoreStubPage")
 
 	page(name: "setNotificationPage")
+	page(name: "notifConfigPage")
 	page(name: "setNotificationTimePage")
 	page(name: "backupStubDataPage")
 	page(name: "backupRemoveDataPage")
 	page(name: "backupPage")
 }
-
 
 mappings {
 	if(!parent) {
@@ -220,7 +220,7 @@ def mainPage() {
 			}
 		}
 		if(atomicState?.isInstalled) {
-			section("Manage Login, Notification, Polling and More:") {
+			section("Manage Logging, Nest Login, Polling and More:") {
 				def descStr = ""
 				def sz = descStr.size()
 				def t1 = getAppNotifConfDesc()
@@ -238,10 +238,10 @@ def mainPage() {
 			section("Donate, View Release and License Info") { //, and Leave Feedback:") {
 				href "infoPage", title: "Help, Info, and More", description: "", image: getAppImg("info.png")
 			}
-			if(atomicState?.isInstalled && atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.weatherDevice)) {
-				section("View App and Device Data${atomicState?.protects ? ", and Perform Device Tests:" : ":"}") {
-					href "nestInfoPage", title: "API | Diagnostics | Testing", description: "", image: getAppImg("api_diag_icon.png")
-				}
+			section("Notifications Options:") {
+				def t1 = getAppNotifConfDesc()
+				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
+						image: getAppImg("notification_icon.png")
 			}
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
@@ -554,11 +554,6 @@ def prefsPage() {
 		section("Polling:") {
 			def t1 = getPollingConfDesc()
 			href "pollPrefPage", title: "Device | Structure\nPolling Preferences", description: "${t1}\n\nTap to modify", state: (t1 != "" ? "complete" : null), image: getAppImg("timer_icon.png")
-		}
-		section("Notifications Options:") {
-			def t1 = getAppNotifConfDesc()
-			href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
-					image: getAppImg("notification_icon.png")
 		}
 		showVoiceRprtPrefs()
 
@@ -917,6 +912,10 @@ def notifPrefPage() {
 					input ("phone", "phone", title: "Phone Number to send SMS to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
 				}
 			}
+			if(settings?.recipients || settings?.phone || settings?.usePush) {
+				def t1 = getNotifSchedDesc()
+				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("quiet_time_icon.png")
+			}
 		}
 		if(settings?.recipients || settings?.phone || settings?.usePush) {
 			if(settings?.recipients && !atomicState?.pushTested) {
@@ -924,57 +923,94 @@ def notifPrefPage() {
 				atomicState.pushTested = true
 			} else { atomicState.pushTested = true }
 
-			section(title: "Time Restrictions") {
-				def t1 = getNotifSchedDesc()
-				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), params: [pName: ""], state: (t1 ? "complete" : null),
-					image: getAppImg("quiet_time_icon.png")
+			section("App Notifications:") {
+				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("notification_icon.png")
 			}
-			section("Missed Poll Notification:") {
-				input (name: "sendMissedPollMsg", type: "bool", title: "Send Missed Poll Messages?", defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png"))
-				if(settings?.sendMissedPollMsg == null || settings?.sendMissedPollMsg) {
-					//def misPollNotifyWaitValDesc = !settings?.misPollNotifyWaitVal ? "Default: 15 Minutes" : settings?.misPollNotifyWaitVal
-					input (name: "misPollNotifyWaitVal", type: "enum", title: "Time Past the missed Poll?", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(settings?.misPollNotifyWaitVal) {
-						atomicState.misPollNotifyWaitVal = !settings?.misPollNotifyWaitVal ? 900 : settings?.misPollNotifyWaitVal.toInteger()
-						if(settings?.misPollNotifyWaitVal.toInteger() == 1000000) {
-							input (name: "misPollNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "60..86400", required: false, defaultValue: 900, submitOnChange: true)
-							if(settings?.misPollNotifyWaitValCust) { atomicState?.misPollNotifyWaitVal = settings?.misPollNotifyWaitValCust ? settings?.misPollNotifyWaitValCust.toInteger() : 900 }
-						}
-					} else { atomicState.misPollNotifyWaitVal = !settings?.misPollNotifyWaitVal ? 900 : settings?.misPollNotifyWaitVal.toInteger() }
-
-					def misPollNotifyMsgWaitValDesc = !settings?.misPollNotifyMsgWaitVal ? "Default: 1 Hour" : settings?.misPollNotifyMsgWaitVal
-					input (name: "misPollNotifyMsgWaitVal", type: "enum", title: "Send Reminder Again After?", required: false, defaultValue: 3600, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(settings?.misPollNotifyMsgWaitVal) {
-						atomicState.misPollNotifyMsgWaitVal = !settings?.misPollNotifyMsgWaitVal ? 3600 : settings?.misPollNotifyMsgWaitVal.toInteger()
-						if(settings?.misPollNotifyMsgWaitVal.toInteger() == 1000000) {
-							input (name: "misPollNotifyMsgWaitValCust", type: "number", title: "Custom Wait Value in Seconds", range: "60..86400", required: false, defaultValue: 3600, submitOnChange: true)
-							if(misPollNotifyMsgWaitValCust) { atomicState.misPollNotifyMsgWaitVal = settings?.misPollNotifyMsgWaitValCust ? settings?.misPollNotifyMsgWaitValCust.toInteger() : 3600 }
-						}
-					} else { atomicState.misPollNotifyMsgWaitVal = !settings?.misPollNotifyMsgWaitVal ? 3600 : settings?.misPollNotifyMsgWaitVal.toInteger() }
-				}
-			}
-			section("App and Device Updates:") {
-				input (name: "sendAppUpdateMsg", type: "bool", title: "Notify on App & Device Updates?", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png"))
-				if(settings?.sendAppUpdateMsg == null || settings?.sendAppUpdateMsg) {
-					//def updNotifyWaitValDesc = !settings?.updNotifyWaitVal ? "Default: 12 Hours" : settings?.updNotifyWaitVal
-					input (name: "updNotifyWaitVal", type: "enum", title: "Send Reminder Every?", required: false, defaultValue: 43200, metadata: [values:notifValEnum()], submitOnChange: true)
-					if(settings?.updNotifyWaitVal) {
-						atomicState.updNotifyWaitVal = !settings?.updNotifyWaitVal ? 43200 : settings?.updNotifyWaitVal.toInteger()
-						if(settings?.updNotifyWaitVal.toInteger() == 1000000) {
-							input (name: "updNotifyWaitValCust", type: "number", title: "Custom Missed Poll Value in Seconds", range: "30..86400", required: false, defaultValue: 43200, submitOnChange: true)
-							if(settings?.updNotifyWaitValCust) { atomicState.updNotifyWaitVal = settings?.updNotifyWaitValCust ? settings?.updNotifyWaitValCust.toInteger() : 43200 }
-						}
-					} else { atomicState.updNotifyWaitVal = !settings?.updNotifyWaitVal ? 43200 : settings?.updNotifyWaitVal.toInteger() }
-				}
-			}
-			if(atomicState?.weatherDevice) {
-				section("Weather Device:") {
-					input ("weathAlertNotif", "bool", title: "Local Weather Alert Notifications?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
-				}
+			section("Device Notifications:") {
+				href "notifConfigPage", title: "Device Notifications", description: "Tap to configure", params: [pType:"dev"], image: getAppImg("thermostat_icon.png")
 			}
 		} else { atomicState.pushTested = false }
 		incNotifPrefLoadCnt()
 		devPageFooter("notifPrefLoadCnt", execTime)
+	}
+}
+def notifConfigPage(params) {
+	def pType = params.pType
+	if(params?.pType) {
+		atomicState.curNotifConfigPageData = params
+	} else {
+		pType = atomicState?.curNotifConfigPageData?.pType
+	}
+	def execTime = now()
+	dynamicPage(name: "notifConfigPage", install: false) {
+		// - [ ] API issues
+		// - [ ] Failed API Commands
+		// - [ ] Nest presence changes
+		// - [ ] Schedule change notifications
+		// - [ ] Device Health issues
+		// - [ ] Debug logging reminders and remote diag reminders
+		// - [ ] Protect test reminders
+		// - [ ] API rate limit messages
+		// - [ ] Manage Watchdog Notifications from Manager
+		switch(pType.toString()) {
+			case "app":
+				section("Code Update Notifications:") {
+					paragraph "Get notified when Manager and Device updates are available...", state: "complete"
+					input name: "sendAppUpdateMsg", type: "bool", title: "Notify on Updates?", defaultValue: true, submitOnChange: true, image: getAppImg("update_icon.png")
+					if(settings?.sendAppUpdateMsg) {
+						input name: "updNotifyWaitVal", type: "enum", title: "Send Update Reminder Every?", required: false, defaultValue: 43200,
+								metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("reminder_icon.png")
+						atomicState.updNotifyWaitVal = !settings?.updNotifyWaitVal ? 43200 : settings?.updNotifyWaitVal.toInteger()
+					}
+				}
+				section("API Event Notifications:") {
+					paragraph "Get notified when Manager and Device updates are available...", state: "complete"
+					input name: "appApiIssuesMsg", type: "bool", title: "Notify on API Issues?", defaultValue: true, submitOnChange: true, image: getAppImg("issue_icon.png")
+					if(settings?.appApiIssuesMsg) {
+						input name: "appApiFailedCmdMsg", type: "bool", title: "Notify on Failed Commands?", defaultValue: true, submitOnChange: true, image: getAppImg("issue_icon.png")
+						input name: "appApiRateLimitedMsg", type: "bool", title: "Notify when being Rate-Limited?", defaultValue: true, submitOnChange: true, image: getAppImg("issue_icon.png")
+						input name: "appApiIssuesWaitVal", type: "enum", title: "Send Issue Reminder Every?", required: false, defaultValue: 43200,
+								metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("reminder_icon.png")
+						atomicState.appApiIssuesWaitVal = !settings?.appApiIssuesWaitVal ? 43200 : settings?.appApiIssuesWaitVal.toInteger()
+					}
+				}
+
+				section("Location Notifications:") {
+					paragraph "Get notified when the Location changes from Home/Away...", state: "complete"
+					input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
+				}
+
+				section("Missed Poll Notifications") {
+					paragraph "Get notified when the manager hasn't updated any data in a while...", state: "complete"
+					input name: "sendMissedPollMsg", type: "bool", title: "Send Missed Poll Messages?", defaultValue: true, submitOnChange: true, image: getAppImg("late_icon.png")
+					if(settings?.sendMissedPollMsg) {
+						input name: "misPollNotifyWaitVal", type: "enum", title: "Delay After Missed Poll?", required: false, defaultValue: 900,
+								metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
+						atomicState.misPollNotifyWaitVal = !settings?.misPollNotifyWaitVal ? 900 : settings?.misPollNotifyWaitVal.toInteger()
+
+						input name: "misPollNotifyMsgWaitVal", type: "enum", title: "Send Reminder Again After?", required: false, defaultValue: 3600,
+								metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("reminder_icon.png")
+						atomicState.misPollNotifyMsgWaitVal = !settings?.misPollNotifyMsgWaitVal ? 3600 : settings?.misPollNotifyMsgWaitVal.toInteger()
+					}
+				}
+				section("Debug/Remote Diag Notifications:") {
+					paragraph "Get notified when debug logs or remote diagnostics has been enabled for to long...", state: "complete"
+					input name: "appDbgDiagRemindMsg", type: "bool", title: "Remind me when debug and diagnostics is left on?", defaultValue: true, submitOnChange: true, image: getAppImg("reminder_icon.png")
+				}
+				break
+			case "dev":
+				section("Device Notifications:") {
+					paragraph "Get notified when Devices do something...", state: "complete"
+				}
+				if(atomicState?.weatherDevice) {
+					section("Weather Device:") {
+						input ("weathAlertNotif", "bool", title: "Local Weather Alert Notifications?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
+					}
+				}
+				break
+		}
+		incAppNotifPrefLoadCnt()
+		devPageFooter("appNotifPrefLoadCnt", execTime)
 	}
 }
 
@@ -1936,9 +1972,6 @@ def getInstAutoTypesDesc() {
 	def sch = dat?.schMot.findAll { it?.value > 0}
 	str += (sch?.size()) ? "\n• Thermostat (${sch?.size()})" : ""
 	str += (disItems?.size() > 0) ? "\n• Disabled: (${disItems?.size()})" : ""
-	// disItems?.each { di ->
-	// 	str += (disItems?.size() > 0) ? "\n• $di" : ""
-	// }
 	return (str != "") ? str : null
 }
 
@@ -4168,6 +4201,7 @@ def incPollPrefLoadCnt() { incMetricCntVal("pollPrefLoadCnt") }
 def incDevCustLoadCnt() { incMetricCntVal("devCustLoadCnt") }
 def incVrprtPrefLoadCnt() { incMetricCntVal("vRprtPrefLoadCnt") }
 def incNotifPrefLoadCnt() { incMetricCntVal("notifPrefLoadCnt") }
+def incAppNotifPrefLoadCnt() { incMetricCntVal("appNotifPrefLoadCnt") }
 def incLogPrefLoadCnt() { incMetricCntVal("logPrefLoadCnt") }
 def incViewAutoSchedLoadCnt() { incMetricCntVal("viewAutoSchedLoadCnt") }
 def incViewAutoStatLoadCnt() { incMetricCntVal("viewAutoStatLoadCnt") }
