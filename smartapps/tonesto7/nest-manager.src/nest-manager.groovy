@@ -655,6 +655,11 @@ def automationsPage() {
 				descStr += "${(settings?.locDesiredCoolTemp || settings?.locDesiredHeatTemp) ? "\n\n" : ""}${getSafetyValuesDesc()}" ?: ""
 				def prefDesc = (descStr != "") ? "${descStr}\n\nTap to modify" : "Tap to configure"
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
+				input "disableAllAutomations", "bool", title: "Disable All Automations?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("disable_icon2.png")
+				if(atomicState?.disableAllAutomations == null || atomicState?.disableAllAutomations != settings?.disableAllAutomations) {
+					toggleAllAutomations(settings?.disableAllAutomations)
+					atomicState?.disableAllAutomations = settings?.disableAllAutomations
+				}
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
@@ -923,10 +928,13 @@ def notifPrefPage() {
 				atomicState.pushTested = true
 			} else { atomicState.pushTested = true }
 
-			section("App Notifications:") {
+			section("App Alerts:") {
 				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("notification_icon.png")
 			}
-			section("Device Notifications:") {
+			section("Automation Alerts:") {
+				href "notifConfigPage", title: "Automation Notifications", description: "Tap to configure", params: [pType:"auto"], image: getAppImg("automation_icon.png")
+			}
+			section("Device Alerts:") {
 				href "notifConfigPage", title: "Device Notifications", description: "Tap to configure", params: [pType:"dev"], image: getAppImg("thermostat_icon.png")
 			}
 		} else { atomicState.pushTested = false }
@@ -934,6 +942,7 @@ def notifPrefPage() {
 		devPageFooter("notifPrefLoadCnt", execTime)
 	}
 }
+
 def notifConfigPage(params) {
 	def pType = params.pType
 	if(params?.pType) {
@@ -1008,9 +1017,39 @@ def notifConfigPage(params) {
 					}
 				}
 				break
+			case "auto":
+				section("Automation Notifications:") {
+					paragraph "Manage some of your automation app notifications...", state: "complete"
+				}
+				def cApps = getChildApps()
+				def watDogEcoNotif = false
+				def watDogEcoNotifVal = false
+				cApps?.each { ca ->
+					if(ca?.getAutomationType() == "watchDog") {
+						watDogEcoNotif = true
+						watDogEcoNotifVal = (ca?.getSettingVal("watDogNotifMissedEco") == true) ? true : false
+						if(watDogEcoNotif) {
+							section("WatchDog Eco Notification:") {
+								input "watchDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?", required: false, defaultValue: watDogEcoNotifVal, submitOnChange: true, image: getAppImg("alert_icon2.png")
+							}
+							ca?.settingUpdate("watDogNotifMissedEco", "${settings?.watchDogNotifMissedEco}", "bool")
+						}
+					}
+				}
+				break
 		}
 		incAppNotifPrefLoadCnt()
 		devPageFooter("appNotifPrefLoadCnt", execTime)
+	}
+}
+
+def toggleAllAutomations(disable=false) {
+	def cApps = getChildApps()
+	cApps.each { ca ->
+	 	ca?.settingUpdate("disableAutomationreq", "$disable", "bool")
+	 	ca?.stateUpdate("disableAutomation", disable)
+	 	ca?.stateUpdate("disableAutomationDt", (disable ? getDtNow() : null))
+	 	ca?.update()
 	}
 }
 
