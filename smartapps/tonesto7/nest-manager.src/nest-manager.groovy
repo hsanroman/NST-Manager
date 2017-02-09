@@ -1010,6 +1010,13 @@ def notifConfigPage(params) {
 			case "dev":
 				section("Device Notifications:") {
 					paragraph "Get notified when Devices do something...", state: "complete"
+					section("Device Alerts:") {
+						input ("devHealthNotifyMsg", "bool", title: "Local Weather Alert Notifications?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
+						if(settings?.devHealthNotifyMsg) {
+							input name: "devHealthMsgWaitVal", type: "enum", title: "Send Health Reminder Every?", required: false, defaultValue: 43200,
+									metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("reminder_icon.png")
+						}
+					}
 				}
 				if(atomicState?.weatherDevice) {
 					section("Weather Device:") {
