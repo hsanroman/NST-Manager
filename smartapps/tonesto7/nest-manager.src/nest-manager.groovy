@@ -1010,12 +1010,19 @@ def notifConfigPage(params) {
 			case "dev":
 				section("Device Notifications:") {
 					paragraph "Get notified when Devices do something...", state: "complete"
-					section("Device Alerts:") {
-						input ("devHealthNotifyMsg", "bool", title: "Local Weather Alert Notifications?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_icon.png"))
+				}
+				if(atomicState?.thermostats || atomicState?.presDevice || atomicState?.cameras || atomicState?.protects || atomicState?.weatherDevice) {
+					section("Health Alerts:") {
+						input ("devHealthNotifyMsg", "bool", title: "Send Alert when your device(s) go offline?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("health_icon.png"))
 						if(settings?.devHealthNotifyMsg) {
-							input name: "devHealthMsgWaitVal", type: "enum", title: "Send Health Reminder Every?", required: false, defaultValue: 43200,
+							input name: "devHealthMsgWaitVal", type: "enum", title: "Send Health Reminder Every?", required: false, defaultValue: 7200,
 									metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("reminder_icon.png")
 						}
+					}
+				}
+				if(atomicState?.cameras) {
+					section("Camera Alerts:") {
+						input ("camSteamNotifMsg", "bool", title: "Send Alert when Camera's streaming Changes?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("camera_icon.png"))
 					}
 				}
 				if(atomicState?.weatherDevice) {
@@ -1029,19 +1036,13 @@ def notifConfigPage(params) {
 					paragraph "Manage some of your automation app notifications...", state: "complete"
 				}
 				def cApps = getChildApps()
-				def watDogEcoNotif = false
-				def watDogEcoNotifVal = false
-				cApps?.each { ca ->
-					if(ca?.getAutomationType() == "watchDog") {
-						watDogEcoNotif = true
-						watDogEcoNotifVal = (ca?.getSettingVal("watDogNotifMissedEco") == true) ? true : false
-						if(watDogEcoNotif) {
-							section("WatchDog Eco Notification:") {
-								input "watchDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?", required: false, defaultValue: watDogEcoNotifVal, submitOnChange: true, image: getAppImg("alert_icon2.png")
-							}
-							ca?.settingUpdate("watDogNotifMissedEco", "${settings?.watchDogNotifMissedEco}", "bool")
-						}
+				def watchDog = cApps?.find { it?.getAutomationType() == "watchDog" }
+				if(watchDog) {
+					def watDogEcoNotifVal = (watchDog?.getSettingVal("watDogNotifMissedEco") == true) ? true : false
+					section("WatchDog Eco Notification:") {
+						input "watchDogNotifMissedEco", "bool", title: "Notify when Nest is Away and not in Eco mode?", required: false, defaultValue: watDogEcoNotifVal, submitOnChange: true, image: getAppImg("alert_icon2.png")
 					}
+					watchDog?.settingUpdate("watDogNotifMissedEco", "${settings?.watchDogNotifMissedEco}", "bool")
 				}
 				break
 		}
@@ -1050,15 +1051,79 @@ def notifConfigPage(params) {
 	}
 }
 
+def buildNotifPrefMap() {
+
+}
+
 def toggleAllAutomations(disable=false) {
 	def cApps = getChildApps()
 	cApps.each { ca ->
-	 	ca?.settingUpdate("disableAutomationreq", "$disable", "bool")
-	 	ca?.stateUpdate("disableAutomation", disable)
-	 	ca?.stateUpdate("disableAutomationDt", (disable ? getDtNow() : null))
-	 	ca?.update()
+	 	ca?.setAutomationStatus(disable, true)
 	}
 }
+
+def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt, null, "getLastUpdMsgSec").toInteger() }
+def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt, null, "getLastMisPollMsgSec").toInteger() }
+def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
+
+def notificationCheck() {
+	missedPollNotify()
+	if((settings?.sendAppUpdateMsg == null || settings?.sendAppUpdateMsg) && !appDevType()) { appUpdateNotify() }
+}
+
+def missedPollNotify() {
+	if((getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger())) {
+		if(getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger()) {
+			def msg = "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing Nest Authentication settings."
+			if(settings?.sendMissedPollMsg || settings?.sendMissedPollMsg == null) {
+				sendMsg("Warning", msg)
+			}
+			LogAction(msg, "error", true)
+			atomicState?.lastMisPollMsgDt = getDtNow()
+		}
+	}
+}
+
+def appUpdateNotify() {
+	def appUpd = isAppUpdateAvail()
+	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
+	def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
+	def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
+	def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
+	def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+	if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
+		def str = ""
+		str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
+		str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
+		str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
+		str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
+		str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+		str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
+		sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code")
+		atomicState?.lastUpdMsgDt = getDtNow()
+	}
+}
+
+def updateHandler() {
+	//LogTrace("updateHandler")
+	if(atomicState?.isInstalled) {
+		if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo?.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
+			sendMsg("Critical", "There are Critical Updates available for ${appName()}! Please visit the IDE and make sure to update the App and Devices Code")
+			atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater?.updateVer?.toInteger()]
+		}
+		if(atomicState?.appData?.updater?.updateMsg != null && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
+			if(getLastUpdateMsgSec() > 86400) {
+				sendMsg("Info", "${atomicState?.updater?.updateMsg}")
+				atomicState.lastUpdateMsgDt = getDtNow()
+				atomicState.lastUpdateMsg = atomicState?.appData?.updater?.updateMsg
+			}
+		}
+	}
+}
+
+//this is parent only method
+def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
 def devNamePage() {
 	def execTime = now()
@@ -3819,70 +3884,7 @@ def increaseCmdCnt() {
 *************************************************************************************************/
 def pushStatus() { return (settings?.recipients || settings?.phone || settings?.usePush) ? (settings?.usePush ? "Push Enabled" : "Enabled") : null }
 def getLastMsgSec() { return !atomicState?.lastMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMsgDt, null, "getLastMsgSec").toInteger() }
-def getLastUpdMsgSec() { return !atomicState?.lastUpdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastUpdMsgDt, null, "getLastUpdMsgSec").toInteger() }
-def getLastMisPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastMisPollMsgDt, null, "getLastMisPollMsgSec").toInteger() }
-def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
 
-def notificationCheck() {
-	missedPollNotify()
-	if((settings?.sendAppUpdateMsg == null || settings?.sendAppUpdateMsg) && !appDevType()) { appUpdateNotify() }
-}
-
-def isMissedPoll() { return (getLastDevicePollSec() > atomicState?.misPollNotifyWaitVal.toInteger()) ? true : false }
-
-def missedPollNotify() {
-	if(isMissedPoll()) {
-		if(getLastMisPollMsgSec() > atomicState?.misPollNotifyMsgWaitVal.toInteger()) {
-			def msg = "${app.name} has not refreshed data in the last (${getLastDevicePollSec()}) seconds.  Please try refreshing Nest Authentication settings."
-			if(settings?.sendMissedPollMsg || settings?.sendMissedPollMsg == null) {
-				sendMsg("Warning", msg)
-			}
-			LogAction(msg, "error", true)
-			atomicState?.lastMisPollMsgDt = getDtNow()
-		}
-	}
-}
-
-def appUpdateNotify() {
-	def appUpd = isAppUpdateAvail()
-	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
-	def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
-	def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
-	def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
-	def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
-	if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > atomicState?.updNotifyWaitVal.toInteger())) {
-		def str = ""
-		str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
-		str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
-		str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
-		str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
-		str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-		str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-		sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code")
-		atomicState?.lastUpdMsgDt = getDtNow()
-	}
-}
-
-def updateHandler() {
-	//LogTrace("updateHandler")
-	if(atomicState?.isInstalled) {
-		if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo?.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
-			sendMsg("Critical", "There are Critical Updates available for ${appName()}! Please visit the IDE and make sure to update the App and Devices Code")
-			atomicState?.lastCritUpdateInfo = ["dt":getDtNow(), "ver":atomicState?.appData?.updater?.updateVer?.toInteger()]
-		}
-		if(atomicState?.appData?.updater?.updateMsg != null && atomicState?.appData?.updater?.updateMsg != atomicState?.lastUpdateMsg) {
-			if(getLastUpdateMsgSec() > 86400) {
-				sendMsg("Info", "${atomicState?.updater?.updateMsg}")
-				atomicState.lastUpdateMsgDt = getDtNow()
-				atomicState.lastUpdateMsg = atomicState?.appData?.updater?.updateMsg
-			}
-		}
-	}
-}
-
-//this is parent only method
-def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
 // parent only method
 def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null) {

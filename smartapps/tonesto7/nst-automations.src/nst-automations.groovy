@@ -420,7 +420,7 @@ def mainAutoPage(params) {
 	}
 }
 
-def setAutomationStatus(disabled) {
+def setAutomationStatus(disabled, upd=false) {
 	if(!atomicState?.disableAutomation && disabled) {
 		LogAction("Automation Disabled at (${getDtNow()})", "info", true)
 		atomicState?.disableAutomationDt = getDtNow()
@@ -429,6 +429,7 @@ def setAutomationStatus(disabled) {
 		atomicState?.disableAutomationDt = null
 	}
 	atomicState?.disableAutomation = disabled
+	if(upd) { app.update() }
 }
 
 def buildSettingsMap() {
