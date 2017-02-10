@@ -3550,7 +3550,7 @@ def checkNestMode() {
 def getNestLocPres() {
 	if(atomicState?.disableAutomation) { return }
 	else {
-		def plocationPresence = parent?.locationPresence()
+		def plocationPresence = parent?.getLocationPresence()
 		if(!plocationPresence) { return null }
 		else {
 			return plocationPresence

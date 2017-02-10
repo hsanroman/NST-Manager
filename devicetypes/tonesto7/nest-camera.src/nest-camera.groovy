@@ -248,6 +248,8 @@ def processEvent() {
 			//log.debug "results: $results"
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			state.streamMsg = eventData?.streamNotify == true ? true : false
+			state.healthMsg = eventData?.healthNotify == true ? true : false
 			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -284,6 +286,7 @@ def processEvent() {
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
 			lastUpdatedEvent()
+			checkHealthNotify()
 		}
 		//log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
 		return null
@@ -343,7 +346,8 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-	if(!curData?.equals(newData)) {
+	// if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devTypeVer", newData?.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -356,7 +360,8 @@ def lastCheckinEvent(checkin) {
 	def lastConn = checkin ? tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin.toString())) : "Not Available"
 	def lastChk = device.currentState("lastConnection")?.value
 	state?.lastConnection = lastConn?.toString()
-	if(!lastChk.equals(lastConn?.toString())) {
+	//if(!lastChk.equals(lastConn?.toString())) {
+	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
 		Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
@@ -369,7 +374,8 @@ def lastOnlineEvent(dt) {
 	tf.setTimeZone(getTimeZone())
 	def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
 	state?.lastOnl = lastOnl
-	if(!lastOnlVal.equals(lastOnl?.toString())) {
+	//if(!lastOnlVal.equals(lastOnl?.toString())) {
+	if(isStateChange(device, "lastOnline", lastOnl?.toString())) {
 		Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
 		sendEvent(name: 'lastOnline', value: lastOnl, displayed: false, isStateChange: true)
 	} else { LogAction("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
@@ -383,24 +389,26 @@ def onlineStatusEvent(online) {
 	state?.onlineStatus = val.toString().capitalize()
 	state?.isOnline = (val == "online")
 	// log.debug "onlineStatus: ${state?.isOnline} | val: $online"
-	if(!isOn.equals(val.toString().capitalize())) {
+	if(isStateChange(device, "onlineStatus", val.toString().capitalize())) {
 		Logger("UPDATED | Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})")
 		sendEvent(name: "onlineStatus", value: val.toString().capitalize(), descriptionText: "Online Status is: ${val.toString().capitalize()}", displayed: true, isStateChange: true, state: val.toString().capitalize())
 	} else { LogAction("Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})") }
 }
 
-def isStreamingEvent(isStreaming) {
+def isStreamingEvent(isStreaming, override=false) {
 	//log.trace "isStreamingEvent($isStreaming)..."
 	def isOn = device.currentState("isStreaming")?.value
 	def isOnline = device.currentState("onlineStatus")?.value
-	if(state?.camApiServerData && state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] }
+	if(override) { state?.camApiServerData = null }
+	else { if(state?.camApiServerData && state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] } }
 	def val = (isStreaming.toString() == "true") ? "on" : (isOnline.toString() != "Online" ? "offline" : "off")
 	//log.debug "isStreaming: $val | isOnline: $isOnline"
 	state?.isStreaming = (val == "on") ? true : false
-	if(!isOn.equals(val)) {
+	if(isStateChange(device, "isStreaming", val.toString())) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
 		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
+		cameraStreamNotify()
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -408,7 +416,7 @@ def audioInputEnabledEvent(on) {
 	def isOn = device.currentState("audioInputEnabled")?.value
 	def val = (on.toString() == "true") ? "Enabled" : "Disabled"
 	state?.audioInputEnabled = val
-	if(!isOn.equals(val)) {
+	if(isStateChange(device, "audioInputEnabled", val.toString())) {
 		Logger("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Audio Input Status is: (${val}) | Original State: (${isOn})") }
@@ -418,7 +426,7 @@ def videoHistEnabledEvent(on) {
 	def isOn = device.currentState("videoHistoryEnabled")?.value
 	def val = (on.toString() == "true") ? "Enabled" : "Disabled"
 	state?.videoHistoryEnabled = val
-	if(!isOn.equals(val)) {
+	if(isStateChange(device, "videoHistoryEnabled", val.toString())) {
 		Logger("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Video History Status is: (${val}) | Original State: (${isOn})") }
@@ -428,7 +436,7 @@ def publicShareEnabledEvent(on) {
 	def isOn = device.currentState("publicShareEnabled")?.value
 	def val = on ? "Enabled" : "Disabled"
 	state?.publicShareEnabled = val
-	if(!isOn.equals(val)) {
+	if(isStateChange(device, "publicShareEnabled", val.toString())) {
 		Logger("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
@@ -437,7 +445,7 @@ def publicShareEnabledEvent(on) {
 def softwareVerEvent(ver) {
 	def verVal = device.currentState("softwareVer")?.value
 	state?.softwareVer = ver
-	if(!verVal.equals(ver)) {
+	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
@@ -486,7 +494,7 @@ def zoneMotionEvent(data) {
 		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
 	}
 	def val = ((data?.has_motion == "true") && isBtwn) ? "active" : "inactive"
-	if(!isMotion.equals(val)) {
+	if(isStateChange(device, "motion", val.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
 		sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
@@ -504,8 +512,8 @@ def zoneSoundEvent(data) {
 		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
 	}
 	def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
-	if(!isSound.equals(val)) {
-		Logger("UPDATED | Sound Sensor is now: (${val}) | Original State: (${isSound})")
+	if(isStateChange(device, "sound", val.toString())) {
+		Logger("UPDATED | Sound Sensor is: (${val}) | Original State: (${isSound})")
 		sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Sound Sensor is: (${val}) | Original State: (${isSound})") }
 }
@@ -519,17 +527,17 @@ def debugOnEvent(debug) {
 	def dVal = debug ? "On" : "Off"
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
-	if(!val.equals(dVal)) {
-		Logger("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+	if(isStateChange(device, "debugOn", dVal.toString())) {
+		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
+	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "Issues" : "Ok"
 	state?.apiStatus = newStat
-	if(!curStat.equals(newStat)) {
+	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -569,7 +577,7 @@ def vidHistoryTimeEvent() {
 	def curMax = device.currentState("maxVideoHistoryHours")?.value
 	state?.minVideoHistoryHours = newMin
 	state?.maxVideoHistoryHours = newMax
-	if((curMin.toString() != newMin.toString()) || (curMax.toString() != newMax.toString())) {
+	if(isStateChange(device, "minVideoHistoryHours", newMin.toString()) || isStateChange(device, "maxVideoHistoryHours", newMax.toString())) {
 		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
 		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
 		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
@@ -626,6 +634,24 @@ def getRecTimeDesc(val) {
 	return result
 }
 
+def cameraStreamNotify(streaming) {
+	log.trace "cameraStreamNotify..."
+	if(!streaming || state?.streamMsg != true) { return }
+	def msg = "Your Nest Camera (${device?.displayName}) streaming has changed to '${streaming ? "ON" : "OFF"}'"
+	parent?.deviceMsgNotifHandler("Info", msg)
+}
+
+def getHealthStatus() {
+	return device?.getStatus()
+}
+
+def checkHealthNotify() {
+	//log.trace "checkHealthNotify..."
+	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
+	def msg = "The Nest Camera Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
+	parent?.deviceMsgNotifHandler("Warning", msg)
+}
+
 /************************************************************************************************
 |									DEVICE COMMANDS     										|
 *************************************************************************************************/
@@ -642,8 +668,7 @@ void streamingOn(manChg=false) {
 	try {
 		log.trace "streamingOn..."
 		if(parent?.setCamStreaming(this, "true")) {
-			sendEvent(name: "isStreaming", value: "on", descriptionText: "Streaming Video is: on", displayed: true, isStateChange: true, state: "on")
-			sendEvent(name: "switch", value: "on")
+			isStreamingEvent(true, true)
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
@@ -658,8 +683,7 @@ void streamingOff(manChg=false) {
 	try {
 		log.trace "streamingOff..."
 		if(parent?.setCamStreaming(this, "false")) {
-			sendEvent(name: "isStreaming", value: "off", descriptionText: "Streaming Video is: off", displayed: true, isStateChange: true, state: "off")
-			sendEvent(name: "switch", value: "off")
+			isStreamingEvent(false, true)
 			if(manChg) { incManStreamChgCnt() }
 			else { incProgStreamChgCnt() }
 		}
