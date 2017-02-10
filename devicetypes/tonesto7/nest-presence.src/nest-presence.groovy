@@ -147,6 +147,7 @@ def processEvent(data) {
 		if(eventData) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			state.healthMsg = eventData?.healthNotify == true ? true : false
 			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -161,6 +162,7 @@ def processEvent(data) {
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			lastUpdatedEvent(true)
+			checkHealthNotify()
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
@@ -218,7 +220,7 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-	if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -228,10 +230,10 @@ def debugOnEvent(debug) {
 	def val = device.currentState("debugOn")?.value
 	def stateVal = debug ? "On" : "Off"
 	state.debug = debug ? true : false
-	if(!val.equals(stateVal)) {
-		log.debug("UPDATED | debugOn: (${stateVal}) | Original State: (${val})")
+	if(isStateChange(device, "debugOn", stateVal.toString())) {
+		log.debug("UPDATED | Device Debug Logging is: (${stateVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: stateVal, displayed: false)
-	} else { LogAction("debugOn: (${stateVal}) | Original State: (${val})") }
+	} else { LogAction("Device Debug Logging is: (${stateVal}) | Original State: (${val})") }
 }
 
 def lastUpdatedEvent(sendEvt=false) {
@@ -267,7 +269,7 @@ def presenceEvent(presence) {
 	def statePres = state?.present
 	state?.present = (pres == "present") ? true : false
 	state?.nestPresence = newNestPres
-	if(!val.equals(pres) || !nestPres.equals(newNestPres) || !nestPres) {
+	if(isStateChange(device, "presence", pres.toString()) || isStateChange(device, "nestPresence", newNestPres.toString()) || !nestPres) {
 		Logger("UPDATED | Presence: ${pres} | Original State: ${val} | State Variable: ${statePres}")
 		sendEvent(name: 'nestPresence', value: newNestPres, descriptionText: "Nest Presence is: ${newNestPres}", displayed: true, isStateChange: true )
 		sendEvent(name: 'presence', value: pres, descriptionText: "Device is: ${pres}", displayed: true, isStateChange: true )
@@ -278,7 +280,7 @@ def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "issue" : "ok"
 	state?.apiStatus = newStat
-	if(!curStat.equals(newStat)) {
+	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -290,6 +292,17 @@ def getNestPresence() {
 
 def getPresence() {
 	return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
+}
+
+def getHealthStatus() {
+	return device?.getStatus()
+}
+
+def checkHealthNotify() {
+	//log.trace "checkHealthNotify..."
+	if(device?.getStatus() != "INACTIVE" || state?.healthMsg != true) { return }
+	def msg = "The Nest Presence Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
+	parent?.deviceMsgNotifHandler("Warning", msg)
 }
 
 /************************************************************************************************

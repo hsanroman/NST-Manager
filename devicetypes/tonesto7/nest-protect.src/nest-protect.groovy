@@ -278,6 +278,7 @@ def processEvent(data) {
 			def results = eventData?.data
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			state.healthMsg = eventData?.healthNotify == true ? true : false
 
 			if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
 				state.hcBattTimeout = eventData?.hcBattTimeout
@@ -307,6 +308,7 @@ def processEvent(data) {
 			determinePwrSrc()
 
 			lastUpdatedEvent() //I don't see a need for this any more
+			checkHealthNotify()
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
@@ -396,7 +398,7 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-	if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -461,7 +463,7 @@ def determinePwrSrc() {
 	if(checkinAvg && checkinAvg < 10000) {
 		powerTypeEvent(true)
 	} else { powerTypeEvent(false) }
-	log.debug "checkins: $checkins | Avg: $checkinAvg"
+	//log.debug "checkins: $checkins | Avg: $checkinAvg"
 }
 
 def powerTypeEvent(wired) {
@@ -482,7 +484,7 @@ def lastTestedEvent(dt) {
 	tf.setTimeZone(getTimeZone())
 	def lastTest = !dt ? "No Test Recorded" : "${tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt))}"
 	state?.lastTested = lastTest
-	if(!lastTstVal.equals(lastTest?.toString())) {
+	if(isStateChange(device, "lastTested", lastTest.toString())) {
 		Logger("UPDATED | Last Manual Test was: (${lastTest}) | Original State: (${lastTstVal})")
 		sendEvent(name: 'lastTested', value: lastTest, displayed: true, isStateChange: true)
 	} else { LogAction("Last Manual Test was: (${lastTest}) | Original State: (${lastTstVal})") }
@@ -491,7 +493,7 @@ def lastTestedEvent(dt) {
 def softwareVerEvent(ver) {
 	def verVal = device.currentState("softwareVer")?.value
 	state?.softwareVer = ver
-	if(!verVal.equals(ver)) {
+	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
@@ -502,17 +504,17 @@ def debugOnEvent(debug) {
 	def dVal = debug ? "On" : "Off"
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
-	if(!val.equals(dVal)) {
-		Logger("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+	if(isStateChange(device, "debugOn", dVal.toString())) {
+		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
+	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "issue" : "ok"
 	state?.apiStatus = newStat
-	if(!curStat.equals(newStat)) {
+	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -545,7 +547,7 @@ def keepAwakeEvent() {
 
 def uiColorEvent(color) {
 	def colorVal = device.currentState("uiColor")?.value
-	if(!colorVal.equals(color)) {
+	if(isStateChange(device, "uiColor", color.toString())) {
 		Logger("UI Color is: (${color}) | Original State: (${colorVal})")
 		sendEvent(name:'uiColor', value: color.toString(), displayed: false, isStateChange: true)
 	} else { LogAction("UI Color: (${color}) | Original State: (${colorVal})") }
@@ -556,7 +558,7 @@ def batteryStateEvent(batt) {
 	def battVal = device.currentState("batteryState")?.value
 	def stbattVal = device.currentState("battery")?.value
 	state?.battVal = batt
-	if(!battVal.equals(batt) || !stbattVal) {
+	if(isStateChange(device, "batteryState", batt.toString()) || !stbattVal) {
 		Logger("Battery is: ${batt} | Original State: (${battVal})")
 		sendEvent(name:'batteryState', value: batt, descriptionText: "Nest Battery status is: ${batt}", displayed: true, isStateChange: true)
 		sendEvent(name:'battery', value: stbattery, descriptionText: "Battery is: ${stbattery}", displayed: true, isStateChange: true)
@@ -565,7 +567,7 @@ def batteryStateEvent(batt) {
 
 def testingStateEvent(test) {
 	def testVal = device.currentState("isTesting")?.value
-	if(!testVal.equals(test)) {
+	if(isStateChange(device, "isTesting", test.toString())) {
 		Logger("Testing State: (${test}) | Original State: (${testVal})")
 		//Not displaying the results of this, not sure if it is truly needed
 		sendEvent(name:'isTesting', value: test, descriptionText: "Manual test: ${test}", displayed: true, isStateChange: true)
@@ -591,12 +593,12 @@ def testingStateEvent(test) {
 		alarmStateST = coState == "emergency" ? "co-emergency" : "co-warning"
 		carbonValStr = "detected"
 	}
-	if(!smokeVal.equals(smokeState)) {
+	if(isStateChange(device, "nestSmoke", smokeState.toString())) {
 		Logger("Nest Smoke State is: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})")
 		sendEvent( name: 'nestSmoke', value: smokeState, descriptionText: "Nest Smoke Alarm: ${smokeState}", type: "physical", displayed: true, isStateChange: true )
 		sendEvent( name: 'smoke', value: smokeValStr, descriptionText: "Smoke Alarm: ${smokeState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true )
 	} else { LogAction("Smoke State: (${smokeState.toString().toUpperCase()}) | Original State: (${smokeVal.toString().toUpperCase()})") }
-	if(!carbonVal.equals(coState)) {
+	if(isStateChange(device, "nestCarbonMonoxide", coState.toString())) {
 		Logger("Nest CO State is : (${coState.toString().toUpperCase()}) | Original State: (${carbonVal.toString().toUpperCase()})")
 		sendEvent( name: 'nestCarbonMonoxide', value: coState, descriptionText: "Nest CO Alarm: ${coState}", type: "physical", displayed: true, isStateChange: true )
 		sendEvent( name: 'carbonMonoxide', value: carbonValStr, descriptionText: "CO Alarm: ${coState} Testing: ${testVal}", type: "physical", displayed: true, isStateChange: true )
@@ -608,6 +610,16 @@ def testingStateEvent(test) {
 	}
 }
 
+def getHealthStatus() {
+	return device?.getStatus()
+}
+
+def checkHealthNotify() {
+	//log.trace "checkHealthNotify..."
+	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
+	def msg = "The Nest Protect Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
+	parent?.deviceNotify("Warning", msg)
+}
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/

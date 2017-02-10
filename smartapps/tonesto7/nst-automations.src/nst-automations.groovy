@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.5.6" }
-def appVerDate() { "2-1-2017" }
+def appVersion() { parent?.appVersion() }//"4.5.7" }
+def appVerDate() { "2-2-2017" }
 
 preferences {
 	//startPage
@@ -121,6 +121,7 @@ def uninstalled() {
 
 def initialize() {
 	//LogTrace("initialize")
+	if(!atomicState?.newAutomationFile) { atomicState?.newAutomationFile = true }
 	def settingsReset = parent?.settings?.resetAllData
 	if(atomicState?.resetAllData || settingsReset) {
 		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
@@ -397,7 +398,7 @@ def mainAutoPage(params) {
 			section("Automation Options:") {
 				if(atomicState?.isInstalled && (isNestModesConfigured() || isWatchdogConfigured() || isSchMotConfigured())) {
 					//paragraph title:"Enable/Disable this Automation", ""
-					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: atomicState?.disableAutomation, submitOnChange: true, image: getAppImg("disable_icon.png")
+					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: atomicState?.disableAutomation, submitOnChange: true, image: getAppImg("disable_icon2.png")
 					setAutomationStatus(settings?.disableAutomationreq)
 				}
 				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
@@ -419,7 +420,7 @@ def mainAutoPage(params) {
 	}
 }
 
-def setAutomationStatus(disabled) {
+def setAutomationStatus(disabled, upd=false) {
 	if(!atomicState?.disableAutomation && disabled) {
 		LogAction("Automation Disabled at (${getDtNow()})", "info", true)
 		atomicState?.disableAutomationDt = getDtNow()
@@ -428,6 +429,7 @@ def setAutomationStatus(disabled) {
 		atomicState?.disableAutomationDt = null
 	}
 	atomicState?.disableAutomation = disabled
+	if(upd) { app.update() }
 }
 
 def buildSettingsMap() {
@@ -505,17 +507,16 @@ def stateUpdate(key, value) {
 def initAutoApp() {
 	def restoreId = settings["restoreId"]
 	def restoreComplete = settings["restoreCompleted"] == true ? true : false
-
 	if(settings["watchDogFlag"]) {
 		atomicState?.automationType = "watchDog"
 	}
 	else if (restoreId != null && restoreComplete == false) {
 		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
 		if(parent?.callRestoreState(app, restoreId)) {
-			parent?.removeAutomationBackupData(restoreId)
+			parent?.postChildRestore(restoreId)
+			if(parent?.keepBackups() != true) { parent?.removeAutomationBackupData(restoreId) }
 			settingUpdate("restoreCompleted", true, "bool")
 		}
-		atomicState?.newAutomationFile = true
 	}
 
 	def autoType = getAutoType()
@@ -1204,7 +1205,7 @@ def watchDogAlarmActions(dev, dni, actType) {
 			evtVoiceMsg = evtNotifMsg
 			break
 		case "eco":
-			if(settings["watDogNotifMissedEco"] == null || settings["watDogNotifMissedEco"] == true) {
+			if(settings["watDogNotifMissedEco"] == true) {
 				evtNotifMsg = "Nest Location Home/Away Mode is 'Away' and thermostat [${dev}] is not in ECO."
 				evtVoiceMsg = evtNotifMsg
 			} else {return}
@@ -3549,7 +3550,7 @@ def checkNestMode() {
 def getNestLocPres() {
 	if(atomicState?.disableAutomation) { return }
 	else {
-		def plocationPresence = parent?.locationPresence()
+		def plocationPresence = parent?.getLocationPresence()
 		if(!plocationPresence) { return null }
 		else {
 			return plocationPresence

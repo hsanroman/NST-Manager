@@ -407,6 +407,7 @@ void processEvent(data) {
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			state.healthMsg = eventData?.healthNotify == true ? true : false
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
@@ -540,6 +541,7 @@ void processEvent(data) {
 			}
 			getSomeData(true)
 			lastUpdatedEvent() //I don't know that this is needed any more
+			checkHealthNotify()
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -598,7 +600,7 @@ def isCodeUpdateAvailable(newVer, curVer) {
 
 def pauseEvent(val) {
 	def curData = device.currentState("pauseUpdates")?.value
-	if(!curData?.equals(val)) {
+	if(isStateChange(device, "pauseUpdates", val.toString())) {
 		Logger("UPDATED | Pause Updates is: (${val}) | Original State: (${curData})")
 		sendEvent(name: 'pauseUpdates', value: val, displayed: false)
 	} else { LogAction("Pause Updates is: (${val}) | Original State: (${curData})") }
@@ -612,7 +614,7 @@ def deviceVerEvent(ver) {
 	def newData = state.updateAvailable ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state.devTypeVer = newData
 		//log.info "curData: ${curData.getProperties().toString()},  newData: ${newData.getProperties().toString()}"
-	if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -631,7 +633,7 @@ def sunlightCorrectionEnabledEvent(sunEn) {
 	def val = device.currentState("sunlightCorrectionEnabled")?.value
 	def newVal = sunEn.toString() == "true" ? true : false
 	state?.sunCorrectEnabled = newVal
-	if(!val.equals(newVal.toString())) {
+	if(isStateChange(device, "sunlightCorrectionEnabled", newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Enabled: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionEnabled', value: newVal, displayed: false)
 	} else { LogAction("SunLight Correction Enabled: (${newVal}) | Original State: (${val})") }
@@ -641,7 +643,7 @@ def sunlightCorrectionActiveEvent(sunAct) {
 	def val = device.currentState("sunlightCorrectionActive")?.value
 	def newVal = sunAct.toString() == "true" ? true : false
 	state?.sunCorrectActive = newVal
-	if(!val.equals(newVal.toString())) {
+	if(isStateChange(device, "sunlightCorrectionActive", newVal.toString())) {
 		Logger("UPDATED | SunLight Correction Active: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'sunlightCorrectionActive', value: newVal, displayed: false)
 	} else { LogAction("SunLight Correction Active: (${newVal}) | Original State: (${val})") }
@@ -664,7 +666,7 @@ def timeToTargetEvent(ttt, tttTr) {
 		trStr = tttTr.toString() == "training" ? "\n(Still Training)" : ""
 	}
 	def newVal = ttt ? (nVal == 0 || opIdle ? "System is Idle" : "${nVal} Minutes${trStr}") : "Not Available"
-	if(!val.equals(newVal.toString())) {
+	if(isStateChange(device, "timeToTarget", newVal.toString())) {
 		Logger("UPDATED | Time to Target: (${newVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'timeToTarget', value: newVal, displayed: false)
 	} else { LogAction("Time to Target: (${newVal}) | Original State: (${val})") }
@@ -675,10 +677,10 @@ def debugOnEvent(debug) {
 	def dVal = debug ? "On" : "Off"
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
-	if(!val.equals(dVal)) {
-		Logger("UPDATED | debugOn: (${dVal}) | Original State: (${val.toString().capitalize()})")
+	if(isStateChange(device, "debugOn", dVal.toString())) {
+		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val.toString().capitalize()})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
+	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
 
 def lastCheckinEvent(checkin, isOnline) {
@@ -729,7 +731,7 @@ def lastUpdatedEvent(sendEvt=false) {
 def softwareVerEvent(ver) {
 	def verVal = device.currentState("softwareVer")?.value
 	state?.softwareVer = ver
-	if(!verVal.equals(ver)) {
+	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now ${ver}", displayed: false, isStateChange: true)
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
@@ -738,7 +740,7 @@ def softwareVerEvent(ver) {
 def tempUnitEvent(unit) {
 	def tmpUnit = device.currentState("temperatureUnit")?.value
 	state?.tempUnit = unit
-	if(!tmpUnit.equals(unit)) {
+	if(isStateChange(device, "temperatureUnit", unit.toString())) {
 		Logger("UPDATED | Temperature Unit: (${unit}) | Original State: (${tmpUnit})")
 		sendEvent(name:'temperatureUnit', value: unit, descriptionText: "Temperature Unit is now: '${unit}'", displayed: true, isStateChange: true)
 	} else { LogAction("Temperature Unit: (${unit}) | Original State: (${tmpUnit})") }
@@ -748,7 +750,7 @@ def tempUnitEvent(unit) {
 def targetTempEvent(Double targetTemp) {
 	def temp = device.currentState("targetTemperature")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-	if(!temp.equals(rTargetTemp.toString())) {
+	if(isStateChange(device, "targetTemperature", rTargetTemp.toString())) {
 		Logger("UPDATED | targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'targetTemperature', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "Target Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
@@ -757,7 +759,7 @@ def targetTempEvent(Double targetTemp) {
 def thermostatSetpointEvent(Double targetTemp) {
 	def temp = device.currentState("thermostatSetpoint")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-	if(!temp.equals(rTargetTemp.toString())) {
+	if(isStateChange(device, "thermostatSetPoint", rTargetTemp.toString())) {
 		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("thermostatSetpoint is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
@@ -767,7 +769,7 @@ def temperatureEvent(Double tempVal) {
 	try {
 		def temp = device.currentState("temperature")?.value.toString()
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-		if(!temp.equals(rTempVal.toString())) {
+		if(isStateChange(device, "temperature", rTempVal.toString())) {
 			Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}" , displayed: true, isStateChange: true)
 		} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
@@ -785,7 +787,7 @@ def heatingSetpointEvent(Double tempVal) {
 		if(temp != "") { clearHeatingSetpoint() }
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-		if(!temp.equals(rTempVal.toString())) {
+		if(isStateChange(device, "heatingSetpoint", rTempVal.toString())) {
 			Logger("UPDATED | Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
@@ -801,7 +803,7 @@ def coolingSetpointEvent(Double tempVal) {
 		if(temp != "") { clearCoolingSetpoint() }
 	} else {
 		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-		if(!temp.equals(rTempVal.toString())) {
+		if(isStateChange(device, "coolingSetpoint", rTempVal.toString())) {
 			Logger("UPDATED | Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 			def disp = false
 			def hvacMode = getHvacMode()
@@ -815,7 +817,7 @@ def hasLeafEvent(Boolean hasLeaf) {
 	def leaf = device.currentState("hasLeaf")?.value
 	def lf = hasLeaf ? "On" : "Off"
 	state?.hasLeaf = hasLeaf
-	if(!leaf.equals(lf)) {
+	if(isStateChange(device, "hasLeaf", lf.toString())) {
 		Logger("UPDATED | Leaf is set to (${lf}) | Original State: (${leaf})")
 		sendEvent(name:'hasLeaf', value: lf,  descriptionText: "Leaf: ${lf}" , displayed: false, isStateChange: true, state: lf)
 	} else { LogAction("Leaf is set to (${lf}) | Original State: (${leaf})") }
@@ -823,7 +825,7 @@ def hasLeafEvent(Boolean hasLeaf) {
 
 def humidityEvent(humidity) {
 	def hum = device.currentState("humidity")?.value
-	if(!hum.equals(humidity)) {
+	if(isStateChange(device, "humidity", humidity.toString())) {
 		Logger("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
 		sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
 	} else { LogAction("Humidity is (${humidity}) | Original State: (${hum})") }
@@ -880,28 +882,26 @@ def hvacPreviousModeEvent(mode) {
 def fanModeEvent(fanActive) {
 	def val = state?.has_fan ? ((fanActive == "true") ? "on" : "auto") : "disabled"
 	def fanMode = device.currentState("thermostatFanMode")?.value
-	if(!fanMode.equals(val)) {
+	if(isStateChange(device, "thermostatFanMode", val.toString())) {
 		Logger("UPDATED | Fan Mode: (${val.toString().capitalize()}) | Original State: (${fanMode.toString().capitalize()})")
 		sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
 	} else { LogAction("Fan Active: (${val}) | Original State: (${fanMode})") }
-
 }
 
 def operatingStateEvent(operatingState) {
 	def hvacState = device.currentState("thermostatOperatingState")?.value
 	def operState = (operatingState == "off") ? "idle" : operatingState
-	if(!hvacState.equals(operState)) {
+	if(isStateChange(device, "thermostatOperatingState", operState.toString())) {
 		Logger("UPDATED | OperatingState is (${operState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
 		sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
 	} else { LogAction("OperatingState is (${operState}) | Original State: (${hvacState})") }
-
 }
 
 def tempLockOnEvent(isLocked) {
 	def curState = device.currentState("tempLockOn")?.value.toString()
 	def newState = isLocked?.toString()
 	state?.tempLockOn = newState
-	if(!curState?.equals(newState)) {
+	if(isStateChange(device, "tempLockOn", newState.toString())) {
 		Logger("UPDATED | Temperature Lock is set to (${newState}) | Original State: (${curState})")
 		sendEvent(name:'tempLockOn', value: newState,  descriptionText: "Temperature Lock: ${newState}" , displayed: false, isStateChange: true, state: newState)
 	} else { LogAction("Temperature Lock is set to (${newState}) | Original State: (${curState})") }
@@ -951,7 +951,7 @@ def checkSafetyTemps() {
 	if(curMinTemp && curMinTemp > curTemp) { inRange = false }
 	if(curMaxTemp && curMaxTemp < curTemp) { inRange = false }
 	def t0 = !(inRange.toBoolean())
-	Logger("curMin: ${curMinTemp}  curMax: ${curMaxTemp} curTemp: ${curTemp} exceeded: ${t0.toBoolean()}  curInRange: ${curInRange} inRange: ${inRange}")
+	Logger("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${t0.toBoolean()} | curInRange: ${curInRange} | inRange: ${inRange})")
 	if(curRangeStr == null || inRange != curInRange) {
 		sendEvent(name:'safetyTempExceeded', value: ${t0.toBoolean()},  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
 		Logger("UPDATED | Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
@@ -965,7 +965,8 @@ def comfortHumidityEvent(comfortHum) {
 	def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
 	//def newMinHum = comfortHum?.min.toInteger() ?: 0
 	def newMaxHum = comfortHum?.toInteger() ?: 0
-	if(curMaxHum != newMaxHum) {
+	//if(isStateChange(device, "comfortHumidityMin", newMinHum.toString()) || isStateChange(device, "comfortHumidityMax", newMaxHum.toString())) {
+	if(isStateChange(device, "comfortHumidityMax", newMaxHum.toString())) {
 		//LogAction("UPDATED | Comfort Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
 		Logger("UPDATED | Comfort Humidity Maximum is (${newMaxHum}%) | Original Humidity: (${curMaxHum}%)")
 		sendEvent(name:'comfortHumidityMax', value: newMaxHum, unit: "%", descriptionText: "Safety Humidity Maximum is ${newMaxHum}%" , displayed: true, isStateChange: true)
@@ -980,7 +981,8 @@ def comfortDewpointEvent(comfortDew) {
 	def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
 	//def newMinDew = comfortDew?.min.toInteger() ?: 0
 	def newMaxDew = comfortDew?.toDouble() ?: 0.0
-	if(curMaxDew != newMaxDew) {
+	//if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString()) || isStateChange(device, "comfortDewpointMin", newMinDew.toString())) {
+	if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString())) {
 		//LogAction("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
 		Logger("UPDATED | Comfort Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
 		//sendEvent(name:'comfortDewpointMin', value: newMinDew, unit: "%", descriptionText: "Comfort Dewpoint Minimum is ${newMinDew}" , displayed: true, isStateChange: true)
@@ -995,7 +997,7 @@ def onlineStatusEvent(online) {
 	def isOn = device.currentState("onlineStatus")?.value
 	def val = online ? "Online" : "Offline"
 	state?.onlineStatus = val
-	if(!isOn.equals(val)) {
+	if(isStateChange(device, "onlineStatus", val.toString())) {
 		Logger("UPDATED | Online Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "onlineStatus", value: val, descriptionText: "Online Status is: ${val}", displayed: true, isStateChange: true, state: val)
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: (val == "Online" ? "online" : "offline"), displayed: false)
@@ -1006,7 +1008,7 @@ def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "Has Issue" : "Good"
 	state?.apiStatus = newStat
-	if(!curStat.equals(newStat)) {
+	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -1041,14 +1043,22 @@ def canHeatCool(canHeat, canCool) {
 	state?.can_heat = !canHeat ? false : true
 	state?.can_cool = !canCool ? false : true
 	state?.has_auto = (canCool && canHeat) ? true : false
-	sendEvent(name: "canHeat", value: state?.can_heat.toString())
-	sendEvent(name: "canCool", value: state?.can_cool.toString())
-	sendEvent(name: "hasAuto", value: state?.has_auto.toString())
+	if(isStateChange(device, "canHeat", state?.can_heat.toString())) {
+		sendEvent(name: "canHeat", value: state?.can_heat.toString())
+	}
+	if(isStateChange(device, "canCool", state?.can_cool.toString())) {
+		sendEvent(name: "canCool", value: state?.can_cool.toString())
+	}
+	if(isStateChange(device, "hasAuto", state?.has_auto.toString())) {
+		sendEvent(name: "hasAuto", value: state?.has_auto.toString())
+	}
 }
 
 def hasFan(hasFan) {
 	state?.has_fan = (hasFan == "true") ? true : false
-	sendEvent(name: "hasFan", value: hasFan.toString())
+	if(isStateChange(device, "hasFan", hasFan.toString())) {
+		sendEvent(name: "hasFan", value: hasFan.toString())
+	}
 }
 
 def isEmergencyHeat(val) {
@@ -1115,7 +1125,16 @@ def getTempWaitVal() {
 
 def wantMetric() { return (state?.tempUnit == "C") }
 
+def getHealthStatus() {
+	return device?.getStatus()
+}
 
+def checkHealthNotify() {
+	//log.trace "checkHealthNotify..."
+	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
+	def msg = "The Nest Thermostat Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
+	parent?.deviceMsgNotifHandler("Warning", msg)
+}
 /************************************************************************************************
 |							Temperature Setpoint Functions for Buttons							|
 *************************************************************************************************/

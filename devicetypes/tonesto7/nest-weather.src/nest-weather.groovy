@@ -229,6 +229,7 @@ void processEvent() {
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
+			state.healthMsg = eventData?.healthNotify == true ? true : false
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
@@ -256,7 +257,8 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			//lastUpdatedEvent()
+			checkHealthNotify()
+			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
 		//return null
@@ -316,7 +318,7 @@ def deviceVerEvent(ver) {
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
 	def newData = state.updateAvailable ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
-	if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
@@ -327,10 +329,10 @@ def debugOnEvent(debug) {
 	def dVal = debug ? "on" : "off"
 	state?.debugStatus = dVal
 	state?.debug = debug.toBoolean() ? true : false
-	if(!val.equals(dVal)) {
-		Logger("UPDATED | debugOn: (${dVal}) | Original State: (${val})")
+	if(isStateChange(device, "debugOn", dVal.toString())) {
+		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-	} else { LogAction("debugOn: (${dVal}) | Original State: (${val})") }
+	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
 
 def lastUpdatedEvent(sendEvt=false) {
@@ -363,7 +365,7 @@ def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "issue" : "ok"
 	state?.apiStatus = newStat
-	if(!curStat.equals(newStat)) {
+	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
@@ -371,7 +373,7 @@ def apiStatusEvent(issue) {
 
 def humidityEvent(humidity) {
 	def hum = device.currentState("humidity")?.value
-	if(!hum.equals(humidity)) {
+	if(isStateChange(device, "humidity", humidity.toString())) {
 		Logger("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
 		sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
 	} else { LogAction("Humidity is (${humidity}) | Original State: (${hum})") }
@@ -380,7 +382,7 @@ def humidityEvent(humidity) {
 def illuminanceEvent(illum) {
 	if(illum != null) {
 		def cur = device.currentState("illuminance")?.value.toString()
-		if(!cur.equals(illum.toString())) {
+		if(isStateChange(device, "illuminance", illum.toString())) {
 			Logger("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
 			sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
 		} else { LogAction("Illuminance is (${illum}) | Original State: (${cur})") }
@@ -390,7 +392,7 @@ def illuminanceEvent(illum) {
 def dewpointEvent(Double tempVal) {
 	def temp = device.currentState("dewpoint")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-	if(!temp.equals(rTempVal.toString())) {
+	if(isStateChange(device, "dewpoint", rTempVal.toString())) {
 		Logger("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
 	} else { LogAction("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
@@ -400,7 +402,7 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 	def temp = device.currentState("temperature")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
-	if(!temp.equals(rTempVal.toString())) {
+	if(isStateChange(device, "temperature", rTempVal.toString()) || isStateChange(device, "feelsLike", rFeelsVal.toString())) {
 		Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
 		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
@@ -434,6 +436,17 @@ def getHumidity() {
 }
 
 def wantMetric() { return (state?.tempUnit == "C") }
+
+def getHealthStatus() {
+	return device?.getStatus()
+}
+
+def checkHealthNotify() {
+	//log.trace "checkHealthNotify..."
+	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
+	def msg = "The Nest Weather Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
+	parent?.deviceMsgNotifHandler("Warning", msg)
+}
 /************************************************************************************************
 |									Weather Info for Tiles										|
 *************************************************************************************************/
