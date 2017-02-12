@@ -285,7 +285,7 @@ def processEvent() {
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
-			lastUpdatedEvent()
+			// lastUpdatedEvent()
 			checkHealthNotify()
 		}
 		//log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
@@ -374,7 +374,6 @@ def lastOnlineEvent(dt) {
 	tf.setTimeZone(getTimeZone())
 	def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
 	state?.lastOnl = lastOnl
-	//if(!lastOnlVal.equals(lastOnl?.toString())) {
 	if(isStateChange(device, "lastOnline", lastOnl?.toString())) {
 		Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
 		sendEvent(name: 'lastOnline', value: lastOnl, displayed: false, isStateChange: true)
@@ -388,7 +387,8 @@ def onlineStatusEvent(online) {
 	def val = online.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = val.toString().capitalize()
 	state?.isOnline = (val == "online")
-	// log.debug "onlineStatus: ${state?.isOnline} | val: $online"
+	if(val == "online") { lastUpdatedEvent(true) }
+	//log.debug "onlineStatus: ${state?.isOnline} | val: $online"
 	if(isStateChange(device, "onlineStatus", val.toString().capitalize())) {
 		Logger("UPDATED | Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})")
 		sendEvent(name: "onlineStatus", value: val.toString().capitalize(), descriptionText: "Online Status is: ${val.toString().capitalize()}", displayed: true, isStateChange: true, state: val.toString().capitalize())
@@ -399,10 +399,10 @@ def isStreamingEvent(isStreaming, override=false) {
 	//log.trace "isStreamingEvent($isStreaming)..."
 	def isOn = device.currentState("isStreaming")?.value
 	def isOnline = device.currentState("onlineStatus")?.value
+	//log.debug "isStreamingEvent: ${isStreaming} | CamData: ${state?.camApiServerData?.items?.is_streaming[0]}"
 	if(override) { state?.camApiServerData = null }
 	else { if(state?.camApiServerData && state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] } }
 	def val = (isStreaming.toString() == "true") ? "on" : (isOnline.toString() != "Online" ? "offline" : "off")
-	//log.debug "isStreaming: $val | isOnline: $isOnline"
 	state?.isStreaming = (val == "on") ? true : false
 	if(isStateChange(device, "isStreaming", val.toString())) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
@@ -551,7 +551,7 @@ def lastUpdatedEvent(sendEvt=false) {
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
-	if(sendEvt) {
+	if(sendEvt && state?.isOnline) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
 	}
