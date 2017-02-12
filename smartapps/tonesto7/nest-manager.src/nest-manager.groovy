@@ -3054,18 +3054,30 @@ def getLocationPresence() {
 }
 
 def apiIssues() {
-	def result = state?.apiIssuesList.toString().contains("true") ? true : false
+	def result = state?.apiIssuesList[4..-1].every { it == true } ? true : false
 	def dt = atomicState?.apiIssueDt
 	if(result) {
 		LogAction("Nest API Issues ${dt ? "may still be occurring. Status will clear when last 4 updates are good (Last 4 Updates: ${state?.apiIssuesList}) | Issues began at ($dt) " : "Detected (${getDtNow()})"}", "warn", true)
 	}
+	apiIssueType()
 	atomicState?.apiIssueDt = (result ? (dt ?: getDtNow()) : null)
 	return result
 }
 
+def apiIssueType() {
+	def res = "none"
+	def items = state?.apiIssuesList[4..-1].findAll { it == true }
+	if(items?.size() >= 1 && items?.size() <= 2) { res = "partial" }
+	else if(items?.size() >= 3) { res = "full" }
+	log.debug "apiIssueType: $res"
+	return res
+}
+
+def issueListSize() { return 7 }
+
 def apiIssueEvent(issue, cmd = null) {
 	def list = state?.apiIssuesList ?: []
-	def listSize = 4
+	def listSize = issueListSize()
 	if(list?.size() < listSize) {
 		list.push(issue)
 	}
@@ -3879,12 +3891,11 @@ def notificationCheck() {
 
 def cameraStreamNotify(child, Boolean streaming) {
 	if(!streaming || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
-	def msg = "Streaming is now '${streaming ? "ON" : "OFF"}'"
-	sendMsg("${child?.device?.displayName} Info", msg)
+	sendMsg("${child?.device?.displayName} Info", "Streaming is now '${streaming ? "ON" : "OFF"}'")
 }
 
 def deviceHealthNotify(child, Boolean isHealthy) {
-	log.trace "deviceHealthNotify(${child?.device?.displayName}, $isHealthy)"
+	// log.trace "deviceHealthNotify(${child?.device?.displayName}, $isHealthy)"
 	def nPrefs = atomicState?.notificationPrefs?.dev?.devHealth
 	def devLbl = child?.device?.displayName
 	def sameAsLastDev = (atomicState?.lastDevHealthMsgData?.device == devLbl)
@@ -3897,8 +3908,7 @@ def locationPresNotify(pres) {
 	if(!pres || atomicState?.notificationPrefs?.locationChg != true) { return }
 	def lastStatus = atomicState?.nestLocStatus
 	if(lastStatus && lastStatus != pres) {
-		def msg = "\n(${atomicState?.structName}) location has been changed to [${pres.toString().capitalize()}]"
-		sendMsg("${app?.name} Nest Location Info", msg)
+		sendMsg("${app?.name} Nest Location Info", "\n(${atomicState?.structName}) location has been changed to [${pres.toString().capitalize()}]")
 	}
 	atomicState?.nestLocStatus = pres
 }
