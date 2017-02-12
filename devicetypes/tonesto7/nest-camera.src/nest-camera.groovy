@@ -973,6 +973,7 @@ def getCamUUID(pubVidId) {
 def camPageHtmlRespMethod(response, data) {
 	def rData = response.getData()
 	def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
+	log.debug "url: $url"
 	def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
 	//log.debug "UUID: ${uuid}"
 	state.camUUID = uuid

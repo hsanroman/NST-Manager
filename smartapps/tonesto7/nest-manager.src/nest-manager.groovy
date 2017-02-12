@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.8" }
-def appVerDate() { "2-6-2017" }
+def appVersion() { "4.5.9" }
+def appVerDate() { "2-12-2017" }
 
 preferences {
 	//startPage
@@ -934,17 +934,14 @@ def notifPrefPage() {
 				paragraph "Get notified when the Location changes from Home/Away", state: "complete"
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
 			}
-
 			section("App Alerts:") {
 				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("notification_icon.png")
 			}
-
-			section("Automation Alerts:") {
-				href "notifConfigPage", title: "Automation Notifications", description: "Tap to configure", params: [pType:"auto"], image: getAppImg("automation_icon.png")
-			}
-
 			section("Device Alerts:") {
 				href "notifConfigPage", title: "Device Notifications", description: "Tap to configure", params: [pType:"dev"], image: getAppImg("thermostat_icon.png")
+			}
+			section("Automation Alerts:") {
+				href "notifConfigPage", title: "Automation Notifications", description: "Tap to configure", params: [pType:"auto"], image: getAppImg("automation_icon.png")
 			}
 			section("Reminder Settings:") {
 				input name: "notifyMsgWaitVal", type: "enum", title: "Default Reminder Wait?", required: false, defaultValue: 3600,
@@ -5421,6 +5418,16 @@ def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
 }
 
+def tokenStrScrubber(str) {
+	def regex1 = /(Bearer c.{1}\w+)/
+	def newStr = str.replaceAll(regex1, "Bearer 'token code scrubbed'")
+	str?.findAll(regex1).each {
+		//log.debug "regex match: $it"
+	}
+	//log.debug "newStr: $newStr"
+	return newStr
+}
+
 def Logger(msg, type, logSrc=null) {
 	if(msg && type) {
 		def labelstr = ""
@@ -5429,7 +5436,8 @@ def Logger(msg, type, logSrc=null) {
 			atomicState?.debugAppendAppName = (tval || tval == null) ? true : false
 		}
 		if(atomicState?.debugAppendAppName) { labelstr = "${app.label} | " }
-		def themsg = "${labelstr}${msg}"
+		def themsg = tokenStrScrubber("${labelstr}${msg}")
+
 		switch(type) {
 			case "debug":
 				log.debug "${themsg}"
