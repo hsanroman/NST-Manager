@@ -541,7 +541,7 @@ void processEvent(data) {
 			}
 			getSomeData(true)
 			lastUpdatedEvent() //I don't know that this is needed any more
-			checkHealthNotify()
+			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -1129,12 +1129,12 @@ def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def checkHealthNotify() {
-	//log.trace "checkHealthNotify..."
-	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
-	def msg = "The Nest Thermostat Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
-	parent?.deviceMsgNotifHandler("Warning", msg)
+def checkHealth() {
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
+
 /************************************************************************************************
 |							Temperature Setpoint Functions for Buttons							|
 *************************************************************************************************/

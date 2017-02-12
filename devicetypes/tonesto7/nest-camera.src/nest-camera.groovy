@@ -285,8 +285,8 @@ def processEvent() {
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
+			checkHealth()
 			// lastUpdatedEvent()
-			checkHealthNotify()
 		}
 		//log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
 		return null
@@ -408,7 +408,7 @@ def isStreamingEvent(isStreaming, override=false) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
 		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
-		cameraStreamNotify()
+		cameraStreamNotify(state?.isStreaming)
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -634,22 +634,23 @@ def getRecTimeDesc(val) {
 	return result
 }
 
+def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
+	if(msg && msgType) { parent?.sendMsg(msg, msgType, recips, sms, push) }
+}
+
 def cameraStreamNotify(streaming) {
-	log.trace "cameraStreamNotify..."
-	if(!streaming || state?.streamMsg != true) { return }
-	def msg = "Your Nest Camera (${device?.displayName}) streaming has changed to '${streaming ? "ON" : "OFF"}'"
-	parent?.deviceMsgNotifHandler("Info", msg)
+	if(streaming == null || state?.streamMsg != true) { return }
+	parent?.cameraStreamNotify(this, streaming)
 }
 
 def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def checkHealthNotify() {
-	//log.trace "checkHealthNotify..."
-	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
-	def msg = "The Nest Camera Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
-	parent?.deviceMsgNotifHandler("Warning", msg)
+def checkHealth() {
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
 
 /************************************************************************************************

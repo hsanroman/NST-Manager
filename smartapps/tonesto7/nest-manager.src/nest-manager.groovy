@@ -1604,7 +1604,7 @@ def getNotifSchedDesc() {
 	def notifDesc = ""
 	def getNotifTimeStartLbl = ( (startInput == "Sunrise" || startInput == "Sunset") ? ( (startInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (startTime ? time2Str(startTime) : "") )
 	def getNotifTimeStopLbl = ( (stopInput == "Sunrise" || stopInput == "Sunset") ? ( (stopInput == "Sunset") ? epochToTime(sun?.sunset.time) : epochToTime(sun?.sunrise.time) ) : (stopTime ? time2Str(stopTime) : "") )
-	notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? " • Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
+	notifDesc += (getNotifTimeStartLbl && getNotifTimeStopLbl) ? "• Silent Time: ${getNotifTimeStartLbl} - ${getNotifTimeStopLbl}" : ""
 	def days = getInputToStringDesc(dayInput)
 	def modes = getInputToStringDesc(modeInput)
 	notifDesc += days ? "${(getNotifTimeStartLbl || getNotifTimeStopLbl) ? "\n" : ""}• Silent Day${isPluralString(dayInput)}: ${days}" : ""
@@ -3863,6 +3863,7 @@ def getLastMissPollMsgSec() { return !atomicState?.lastMisPollMsgDt ? 100000 : G
 def getLastApiIssueMsgSec() { return !atomicState?.lastApiIssueMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastApiIssueMsgDt, null, "getLastApiIssueMsgSec").toInteger() }
 def getLastLogRemindMsgSec() { return !atomicState?.lastLogRemindMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastLogRemindMsgDt, null, "getLastLogRemindMsgSec").toInteger() }
 def getLastFailedCmdMsgSec() { return !atomicState?.lastFailedCmdMsgDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastFailedCmdMsgDt, null, "getLastFailedCmdMsgSec").toInteger() }
+def getLastDevHealthMsgSec() { return !atomicState?.lastDevHealthMsgData?.dt ? 100000 : GetTimeDiffSeconds(atomicState?.lastDevHealthMsgData?.dt, null, "getLastDevHealthMsgSec").toInteger() }
 def getDebugLogsOnSec() { return !atomicState?.debugEnableDt ? 0 : GetTimeDiffSeconds(atomicState?.debugEnableDt, null, "getDebugLogsOnSec").toInteger() }
 
 def getRecipientsSize() { return !settings.recipients ? 0 : settings?.recipients.size() }
@@ -3876,10 +3877,20 @@ def notificationCheck() {
 	if(!appDevType()) { appUpdateNotify(nPrefs?.app?.updates?.updMsg, nPrefs?.app?.updates?.updMsgWait) }
 }
 
-def deviceMsgNotifHandler(msg, type) {
-	if(msg) {
-		sendMsg(type, msg)
-	}
+def cameraStreamNotify(child, Boolean streaming) {
+	if(!streaming || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
+	def msg = "Streaming is now '${streaming ? "ON" : "OFF"}'"
+	sendMsg("${child?.device?.displayName} Info", msg)
+}
+
+def deviceHealthNotify(child, Boolean isHealthy) {
+	log.trace "deviceHealthNotify(${child?.device?.displayName}, $isHealthy)"
+	def nPrefs = atomicState?.notificationPrefs?.dev?.devHealth
+	def devLbl = child?.device?.displayName
+	def sameAsLastDev = (atomicState?.lastDevHealthMsgData?.device == devLbl)
+	if(isHealthy == true || nPrefs?.healthMsg != true || (getLastDevHealthMsgSec() <= nPrefs?.healthMsgWait.toInteger() && sameAsLastDev) ) { return }
+	sendMsg("$devLbl Health Warning", "\nDevice is currently OFFLINE. Please check your logs for possible issues.")
+	atomicState?.lastDevHealthMsgData = ["device":"$devLbl", "dt":getDtNow()]
 }
 
 def locationPresNotify(pres) {
@@ -6271,7 +6282,7 @@ def childDevDataPage() {
 					if(selDev == dev?.deviceNetworkId) {
 						section("${strCapitalize(dev?.displayName)}:") {
 							if(settings?.childDevPageShowState == true || settings?.childDevPageShowState == null) {
-								paragraph title: "State Data", "${getMapDescStr(dev?.getState(), atomicState?.diagDevStateFilters)}"
+								paragraph title: "State Data", "${getMapDescStr(dev?.getState())}"
 							}
 							if(settings?.childDevPageShowAttr == true || settings?.childDevPageShowAttr == null) {
 								def str = ""; def cnt = 1

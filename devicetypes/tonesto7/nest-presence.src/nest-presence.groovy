@@ -162,7 +162,7 @@ def processEvent(data) {
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			lastUpdatedEvent(true)
-			checkHealthNotify()
+			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
@@ -298,11 +298,10 @@ def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def checkHealthNotify() {
-	//log.trace "checkHealthNotify..."
-	if(device?.getStatus() != "INACTIVE" || state?.healthMsg != true) { return }
-	def msg = "The Nest Presence Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
-	parent?.deviceMsgNotifHandler("Warning", msg)
+def checkHealth() {
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
 
 /************************************************************************************************

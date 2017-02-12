@@ -257,7 +257,7 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			checkHealthNotify()
+			checkHealth()
 			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
@@ -441,12 +441,12 @@ def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def checkHealthNotify() {
-	//log.trace "checkHealthNotify..."
-	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
-	def msg = "The Nest Weather Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
-	parent?.deviceMsgNotifHandler("Warning", msg)
+def checkHealth() {
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
+
 /************************************************************************************************
 |									Weather Info for Tiles										|
 *************************************************************************************************/
@@ -827,11 +827,9 @@ private estimateLux(weatherIcon) {
 }
 
 def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
-	if(recips || sms || push) {
+	if(msg && msgType) {
 		parent?.sendMsg(msg, msgType, recips, sms, push)
 		//LogAction("Send Push Notification to $recips...", "info", true)
-	} else {
-		parent?.sendMsg(msg, msgType)
 	}
 }
 

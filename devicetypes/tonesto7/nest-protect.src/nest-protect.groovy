@@ -308,7 +308,7 @@ def processEvent(data) {
 			determinePwrSrc()
 
 			lastUpdatedEvent() //I don't see a need for this any more
-			checkHealthNotify()
+			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
 		//log.debug "Device State Data: ${getState()}"
@@ -614,12 +614,12 @@ def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def checkHealthNotify() {
-	//log.trace "checkHealthNotify..."
-	if(getHealthStatus() != "INACTIVE" || state?.healthMsg != true) { return }
-	def msg = "The Nest Protect Device (${device?.displayName}) is currently OFFLINE. Please check your logs for possible issues.'"
-	parent?.deviceNotify("Warning", msg)
+def checkHealth() {
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
+
 /************************************************************************************************
 |										LOGGING FUNCTIONS										|
 *************************************************************************************************/
