@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.9" }
-def appVerDate() { "2-12-2017" }
+def appVersion() { "4.5.10" }
+def appVerDate() { "2-13-2017" }
 
 preferences {
 	//startPage
@@ -434,13 +434,15 @@ def custWeatherPage() {
 }
 
 def getWeatherQueryResults(query) {
-	LogTrace("Getting Weather Query Results for '$query'")
+	LogAction("Getting Weather Query Results for '$query'", "trace", true)
 	def objMap = [:]
-	def params = [uri: "http://autocomplete.wunderground.com/aq?query=${query.toString().encodeAsURL()}", contentType:"application/json", requestContentType:"application/json"]
-	def data = getWebData(params, "weather location query", false)
-	data?.RESULTS?.each { res ->
-		log.debug "item: ${res?.name} | Zip: ${res?.zmw}"
-		objMap[["zmw:${res?.zmw}"].join('.')] = res?.name.toString()
+	if(query) {
+		def params = [uri: "http://autocomplete.wunderground.com/aq?query=${query.toString().encodeAsURL()}", contentType:"application/json", requestContentType:"application/json"]
+		def data = getWebData(params, "weather location query", false)
+		data?.RESULTS?.each { res ->
+			log.debug "item: ${res?.name} | Zip: ${res?.zmw}"
+			objMap[["zmw:${res?.zmw}"].join('.')] = res?.name.toString()
+		}
 	}
 	return objMap
 }
@@ -1022,7 +1024,7 @@ def notifConfigPage(params) {
 			case "dev":
 				if(atomicState?.thermostats || atomicState?.presDevice || atomicState?.cameras || atomicState?.protects || atomicState?.weatherDevice) {
 					section("Health Alerts:") {
-						paragraph "Get notified when a device go offline", state: "complete"
+						paragraph "Get notified when devices go offline", state: "complete"
 						input ("devHealthNotifyMsg", "bool", title: "Send Device Heatlth Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("health_icon.png"))
 						if(settings?.devHealthNotifyMsg) {
 							input name: "devHealthMsgWaitVal", type: "enum", title: "Send Health Reminder Every?", required: false, defaultValue: 3600,
@@ -1033,7 +1035,7 @@ def notifConfigPage(params) {
 				if(atomicState?.cameras) {
 					section("Camera Alerts:") {
 						paragraph "Get notified on Camera streaming changes", state: "complete"
-						input ("camSteamNotifMsg", "bool", title: "Send Cam Streaming Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("camera_icon.png"))
+						input ("camStreamNotifMsg", "bool", title: "Send Cam Streaming Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("camera_icon.png"))
 					}
 				}
 				if(atomicState?.weatherDevice) {
@@ -1076,7 +1078,7 @@ def getAppNotifDesc() {
 def getDevNotifDesc() {
 	def str = ""
 	str += settings?.devHealthNotifyMsg ? "\n• Health Alerts: (${strCapitalize(settings?.devHealthNotifyMsg)})" : ""
-	str += settings?.camSteamNotifMsg ? "\n• Camera Stream Alerts: (${strCapitalize(settings?.camSteamNotifMsg)})" : ""
+	str += settings?.camStreamNotifMsg ? "\n• Camera Stream Alerts: (${strCapitalize(settings?.camStreamNotifMsg)})" : ""
 	str += settings?.weathAlertNotif ? "\n• Weather Alerts: (${strCapitalize(settings?.weathAlertNotif)})" : ""
 	return str != "" ? str : null
 }
@@ -1093,7 +1095,7 @@ def getAppNotifConfDesc() {
 		def ap = getAppNotifDesc()
 		def de = getDevNotifDesc()
 		def au = getAutoNotifDesc()
-		def nd = getNotifSchedDesc()
+
 		str += (settings?.recipients) ? "\nSending via Contact Book (True)" : ""
 		str += (settings?.usePush) ? "\nSending via Push: (True)" : ""
 		str += (settings?.phone) ? "\nSending via SMS: (True)" : ""
@@ -1101,7 +1103,8 @@ def getAppNotifConfDesc() {
 		str += (ap) ? "\n• App Alerts (True)" : ""
 		str += (de) ? "\n• Device Alerts (True)" : ""
 		str += (au) ? "\n• Automation Alerts (True)" : ""
-		str += (nd) ? "Alert Restrictions:\n${nd}" : ""
+
+		str += (getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
 	}
 	return str != "" ? str : null
 }
@@ -1118,7 +1121,7 @@ def buildNotifPrefMap() {
 	res?.app["remind"] = ["logRemindMsg":(settings?.appDbgDiagRemindMsg == false ? false : true)]
 	res["dev"] = [:]
 	res?.dev["devHealth"] = ["healthMsg":(settings?.devHealthNotifyMsg == false ? false : true), "healthMsgWait":(!settings?.devHealthMsgWaitVal ? 3600 : settings?.devHealthMsgWaitVal.toInteger())]
-	res?.dev["camera"] = ["streamMsg":(settings?.camSteamNotifMsg == false ? false : true)]
+	res?.dev["camera"] = ["streamMsg":(settings?.camStreamNotifMsg == false ? false : true)]
 	res?.dev["weather"] = ["localAlertMsg":(settings?.weathAlertNotif == false ? false : true)]
 	res?.dev["tstat"] = [:]
 	res?.dev["presence"] = [:]
@@ -1129,9 +1132,10 @@ def buildNotifPrefMap() {
 }
 
 def toggleAllAutomations(disable=false) {
+	def dis = disable == null ? false : disable
 	def cApps = getChildApps()
 	cApps.each { ca ->
-	 	ca?.setAutomationStatus(disable, true)
+	 	ca?.setAutomationStatus(dis, true)
 	}
 }
 
@@ -1931,7 +1935,7 @@ def initialize() {
 		runIn(6, "initAutoApp", [overwrite: true])
 	}
 	else {
-		//checkMigrationRequired()
+		if(checkMigrationRequired()) { return true }	// This will call updated later
 		initWatchdogApp()
 		runIn(14, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
 		runIn(34, "initWatchdogApp", [overwrite: true])	// need to have watchdog check if we created devices
@@ -2151,8 +2155,7 @@ def onAppTouch(event) {
 		and clear the flags that marked the migration complete.
 		FYI: If allowMigration() is set to true it will attempt to run a migration
 	*/
-	testErrorAsync()
-	//runIn(3, "cleanRestAutomationTest",[overwrite: true])
+	runIn(3, "cleanRestAutomationTest",[overwrite: true])
 }
 
 def refresh(child = null) {
@@ -2172,8 +2175,7 @@ def pollWatcher(evt) {
 }
 
 def cleanRestAutomationTest() {
-	/*
-		NOTE:
+	/* NOTE:
 		This is only here to allow testing.
 		It will be removed after testing is complete
 	*/
@@ -2197,10 +2199,13 @@ def cleanRestAutomationTest() {
 	atomicState?.migrationInProgress = false
 	atomicState?.pollBlocked = false
 	atomicState?.autoMigrationComplete = false
+	def t0 = atomicState?.installData
+	t0["usingNewAutoFile"] = false
+	atomicState?.installData = t0
 }
 
 def checkIfSwupdated() {
-	if(checkMigrationRequired()) { return true }  // This is only here to allow testing.  It will be removed after testing is complete
+	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
@@ -2210,7 +2215,6 @@ def checkIfSwupdated() {
 			}
 		}
 		updated()
-		//checkMigrationRequired()
 		return true
 	}
 	return false
@@ -2226,7 +2230,7 @@ def checkMigrationRequired() {
 	if(atomicState?.migrationInProgress == true || atomicState?.installData?.usingNewAutoFile) { return true }
 	if(allowMigration()) {
 		if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
-			log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
+			LogAction("checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)", "info", true)
 			runIn(5, "doAutoMigrationProcess", [overwrite: true])
 			return true
 		}
@@ -2336,6 +2340,10 @@ void doAutoMigrationProcess() {
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
 
+	// This is to control the parent/child state to reset using fixState()
+	atomicState?.resetAllData = false
+	settingUpdate("resetAllData", "false")
+
 	def cApps = getChildApps()
 	if(cApps) {
 		cApps?.each { ca ->
@@ -2386,7 +2394,7 @@ void processAutoRestore() {
 	PARENT METHOD
 */
 def automationRestore(data, id=null) {
-	LogAction("automationRestore...", "trace", true)
+	LogAction("automationRestore... size: ${data?.size()}", "trace", true)
 	try {
 		if(data) {
 			data?.each { bApp ->
@@ -2401,13 +2409,15 @@ def automationRestore(data, id=null) {
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
-				//postChildRestore(bApp?.key, keepBackups())
+				postChildRestore(bApp?.key)
 			}
 			runIn(25, "finishMigrationProcess", [overwrite:true])
-			log.debug "Scheduling finishMigrationProcess for (25 seconds)..."
+			LogAction("Scheduling finishMigrationProcess for (25 seconds)...", "debug", true)
 			return true
 		}
-	} catch (ex) { }
+	} catch (ex) {
+		log.error "automationRestore Exception:", ex
+	}
 	return false
 }
 
@@ -2446,9 +2456,10 @@ def callRestoreState(child, restId) {
 	PARENT METHOD
 */
 def postChildRestore(childId) {
-	LogAction("postChildRestore(childId: $childId, remove: $remove)", "trace", true)
+	LogAction("postChildRestore(childId: $childId)", "trace", true)
 	def cApp = getChildApps()
 	cApp?.each { ca ->
+		LogAction("postChildRestore Checking Automation (${ca?.label})...", "info", true)
 		if(ca?.getId() == childId) {
 			if(keepBackups() == false) {
 				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
@@ -2474,16 +2485,22 @@ def postChildRestore(childId) {
 */
 void finishMigrationProcess(result=true) {
 	LogAction("finishMigrationProcess result: $result", "trace", true)
-	// atomicState?.autoMigrationComplete = true
-	// atomicState?.pollBlocked = false
-	// atomicState?.migrationInProgress = false
 	if(result) {
-		atomicState?.autoMigrationComplete = true
-		atomicState?.pollBlocked = false
-		atomicState?.migrationInProgress = false
 		LogAction("Auto Migration Process is complete...", "info", true)
-		atomicState?.installData["usingNewAutoFile"] = true
-	} else { LogAction("Auto Migration did not complete...", "warn", true) }
+		def t0 = atomicState?.installData
+		t0["usingNewAutoFile"] = true
+		atomicState?.installData = t0
+	} else {
+		LogAction("Auto Migration did not do anything...", "warn", true)
+	}
+	atomicState?.pollBlocked = false
+	atomicState?.migrationInProgress = false
+	atomicState?.autoMigrationComplete = true
+
+	// This is to force the parent/child state to reset using fixState()
+	atomicState?.resetAllData = false
+	settingUpdate("resetAllData", "true")
+
 	// This will perform a cleanup of any backup data that wasn't removed
 	if(keepBackups() == false) { clearAllAutomationBackupData() }
 	app.update()
@@ -2620,7 +2637,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiStructureData - Received: Resp (${resp?.status})", "error", true)
-					apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
 				}
 			}
 		}
@@ -2642,7 +2659,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiDeviceData - Received Resp (${resp?.status})", "error", true)
-					apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
 				}
 			}
 		}
@@ -2666,28 +2683,26 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiMetaData - Received Resp (${resp?.status})", "error", true)
-					apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
+					//apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
 				}
 			}
 		}
-	} catch (groovyx.net.http.HttpResponseException ex) {
-	   //log.debug "Status: ${ex?.response?.status} | Error: ${ex?.response?.data}"
-	   apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
-   	} catch(ex) {
+	}
+	catch(ex) {
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
 		atomicState.needChildUpd = true
-		// if(ex instanceof groovyx.net.http.HttpResponseException) {
-		// 	if(ex.message.contains("Too Many Requests")) {
-		// 		LogAction("Received '${ex.message}' response", "warn", true)
-		// 	}
-		// } else {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			if(ex.message.contains("Too Many Requests")) {
+				LogAction("Received '${ex.message}' response", "warn", true)
+			}
+		} else {
 			log.error "getApiData (type: $type) Exception:", ex
 			if(type == "str") { atomicState.needStrPoll = true }
 			else if(type == "dev") { atomicState?.needDevPoll = true }
 			else if(type == "meta") { atomicState?.needMetaPoll = true }
 			sendExceptionData(ex, "getApiData")
-		//}
+		}
 	}
 	return result
 }
@@ -2736,9 +2751,6 @@ def processResponse(resp, data) {
 	def errorMsg = resp?.errorMessage ?: null
 	def type = data?.type
 	try {
-		if(resp?.hasError()) {
-			apiRespHandler(resp?.getStatus(), resp?.getErrorJson(), "processResponse")
-		}
 		if(!type) { return }
 
 		if(resp?.status == 307) {
@@ -2791,6 +2803,8 @@ def processResponse(resp, data) {
 				atomicState.qmetaRequested = false
 			}
 		} else {
+			apiRespHandler(rCode, errorMsg, "processResponse")
+
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 			//LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
 			apiIssueEvent(true)
@@ -2808,6 +2822,8 @@ def processResponse(resp, data) {
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
+
+		apiRespHandler(rCode, errorMsg, "processResponse")
 		//log.error "processResponse (type: $type) Exception:", ex
 
 		if(type == "str") { atomicState.needStrPoll = true }
@@ -3804,11 +3820,9 @@ def nestResponse(resp, data) {
 	def qnum = data?.qnum
 	def command = data?.cmd
 	def result = false
+	def rCode = resp?.status ?: null
+	def errorMsg = resp?.errorMessage ?: null
 	try {
-		if(resp?.hasError()) {
-			apiRespHandler(resp?.getStatus(), resp?.getErrorJson(), "nestResponse")
-		}
-
 		if(!command) { cmdProcState(false); return }
 
 		if(resp?.status == 307) {
@@ -3829,12 +3843,13 @@ def nestResponse(resp, data) {
 		} else {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
+			apiRespHandler(rCode, errorMsg, "nestResponse")
 		}
 		finishWorkQ(command, result)
 
 	} catch (ex) {
 		log.error "nestResponse (command: $command) Exception:", ex
-		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
+		apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "nestResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3869,6 +3884,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 		httpPutJson(params) { resp ->
 			def rCode = resp?.status ?: null
+			//def errorMsg = resp?.errorMessage ?: null
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
@@ -3892,11 +3908,10 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				apiRespHandler(resp?.status, resp?.data, "nestResponse")
 			}
 		}
-	} catch (groovyx.net.http.HttpResponseException ex) {
-	   //log.debug "Status: ${ex?.response?.status} | Error: ${ex?.response?.data}"
-	   apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
-   	} catch (ex) {
+	}
+	catch (ex) {
 		log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
+		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "procNestApiCmd")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3905,39 +3920,38 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 	return result
 }
 
-def apiRespHandler(code, errJson, methodName) {
-	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errJson}"
+def apiRespHandler(code, errMsg, methodName) {
+	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
 	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
-		def errMsg = errJson?.message != null ? errJson?.message : null
 		switch(code) {
 			case 400:
-				result = !errMsg ? "A Bad Request was made to the API..." : errMsg
+				result = "A Bad Request was made to the API"
 				break
 			case 401:
-				result =  !errMsg ? "Authentication ERROR, Please try refreshing your login under Authentication settings..." : errMsg
+				result = "Authentication ERROR, Please try refreshing your login under Authentication settings..."
 				break
 			case 403:
-				result =  !errMsg ? "Forbidden: Your Login Credentials are Invalid..." : errMsg
+				result = "Forbidden: Your Login Credentials are Invalid..."
 				break
 			case 429:
-				result =  !errMsg ? "Requests are currently being blocked because of API Rate Limiting..." : errMsg
+				result = "Requests are currently being blocked because of API Rate Limiting..."
 				atomicState?.apiRateLimited = true
 				break
 			case 500:
-				result =  !errMsg ? "Internal Nest Error:" : errMsg
+				result = "Internal Nest Error:"
 				break
 			case 503:
-				result =  !errMsg ? "There is currently a Nest Service Issue..." : errMsg
+				result = "There is currently a Nest Service Issue..."
 				break
 			default:
-				result =  !errMsg ? "Received Response..." : errMsg
+				result = "Received Response..."
 				break
 		}
 		def failData = ["msg":result, "method":methodName, "dt":getDtNow()]
 		atomicState?.apiCmdFailData = failData
 		failedCmdNotify(failData)
-		LogAction("$methodName error - (Status: $code - $result) - [ErrorLink: ${errJson?.type}]", "error", true)
+		LogAction("$methodName | $result | (Status: $code | Error: $errMsg)", "error", true)
 	}
 }
 
@@ -4334,7 +4348,7 @@ def webResponse(resp, data) {
 
 def getWebData(params, desc, text=true) {
 	try {
-		LogAction("Getting ${desc} data", "info", true)
+		LogAction("getWebData: ${desc} data", "info", true)
 		httpGet(params) { resp ->
 			if(resp.data) {
 				if(text) {
@@ -5564,7 +5578,7 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!parent) {
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt"]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -7161,6 +7175,8 @@ def getAutoIcon(type) {
 }
 
 //These are here to catch any events that occur before the migration occurs
+def heartbeatAutomation() { return }
+def runAutomationEval() { return }
 def automationGenericEvt(evt) { return }
 def automationSafetyTempEvt(evt) { return }
 def nModeGenericEvt(evt) { return }
@@ -8013,7 +8029,7 @@ def appName()		{ return "${parent ? "${autoAppName()}" : "${appLabel()}"}${appDe
 def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def useNewAutoFile(){ return true }
+def useNewAutoFile()	{ return true }
 def blockOldAuto()	{ return true }
 def newAutoName()	{ return "NST Automations" }
 def autoAppName()	{ return "NST Automations" }//(versionStr2Int(appVersion()).toInteger() >= 454 && useNewAutoFile() == true) ? "NST Automations" : "Nest Automations" }
@@ -8022,7 +8038,7 @@ def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
-def keepBackups()	{ return false }
+def keepBackups()	{ return true }
 def allowMigration(){ return true }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
