@@ -595,7 +595,7 @@ def publicShareUrlEvent(url) {
 			state?.lastPubVidId = pubVidId
 		}
 		if(!state?.camUUID) { getCamUUID(pubVidId) }
-		if(state?.camUUID) {
+		else {
 			def camData = getCamApiServerData(state?.camUUID)
 			if(camData && state?.lastCamApiServerData != camData) { state?.lastCamApiServerData = camData }
 		}
@@ -954,7 +954,11 @@ include 'asynchttp_v1' //<<<<<This is currently in Beta
 def getCamUUID(pubVidId) {
 	try {
 		if(pubVidId) {
-			if(!state?.lastPubVidId || !state?.camUUID || state?.lastPubVidId != pubVidId) {
+			if(!state?.isStreaming) {
+				Logger("getCamUUID: Your Camera's currently not streaming so we are unable to get the required ID.  Once streaming is enabled the ID will be collected...", "warn")
+				return null
+			}
+			else if(state?.isStreaming && (state?.lastPubVidId == null || state?.camUUID == null || state?.lastPubVidId != pubVidId)) {
 				def params = [
 					uri: "https://video.nest.com/live/${pubVidId}",
 					requestContentType: 'text/html'
@@ -971,12 +975,14 @@ def getCamUUID(pubVidId) {
 }
 
 def camPageHtmlRespMethod(response, data) {
-	def rData = response.getData()
-	def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
-	log.debug "url: $url"
-	def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
-	//log.debug "UUID: ${uuid}"
-	state.camUUID = uuid
+	if(response?.status != 408) {
+		def rData = response.getData()
+		def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
+		//log.debug "url: $url"
+		def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
+		//log.debug "UUID: ${uuid}"
+		state.camUUID = uuid
+	} else { return }
 }
 
 def getCamApiServerData(camUUID) {
