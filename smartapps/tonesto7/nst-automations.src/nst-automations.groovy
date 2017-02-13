@@ -124,7 +124,7 @@ def initialize() {
 	if(!atomicState?.newAutomationFile) { atomicState?.newAutomationFile = true }
 	def settingsReset = parent?.settings?.resetAllData
 	if(atomicState?.resetAllData || settingsReset) {
-		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
+		if(fixState()) { return }	// runIn of fixState will call initAutoApp()
 	}
 	runIn(6, "initAutoApp", [overwrite: true])
 }
@@ -172,8 +172,14 @@ def isAppUpdateAvail() {
 	return false
 }
 
+def setMyLockId(val) {
+        if(atomicState?.myID == null && parent && val) {
+                atomicState.myID = val
+        }
+}
+
 def getMyLockId() {
-	if(parent) { return atomicState?.myID } else { return null }
+        if(parent) { return atomicState?.myID } else { return null }
 }
 
 def fixState() {
@@ -181,6 +187,7 @@ def fixState() {
 	LogAction("fixState", "info", false)
 	def before = getStateSizePerc()
 	if(!parent) {
+/*
 		if(!atomicState?.resetAllData && resetAllData) {
 			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt"]) }
 			data.each { item ->
@@ -194,10 +201,10 @@ def fixState() {
 			LogAction("fixState: resetting ALL toggle", "info", true)
 			atomicState.resetAllData = false
 		}
-
+*/
 	} else {
 		if(!atomicState?.resetAllData && parent?.settings?.resetAllData) { // automation cleanup called from update() -> initAutoApp()
-			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp" ]) }
+			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp", "restoreId", "restoredFromBackup", "restoreCompleted", "automationTypeFlag" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -220,6 +227,7 @@ def fixState() {
 void finishFixState() {
 	LogAction("finishFixState", "info", false)
 	if(!parent) {
+/*
 		if(atomicState?.resetAllData) {
 			atomicState.misPollNotifyWaitVal = !misPollNotifyWaitVal ? 900 : misPollNotifyWaitVal.toInteger()
 			atomicState.misPollNotifyMsgWaitVal = !misPollNotifyMsgWaitVal ? 3600 : misPollNotifyMsgWaitVal.toInteger()
@@ -267,6 +275,7 @@ void finishFixState() {
 				}
 			}
 		}
+*/
 	} else {
 		if(atomicState?.resetAllData) {
 			def tstat = settings?.schMotTstat
@@ -447,7 +456,7 @@ def buildSettingsMap() {
 
 def createAutoBackupJson() {
 	//log.trace "createAutoBackupJson..."
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData"]
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData", "resetAllData"]
 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
 	def stateData = [:]
@@ -6511,6 +6520,7 @@ def devPageFooter(var, eTime) {
 
 def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
 
+/*
 
 //Things that I need to clear up on updates go here
 //IMPORTANT: This must be run in it's own thread, and exit after running as the cleanup occurs on exit
@@ -6541,6 +6551,7 @@ def stateCleanup() {
 		}
 	}
 }
+*/
 
 /******************************************************************************
 *								STATIC METHODS								  *
