@@ -206,7 +206,7 @@ def mainPage() {
 				paragraph "Home/Away Status: (${strCapitalize(getLocationPresence())})", title: "Location: ${atomicState?.structName}", state: "complete",  image: getAppImg("thermostat_icon.png")
 				def t1 = getDevicesDesc(false)
 				def devDesc = t1 ? "${t1}\n\nTap to modify devices" : "Tap to configure"
-				href "deviceSelectPage", title: "", description: devDesc, state: "complete", image: "blank_icon.png"
+				href "deviceSelectPage", title: "Manage Devices", description: devDesc, state: "complete", image: "blank_icon.png"
 			}
 			//getDevChgDesc()
 		}
@@ -242,7 +242,7 @@ def mainPage() {
 			section("Notifications Options:") {
 				def t1 = getAppNotifConfDesc()
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
-						image: getAppImg("notification_icon.png")
+						image: getAppImg("notification_icon2.png")
 			}
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
@@ -334,6 +334,14 @@ def devicesPage() {
 					href "devPrefPage", title: "Device Customization", description: "Tap to configure", image: getAppImg("device_pref_icon.png")
 				}
 			}
+			if(atomicState?.protects) {
+				section("Nest Protect Alarm Simulation:") {
+					if(atomicState?.protects) {
+						def dt = atomicState?.isAlarmCoTestActiveDt
+						href "alarmTestPage", title: "Test Protect Automations\nBy Simulating Alarm Events", description: "${dt ? "Last Tested:\n$dt\n\n" : ""}Tap to Begin...", image: getAppImg("test_icon.png")
+					}
+				}
+			}
 		}
 	}
 }
@@ -350,18 +358,27 @@ def devPrefPage() {
 		}
 		if(atomicState?.thermostats) {
 			section("Thermostat Devices:") {
-				input ("tstatCollectRunUsage", "bool", title: "Store HVAC Runtime History?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("info_icon.png"))
+				input ("tstatCollectRunUsage", "bool", title: "Store HVAC Runtime History?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("history_icon.png"))
 				if(settings?.tstatCollectRunUsage) {
-					input ("tstatShowHistoryGraph", "bool", title: "Show Graph with Setpoint, Humidity, Temp History?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("graph_icon.png"))
+					input ("tstatShowHistoryGraph", "bool", title: "Show Graph with Setpoint, Humidity, Temp History?", description: "", required: false, defaultValue: true, submitOnChange: true,
+							image: getAppImg("graph_icon2.png"))
 				}
-				input ("tempChgWaitVal", "enum", title: "Delay between Manual Temp Changes?", required: false, defaultValue: 4, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("temp_icon.png"))
+				input ("tempChgWaitVal", "enum", title: "Manual Temp Change Delay", required: false, defaultValue: 4, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("temp_icon.png"))
 				atomicState.needChildUpd = true
 			}
 		}
 		if(atomicState?.protects) {
 			section("Protect Devices:") {
-				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Device Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
+				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
 				atomicState.needChildUpd = true
+			}
+		}
+		if(atomicState?.weatherDevice) {
+			section("Weather Device:") {
+				def t1 = getWeatherConfDesc()
+				input ("weathAlertNotif", "bool", title: "Local Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_alert_icon.png"))
+				input ("weatherShowGraph", "bool", title: "Weather History Graph?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("graph_icon2.png"))
+				href "custWeatherPage", title: "Customize Weather Location?", description: (t1 ? "${t1}\n\nTap to modify" : ""), state: (t1 ? "complete":""), image: getAppImg("weather_icon_grey.png")
 			}
 		}
 		if(atomicState?.protects) {
@@ -374,14 +391,6 @@ def devPrefPage() {
 			section("Presence Device:") {
 				paragraph "No Presence Device Options Yet..."
 				//atomicState.needChildUpd = true
-			}
-		}
-		if(atomicState?.weatherDevice) {
-			section("Weather Device:") {
-				def t1 = getWeatherConfDesc()
-				input ("weathAlertNotif", "bool", title: "Local Weather Alert Notifications?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("notification_icon.png"))
-				input ("weatherShowGraph", "bool", title: "Display Weather History Graph?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("graph_icon.png"))
-				href "custWeatherPage", title: "Customize Weather Location?", description: (t1 ? "${t1}\n\nTap to modify" : ""), state: (t1 ? "complete":""), image: getAppImg("weather_icon_grey.png")
 			}
 		}
 		incDevCustLoadCnt()
@@ -471,7 +480,7 @@ def reviewSetupPage() {
 
 		section("Notifications:") {
 			def t1 = getAppNotifConfDesc()
-			href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("notification_icon.png")
+			href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("notification_icon2.png")
 		}
 		section("Polling:") {
 			def pollDesc = getPollingConfDesc()
@@ -560,6 +569,12 @@ def prefsPage() {
 
 		showDevSharePrefs()
 
+		def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))
+		if(devSelected) {
+			section("Device Preferences:") {
+				href "devPrefPage", title: "Device Customization", description: "Tap to configure", image: getAppImg("device_pref_icon.png")
+			}
+		}
 		section("Manage Nest Login:") {
 			href "nestLoginPrefPage", title: "Nest Login Preferences", description: "Tap to view", image: getAppImg("login_icon.png")
 		}
@@ -915,12 +930,12 @@ def notifPrefPage() {
 				input(name: "usePush", type: "bool", title: "Send Push Notitifications", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
 			} else {
 				input(name: "recipients", type: "contact", title: "Select Default Contacts", required: false, submitOnChange: true, image: getAppImg("recipient_icon.png")) {
-					input ("phone", "phone", title: "Phone Number to send SMS to", required: false, submitOnChange: true, image: getAppImg("notification_icon.png"))
+					input ("phone", "phone", title: "Phone Number to send SMS to", required: false, submitOnChange: true, image: getAppImg("notification_icon2.png"))
 				}
 			}
 			if(settings?.recipients || settings?.phone || settings?.usePush) {
 				def t1 = getNotifSchedDesc()
-				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("quiet_time_icon.png")
+				href "setNotificationTimePage", title: "Notification Restrictions", description: (t1 ?: "Tap to configure"), state: (t1 ? "complete" : null), image: getAppImg("restriction_icon.png")
 			}
 		}
 		if(settings?.recipients || settings?.phone || settings?.usePush) {
@@ -935,7 +950,7 @@ def notifPrefPage() {
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
 			}
 			section("App Alerts:") {
-				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("notification_icon.png")
+				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("nst_manager_icon.png")
 			}
 			section("Device Alerts:") {
 				href "notifConfigPage", title: "Device Notifications", description: "Tap to configure", params: [pType:"dev"], image: getAppImg("thermostat_icon.png")
@@ -3063,10 +3078,11 @@ def apiIssues() {
 
 def apiIssueType() {
 	def res = "none"
+	//this looks at the last 3 items added and determines whether issue is sporattic or outage
 	def items = state?.apiIssuesList[4..-1].findAll { it == true }
-	if(items?.size() >= 1 && items?.size() <= 2) { res = "partial" }
-	else if(items?.size() >= 3) { res = "full" }
-	log.debug "apiIssueType: $res"
+	if(items?.size() >= 1 && items?.size() <= 2) { res = "sporattic" }
+	else if(items?.size() >= 3) { res = "outage" }
+	//log.debug "apiIssueType: $res"
 	return res
 }
 
@@ -3994,10 +4010,8 @@ def updateHandler() {
 	}
 }
 
-//this is parent only method
 def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
-// parent only method
 def sendMsg(msgType, msg, people = null, sms = null, push = null, brdcast = null) {
 	//LogTrace("sendMsg")
 	try {
@@ -5420,10 +5434,7 @@ def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 
 def tokenStrScrubber(str) {
 	def regex1 = /(Bearer c.{1}\w+)/
-	def newStr = str.replaceAll(regex1, "Bearer 'token code scrubbed'")
-	str?.findAll(regex1).each {
-		//log.debug "regex match: $it"
-	}
+	def newStr = str.replaceAll(regex1, "Bearer 'token code redacted'")
 	//log.debug "newStr: $newStr"
 	return newStr
 }
@@ -5932,7 +5943,8 @@ def nestInfoPage () {
 		if(atomicState?.protects) {
 			section("Nest Protect Alarm Simulation:") {
 				if(atomicState?.protects) {
-					href "alarmTestPage", title: "Test Protect Automations\nBy Simulating Alarm Events", required: true , image: getAppImg("test_icon.png"), state: null, description: "Tap to Begin"
+					def dt = atomicState?.isAlarmCoTestActiveDt
+					href "alarmTestPage", title: "Test Protect Automations\nBy Simulating Alarm Events", description: "${dt ? "Last Tested:\n$dt\n\n" : ""}Tap to Begin...", image: getAppImg("test_icon.png")
 				}
 			}
 		}
@@ -6083,7 +6095,7 @@ def alarmTestPage () {
 				if(settings?.alarmCoTestDeviceSimLowBatt || settings?.alarmCoTestDeviceSimCo || settings?.alarmCoTestDeviceSimSmoke) {
 					section("Execute Selected Tests from Above:") {
 						if(!atomicState?.isAlarmCoTestActive) {
-							paragraph "WARNING: If protect devices are used by Smart Home Monitor (SHM) SHM will not see these as a test and will trigger any action/alarms you have configured",
+							paragraph "WARNING:\nIf protect devices are used by Smart Home Monitor (SHM) it will not be seen as a test and will trigger any actions and/or alarms you have configured.",
 									required: true, state: null
 						}
 						if(settings?.alarmCoTestDeviceSimSmoke && !settings?.alarmCoTestDeviceSimCo && !settings?.alarmCoTestDeviceSimLowBatt) {
@@ -6114,6 +6126,18 @@ def alarmTestPage () {
 	}
 }
 
+void resetAlarmTest() {
+	LogAction("Resetting Protect Alarm Test back to the default.", "info", true)
+	settingUpdate("alarmCoTestDevice", "")
+	settingUpdate("alarmCoTestDeviceSimSmoke", "false")
+	settingUpdate("alarmCoTestDeviceSimCo", "false")
+	settingUpdate("alarmCoTestDeviceSimLowBatt", "false")
+	atomicState?.isAlarmCoTestActive = false
+	atomicState?.curProtTestPageData = null
+}
+
+def getLastAlarmTestDtSec() { return !atomicState?.isAlarmCoTestActiveDt ? 100000 : GetTimeDiffSeconds(atomicState?.isAlarmCoTestActiveDt, null, "getLastAlarmTestDtSec").toInteger() }
+
 def simulateTestEventPage(params) {
 	def pName = getAutoType()
 	def testType
@@ -6123,7 +6147,7 @@ def simulateTestEventPage(params) {
 	} else {
 		testType = atomicState?.curProtTestType
 	}
-	dynamicPage(name: "simulateTestEventPage", refreshInterval: 10, install: false, uninstall: false) {
+	dynamicPage(name: "simulateTestEventPage", refreshInterval: (atomicState?.isAlarmCoTestActive ? null : 10), install: false, uninstall: false) {
 		if(settings?.alarmCoTestDevice) {
 			def dev = getChildDevice(settings?.alarmCoTestDevice)
 			def testText
@@ -6132,6 +6156,8 @@ def simulateTestEventPage(params) {
 					def isRun = false
 					if(!atomicState?.isAlarmCoTestActive) {
 						atomicState?.isAlarmCoTestActive = true
+						atomicState?.isAlarmCoTestActiveDt = getDtNow()
+						runIn(60, "resetAlarmTest", [overwrite: true])
 						if(testType == "co") {
 							testText = "Carbon 'Detected'"
 							dev?.runCoTest()
