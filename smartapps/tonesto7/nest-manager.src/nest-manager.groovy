@@ -7140,6 +7140,15 @@ def getIsAutomationDisabled() {
 	return (dis != null && dis == true) ? true : false
 }
 
+//These are here to catch any events that occur before the migration occurs
+def automationGenericEvt(evt) { return }
+def automationSafetyTempEvt(evt) { return }
+def nModeGenericEvt(evt) { return }
+def leakWatSensorEvt(evt) { return }
+def conWatContactEvt(evt) { return }
+def extTmpGenericEvt(evt) { return }
+
+
 def remSenLock(val, myId) {
 	def res = false
 	if(val && myId && !parent) {
