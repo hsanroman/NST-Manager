@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: NST Manager				                                            |
+|    Application Name: NST Manager                                                          |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -1862,6 +1862,7 @@ def installed() {
 
 def updated() {
 	LogAction("${app.label} Updated..."/*with settings: ${settings}*/, "debug", true)
+	if(atomicState?.migrationInProgress == true) { LogAction("Skipping updated() as migration inprogress", "warn", true); return }
 	initialize()
 	sendNotificationEvent("${appName()} has updated settings")
 	if(parent) {
@@ -2156,7 +2157,7 @@ def cleanRestAutomationTest() {
 }
 
 def checkIfSwupdated() {
-	checkMigrationRequired() // This is only here to allow testing.  It will be removed after testing is complete
+	if(checkMigrationRequired()) { return true }  // This is only here to allow testing.  It will be removed after testing is complete
 	if(atomicState?.swVersion != appVersion()) {
 		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
 		def cApps = getChildApps()
@@ -2179,13 +2180,15 @@ def checkIfSwupdated() {
 	If the to are ok it schedules the "doAutoMigrationProcess" method for 5 seconds.
 */
 def checkMigrationRequired() {
-	if(atomicState?.migrationInProgress == true || atomicState?.installData?.usingNewAutoFile) { return }
+	if(atomicState?.migrationInProgress == true || atomicState?.installData?.usingNewAutoFile) { return true }
 	if(allowMigration()) {
 		if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
 			log.info "checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)"
 			runIn(5, "doAutoMigrationProcess", [overwrite: true])
+			return true
 		}
 	}
+	return false
 }
 
 /* NOTE:
@@ -2278,12 +2281,15 @@ def getAutomationBackupData() {
 	return getWebData([uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", contentType:"application/json"], "getAutomationBackup", false)
 }
 
-/* NOTE: MIGRATION STEP 1
+/*
+	NOTE: MIGRATION STEP 1
 	This is the process that is called to kick off the backup/restore process.
 	It set the state values of pollBlocked and migrationInProgress to true to prevent any polling
+	PARENT METHOD
 */
 void doAutoMigrationProcess() {
-	log.trace "doAutoMigrationProcess..."
+	LogAction("doAutoMigrationProcess...", "trace", true)
+	if(atomicState?.migrationInProgress == true) { LogAction("Migration already in progress", "error", true) }
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
 
@@ -2291,19 +2297,21 @@ void doAutoMigrationProcess() {
 	if(cApps) {
 		cApps?.each { ca ->
 			if(backupAutomation(ca)) {
-				log.debug "backed up ${ca?.label}"
+				LogAction("backed up ${ca?.label}", "debug", true)
 			} else { log.debug "skipping backup of the new style automation" }
 		}
-		runIn(8, "processAutoRestore", [overwrite:true])
-		LogAction("Scheduled restore process for (8 seconds)...", "info", true)
+		runIn(15, "processAutoRestore", [overwrite:true])
+		LogAction("Scheduled restore process for (15 seconds)...", "info", true)
 	} else {
 		LogAction("There are no automations to restore.", "warn", true)
 		finishMigrationProcess(false)
 	}
 }
 
-/* NOTE: MIGRATION STEP 2
+/*
+	NOTE: MIGRATION STEP 2
 	This is the process calls the backupConfigToFirebase method on every child
+	PARENT METHOD
 */
 def backupAutomation(child) {
 	if(child?.settings?.restoredFromBackup != null) { return false }
@@ -2314,23 +2322,28 @@ def backupAutomation(child) {
 	return false
 }
 
-/* NOTE: MIGRATION STEP 3
+/*
+	NOTE: MIGRATION STEP 3
 	This process calls the automationRestore method with all of the backup data to restore
+	PARENT METHOD
 */
 void processAutoRestore() {
+	LogAction("processAutoRestore...", "trace", true)
 	def backupData = getAutomationBackupData()
 	if(backupData instanceof List || backupData instanceof Map) {
 		automationRestore(backupData)
 	}
 }
 
-/* NOTE: MIGRATION STEP 4
+/*
+	NOTE: MIGRATION STEP 4
 	This is the actual automation restore method for installing the automations from the backups
 	It loops through each backed up automation id and creates the map to send and creates the new automation
 	using the new file.
+	PARENT METHOD
 */
 def automationRestore(data, id=null) {
-	log.trace "automationRestore..."
+	LogAction("automationRestore...", "trace", true)
 	try {
 		if(data) {
 			data?.each { bApp ->
@@ -2345,22 +2358,25 @@ def automationRestore(data, id=null) {
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
-				//postChildRestore(bApp?.key, keepBackups())
+				postChildRestore(bApp?.key, keepBackups())
 			}
-			runIn(10, "finishMigrationProcess", [overwrite:true])
-			log.debug "Scheduling finishMigrationProcess for (10 seconds)..."
+			runIn(25, "finishMigrationProcess", [overwrite:true])
+			log.debug "Scheduling finishMigrationProcess for (25 seconds)..."
 			return true
 		}
 	} catch (ex) { }
 	return false
 }
 
-/* NOTE: MIGRATION 5
+/*
+	NOTE: MIGRATION STEP 5
 	This is called by the child automations initAutoApp() method after the addChildApp()
 	creates that app from backup.  On the first initialazation of the child it calls the
-	parent to restore the stateData from backup
+	parent to restore the stateData from backup.   BACKUP MUST STILL EXIST
+	PARENT METHOD
 */
 def callRestoreState(child, restId) {
+	LogAction("callRestoreState ${child.label}   RestoreID: ${restId}", "trace", true)
 	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
 	if(restId) {
 		def data = getAutomationBackupData()
@@ -2372,18 +2388,22 @@ def callRestoreState(child, restId) {
 			}
 			//child?.settingUpdate("restoreCompleted", true, "bool")
 			return true
+		} else {
+			LogAction("Backup Data not found: ${child.label}   RestoreID: ${restId}", "error", true)
 		}
 	}
 	return false
 }
 
-/* NOTE: MIGRATION STEP 6
+/*
+	NOTE: MIGRATION STEP 3  (Really part of STEP 3)
 	This is called by the child once it's state data has been restored and it's purpose is
 	finalize the restore setting values and disable/or remove the old automations.
 	The removal is controlled by the method keepBackups().
+	PARENT METHOD
 */
 def postChildRestore(childId) {
-	//log.trace "postChildRestore(childId: $childId, remove: $remove)"
+	LogAction("postChildRestore(childId: $childId, remove: $remove)", "trace", true)
 	def cApp = getChildApps()
 	cApp?.each { ca ->
 		if(ca?.getId() == childId) {
@@ -2396,16 +2416,21 @@ def postChildRestore(childId) {
 				ca?.stateUpdate("disableAutomationDt", getDtNow())
 				ca?.update()
 			}
+		} else {
+			LogAction("postChildRestore No Match for Automation (${ca?.label})...", "info", true)
 		}
 	}
 }
 
-/* NOTE: MIGRATION 7
+/*
+	NOTE: MIGRATION 6
 	This is the final part of the migration process. It's supposed to if Successful restore polling state,
 	and mark the migration complete.  Otherwise it leaves them set so the migration will try again after the
 	update is called.
+	PARENT METHOD
 */
 void finishMigrationProcess(result=true) {
+	LogAction("finishMigrationProcess result: $result", "trace", true)
 	// atomicState?.autoMigrationComplete = true
 	// atomicState?.pollBlocked = false
 	// atomicState?.migrationInProgress = false
@@ -3431,8 +3456,8 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 				newCmd = [cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]]
 			}
 
-			if(newCmd != []) {   // newCmd is last command in queue
-				if(newCmd[1] == cmdType?.toString() && newCmd[2] == cmdObj?.toString() && newCmd[3] == cmdObjVal) {   // Exact same command; leave it and skip
+			if(newCmd != []) {		// newCmd is last command in queue
+				if(newCmd[1] == cmdType?.toString() && newCmd[2] == cmdObj?.toString() && newCmd[3] == cmdObjVal) {	// Exact same command; leave it and skip
 					skipped = true
 					tempQueue << newCmd
 				} else if(newCmd[1] == cmdType?.toString() && newCmd[2] == cmdObj?.toString() &&
@@ -3522,7 +3547,7 @@ void schedNextWorkQ(childId) {
 	//
 	// This is throttling the rate of commands to the Nest service for this access token.
 	// If too many commands are sent Nest throttling could shut all write commands down for 1 hour to the device or structure
-	// This allows up to 3 commands if none sent in the last hour, then only 1 per 60 seconds.   Nest could still
+	// This allows up to 3 commands if none sent in the last hour, then only 1 per 60 seconds.  Nest could still
 	// throttle this if the battery state on device is low.
 	//
 
@@ -5646,7 +5671,7 @@ def stateCleanup() {
 	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
 	sdata.each { item ->
 		if(settings?."${item}" != null) {
-			settingUpdate("${item.toString()}", "")   // clear settings
+			settingUpdate("${item.toString()}", "")	// clear settings
 		}
 	}
 }
@@ -5654,16 +5679,16 @@ def stateCleanup() {
 /******************************************************************************
 *								STATIC METHODS								  *
 *******************************************************************************/
-def getThermostatChildName(){ return getChildName("Nest Thermostat") }
-def getProtectChildName()   { return getChildName("Nest Protect") }
-def getPresenceChildName()  { return getChildName("Nest Presence") }
-def getWeatherChildName()   { return getChildName("Nest Weather") }
-def getCameraChildName()    { return getChildName("Nest Camera") }
+def getThermostatChildName()	{ return getChildName("Nest Thermostat") }
+def getProtectChildName()	{ return getChildName("Nest Protect") }
+def getPresenceChildName()	{ return getChildName("Nest Presence") }
+def getWeatherChildName()	{ return getChildName("Nest Weather") }
+def getCameraChildName()	{ return getChildName("Nest Camera") }
 
-def getAutoAppChildName()   { return getChildName(autoAppName()) }
+def getAutoAppChildName()	{ return getChildName(autoAppName()) }
 def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
 
-def getChildName(str)     	{ return "${str}${appDevName()}" }
+def getChildName(str)		{ return "${str}${appDevName()}" }
 
 def getServerUrl()			{ return "https://graph.api.smartthings.com" }
 def getShardUrl()			{ return getApiServerUrl() }
@@ -5680,17 +5705,17 @@ def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
 
-def latestTstatVer()    	{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
-def latestProtVer()     	{ return atomicState?.appData?.updater?.versions?.protect ?: "unknown" }
-def latestPresVer()     	{ return atomicState?.appData?.updater?.versions?.presence ?: "unknown" }
-def latestWeathVer()    	{ return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
-def latestCamVer()      	{ return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
-def latestvStatVer()    	{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
-def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
-def getUse24Time()      	{ return useMilitaryTime ? true : false }
+def latestTstatVer()		{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
+def latestProtVer()		{ return atomicState?.appData?.updater?.versions?.protect ?: "unknown" }
+def latestPresVer()		{ return atomicState?.appData?.updater?.versions?.presence ?: "unknown" }
+def latestWeathVer()		{ return atomicState?.appData?.updater?.versions?.weather ?: "unknown" }
+def latestCamVer()		{ return atomicState?.appData?.updater?.versions?.camera ?: "unknown" }
+def latestvStatVer()		{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
+def getChildAppVer(appName)	{ return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
+def getUse24Time()		{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
-def getStateSize()      { return state?.toString().length() }
+def getStateSize()	{ return state?.toString().length() }
 def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
@@ -7012,7 +7037,7 @@ def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
 	def appLbl = getCurAppLbl()
-	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
+	def newName = appName() == "${appLabel()}" ? "${autoAppName()}" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
@@ -7098,7 +7123,7 @@ def automationsInst() {
 	atomicState.isConWatConfigured = 	isConWatConfigured() ? true : false
 	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
 	atomicState.isRemSenConfigured =	isRemSenConfigured() ? true : false
-	atomicState.isTstatSchedConfigured =isTstatSchedConfigured() ? true : false
+	atomicState.isTstatSchedConfigured =	isTstatSchedConfigured() ? true : false
 	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
 	atomicState.isFanCircConfigured = 	isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
@@ -7139,15 +7164,6 @@ def getIsAutomationDisabled() {
 	def dis = atomicState?.disableAutomation
 	return (dis != null && dis == true) ? true : false
 }
-
-//These are here to catch any events that occur before the migration occurs
-def automationGenericEvt(evt) { return }
-def automationSafetyTempEvt(evt) { return }
-def nModeGenericEvt(evt) { return }
-def leakWatSensorEvt(evt) { return }
-def conWatContactEvt(evt) { return }
-def extTmpGenericEvt(evt) { return }
-
 
 def remSenLock(val, myId) {
 	def res = false
@@ -7552,7 +7568,7 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 }
 
 /************************************************************************************************
-|							GLOBAL Code | Logging AND Diagnostic							    |
+|					     GLOBAL Code | Logging AND Diagnostic							    |
 *************************************************************************************************/
 
 def sendEventPushNotifications(message, type, pName) {
@@ -7939,7 +7955,7 @@ def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/S
 |				Application Help and License Info Variables		  			  |
 *******************************************************************************/
 ///////////////////////////////////////////////////////////////////////////////
-def appName()		{ return "${parent ? "Nest Automations" : "${appLabel()}"}${appDevName()}" }
+def appName()		{ return "${parent ? "${autoAppName()}" : "${appLabel()}"}${appDevName()}" }
 def appLabel()		{ return "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
@@ -7952,7 +7968,7 @@ def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
-def keepBackups()	{ return true }
+def keepBackups()	{ return false }
 def allowMigration(){ return true }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
@@ -7964,13 +7980,13 @@ def appInfoDesc()	{
 	str += "\n• ${textModified()}"
 	return str
 }
-def textVersion()   { return "Version: ${appVersion()}" }
-def textModified()  { return "Updated: ${appVerDate()}" }
+def textVersion()	{ return "Version: ${appVersion()}" }
+def textModified()	{ return "Updated: ${appVerDate()}" }
 
-def textVerInfo()   { return "${appVerInfo()}" }
-def appVerInfo() 	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
-def textLicense() 	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/app_license.txt", contentType: "text/plain; charset=UTF-8"], "license") }
-def textDonateLink(){ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
-def stIdeLink()     { return "https://graph.api.smartthings.com" }
-def textCopyright() { return "Copyright© 2017 - Anthony S." }
-def textDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
+def textVerInfo()	{ return "${appVerInfo()}" }
+def appVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
+def textLicense()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/app_license.txt", contentType: "text/plain; charset=UTF-8"], "license") }
+def textDonateLink()	{ return "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2CJEVN439EAWS" }
+def stIdeLink()		{ return "https://graph.api.smartthings.com" }
+def textCopyright()	{ return "Copyright© 2017 - Anthony S." }
+def textDesc()		{ return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
