@@ -643,6 +643,7 @@ def automationsPage() {
 	def execTime = now()
 	return dynamicPage(name: "automationsPage", title: "Installed Automations", nextPage: !parent ? "" : "automationsPage", install: false) {
 		def autoApp = findChildAppByName( autoAppName() )
+		def oldAutoApp = findChildAppByName( "Nest Automations" )
 		def autoAppInst = isAutoAppInst()
 		if(autoApp) { /*Nothing to add here yet*/ }
 		else {
@@ -653,6 +654,10 @@ def automationsPage() {
 		section("") {
 			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
 		}
+		section("Old Automations") {
+			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
+		}
+
 		if(autoAppInst) {
 			section("Automation Details:") {
 				def schEn = getChildApps()?.findAll { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState()) }
@@ -949,14 +954,16 @@ def notifPrefPage() {
 				paragraph "Get notified when the Location changes from Home/Away", state: "complete"
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
 			}
-			section("App Alerts:") {
-				href "notifConfigPage", title: "App Notifications", description: "Tap to configure", params: [pType:"app"], image: getAppImg("nst_manager_icon.png")
-			}
-			section("Device Alerts:") {
-				href "notifConfigPage", title: "Device Notifications", description: "Tap to configure", params: [pType:"dev"], image: getAppImg("thermostat_icon.png")
-			}
-			section("Automation Alerts:") {
-				href "notifConfigPage", title: "Automation Notifications", description: "Tap to configure", params: [pType:"auto"], image: getAppImg("automation_icon.png")
+			section("Alert Configurations:") {
+				def appDesc = getAppNotifDesc() ? "${getAppNotifDesc()}\n\n" : ""
+				href "notifConfigPage", title: "App Notifications", description: "${appDesc}Tap to configure", params: [pType:"app"], state: (appDesc != "" ? "complete" : null),
+				 		image: getAppImg("nst_manager_icon.png")
+				def devDesc = getDevNotifDesc() ? "${getDevNotifDesc()}\n\n" : ""
+				href "notifConfigPage", title: "Device Notifications", description: "${devDesc}Tap to configure", params: [pType:"dev"], state: (devDesc != "" ? "complete" : null),
+						image: getAppImg("thermostat_icon.png")
+				def autoDesc = getAutoNotifDesc() ? "${getAutoNotifDesc()}\n\n" : ""
+				href "notifConfigPage", title: "Automation Notifications", description: "${autoDesc}Tap to configure", params: [pType:"auto"], state: (autoDesc != "" ? "complete" : null),
+						image: getAppImg("automation_icon.png")
 			}
 			section("Reminder Settings:") {
 				input name: "notifyMsgWaitVal", type: "enum", title: "Default Reminder Wait?", required: false, defaultValue: 3600,
@@ -1007,15 +1014,15 @@ def notifConfigPage(params) {
 								metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png")
 					}
 				}
-				section("Debug/Remote Diag Notifications:") {
+				section("Debug Reminders:") {
 					paragraph "Get notified when Debug Logging or Remote Diagnostic Logging has been enabled for more than 24 hours", state: "complete"
-					input name: "appDbgDiagRemindMsg", type: "bool", title: "Remind me when debug and diagnostics is left on?", defaultValue: true, submitOnChange: true, image: getAppImg("reminder_icon.png")
+					input name: "appDbgDiagRemindMsg", type: "bool", title: "Remind me when debug logs are left on?", defaultValue: true, submitOnChange: true, image: getAppImg("reminder_icon.png")
 				}
 				break
 			case "dev":
 				if(atomicState?.thermostats || atomicState?.presDevice || atomicState?.cameras || atomicState?.protects || atomicState?.weatherDevice) {
 					section("Health Alerts:") {
-						paragraph "Get notified when a Device goes offline", state: "complete"
+						paragraph "Get notified when a device go offline", state: "complete"
 						input ("devHealthNotifyMsg", "bool", title: "Send Device Heatlth Alerts?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("health_icon.png"))
 						if(settings?.devHealthNotifyMsg) {
 							input name: "devHealthMsgWaitVal", type: "enum", title: "Send Health Reminder Every?", required: false, defaultValue: 3600,
@@ -1054,6 +1061,50 @@ def notifConfigPage(params) {
 		incAppNotifPrefLoadCnt()
 		devPageFooter("appNotifPrefLoadCnt", execTime)
 	}
+}
+
+def getAppNotifDesc() {
+	def str = ""
+	str += settings?.appApiIssuesMsg && settings?.appApiFailedCmdMsg ? "\n• API CMD Failures: (${strCapitalize(settings?.appApiFailedCmdMsg)})" : ""
+	str += settings?.appApiIssuesMsg && settings?.appApiRateLimitMsg ? "\n• API Rate-Limiting: (${strCapitalize(settings?.appApiRateLimitMsg)})" : ""
+	str += settings?.sendMissedPollMsg ? "\n• Missed Poll Alerts: (${strCapitalize(settings?.sendMissedPollMsg)})" : ""
+	str += settings?.appDbgDiagRemindMsg ? "\n• Debug Log Reminder: (${strCapitalize(settings?.appDbgDiagRemindMsg)})" : ""
+	str += settings?.sendAppUpdateMsg ? "\n• Code Updates: (${strCapitalize(settings?.sendAppUpdateMsg)})" : ""
+	return str != "" ? str : null
+}
+
+def getDevNotifDesc() {
+	def str = ""
+	str += settings?.devHealthNotifyMsg ? "\n• Health Alerts: (${strCapitalize(settings?.devHealthNotifyMsg)})" : ""
+	str += settings?.camSteamNotifMsg ? "\n• Camera Stream Alerts: (${strCapitalize(settings?.camSteamNotifMsg)})" : ""
+	str += settings?.weathAlertNotif ? "\n• Weather Alerts: (${strCapitalize(settings?.weathAlertNotif)})" : ""
+	return str != "" ? str : null
+}
+
+def getAutoNotifDesc() {
+	def str = ""
+	str += settings?.watchDogNotifMissedEco ? "\n• WatchDog Eco Alerts: (${strCapitalize(settings?.watchDogNotifMissedEco)})" : ""
+	return str != "" ? str : null
+}
+
+def getAppNotifConfDesc() {
+	def str = ""
+	if(pushStatus()) {
+		def ap = getAppNotifDesc()
+		def de = getDevNotifDesc()
+		def au = getAutoNotifDesc()
+
+		str += (settings?.recipients) ? "\nSending via Contact Book (True)" : ""
+		str += (settings?.usePush) ? "\nSending via Push: (True)" : ""
+		str += (settings?.phone) ? "\nSending via SMS: (True)" : ""
+		str += (ap || de || au) ? "\nEnabled Alerts:" : ""
+		str += (ap) ? "\n• App Alerts (True)" : ""
+		str += (de) ? "\n• Device Alerts (True)" : ""
+		str += (au) ? "\n• Automation Alerts (True)" : ""
+
+		str += (getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
+	}
+	return str != "" ? str : null
 }
 
 def buildNotifPrefMap() {
@@ -1624,16 +1675,6 @@ def getNotifSchedDesc() {
 	return (notifDesc != "") ? "${notifDesc}" : null
 }
 
-def getAppNotifConfDesc() {
-	def str = ""
-	str += pushStatus() ? "Notifications:" : ""
-	str += (pushStatus() && settings?.recipients) ? "\n• Contacts: (${settings?.recipients?.size()})" : ""
-	str += (pushStatus() && settings?.usePush) ? "\n• Push Messages: Enabled" : ""
-	str += (pushStatus() && sms) ? "\n• SMS: (${sms?.size()})" : ""
-	str += (pushStatus() && settings?.phone) ? "\n• SMS: (${settings?.phone?.size()})" : ""
-	str += (pushStatus() && getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
-	return pushStatus() ? "${str}" : null
-}
 
 def getWeatherConfDesc() {
 	def str = ""
@@ -2358,7 +2399,7 @@ def automationRestore(data, id=null) {
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
-				postChildRestore(bApp?.key, keepBackups())
+				//postChildRestore(bApp?.key, keepBackups())
 			}
 			runIn(25, "finishMigrationProcess", [overwrite:true])
 			log.debug "Scheduling finishMigrationProcess for (25 seconds)..."
@@ -3875,7 +3916,7 @@ def apiRespHandler(code, errMsg, methodName) {
 				result = "Forbidden: Your Login Credentials are Invalid..."
 				break
 			case 429:
-				result = "Requests are currently being Blocked due to Rate Limiting..."
+				result = "Requests are currently being blocked because of API Rate Limiting..."
 				atomicState?.apiRateLimited = true
 				break
 			case 500:
@@ -3966,12 +4007,12 @@ def apiIssueNotify(msgOn, rateOn, wait) {
 }
 
 def failedCmdNotify(failData) {
-	if(!getOk2Notify() || !(getLastFailedCmdMsgSec() > 180)) { return }
+	if(!getOk2Notify() || !(getLastFailedCmdMsgSec() > 600)) { return }
 	def nPrefs = atomicState?.notificationPrefs
 	def cmdFail = (nPrefs?.app?.api?.cmdFailMsg && failData?.msg != null) ? true : false
 	if(cmdFail) {
-		def msg = "\nThe (${atomicState?.lastCmdSent}) CMD sent to the API has failed.\n\nError: ${failData?.msg}\nDT: ${failData?.dt}"
-		sendMsg("${app?.name} API Failed CMD Error", msg)
+		def msg = "\nThe (${atomicState?.lastCmdSent}) CMD sent to the API has failed.\nErrorMsg: ${failData?.msg}\nDT: ${failData?.dt}"
+		sendMsg("${app?.name} API CMD Failed", msg)
 		atomicState?.lastFailedCmdMsgDt = getDtNow()
 	}
 }
@@ -7037,7 +7078,7 @@ def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
 	def appLbl = getCurAppLbl()
-	def newName = appName() == "${appLabel()}" ? "${autoAppName()}" : "${appName()}"
+	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
@@ -7114,18 +7155,26 @@ def getAutoIcon(type) {
 	}
 }
 
-def automationsInst() {
-	atomicState.isNestModesConfigured = isNestModesConfigured() ? true : false
-	atomicState.isWatchdogConfigured = 	isWatchdogConfigured() ? true : false
-	atomicState.isSchMotConfigured = 	isSchMotConfigured() ? true : false
+//These are here to catch any events that occur before the migration occurs
+def automationGenericEvt(evt) { return }
+def automationSafetyTempEvt(evt) { return }
+def nModeGenericEvt(evt) { return }
+def leakWatSensorEvt(evt) { return }
+def conWatContactEvt(evt) { return }
+def extTmpGenericEvt(evt) { return }
 
-	atomicState.isLeakWatConfigured = 	isLeakWatConfigured() ? true : false
-	atomicState.isConWatConfigured = 	isConWatConfigured() ? true : false
-	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
-	atomicState.isRemSenConfigured =	isRemSenConfigured() ? true : false
-	atomicState.isTstatSchedConfigured =	isTstatSchedConfigured() ? true : false
-	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
-	atomicState.isFanCircConfigured = 	isFanCircConfigured() ? true : false
+def automationsInst() {
+	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
+	atomicState.isWatchdogConfigured = 		isWatchdogConfigured() ? true : false
+	atomicState.isSchMotConfigured = 		isSchMotConfigured() ? true : false
+
+	atomicState.isLeakWatConfigured = 		isLeakWatConfigured() ? true : false
+	atomicState.isConWatConfigured = 		isConWatConfigured() ? true : false
+	atomicState.isExtTmpConfigured = 		isExtTmpConfigured() ? true : false
+	atomicState.isRemSenConfigured =		isRemSenConfigured() ? true : false
+	atomicState.isTstatSchedConfigured = 	isTstatSchedConfigured() ? true : false
+	atomicState.isFanCtrlConfigured = 		isFanCtrlConfigured() ? true : false
+	atomicState.isFanCircConfigured = 		isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
 }
 
