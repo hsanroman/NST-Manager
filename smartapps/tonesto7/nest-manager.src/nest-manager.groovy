@@ -1093,7 +1093,7 @@ def getAppNotifConfDesc() {
 		def ap = getAppNotifDesc()
 		def de = getDevNotifDesc()
 		def au = getAutoNotifDesc()
-
+		def nd = getNotifSchedDesc()
 		str += (settings?.recipients) ? "\nSending via Contact Book (True)" : ""
 		str += (settings?.usePush) ? "\nSending via Push: (True)" : ""
 		str += (settings?.phone) ? "\nSending via SMS: (True)" : ""
@@ -1101,8 +1101,7 @@ def getAppNotifConfDesc() {
 		str += (ap) ? "\n• App Alerts (True)" : ""
 		str += (de) ? "\n• Device Alerts (True)" : ""
 		str += (au) ? "\n• Automation Alerts (True)" : ""
-
-		str += (getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
+		str += (nd) ? "Alert Restrictions:\n${nd}" : ""
 	}
 	return str != "" ? str : null
 }
@@ -2145,13 +2144,15 @@ private gcd(input = []) {
 
 def onAppTouch(event) {
 	//poll(true)
-	/*NOTE:
+	/*
+		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
 		which will remove any New migrated automations and restore the originals back to active
 		and clear the flags that marked the migration complete.
 		FYI: If allowMigration() is set to true it will attempt to run a migration
 	*/
-	runIn(3, "cleanRestAutomationTest",[overwrite: true])
+	testErrorAsync()
+	//runIn(3, "cleanRestAutomationTest",[overwrite: true])
 }
 
 def refresh(child = null) {
@@ -2171,7 +2172,8 @@ def pollWatcher(evt) {
 }
 
 def cleanRestAutomationTest() {
-	/* NOTE:
+	/*
+		NOTE:
 		This is only here to allow testing.
 		It will be removed after testing is complete
 	*/
@@ -2618,7 +2620,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiStructureData - Received: Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
 				}
 			}
 		}
@@ -2640,7 +2642,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiDeviceData - Received Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
 				}
 			}
 		}
@@ -2664,26 +2666,28 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiMetaData - Received Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
 				}
 			}
 		}
-	}
-	catch(ex) {
+	} catch (groovyx.net.http.HttpResponseException ex) {
+	   //log.debug "Status: ${ex?.response?.status} | Error: ${ex?.response?.data}"
+	   apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
+   	} catch(ex) {
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
 		atomicState.needChildUpd = true
-		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			if(ex.message.contains("Too Many Requests")) {
-				LogAction("Received '${ex.message}' response", "warn", true)
-			}
-		} else {
+		// if(ex instanceof groovyx.net.http.HttpResponseException) {
+		// 	if(ex.message.contains("Too Many Requests")) {
+		// 		LogAction("Received '${ex.message}' response", "warn", true)
+		// 	}
+		// } else {
 			log.error "getApiData (type: $type) Exception:", ex
 			if(type == "str") { atomicState.needStrPoll = true }
 			else if(type == "dev") { atomicState?.needDevPoll = true }
 			else if(type == "meta") { atomicState?.needMetaPoll = true }
 			sendExceptionData(ex, "getApiData")
-		}
+		//}
 	}
 	return result
 }
@@ -2732,6 +2736,9 @@ def processResponse(resp, data) {
 	def errorMsg = resp?.errorMessage ?: null
 	def type = data?.type
 	try {
+		if(resp?.hasError()) {
+			apiRespHandler(resp?.getStatus(), resp?.getErrorJson(), "processResponse")
+		}
 		if(!type) { return }
 
 		if(resp?.status == 307) {
@@ -2784,8 +2791,6 @@ def processResponse(resp, data) {
 				atomicState.qmetaRequested = false
 			}
 		} else {
-			apiRespHandler(rCode, errorMsg, "processResponse")
-
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 			//LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
 			apiIssueEvent(true)
@@ -2803,8 +2808,6 @@ def processResponse(resp, data) {
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
-
-		apiRespHandler(rCode, errorMsg, "processResponse")
 		//log.error "processResponse (type: $type) Exception:", ex
 
 		if(type == "str") { atomicState.needStrPoll = true }
@@ -3801,9 +3804,11 @@ def nestResponse(resp, data) {
 	def qnum = data?.qnum
 	def command = data?.cmd
 	def result = false
-	def rCode = resp?.status ?: null
-	def errorMsg = resp?.errorMessage ?: null
 	try {
+		if(resp?.hasError()) {
+			apiRespHandler(resp?.getStatus(), resp?.getErrorJson(), "nestResponse")
+		}
+
 		if(!command) { cmdProcState(false); return }
 
 		if(resp?.status == 307) {
@@ -3824,13 +3829,12 @@ def nestResponse(resp, data) {
 		} else {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
-			apiRespHandler(rCode, errorMsg, "nestResponse")
 		}
 		finishWorkQ(command, result)
 
 	} catch (ex) {
 		log.error "nestResponse (command: $command) Exception:", ex
-		apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
+		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "nestResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3865,7 +3869,6 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 		httpPutJson(params) { resp ->
 			def rCode = resp?.status ?: null
-			//def errorMsg = resp?.errorMessage ?: null
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
@@ -3889,10 +3892,11 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				apiRespHandler(resp?.status, resp?.data, "nestResponse")
 			}
 		}
-	}
-	catch (ex) {
+	} catch (groovyx.net.http.HttpResponseException ex) {
+	   //log.debug "Status: ${ex?.response?.status} | Error: ${ex?.response?.data}"
+	   apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
+   	} catch (ex) {
 		log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
-		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "procNestApiCmd")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3901,38 +3905,39 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 	return result
 }
 
-def apiRespHandler(code, errMsg, methodName) {
-	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
+def apiRespHandler(code, errJson, methodName) {
+	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errJson}"
 	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
+		def errMsg = errJson?.message != null ? errJson?.message : null
 		switch(code) {
 			case 400:
-				result = "A Bad Request was made to the API"
+				result = !errMsg ? "A Bad Request was made to the API..." : errMsg
 				break
 			case 401:
-				result = "Authentication ERROR, Please try refreshing your login under Authentication settings..."
+				result =  !errMsg ? "Authentication ERROR, Please try refreshing your login under Authentication settings..." : errMsg
 				break
 			case 403:
-				result = "Forbidden: Your Login Credentials are Invalid..."
+				result =  !errMsg ? "Forbidden: Your Login Credentials are Invalid..." : errMsg
 				break
 			case 429:
-				result = "Requests are currently being blocked because of API Rate Limiting..."
+				result =  !errMsg ? "Requests are currently being blocked because of API Rate Limiting..." : errMsg
 				atomicState?.apiRateLimited = true
 				break
 			case 500:
-				result = "Internal Nest Error:"
+				result =  !errMsg ? "Internal Nest Error:" : errMsg
 				break
 			case 503:
-				result = "There is currently a Nest Service Issue..."
+				result =  !errMsg ? "There is currently a Nest Service Issue..." : errMsg
 				break
 			default:
-				result = "Received Response..."
+				result =  !errMsg ? "Received Response..." : errMsg
 				break
 		}
 		def failData = ["msg":result, "method":methodName, "dt":getDtNow()]
 		atomicState?.apiCmdFailData = failData
 		failedCmdNotify(failData)
-		LogAction("$methodName | $result | (Status: $code | Error: $errMsg)", "error", true)
+		LogAction("$methodName error - (Status: $code - $result) - [ErrorLink: ${errJson?.type}]", "error", true)
 	}
 }
 
