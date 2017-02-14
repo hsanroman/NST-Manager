@@ -645,7 +645,6 @@ def automationsPage() {
 	def execTime = now()
 	return dynamicPage(name: "automationsPage", title: "Installed Automations", nextPage: !parent ? "" : "automationsPage", install: false) {
 		def autoApp = findChildAppByName( autoAppName() )
-		def oldAutoApp = findChildAppByName( "Nest Automations" )
 		def autoAppInst = isAutoAppInst()
 		if(autoApp) { /*Nothing to add here yet*/ }
 		else {
@@ -656,10 +655,6 @@ def automationsPage() {
 		section("") {
 			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
 		}
-		section("Old Automations") {
-			app(name: "autoApp", appName: autoAppName(), namespace: "tonesto7", multiple: true, title: "Create New Automation (NST)", image: getAppImg("automation_icon.png"))
-		}
-
 		if(autoAppInst) {
 			section("Automation Details:") {
 				def schEn = getChildApps()?.findAll { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getActiveScheduleState()) }
@@ -679,10 +674,13 @@ def automationsPage() {
 				def prefDesc = (descStr != "") ? "${descStr}\n\nTap to modify" : "Tap to configure"
 				href "automationGlobalPrefsPage", title: "Global Automation Preferences", description: prefDesc, state: (descStr != "" ? "complete" : null), image: getAppImg("global_prefs_icon.png")
 				input "disableAllAutomations", "bool", title: "Disable All Automations?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("disable_icon2.png")
-				if(atomicState?.disableAllAutomations == null || atomicState?.disableAllAutomations != settings?.disableAllAutomations) {
+				if(atomicState?.disableAllAutomations == false && settings?.disableAllAutomations) {
 					toggleAllAutomations(settings?.disableAllAutomations)
-					atomicState?.disableAllAutomations = settings?.disableAllAutomations
+
+				} else if (atomicState?.disableAllAutomations && !settings?.disableAllAutomations) {
+					toggleAllAutomations(settings?.disableAllAutomations)
 				}
+				atomicState?.disableAllAutomations = settings?.disableAllAutomations
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
@@ -1095,16 +1093,15 @@ def getAppNotifConfDesc() {
 		def ap = getAppNotifDesc()
 		def de = getDevNotifDesc()
 		def au = getAutoNotifDesc()
-
-		str += (settings?.recipients) ? "\nSending via Contact Book (True)" : ""
-		str += (settings?.usePush) ? "\nSending via Push: (True)" : ""
+		def nd = getNotifSchedDesc()
+		str += (settings?.recipients) ? "Sending via Contact Book (True)" : ""
+		str += (settings?.usePush) ? "Sending via Push: (True)" : ""
 		str += (settings?.phone) ? "\nSending via SMS: (True)" : ""
 		str += (ap || de || au) ? "\nEnabled Alerts:" : ""
 		str += (ap) ? "\n• App Alerts (True)" : ""
 		str += (de) ? "\n• Device Alerts (True)" : ""
 		str += (au) ? "\n• Automation Alerts (True)" : ""
-
-		str += (getNotifSchedDesc()) ? "\n${getNotifSchedDesc()}" : ""
+		str += (nd) ? "\n\nAlert Restrictions:\n${nd}" : ""
 	}
 	return str != "" ? str : null
 }
@@ -2175,7 +2172,8 @@ def pollWatcher(evt) {
 }
 
 def cleanRestAutomationTest() {
-	/* NOTE:
+	/*
+		NOTE:
 		This is only here to allow testing.
 		It will be removed after testing is complete
 	*/
@@ -2637,7 +2635,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiStructureData - Received: Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
 				}
 			}
 		}
@@ -2659,7 +2657,7 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiDeviceData - Received Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
 				}
 			}
 		}
@@ -2683,19 +2681,21 @@ def getApiData(type = null) {
 					}
 				} else {
 					LogAction("getApiMetaData - Received Resp (${resp?.status})", "error", true)
-					//apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
+					apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
 				}
 			}
 		}
-	}
-	catch(ex) {
+	} catch (ex) {
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
 		atomicState.needChildUpd = true
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			if(ex.message.contains("Too Many Requests")) {
-				LogAction("Received '${ex.message}' response", "warn", true)
+			if(ex?.response) {
+				apiRespHandler(ex?.response?.status, ex?.response?.data, "getApiData(ex catch)")
 			}
+			// if(ex.message.contains("Too Many Requests")) {
+			// 	LogAction("Received '${ex.message}' response", "warn", true)
+			// }
 		} else {
 			log.error "getApiData (type: $type) Exception:", ex
 			if(type == "str") { atomicState.needStrPoll = true }
@@ -2747,10 +2747,9 @@ def processResponse(resp, data) {
 	def str = false
 	def dev = false
 	def meta = false
-	def rCode = resp?.status ?: null
-	def errorMsg = resp?.errorMessage ?: null
 	def type = data?.type
 	try {
+
 		if(!type) { return }
 
 		if(resp?.status == 307) {
@@ -2803,10 +2802,14 @@ def processResponse(resp, data) {
 				atomicState.qmetaRequested = false
 			}
 		} else {
-			apiRespHandler(rCode, errorMsg, "processResponse")
-
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
 			//LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
+			if(resp?.hasError()) {
+				def rCode = resp?.getStatus() ?: null
+				def errJson = resp?.getErrorJson() ?: null
+				log.debug "rCode: $rCode | errJson: $errJson"
+				apiRespHandler(rCode, errJson, "processResponse($type)")
+			}
 			apiIssueEvent(true)
 			atomicState.needChildUpd = true
 			atomicState.qstrRequested = false
@@ -2816,15 +2819,13 @@ def processResponse(resp, data) {
 		if((atomicState?.qdevRequested == false && atomicState?.qstrRequested == false) && (dev || atomicState?.needChildUpd)) { finishPoll(true, true) }
 
 	} catch (ex) {
+		//log.error "processResponse (type: $type) Exception:", ex
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
 		atomicState.needChildUpd = true
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
-
-		apiRespHandler(rCode, errorMsg, "processResponse")
-		//log.error "processResponse (type: $type) Exception:", ex
 
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
@@ -2842,9 +2843,6 @@ def updateChildData(force = false) {
 	if(atomicState?.pollBlocked) { return }
 	def nforce = atomicState?.needChildUpd
 	atomicState.needChildUpd = true
-	//log.warn "force: $force   nforce: $nforce"
-	//unschedule("schedUpdateChild")
-	//runIn(40, "postCmd", [overwrite: true])
 	try {
 		atomicState?.lastChildUpdDt = getDtNow()
 		def useMt = !useMilitaryTime ? false : true
@@ -3820,8 +3818,6 @@ def nestResponse(resp, data) {
 	def qnum = data?.qnum
 	def command = data?.cmd
 	def result = false
-	def rCode = resp?.status ?: null
-	def errorMsg = resp?.errorMessage ?: null
 	try {
 		if(!command) { cmdProcState(false); return }
 
@@ -3843,13 +3839,14 @@ def nestResponse(resp, data) {
 		} else {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
-			apiRespHandler(rCode, errorMsg, "nestResponse")
+			if(resp?.hasError()) {
+				apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestResponse")
+			}
 		}
 		finishWorkQ(command, result)
 
 	} catch (ex) {
 		log.error "nestResponse (command: $command) Exception:", ex
-		apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
 		sendExceptionData(ex, "nestResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
@@ -3884,7 +3881,6 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 
 		httpPutJson(params) { resp ->
 			def rCode = resp?.status ?: null
-			//def errorMsg = resp?.errorMessage ?: null
 			if(resp?.status == 307) {
 				def newUrl = resp?.headers?.location?.split("\\?")
 				LogTrace("NewUrl: ${newUrl[0]}")
@@ -3908,50 +3904,53 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				apiRespHandler(resp?.status, resp?.data, "nestResponse")
 			}
 		}
-	}
-	catch (ex) {
-		log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
-		//apiRespHandler(rCode, errorMsg, "nestResponse(catch)")
-		sendExceptionData(ex, "procNestApiCmd")
+	} catch (ex) {
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
 		cmdProcState(false)
+		if (ex instanceof groovyx.net.http.HttpResponseException) {
+			apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
+		} else {
+			log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
+			sendExceptionData(ex, "procNestApiCmd")
+		}
 	}
 	return result
 }
 
-def apiRespHandler(code, errMsg, methodName) {
-	//log.warn "[$methodName] | Status: (${code}) | Error Message: ${errMsg}"
+def apiRespHandler(code, errJson, methodName) {
+	log.warn "[$methodName] | Status: (${code}) | Error Message: ${errJson}"
 	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
+		def errMsg = errJson?.message != null ? errJson?.message : null
 		switch(code) {
 			case 400:
-				result = "A Bad Request was made to the API"
+				result = !errMsg ? "A Bad Request was made to the API..." : errMsg
 				break
 			case 401:
-				result = "Authentication ERROR, Please try refreshing your login under Authentication settings..."
+				result =  !errMsg ? "Authentication ERROR, Please try refreshing your login under Authentication settings..." : errMsg
 				break
 			case 403:
-				result = "Forbidden: Your Login Credentials are Invalid..."
+				result =  !errMsg ? "Forbidden: Your Login Credentials are Invalid..." : errMsg
 				break
 			case 429:
-				result = "Requests are currently being blocked because of API Rate Limiting..."
+				result =  !errMsg ? "Requests are currently being blocked because of API Rate Limiting..." : errMsg
 				atomicState?.apiRateLimited = true
 				break
 			case 500:
-				result = "Internal Nest Error:"
+				result =  !errMsg ? "Internal Nest Error:" : errMsg
 				break
 			case 503:
-				result = "There is currently a Nest Service Issue..."
+				result =  !errMsg ? "There is currently a Nest Service Issue..." : errMsg
 				break
 			default:
-				result = "Received Response..."
+				result =  !errMsg ? "Received Response..." : errMsg
 				break
 		}
 		def failData = ["msg":result, "method":methodName, "dt":getDtNow()]
 		atomicState?.apiCmdFailData = failData
 		failedCmdNotify(failData)
-		LogAction("$methodName | $result | (Status: $code | Error: $errMsg)", "error", true)
+		LogAction("$methodName error - (Status: $code - $result) - [ErrorLink: ${errJson?.type}]", "error", true)
 	}
 }
 
@@ -6796,6 +6795,7 @@ def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: 
 def getDbRemDiagPath() { return atomicState?.appData?.database?.remoteDiagPath ?: "remoteDiagLogs" }
 
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
+	log.debug "sendExceptionData(method: $methodName, isChild: $isChild, autoType: $autoType)"
 	if(atomicState?.appData?.database?.disableExceptions == true) {
 		return
 	} else {
@@ -6805,6 +6805,7 @@ def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
 			//LogAction("sendExceptionData: NullPointerException was caught successfully", "info", true)
 			return
 		} else {
+			//log.debug "ex: $ex"
 			exString = ex?.message?.toString()
 			//log.debug "sendExceptionData: Exception Message (${exString})"
 		}
