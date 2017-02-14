@@ -408,6 +408,7 @@ void processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
+			state.showGraphs = eventData?.showGraphs == true ? true : false
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
@@ -936,8 +937,8 @@ def safetyTempsEvent(safetyTemps) {
 		sendEvent(name:'safetyTempMax', value: newMaxTemp, unit: state?.tempUnit, descriptionText: "Safety Temperature Maximum is ${newMaxTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
 		checkSafetyTemps()
 	} else {
-		LogAction("Safety Temperature Minimum is  (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
-		LogAction("Safety Temperature Maximum is  (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})")
+		LogAction("Safety Temperature Minimum is (${newMinTemp}${state?.tempUnit}) | Original Minimum Temp: (${curMinTemp}${state?.tempUnit})")
+		LogAction("Safety Temperature Maximum is (${newMaxTemp}${state?.tempUnit}) | Original Maximum Temp: (${curMaxTemp}${state?.tempUnit})")
 	}
 }
 
@@ -951,7 +952,7 @@ def checkSafetyTemps() {
 	if(curMinTemp && curMinTemp > curTemp) { inRange = false }
 	if(curMaxTemp && curMaxTemp < curTemp) { inRange = false }
 	def t0 = !(inRange.toBoolean())
-	Logger("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${t0.toBoolean()} | curInRange: ${curInRange} | inRange: ${inRange})")
+	LogAction("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${t0.toBoolean()} | curInRange: ${curInRange} | inRange: ${inRange})")
 	if(curRangeStr == null || inRange != curInRange) {
 		sendEvent(name:'safetyTempExceeded', value: ${t0.toBoolean()},  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
 		Logger("UPDATED | Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
@@ -1015,11 +1016,10 @@ def apiStatusEvent(issue) {
 }
 
 def nestReportStatusEvent() {
-	def val = currentNestReportData?.toString()
 	def rprtData = getNestMgrReport()?.toString()
-	if(!val || (val && rprtData && !val.equals(rprtData))) {
-		Logger("UPDATED | Current Nest Report Data has been updated", "info")
-		sendEvent(name: 'nestReportData', value: rprtData, descriptionText: "Nest Report Data has been updated...", display: false, displayed: false)
+	if(rprtData && isStateChange(device, "nestReportData", rprtData.toString())) {
+		Logger("UPDATED | Nest Voice Report Data has been Updated", "info")
+		sendEvent(name: 'nestReportData', value: rprtData, descriptionText: "Nest Voice Report Data has been updated...", display: false, displayed: false)
 	}
 }
 
@@ -1035,8 +1035,10 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	state?.curAutoSchedData = schedData
-	//log.debug "autoData: ${state?.curAutoSchedData}"
+	if(!state?.curAutoSchedData == schedData) {
+		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
+		state?.curAutoSchedData = schedData
+	}
 }
 
 def canHeatCool(canHeat, canCool) {
@@ -2964,15 +2966,74 @@ def getGraphHTML() {
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
+		def devBrdCastData = state?.brdcastData ?: null
+
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
 		def chartHtml = (
+				state?.showGraphs &&
 				state?.temperatureTable?.size() > 0 &&
 				state?.operatingStateTable?.size() > 0 &&
 				state?.temperatureTableYesterday?.size() > 0 &&
 				state?.humidityTable?.size() > 0 &&
 				state?.coolSetpointTable?.size() > 0 &&
-				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : hideChartHtml()
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
+		def schedData = state?.curAutoSchedData
+		log.debug "schedData: $schedData"
+		def schedHtml = ""
+		if(schedData) {
+			schedHtml = """
+				<table class=sched>
+					<col width="90%">
+					<thead>
+						<th><h3>Active Schedule # (${schedData?.scdNum})</h3></th>
+					</thead>
+					<tbody>
+						<tr>
+							<td>${schedData?.schedName}</td>
+						</tr>
+					</tbody>
+				</table>
+				<table class="sched">
+					<col width="50%">
+					<thead>
+						<th>Zone Status</th>
+					</thead>
+					<tbody>
+						<tr>
+							<table>
+								<col width="60%">
+								<col width="38%">
+								<thead class="tempSrc">
+									<th>Temp Source:</th>
+									<th>Zone Temp:</th>
+								</thead>
+								<tbody class="sched">
+									<tr>
+										<td>${schedData?.tempSrcDesc}</td>
+										<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
+									</tr>
+								</tbody>
+							</table>
+						</tr>
+					</tbody>
+				</table>
+				<table class=sched>
+					<col width="45%">
+					<col width="45%">
+					<thead>
+						<th>Desired Heat Temp</th>
+						<th>Desired Cool Temp</th>
+					</thead>
+					<tbody>
+						<tr>
+							<td>${schedData?.reqSenHeatSetPoint ? "${schedData?.reqSenHeatSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+							<td>${schedData?.reqSenCoolSetPoint ? "${schedData?.reqSenCoolSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+						</tr>
+					</tbody>
+				</table>
+			"""
+		}
 
 		def html = """
 		<!DOCTYPE html>
@@ -2994,6 +3055,7 @@ def getGraphHTML() {
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>
 			<body>
+				${schedHtml}
 				<table
 				  <col width="50%">
 				  <col width="50%">
