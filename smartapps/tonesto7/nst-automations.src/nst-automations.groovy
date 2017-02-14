@@ -1,5 +1,5 @@
 /********************************************************************************************
-|    Application Name: NST Automations                                          				|
+|    Application Name: NST Automations                                                      |
 |        Copyright (C) 2017 Anthony S.                                                      |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
@@ -102,7 +102,6 @@ def uninstallPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
-	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
 	initialize()
 	sendNotificationEvent("${appName()} installed")
 }
@@ -122,6 +121,7 @@ def uninstalled() {
 def initialize() {
 	//LogTrace("initialize")
 	if(!atomicState?.newAutomationFile) { atomicState?.newAutomationFile = true }
+	if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()] }
 	def settingsReset = parent?.settings?.resetAllData
 	if(atomicState?.resetAllData || settingsReset) {
 		if(fixState()) { return }	// runIn of fixState will call initAutoApp()
@@ -173,13 +173,13 @@ def isAppUpdateAvail() {
 }
 
 def setMyLockId(val) {
-        if(atomicState?.myID == null && parent && val) {
-                atomicState.myID = val
-        }
+	if(atomicState?.myID == null && parent && val) {
+		atomicState.myID = val
+	}
 }
 
 def getMyLockId() {
-        if(parent) { return atomicState?.myID } else { return null }
+	if(parent) { return atomicState?.myID } else { return null }
 }
 
 def fixState() {
@@ -204,7 +204,7 @@ def fixState() {
 */
 	} else {
 		if(!atomicState?.resetAllData && parent?.settings?.resetAllData) { // automation cleanup called from update() -> initAutoApp()
-			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp", "restoreId", "restoredFromBackup", "restoreCompleted", "automationTypeFlag" ]) }
+			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp", "restoreId", "restoredFromBackup", "restoreCompleted", "automationTypeFlag", "newAutomationFile", "installData" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -502,15 +502,20 @@ def backupConfigToFirebase() {
 void settingUpdate(name, value, type=null) {
 	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
 	try {
-		if(name && value && type) {
+		//if(name && value && type) {
+		if(name && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
-		else if (name && value && type == null) { app?.updateSetting(name.toString(), value) }
-	} catch(e) { }
+		//else if (name && value && type == null) { app?.updateSetting(name.toString(), value) }
+		else if (name && type == null) { app?.updateSetting(name.toString(), value) }
+	} catch(e) {
+		log.error "settingUpdate Exception:", ex
+	}
 }
 
 def stateUpdate(key, value) {
-	atomicState?."${key}" = value
+	if(key) { atomicState?."${key}" = value }
+	else { LogAction("stateUpdate: null key $key $value", "error", true) }
 }
 
 def initAutoApp() {
@@ -641,12 +646,16 @@ def initAutoApp() {
 def uninstAutomationApp() {
 	//LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
+	def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
 		def myID = getMyLockId()
-		if(schMotTstat && myID && parent) {
+		//if(schMotTstat && myID && parent) {
+		if(schMotTstat && myID && parent && !migrate) {
 			if(parent?.addRemoveVthermostat(schMotTstat.deviceNetworkId, false, myID)) {
 				LogAction("uninstAutomationApp: cleanup virtual thermostat", "debug", true)
 			}
+		}
+		if(schMotTstat && myID && parent) {
 			if( parent?.remSenUnlock(atomicState?.remSenTstat, myID) ) { // attempt unlock old ID
 				LogAction("uninstAutomationApp: Released remote sensor lock", "debug", true)
 			}
