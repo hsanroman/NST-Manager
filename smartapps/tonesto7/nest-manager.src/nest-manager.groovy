@@ -36,7 +36,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.11" }
+def appVersion() { "4.6.0" }
 def appVerDate() { "2-14-2017" }
 
 preferences {
@@ -2882,6 +2882,7 @@ def updateChildData(force = false) {
 		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
+		def devBannerMsg = atomicState?.devBannerData ?: null
 
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
@@ -2908,7 +2909,7 @@ def updateChildData(force = false) {
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
-						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs]
+						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -2937,7 +2938,8 @@ def updateChildData(force = false) {
 			else if(atomicState?.protects && atomicState?.deviceData?.smoke_co_alarms[devId]) {
 				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true), "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl,
-						"hcWireTimeout":hcProtWireTimeout, "hcBattTimeout":hcProtBattTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg ]
+						"hcWireTimeout":hcProtWireTimeout, "hcBattTimeout":hcProtBattTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
+						"devBannerData":devBannerData ]
 				def oldProtData = atomicState?."oldProtData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldProtData${devId}" = pDataChecksum
@@ -2966,7 +2968,8 @@ def updateChildData(force = false) {
 			else if(atomicState?.cameras && atomicState?.deviceData?.cameras[devId]) {
 				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl,
-						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "streamNotify":nPrefs?.dev?.camera?.streamMsg ]
+						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
+						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData ]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
 				if(force || nforce || (oldCamData != cDataChecksum)) {
@@ -3029,7 +3032,7 @@ def updateChildData(force = false) {
 						it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
 										"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
 										"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
-										"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs ])
+										"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData ])
 					} else {
 						LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
 						appUpdateNotify()
@@ -4005,7 +4008,7 @@ def notificationCheck() {
 	apiIssueNotify(nPrefs?.app?.api?.issueMsg, nPrefs?.app?.api?.rateLimitMsg, nPrefs?.app?.api?.issueMsgWait)
 	missPollNotify(nPrefs?.app?.poll?.missPollMsg, nPrefs?.app?.poll?.missPollMsgWait)
 	loggingRemindNotify(nPrefs?.app?.remind?.logRemindMsg)
-	if(!appDevType()) { appUpdateNotify(nPrefs?.app?.updates?.updMsg, nPrefs?.app?.updates?.updMsgWait) }
+	if(!appDevType()) { appUpdateNotify() }
 }
 
 def cameraStreamNotify(child, Boolean streaming) {
@@ -4077,7 +4080,9 @@ def missPollNotify(on, wait) {
 	}
 }
 
-def appUpdateNotify(on, wait) {
+def appUpdateNotify() {
+	def on = atomicState?.notificationPrefs?.app?.updates?.updMsg
+	def wait = atomicState?.notificationPrefs?.app?.updates?.updMsgWait
 	if(!on || !wait) { return }
 	def appUpd = isAppUpdateAvail()
 	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
@@ -4404,10 +4409,21 @@ def clientBlacklisted() {
 }
 
 def broadcastCheck() {
-	if(atomicState?.isInstalled && atomicState?.appData.broadcast) {
-		if(atomicState?.appData?.broadcast?.msgId != null && atomicState?.lastBroadcastId != atomicState?.appData?.broadcast?.msgId) {
-			sendMsg(strCapitalize(atomicState?.appData?.broadcast?.type), atomicState?.appData?.broadcast?.message.toString(), false, null, null, null, true)
-			atomicState?.lastBroadcastId = atomicState?.appData?.broadcast?.msgId
+	def bCastData = atomicState?.appData?.broadcast
+	if(atomicState?.isInstalled && bCastData) {
+		if(bCastData?.msgId != null && atomicState?.lastBroadcastId != bCastData?.msgId) {
+			sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), false, null, null, null, true)
+			atomicState?.lastBroadcastId = bCastData?.msgId
+		}
+		if(bCastData?.devBannerMsg != null && atomicState?.devBannerData?.msgId != bCastData?.devBannerMsg?.msgId) {
+			if(bCastData?.devBannerMsg?.msgId && bCastData?.devBannerMsg?.message && bCastData?.devBannerMsg?.type && bCastData?.devBannerMsg?.expireDt) {
+				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+				def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", bCastData?.devBannerMsg?.expireDt.toString())
+				//log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
+				if(curDt && expDt && (curDt > expDt)) {
+					atomicState?.devBannerData = bCastData?.devBannerMsg
+				} else { atomicState?.devBannerData = null }
+			}
 		}
 	}
 }

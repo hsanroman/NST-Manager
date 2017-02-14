@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.5.2"}
+def devVer() { return "4.5.3"}
 
 // for the UI
 metadata {
@@ -320,7 +320,7 @@ void checkStateClear() {
 }
 
 def initialize() {
-	Logger("initialize")
+	Logger("initialized...")
 	checkVirtualStatus()
 	verifyHC()
 }
@@ -451,6 +451,8 @@ void processEvent(data) {
 			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
 			state.voiceReportPrefs = eventData?.vReportPrefs
 			autoSchedDataEvent(eventData?.autoSchedData)
+			state?.devBannerMsgData = eventData?.devBannerData ?: null
+			log.debug "bannerMsgData: ${state?.devBannerMsgData}"
 			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
@@ -2979,7 +2981,6 @@ def getGraphHTML() {
 				state?.coolSetpointTable?.size() > 0 &&
 				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
 		def schedData = state?.curAutoSchedData
-		log.debug "schedData: $schedData"
 		def schedHtml = ""
 		if(schedData) {
 			schedHtml = """

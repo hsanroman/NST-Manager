@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.5.0" }
+def devVer() { return "4.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -145,7 +145,7 @@ mappings {
 }
 
 def initialize() {
-	Logger("initialize...")
+	Logger("initialized...")
 	verifyHC()
 	//poll()
 }
@@ -303,6 +303,7 @@ def processEvent(data) {
 			uiColorEvent(results?.ui_color_state.toString())
 			softwareVerEvent(results?.software_version.toString())
 			deviceVerEvent(eventData?.latestVer.toString())
+			state?.devBannerMsgData = eventData?.devBannerData ?: null
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			determinePwrSrc()

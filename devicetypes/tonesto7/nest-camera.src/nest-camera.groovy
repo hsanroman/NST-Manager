@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.0" }
+def devVer() { return "2.5.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -166,7 +166,7 @@ def getInHomeURL() { return [InHomeURL: getCamPlaylistURL().toString()] }
 def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL().toString()] }
 
 def initialize() {
-	Logger("initialize...")
+	Logger("initialized...")
 	verifyHC()
 	//poll()
 }
@@ -284,6 +284,7 @@ def processEvent() {
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
+			state?.devBannerMsgData = eventData?.devBannerData ?: null
 			vidHistoryTimeEvent()
 			checkHealth()
 			// lastUpdatedEvent()

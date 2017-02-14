@@ -125,7 +125,7 @@ void checkStateClear() {
 }
 
 def initialize() {
-	Logger("initialize")
+	Logger("initialized...")
 	verifyHC()
 }
 
@@ -259,6 +259,7 @@ void processEvent() {
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
 			checkHealth()
+			state?.devBannerMsgData = eventData?.devBannerData ?: null
 			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")

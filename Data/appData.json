@@ -13,7 +13,13 @@
     "broadcast": {
         "msgId": "",
         "message": "",
-        "type": "info"
+        "type": "info",
+        "devBannerMsg": {
+            "msgId": "7lVTfVCjHA",
+            "message": "You must obey me at all costs ;)",
+            "type": "warn",
+            "expireDt": "Wed Feb 15 00:00:00 EST 2017"
+        }
     },
     "updater": {
         "updateVer": 1,
@@ -23,7 +29,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.5.1"
+                "ver": "4.5.2"
             },
             "thermostat": {
                 "ver": "4.5.1"
@@ -81,5 +87,9 @@
         "longTimeout": 120,
         "timeout": 35,
         "enabled": true
+    },
+    "devStatusPage": {
+        "enabled": true,
+        "path": "/Data/status_content.txt"
     }
 }

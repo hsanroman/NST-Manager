@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.0" }
+def devVer() { return "4.5.1" }
 
 // for the UI
 metadata {
@@ -82,7 +82,7 @@ void installed() {
 }
 
 def initialize() {
-	LogAction("initialize")
+	LogAction("initialized...")
 	verifyHC()
 }
 
