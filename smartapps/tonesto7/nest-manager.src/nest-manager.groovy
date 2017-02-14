@@ -2144,15 +2144,16 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	//poll(true)
+	poll(true)
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
 		which will remove any New migrated automations and restore the originals back to active
 		and clear the flags that marked the migration complete.
 		FYI: If allowMigration() is set to true it will attempt to run a migration
-	*/
+
 	runIn(3, "cleanRestAutomationTest",[overwrite: true])
+	*/
 }
 
 def refresh(child = null) {
@@ -2182,12 +2183,31 @@ def cleanRestAutomationTest() {
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
 	atomicState?.autoMigrationComplete = true
+	def foundAll = true
+	if(keepBackups() == false) {
+		cApps.each { ca ->
+			def restId = ca?.getSettingVal("restoreId")
+			if(restId == null) {
+ 				foundAll = false
+			}
+		}
+		if(foundAll) {
+			cApps.each { ca ->
+				def restId = ca?.getSettingVal("restoreId")
+				if(restId != null) {
+		 			ca?.settingUpdate("restoreId", null)
+				}
+			}
+		}
+	}
 	cApps.each { ca ->
 		def restId = ca?.getSettingVal("restoreId")
 		if(restId != null) {
+			LogAction("CleanRestAutomationTest: removing ${ca?.label} ${restId}", "warn", true)
 			deleteChildApp(ca)
 		}
 		else {
+			LogAction("CleanRestAutomationTest: enabling ${ca?.label} ${restId}", "warn", true)
 	 		ca?.settingUpdate("disableAutomationreq", "false", "bool")
 	 		ca?.stateUpdate("disableAutomation", false)
 	 		ca?.stateUpdate("disableAutomationDt", null)
@@ -5042,11 +5062,11 @@ def addRemoveDevices(uninst = null) {
 			}
 			if(atomicState?.vThermostats) {
 				nVstats = atomicState?.vThermostats.collect { dni ->
-					//LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
+					LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
 					def d6 = getChildDevice(getNestvStatDni(dni).toString())
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
-						//LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
+						LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
 						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
 						devsCrt = devsCrt + 1
@@ -5675,15 +5695,20 @@ LogAction("finishFixState found remote sensor configured", "info", true)
 void settingUpdate(name, value, type=null) {
 	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
 	try {
-		if(name && value && type) {
+		//if(name && value && type) {
+		if(name && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
-		else if (name && value && type == null){ app?.updateSetting(name.toString(), value) }
-	} catch(e) { }
+		//else if (name && value && type == null){ app?.updateSetting(name.toString(), value) }
+		else if (name && type == null){ app?.updateSetting(name.toString(), value) }
+	} catch(e) {
+		log.error "settingUpdate Exception:", ex
+	}
 }
 
 def stateUpdate(key, value) {
-	atomicState?."${key}" = value
+	if(key) { atomicState?."${key}" = value }
+	else { LogAction("stateUpdate: null key $key $value", "error", true) }
 }
 
 def setStateVar(frc = false) {
@@ -7073,15 +7098,23 @@ def initAutoApp() {
 	state.remove("enRemDiagLogging")   // cause Automations to re-check with parent for value after updated is called
 }
 
+def migrationInProgress() {
+	return atomicState?.migrationInProgress == true ? true : false
+}
+
 def uninstAutomationApp() {
 	//LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
+	def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
 		def myID = getMyLockId()
-		if(schMotTstat && myID && parent) {
+		if(schMotTstat && myID && parent && !migrate) {
+		//if(schMotTstat && myID && parent) {
 			if(parent?.addRemoveVthermostat(schMotTstat.deviceNetworkId, false, myID)) {
 				LogAction("uninstAutomationApp: cleanup virtual thermostat", "debug", true)
 			}
+		}
+		if(schMotTstat && myID && parent) {
 			if( parent?.remSenUnlock(atomicState?.remSenTstat, myID) ) { // attempt unlock old ID
 				LogAction("uninstAutomationApp: Released remote sensor lock", "debug", true)
 			}
@@ -7475,6 +7508,7 @@ def isSchMotConfigured() {
 
 def getLastschMotEvalSec() { return !atomicState?.lastschMotEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastschMotEval, null, "getLastschMotEvalSec").toInteger() }
 
+/*
 def schMotCheck() {
 	LogAction("schMotCheck", "trace", false)
 	try {
@@ -7527,6 +7561,7 @@ def schMotCheck() {
 		parent?.sendExceptionData(ex, "schMotCheck", true, getAutoType())
 	}
 }
+*/
 
 def storeLastEventData(evt) {
 	if(evt) {
@@ -8039,8 +8074,8 @@ def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
-def keepBackups()	{ return true }
-def allowMigration(){ return true }
+def keepBackups()	{ return false }
+def allowMigration()	{ return true }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
 	def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
