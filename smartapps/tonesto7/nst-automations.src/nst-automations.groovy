@@ -4468,8 +4468,8 @@ def getSchedData(num) {
 	def schData = atomicState?.activeSchedData
 	schData?.each { sch ->
 		//log.debug "sch: $sch"
-		if(num == sch?.key) {
-			//log.debug "Data:(${sch?.value})"
+		if(sch?.key != null && num?.toInteger() == sch?.key.toInteger()) {
+			// log.debug "Data:(${sch?.value})"
 			resData = sch?.value
 		}
 	}
