@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.5.10" }
-def appVerDate() { "2-13-2017" }
+def appVersion() { "4.5.11" }
+def appVerDate() { "2-14-2017" }
 
 preferences {
 	//startPage
@@ -4544,36 +4544,29 @@ def isWeatherUpdateAvail() {
 def reqSchedInfoRprt(child, report=true) {
 	//LogTrace("reqSchedInfoRprt: (${child.device.label})")
 	def result = null
-	if(!atomicState?.installData?.usingNewAutoFile) { return null }
+	if(!atomicState?.installData?.usingNewAutoFile) { return result }
+
 	def tstat = getChildDevice(child.device.deviceNetworkId)
 	if (tstat) {
 		def str = ""
-		def chldSch = getChildApps()?.find { (!(it.getAutomationType() in ["nMode", "watchDog"]) && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
-		if(chldSch) {
-			def actNum = chldSch?.getCurrentSchedule()
-			if(!actNum && !report) { return null }
-
-			def reqSenHeatSetPoint = chldSch?.getRemSenHeatSetTemp()
-			def reqSenCoolSetPoint = chldSch?.getRemSenCoolSetTemp()
-			def curZoneTemp = chldSch?.getRemoteSenTemp()
-			def tempSrc = chldSch?.getRemSenTempSrc()
+		def tstatAutoApp = getChildApps()?.find { (it.getAutomationType() == "schMot" && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
+		def actSchedNum = tstatAutoApp?.getCurrentSchedule()
+		//
+		if(actSchedNum) {
+			def reqSenHeatSetPoint = tstatAutoApp?.getRemSenHeatSetTemp()
+			def reqSenCoolSetPoint = tstatAutoApp?.getRemSenCoolSetTemp()
+			def curZoneTemp = tstatAutoApp?.getRemoteSenTemp()
+			def tempSrc = tstatAutoApp?.getRemSenTempSrc()
 
 			def tempSrcStr = tempSrc
-			def schedData
-			def schedMotionActive
-
-			if(actNum) {
-				schedData = chldSch?.getSchedData(actNum)
-				schedMotionActive = schedData?.m0 ? chldSch?.checkOnMotion(actNum) : null
-				tempSrcStr = (tempSrc == "Schedule") ? "Schedule ${actNum} Sensor" : tempSrc
-			}
+			def schedData = tstatAutoApp?.getSchedData(actSchedNum)
+			def schedMotionActive = schedData?.m0 ? tstatAutoApp?.checkOnMotion(actSchedNum) : null
+			tempSrcStr = (tempSrc == "Schedule") ? "Schedule ${actSchedNum} Sensor" : tempSrc
 
 			if(!report) {
-				if(actNum) {
-					def useMot = (schedMotionActive && (schedData?.mctemp || schedData?.mhtemp)) ? true : false
-					tempSrcStr = useMot ? "Schedule Motion Trigger" : tempSrcStr
-					return ["scdNum":actNum, "label":schedData?.lbl, "reqSenHeatSetPoint":reqSenHeatSetPoint, "reqSenCoolSetPoint":reqSenCoolSetPoint, "curZoneTemp":curZoneTemp, "tempSrc":tempSrc, "tempSrcDesc":tempSrcStr]
-				} else { return null }
+				def useMot = (schedMotionActive && (schedData?.mctemp || schedData?.mhtemp)) ? true : false
+				tempSrcStr = useMot ? "Schedule Motion Trigger" : tempSrcStr
+				return ["scdNum":actSchedNum, "schedName":schedData?.lbl, "reqSenHeatSetPoint":reqSenHeatSetPoint, "reqSenCoolSetPoint":reqSenCoolSetPoint, "curZoneTemp":curZoneTemp, "tempSrc":tempSrc, "tempSrcDesc":tempSrcStr]
 			} else {
 				def tempScaleStr = " degrees"
 				def canHeat = tstat?.currentCanHeat.toString() == "true" ? true : false
@@ -4581,7 +4574,7 @@ def reqSchedInfoRprt(child, report=true) {
 				def curMode = tstat?.currentnestThermostatMode.toString()
 				def curOper = tstat?.currentThermostatOperatingState.toString()
 				def curHum = tstat?.currentHumidity.toString()
-				def schedDesc = schedVoiceDesc(actNum, schedData, schedMotionActive)
+				def schedDesc = schedVoiceDesc(actSchedNum, schedData, schedMotionActive)
 				str += schedDesc ?: " There are No Schedules currently Active. "
 
 				if(getVoiceRprtPrefs()?.vRprtZone == true) {
@@ -4620,8 +4613,10 @@ def reqSchedInfoRprt(child, report=true) {
 				}
 			}
 		} else {
-			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for ${tstat} device", "warn", true)
-			//result = "No Thermostat Automation Schedules were found for ${tstat} device"
+			//LogAction ("reqSchedInfoRprt: No Automation Schedules were found for ${tstat} device", "warn", false)
+			if(report) {
+				result = "No Thermostat Automation Schedules were found for ${tstat} device"
+			}
 		}
 	} else {
 		LogAction("reqSchedInfoRprt: Thermostat device not found", "error", true)
