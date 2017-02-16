@@ -2436,17 +2436,17 @@ def getHumCtrlTemperature() {
 def getMaxHumidity(curExtTemp, curHum) {
 	def maxhum = 45
 	if(curExtTemp != null && curHum) {
-		if(curExtTemp >= fixTempSetting(40) && curHum < 45) {
+		if(curExtTemp >= adj_temp(40) && curHum < 45) {
 			;
-		} else if(curExtTemp >= fixTempSetting(32) && curHum < 40) {
+		} else if(curExtTemp >= adj_temp(32) && curHum < 40) {
 			maxhum = 40
-		} else if(curExtTemp >= fixTempSetting(20) && curHum < 35) {
+		} else if(curExtTemp >= adj_temp(20) && curHum < 35) {
 			maxhum = 35
-		} else if(curExtTemp >= fixTempSetting(10) && curHum < 30) {
+		} else if(curExtTemp >= adj_temp(10) && curHum < 30) {
 			maxhum = 30
-		} else if(curExtTemp >= fixTempSetting(0) && curHum < 25) {
+		} else if(curExtTemp >= adj_temp(0) && curHum < 25) {
 			maxhum = 25
-		} else if(curExtTemp >= fixTempSetting(-10) && curHum < 20) {
+		} else if(curExtTemp >= adj_temp(-10) && curHum < 20) {
 			maxhum = 20
 		}
 	}
