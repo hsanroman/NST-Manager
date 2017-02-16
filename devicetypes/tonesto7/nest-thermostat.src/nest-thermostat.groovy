@@ -769,19 +769,13 @@ def thermostatSetpointEvent(Double targetTemp) {
 }
 
 def temperatureEvent(Double tempVal) {
-	try {
-		def temp = device.currentState("temperature")?.value.toString()
-		def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
-		if(isStateChange(device, "temperature", rTempVal.toString())) {
-			Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
-			sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}" , displayed: true, isStateChange: true)
-		} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
-		checkSafetyTemps()
-	}
-	catch (ex) {
-		log.error "temperatureEvent Exception:", ex
-		exceptionDataHandler(ex.message, "temperatureEvent")
-	}
+	def temp = device.currentState("temperature")?.value.toString()
+	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
+	if(isStateChange(device, "temperature", rTempVal.toString())) {
+		Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
+		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}${tUnitStr()}" , displayed: true, isStateChange: true)
+	} else { LogAction("Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp})${tUnitStr()}") }
+	checkSafetyTemps()
 }
 
 def heatingSetpointEvent(Double tempVal) {
@@ -956,7 +950,7 @@ def checkSafetyTemps() {
 	def t0 = !(inRange.toBoolean())
 	LogAction("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${t0.toBoolean()} | curInRange: ${curInRange} | inRange: ${inRange})")
 	if(curRangeStr == null || inRange != curInRange) {
-		sendEvent(name:'safetyTempExceeded', value: ${t0.toBoolean()},  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}" , displayed: true, isStateChange: true)
+		sendEvent(name:'safetyTempExceeded', value: t0.toBoolean(),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}", displayed: true, isStateChange: true)
 		Logger("UPDATED | Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
 	} else {
 		LogAction("Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
