@@ -227,7 +227,7 @@ metadata {
 		standardTile("blank", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "default", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "getGraphHTML", width: 6, height: 14, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
@@ -283,7 +283,7 @@ def getRange() {
 }
 
 mappings {
-	path("/getGraphHTML") {action: [GET: "getGraphHTML"]}
+	path("/graphHTML") {action: [GET: "getGraphHTML"]}
 }
 
 void checkStateClear() {
@@ -762,7 +762,7 @@ def targetTempEvent(Double targetTemp) {
 def thermostatSetpointEvent(Double targetTemp) {
 	def temp = device.currentState("thermostatSetpoint")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-	if(isStateChange(device, "thermostatSetPoint", rTargetTemp.toString())) {
+	if(isStateChange(device, "thermostatSetPoint", rTargetTemp)) {
 		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("thermostatSetpoint is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
@@ -2998,13 +2998,13 @@ def getGraphHTML() {
 				<table class="sched">
 					<col width="50%">
 					<thead>
-						<th>Zone Status</th>
+						<th class="sched"><h3>Zone Status</h3></th>
 					</thead>
 					<tbody>
 						<tr>
 							<table>
-								<col width="60%">
-								<col width="38%">
+								<col width="50%">
+								<col width="50%">
 								<thead class="tempSrc">
 									<th>Temp Source:</th>
 									<th>Zone Temp:</th>
@@ -3023,8 +3023,8 @@ def getGraphHTML() {
 					<col width="45%">
 					<col width="45%">
 					<thead>
-						<th>Desired Heat Temp</th>
-						<th>Desired Cool Temp</th>
+						<th><h3>Desired Heat Temp</h3></th>
+						<th><h3>Desired Cool Temp</h3></th>
 					</thead>
 					<tbody>
 						<tr>
@@ -3046,9 +3046,12 @@ def getGraphHTML() {
 				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+
+				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
 
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
 
@@ -3056,71 +3059,139 @@ def getGraphHTML() {
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 			</head>
 			<body>
-				${schedHtml}
-				<table
-				  <col width="50%">
-				  <col width="50%">
-				  <thead>
-					<th>Time to Target</th>
-					<th>Sun Correction</th>
-				  </thead>
-				  <tbody>
-					<tr>
-					  <td>${timeToTarget}</td>
-						<td>${sunCorrectStr}</td>
-					</tr>
-				  </tbody>
-				</table>
-				<table>
-					${chartHtml}
-				<table>
-				<col width="40%">
-				<col width="20%">
-				<col width="40%">
-				<thead>
-				  <th>Network Status</th>
-				  <th>Leaf</th>
-				  <th>API Status</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td>${state?.onlineStatus.toString()}</td>
-					<td><img src="${leafImg}" class="leafImg"></img></td>
-					<td>${state?.apiStatus}</td>
-				  </tr>
-				</tbody>
-			  </table>
-			  <table>
-				<col width="40%">
-				<col width="20%">
-				<col width="40%">
-				  <thead>
-				  <th>Firmware Version</th>
-				  <th>Debug</th>
-				  <th>Device Type</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td>${state?.softwareVer.toString()}</td>
-					  <td>${state?.debugStatus}</td>
-					  <td>${state?.devTypeVer.toString()}</td>
-				  </tr>
+				${clientBl}
+		  		${updateAvail}
+				<div class="swiper-container">
+					<!-- Additional required wrapper -->
+					<div class="swiper-wrapper">
+						<!-- Slides -->
+						<div class="swiper-slide">
+							${schedHtml}
+							<table
+							  <col width="50%">
+							  <col width="50%">
+							  <thead>
+								<th>Time to Target</th>
+								<th>Sun Correction</th>
+							  </thead>
+							  <tbody>
+								<tr>
+								  <td>${timeToTarget}</td>
+								  <td>${sunCorrectStr}</td>
+								</tr>
+							  </tbody>
+							</table>
+						</div>
+						${chartHtml}
+						<div class="swiper-slide">
+							<table>
+							<col width="40%">
+							<col width="20%">
+							<col width="40%">
+							<thead>
+							  <th>Network Status</th>
+							  <th>Leaf</th>
+							  <th>API Status</th>
+							</thead>
+							<tbody>
+							  <tr>
+								<td>${state?.onlineStatus.toString()}</td>
+								<td><img src="${leafImg}" class="leafImg"></img></td>
+								<td>${state?.apiStatus}</td>
+							  </tr>
+							</tbody>
+						  </table>
+						  <table>
+							<col width="40%">
+							<col width="20%">
+							<col width="40%">
+							  <thead>
+							    <th>Firmware Version</th>
+							    <th>Debug</th>
+							    <th>Device Type</th>
+							  </thead>
+							<tbody>
+							  <tr>
+								<td>${state?.softwareVer.toString()}</td>
+								<td>${state?.debugStatus}</td>
+								<td>${state?.devTypeVer.toString()}</td>
+							  </tr>
+							</tbody>
+						  </table>
+						  <table>
+							<thead>
+							  <th>Nest Checked-In</th>
+							  <th>Data Last Received</th>
+							</thead>
+							<tbody>
+							  <tr>
+								<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+								<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+							  </tr>
+						  </table>
+						</div>
+					</div>
+					<!-- If we need pagination -->
+					<div class="swiper-pagination"></div>
 
-				</tbody>
-			  </table>
-			  <table>
-				<thead>
-				  <th>Nest Checked-In</th>
-				  <th>Data Last Received</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-				  </tr>
-			  </table>
-			  ${clientBl}
-			  ${updateAvail}
+					<div style="text-align: center;">
+						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
+					</div>
+				</div>
+
+				<script>
+					var mySwiper = new Swiper ('.swiper-container', {
+						// Optional parameters
+						direction: 'horizontal',
+				    	loop: true,
+						//loopedSlides: 4,
+                        effect: 'coverflow',
+                        coverflow: {
+						  rotate: 50,
+						  stretch: 0,
+						  depth: 100,
+						  modifier: 1,
+						  slideShadows : true
+						},
+						// onClick: (swiper, event) => {
+					    //     let element = event.target;
+					    //     //specific element that was clicked i.e.: p or img tag
+						// 	swiper.slideNext()
+						// 	console.log("next slide...")
+					    // },
+						onTap: (swiper, event) => {
+					        let element = event.target;
+					        //specific element that was clicked i.e.: p or img tag
+							swiper.slideNext()
+							console.log("next slide...")
+					    },
+						slidesPerView: 1,
+						spaceBetween: 30,
+						autoHeight: true,
+						iOSEdgeSwipeDetection: true,
+						parallax: true,
+						slideToClickedSlide: true,
+
+					    pagination: '.swiper-pagination',
+						paginationHide: false,
+						paginationClickable: true
+					})
+
+					// console.log(window.location.href)
+					 function reloadTest() {
+						var url = "https://"
+					 	url += window.location.host.toString()
+						url += "/api/devices/${device?.getId()}/graphHTML"
+						console.log("url: " + url)
+						document.getElementById("myspan2").textContent = "URL: " + url.toString();
+					 	window.location = url;
+						//window.location.reload(true)
+					 }
+				</script>
+				<p id="myspan2"/>
+				<div style="text-align: center; position: relative;">
+					<input class="pageFooterBtn" type="button" value="Reload Test" onclick="reloadTest()">
+				</div>
 			</body>
 		</html>
 		"""
@@ -3279,133 +3350,140 @@ def showChartHtml() {
 	//log.debug lStr
 
 	def data = """
-	<script type="text/javascript">
-		google.charts.load('current', {packages: ['corechart']});
-		google.charts.setOnLoadCallback(drawHistoryGraph);
-		google.charts.setOnLoadCallback(drawUseGraph);
+		<!-- Slides -->
+		<div class="swiper-slide">
+			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+			<div id="main_graph" style="width: 100%; height: 325px;"></div>
+		</div>
+		<div class="swiper-slide">
+		  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
+		  <div id="use_graph" style="width: 100%; height: 325px;"></div>
+		</div>
 
-		function drawHistoryGraph() {
-			var data = new google.visualization.DataTable();
-			data.addColumn('timeofday', 'time');
-			data.addColumn('number', 'Temp (Y)');
-			data.addColumn('number', 'Temp (T)');
-			data.addColumn('number', 'Operating');
-			data.addColumn('number', 'Humidity');
-			${coolstr1}
-			${heatstr1}
-			${weathstr1}
-			data.addRows([
-				${getDataString(1)}
-				${getDataString(2)}
-				${getDataString(3)}
-				${getDataString(4)}
-				${coolstr2}
-				${heatstr2}
-				${weathstr2}
-			]);
-			var options = {
-				width: '100%',
-				height: '100%',
-				animation: {
-					duration: 1500,
-					startup: true
-				},
-				hAxis: {
-					format: 'H:mm',
-					minValue: [${getStartTime()},0,0],
-					slantedText: true,
-					slantedTextAngle: 30
-				},
-				series: {
-					0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
-					1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
-					2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
-					3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
-					${coolstr3}
-					${heatstr3}
-					${weathstr3}
-				},
-				vAxes: {
-					0: {
-						title: 'Humidity (%)',
-						format: 'decimal',
-						minValue: 0,
-						maxValue: 100,
-						textStyle: {color: '#B8B8B8'},
-						titleTextStyle: {color: '#B8B8B8'}
+		<script type="text/javascript">
+			google.charts.load('current', {packages: ['corechart']});
+			google.charts.setOnLoadCallback(drawHistoryGraph);
+			google.charts.setOnLoadCallback(drawUseGraph);
+
+			function drawHistoryGraph() {
+				var data = new google.visualization.DataTable();
+				data.addColumn('timeofday', 'time');
+				data.addColumn('number', 'Temp (Y)');
+				data.addColumn('number', 'Temp (T)');
+				data.addColumn('number', 'Operating');
+				data.addColumn('number', 'Humidity');
+				${coolstr1}
+				${heatstr1}
+				${weathstr1}
+				data.addRows([
+					${getDataString(1)}
+					${getDataString(2)}
+					${getDataString(3)}
+					${getDataString(4)}
+					${coolstr2}
+					${heatstr2}
+					${weathstr2}
+				]);
+				var options = {
+					width: '100%',
+					height: '100%',
+					animation: {
+						duration: 1500,
+						startup: true
 					},
-					1: {
-						title: 'Temperature (${tempStr})',
-						format: 'decimal',
-						${minstr}
-						${maxstr}
-						textStyle: {color: '#FF0000'},
-						titleTextStyle: {color: '#FF0000'}
+					hAxis: {
+						format: 'H:mm',
+						minValue: [${getStartTime()},0,0],
+						slantedText: true,
+						slantedTextAngle: 30
+					},
+					series: {
+						0: {targetAxisIndex: 1, type: 'area', color: '#FFC2C2', lineWidth: 1},
+						1: {targetAxisIndex: 1, type: 'area', color: '#FF0000'},
+						2: {targetAxisIndex: 0, type: 'area', color: '#ffdc89'},
+						3: {targetAxisIndex: 0, type: 'area', color: '#B8B8B8'},
+						${coolstr3}
+						${heatstr3}
+						${weathstr3}
+					},
+					vAxes: {
+						0: {
+							title: 'Humidity (%)',
+							format: 'decimal',
+							minValue: 0,
+							maxValue: 100,
+							textStyle: {color: '#B8B8B8'},
+							titleTextStyle: {color: '#B8B8B8'}
+						},
+						1: {
+							title: 'Temperature (${tempStr})',
+							format: 'decimal',
+							${minstr}
+							${maxstr}
+							textStyle: {color: '#FF0000'},
+							titleTextStyle: {color: '#FF0000'}
+						}
+					},
+					legend: {
+						position: 'bottom',
+						maxLines: 4,
+						textStyle: {color: '#000000'}
+					},
+					chartArea: {
+						left: '12%',
+						right: '18%',
+						top: '3%',
+						bottom: '27%',
+						height: '80%',
+						width: '100%'
 					}
-				},
-				legend: {
-					position: 'bottom',
-					maxLines: 4,
-					textStyle: {color: '#000000'}
-				},
-				chartArea: {
-					left: '12%',
-					right: '18%',
-					top: '3%',
-					bottom: '27%',
-					height: '80%',
-					width: '100%'
-				}
-			};
-			var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
-			chart.draw(data, options);
-		}
+				};
+				var chart = new google.visualization.ComboChart(document.getElementById('main_graph'));
+				chart.draw(data, options);
+			}
 
-		function drawUseGraph() {
-			var data = google.visualization.arrayToDataTable([
-			  ${mUseHeadStr},
-			  ${tdData?.size() ? "${tdData}," : ""}
-			  ${m3Data?.size() ? "${m3Data}${(m2Data?.size() || m1Data?.size() || tdData?.size()) ? "," : ""}" : ""}
-			  ${m2Data?.size() ? "${m2Data}${(m1Data?.size() || tdData?.size())  ? "," : ""}" : ""}
-			  ${m1Data?.size() ? "${m1Data}" : ""}
-			]);
+			function drawUseGraph() {
+				var data = google.visualization.arrayToDataTable([
+				  ${mUseHeadStr},
+				  ${tdData?.size() ? "${tdData}," : ""}
+				  ${m3Data?.size() ? "${m3Data}${(m2Data?.size() || m1Data?.size() || tdData?.size()) ? "," : ""}" : ""}
+				  ${m2Data?.size() ? "${m2Data}${(m1Data?.size() || tdData?.size())  ? "," : ""}" : ""}
+				  ${m1Data?.size() ? "${m1Data}" : ""}
+				]);
 
-			  var view = new google.visualization.DataView(data);
-			  view.setColumns([
-				${(useTabListSize >= 1) ? "0," : ""}
-				${(useTabListSize >= 1) ? "1, { calc: 'stringify', sourceColumn: 1, type: 'string', role: 'annotation' }${(useTabListSize > 1) ? "," : ""} // Heat Column": ""}
-				${(useTabListSize > 1) ? "2, { calc: 'stringify', sourceColumn: 2, type: 'string', role: 'annotation' }${(useTabListSize > 2) ? "," : ""} // Cool column" : ""}
-				${(useTabListSize > 2) ? "3, { calc: 'stringify', sourceColumn: 3, type: 'string', role: 'annotation' } // FanOn Column" : ""}
-			  ]);
-			  var options = {
-				vAxis: {
-				  title: 'Hours'
-				},
-				seriesType: 'bars',
-				colors: ['#FF9900', '#0066FF', '#884ae5'],
-				chartArea: {
-				  left: '15%',
-				  right: '20%',
-				  top: '10%',
-				  bottom: '10%'
-				}
-			  };
+				var view = new google.visualization.DataView(data);
+				view.setColumns([
+					${(useTabListSize >= 1) ? "0," : ""}
+					${(useTabListSize >= 1) ? "1, { calc: 'stringify', sourceColumn: 1, type: 'string', role: 'annotation' }${(useTabListSize > 1) ? "," : ""} // Heat Column": ""}
+					${(useTabListSize > 1) ? "2, { calc: 'stringify', sourceColumn: 2, type: 'string', role: 'annotation' }${(useTabListSize > 2) ? "," : ""} // Cool column" : ""}
+					${(useTabListSize > 2) ? "3, { calc: 'stringify', sourceColumn: 3, type: 'string', role: 'annotation' } // FanOn Column" : ""}
+				]);
+				var options = {
+					vAxis: {
+					  title: 'Hours'
+					},
+					seriesType: 'bars',
+					colors: ['#FF9900', '#0066FF', '#884ae5'],
+					chartArea: {
+					  left: '15%',
+					  right: '20%',
+					  top: '10%',
+					  bottom: '10%',
+					  height: '100%',
+					  width: '80%'
+					}
+				};
 
-			  var columnWrapper = new google.visualization.ChartWrapper({
-				chartType: 'ComboChart',
-				containerId: 'use_graph',
-				dataTable: view,
-				options: options
-			  });
-			  columnWrapper.draw()
-		}
-	  </script>
-	  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-	  <div id="main_graph" style="width: 100%; height: 260px;"></div>
-
-	   <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
-	   <div id="use_graph" style="width: 100%; height: 275px;"></div>
-	"""
+				var columnWrapper = new google.visualization.ChartWrapper({
+					chartType: 'ComboChart',
+					containerId: 'use_graph',
+					dataTable: view,
+					options: options
+				});
+				columnWrapper.draw()
+			}
+		  </script>
+	  """
 	return data
 }
 

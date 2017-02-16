@@ -383,8 +383,20 @@ tr {
 	background: gray;
 }
 
-.sched td {
-	font-size: 4.6vw;
+.slideFooterMsg {
+	font-size: 3.0vw;
+	padding: 20px;
+	position: absolute;
+	width: 95%;
+	bottom: 0;
+	horizontal-align: center;
+	vertical-align: bottom;
+}
+
+.pageFooterBtn {
+	padding: 10px;
+	horizontal-align: center;
+	vertical-align: bottom;
 }
 
 .schedFill {
@@ -395,9 +407,14 @@ tr {
 }
 
 .tempSrc th {
-	font-size: 4.8vw;
+	font-size: 4.1vw;
 	font-weight: bold;
 	background: transparent;
 	text-decoration: underline;
 	color: gray;
+}
+
+.swiper-container {
+    width: 97%;
+    min-height: 400px;
 }
