@@ -408,7 +408,7 @@ void processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			state.showGraphs = eventData?.showGraphs == true ? true : false
+			state.showGraphs = eventData?.showGraphs != null ? eventData?.showGraphs : true
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
