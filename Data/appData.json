@@ -31,6 +31,9 @@
             "app": {
                 "ver": "4.5.2"
             },
+            "autoapp": {
+                "ver": "4.5.2"
+            },
             "thermostat": {
                 "ver": "4.5.1"
             },
