@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { parent?.appVersion() }//"4.5.7" }
-def appVerDate() { "2-16-2017" }
+def appVersion() { "4.6.0" }
+def appVerDate() { "2-17-2017" }
 
 preferences {
 	//startPage
@@ -152,8 +152,9 @@ def getNestTimeZone() {
 }
 
 def helpHandler() {
-	if(atomicState?.appData?.help) {
-		atomicState.showHelp = (atomicState?.appData?.help?.showHelp == false) ? false : true
+	def help = parent ? parent?.state?.appData?.help : null
+	if(help) {
+		atomicState.showHelp = (help?.showHelp == false) ? false : true
 	}
 }
 
@@ -165,8 +166,34 @@ def incMetricCntVal(item) {
 
 def incAutoGlobPrefLoadCnt() { incMetricCntVal("autoGlobPrefLoadCnt") }
 
+def isCodeUpdateAvailable(newVer, curVer, type) {
+	def result = false
+	def latestVer
+	if(newVer && curVer) {
+		def versions = [newVer, curVer]
+		if(newVer != curVer) {
+			latestVer = versions?.max { a, b ->
+				def verA = a?.tokenize('.')
+				def verB = b?.tokenize('.')
+				def commonIndices = Math.min(verA?.size(), verB?.size())
+				for (int i = 0; i < commonIndices; ++i) {
+					//log.debug "comparing $numA and $numB"
+					if(verA[i]?.toInteger() != verB[i]?.toInteger()) {
+						return verA[i]?.toInteger() <=> verB[i]?.toInteger()
+					}
+				}
+				verA?.size() <=> verB?.size()
+			}
+			result = (latestVer == newVer) ? true : false
+		}
+	}
+	//log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+	return result
+}
+
 def isAppUpdateAvail() {
-	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.autoapp?.ver, appVersion(), "automation")) { return true }
+	def ver = parent ? parent?.state?.appData?.updater?.versions?.autoapp : null
+	if(isCodeUpdateAvailable(ver?.ver, appVersion(), "automation")) { return true }
 	return false
 }
 
@@ -322,7 +349,8 @@ def mainAutoPage(params) {
 	//LogTrace("mainAutoPage()")
 	if(!atomicState?.tempUnit) { atomicState?.tempUnit = getTemperatureScale()?.toString() }
 	if(!atomicState?.disableAutomation) { atomicState.disableAutomation = false }
-	atomicState?.showHelp = (parent?.getShowHelp() != null) ? parent?.getShowHelp() : true
+	def t0 = parent?.getShowHelp()
+	atomicState?.showHelp = (t0 != null) ? t0 : true
 	def autoType = null
 	//If params.autoType is not null then save to atomicState.
 	if(!params?.autoType) { autoType = atomicState?.automationType }
@@ -3744,7 +3772,7 @@ def checkNestMode() {
 				if(nModeCamOffHome) { adjustCameras(false) }
 			}
 			else {
-				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}| ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away?: ($away) | Home?: ($home)", "info", true)
+				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}| ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away: ($away) | Home: ($home)", "info", true)
 			}
 			if(didsomething) {
 				scheduleAutomationEval(90)
@@ -7150,7 +7178,7 @@ def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
-	def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
+	def cur = parent ? parent?.state?.appData?.updater?.versions?.autoapp?.ver.toString() : null
 	def beta = betaMarker() ? "" : ""
 	def str = ""
 	str += "${appName()}"
