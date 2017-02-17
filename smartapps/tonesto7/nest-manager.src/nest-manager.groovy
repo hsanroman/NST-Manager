@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.6.0" }
-def appVerDate() { "2-14-2017" }
+def appVerDate() { "2-17-2017" }
 
 preferences {
 	//startPage
@@ -2036,7 +2036,7 @@ def getInstAutoTypesDesc() {
 		}
 		if(ver != appVersion()) {
 			LogAction("Bad child app version ${ver}", "error", true)
-			//appUpdateNotify()
+			appUpdateNotify()
 		}
 		if(dis) {
 			disItems.push(a?.label.toString())
@@ -4085,6 +4085,7 @@ def appUpdateNotify() {
 	def wait = atomicState?.notificationPrefs?.app?.updates?.updMsgWait
 	if(!on || !wait) { return }
 	def appUpd = isAppUpdateAvail()
+	def autoappUpd = isAutoAppUpdateAvail()
 	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
 	def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
 	def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
@@ -4093,6 +4094,7 @@ def appUpdateNotify() {
 	if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > wait.toInteger())) {
 		def str = ""
 		str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
+		str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 		str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
 		str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
 		str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
@@ -4529,6 +4531,11 @@ def isCodeUpdateAvailable(newVer, curVer, type) {
 
 def isAppUpdateAvail() {
 	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.app?.ver, appVersion(), "manager")) { return true }
+	return false
+}
+
+def isAutoAppUpdateAvail() {
+	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.autoapp?.ver, appVersion(), "automation")) { return true }
 	return false
 }
 
