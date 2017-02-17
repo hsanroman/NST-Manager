@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { parent?.appVersion() }//"4.5.7" }
-def appVerDate() { "2-2-2017" }
+def appVerDate() { "2-16-2017" }
 
 preferences {
 	//startPage
@@ -2378,7 +2378,7 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 def humCtrlPrefix() { return "humCtrl" }
 
 def isHumCtrlConfigured() {
-	return ((settings?.extTmpUseWeather || settings?.extTmpTempSensor) && settings?.humCtrlHumidity) ? true : false
+	return ((settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) && settings?.humCtrlHumidity && settings?.humCtrlSwitches) ? true : false
 }
 
 def humCtrlSwitchDesc(showOpt = true) {
@@ -2453,8 +2453,10 @@ def getMaxHumidity(curExtTemp, curHum) {
 	return maxhum
 }
 
+def humCtrlScheduleOk() { return autoScheduleOk(humCtrlPrefix()) }
+
 def humCtrlCheck() {
-	LogAction("extTmpTempCheck", "trace", false)
+	LogAction("humCtrlCheck", "trace", false)
 	def pName = humCtrlPrefix()
 	try {
 		def tstat = schMotTstat
@@ -2464,6 +2466,7 @@ def humCtrlCheck() {
 		def curHum = humCtrlHumidity?.currentHumidity?.toInteger()
 		def curExtTemp = getHumCtrlTemperature()
 		def maxHum = getMaxHumidity(curExtTemp, curHum)
+		def schedOk = humCtrlScheduleOk()
 
 		LogAction("humCtrlCheck: ( Humidity: (${curHum}) | External Temp: (${curExtTemp}) | Max Humidity: (${maxHum}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) )", "info", true)
 
@@ -2504,12 +2507,12 @@ def humCtrlCheck() {
 
 		def validHvac = true
 		if( !( ("any" in settings?.humCtrlSwitchHvacModeFilter) || (hvacMode in settings?.humCtrlSwitchHvacModeFilter) ) ){
-			LogAction("humCtrlCheck: Evaluating turn humidifier off; Thermostat Mode does not Match the required Mode", "info", true)
+			LogAction("humCtrlCheck: Evaluating turn humidifier off; Thermostat Mode does not Match the required Mode", "info", false)
 			validHvac = false  // force off
 		}
 
-		def turnOn = (humOn && validOperating && validHvac) ?: false
-		LogAction("humCtrlCheck: turnOn: ${turnOn} | humOn: ${humOn} | validOperating: ${validOperating} | validHvac: ${validHvac} | savedHaveRun: ${savedHaveRun}", "info", true)
+		def turnOn = (humOn && validOperating && validHvac && schedOk) ?: false
+		LogAction("humCtrlCheck: turnOn: ${turnOn} | humOn: ${humOn} | validOperating: ${validOperating} | validHvac: ${validHvac} | schedOk: ${schedOk} | savedHaveRun: ${savedHaveRun}", "info", true)
 
 		settings?.humCtrlSwitches?.each { sw ->
 			def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
@@ -4605,6 +4608,8 @@ def schMotModePage() {
 					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "Settings:" : ""
 					humDesc += (!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) ? "\n • Sensor: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? "\n • Weather: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
+					humDesc += (settings?."${humCtrlPrefix()}Modes" || settings?."${humCtrlPrefix()}Days" || (settings?."${humCtrlPrefix()}StartTime" && settings?."${humCtrlPrefix()}StopTime")) ?
+							"\n • Evaluation Allowed: (${autoScheduleOk(humCtrlPrefix()) ? "ON" : "OFF"})" : ""
 					//TODO need this in schedule
 					humDesc += ((settings?.humCtrlTempSensor || settings?.humCtrlUseWeather) ) ? "\n\nTap to modify" : ""
 					def humCtrlDesc = isHumCtrlConfigured() ? "${humDesc}" : null
@@ -4995,52 +5000,59 @@ def tstatConfigAutoPage(params) {
 						paragraph "${humCtrlSwitchDesc(false)}", state: humCtrlSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
 					}
 				}
-				section("Humidifier Triggers") {
-					paragraph "Triggers are evaluated when Thermostat sends an operating event.  Poll time may take 1 minute or more for fan to switch on.",
-							title: "What are these triggers?", image: getAppImg("instruct_icon.png")
+				if(settings?.humCtrlSwitches) {
+					section("Humidifier Triggers") {
+						paragraph "Triggers are evaluated when Thermostat sends an operating event.  Poll time may take 1 minute or more for fan to switch on.",
+								title: "What are these triggers?", image: getAppImg("instruct_icon.png")
 // TODO needs to fix icon
-					input "humCtrlSwitchTriggerType", "enum", title: "Control Switches When?", defaultValue: 5, metadata: [values:switchRunEnum(true)],
-							submitOnChange: true, image: getAppImg("${settings?.humCtrlSwitchTriggerType == 1 ? "thermostat" : "home_fan"}_icon.png")
-					input "humCtrlSwitchHvacModeFilter", "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
-							submitOnChange: true, multiple: true, image: getAppImg("mode_icon.png")
-				}
-				section("Indoor Humidity Measurement") {
-					def req = !settings?.humCtrlHumidity ? true : false
-// TODO need new icon
-					input name: "humCtrlHumidity", type: "capability.relativeHumidityMeasurement", title: "Which Humidity Sensor(s)?", multiple: false, submitOnChange: true, required: req,
-							image: getAppImg("contact_icon.png")
-					if(settings?.humCtrlHumidity) {
-						def str = ""
-						str += settings?.humCtrlHumidity ? "${humCtrlHumidityDesc()}\n" : ""
-						paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+						input "humCtrlSwitchTriggerType", "enum", title: "Control Switches When?", defaultValue: 5, metadata: [values:switchRunEnum(true)],
+								submitOnChange: true, image: getAppImg("${settings?.humCtrlSwitchTriggerType == 1 ? "thermostat" : "home_fan"}_icon.png")
+						input "humCtrlSwitchHvacModeFilter", "enum", title: "Thermostat Mode Triggers?", defaultValue: "any", metadata: [values:fanModeTrigEnum()],
+								submitOnChange: true, multiple: true, image: getAppImg("mode_icon.png")
 					}
-				}
-				section("Select the External Temp Sensor to Use:") {
-					if(!parent?.getWeatherDeviceInst()) {
-						paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as the External Temperature Sensor!", required: true, state: null
-					} else {
-						if(!settings?.humCtrlTempSensor) {
-							input "humCtrlUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-							if(settings?.humCtrlUseWeather){
-								if(atomicState?.curWeather == null) {
-									atomicState.NeedwUpd = true
-									getExtConditions()
+					section("Indoor Humidity Measurement") {
+						def req = !settings?.humCtrlHumidity ? true : false
+// TODO need new icon
+						input name: "humCtrlHumidity", type: "capability.relativeHumidityMeasurement", title: "Which Humidity Sensor(s)?", multiple: false, submitOnChange: true, required: req,
+								image: getAppImg("contact_icon.png")
+						if(settings?.humCtrlHumidity) {
+							def str = ""
+							str += settings?.humCtrlHumidity ? "${humCtrlHumidityDesc()}\n" : ""
+							paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
+						}
+					}
+					section("Select the External Temp Sensor to Use:") {
+						if(!parent?.getWeatherDeviceInst()) {
+							paragraph "Please Enable the Weather Device under the Manager App before trying to use External Weather as the External Temperature Sensor!", required: true, state: null
+						} else {
+							if(!settings?.humCtrlTempSensor) {
+								input "humCtrlUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
+								if(settings?.humCtrlUseWeather){
+									if(atomicState?.curWeather == null) {
+										atomicState.NeedwUpd = true
+										getExtConditions()
+									}
+									def tmpVal = (tempScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
+									paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc}\n• Temp: (${tmpVal}${tempScaleStr})", state: "complete", image: getAppImg("instruct_icon.png")
 								}
-								def tmpVal = (tempScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
-								paragraph "Local Weather:\n• ${atomicState?.curWeatherLoc}\n• Temp: (${tmpVal}${tempScaleStr})", state: "complete", image: getAppImg("instruct_icon.png")
+							}
+						}
+						if(!settings?.humCtrlUseWeather) {
+							atomicState.curWeather = null  // force refresh of weather if toggled
+							def senReq = (!settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? true : false
+							input "humCtrlTempSensor", "capability.temperatureMeasurement", title: "Select a Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, image: getAppImg("temperature_icon.png")
+							if(settings?.humCtrlTempSensor) {
+								def str = ""
+								str += settings?.humCtrlTempSensor ? "Sensor Status:" : ""
+								str += settings?.humCtrlTempSensor ? "\n└ Temp: (${settings?.extTmpTempSensor?.currentTemperature}${tempScaleStr})" : ""
+								paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 							}
 						}
 					}
-					if(!settings?.humCtrlUseWeather) {
-						atomicState.curWeather = null  // force refresh of weather if toggled
-						def senReq = (!settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? true : false
-						input "humCtrlTempSensor", "capability.temperatureMeasurement", title: "Select a Temp Sensor?", submitOnChange: true, multiple: false, required: senReq, image: getAppImg("temperature_icon.png")
-						if(settings?.humCtrlTempSensor) {
-							def str = ""
-							str += settings?.humCtrlTempSensor ? "Sensor Status:" : ""
-							str += settings?.humCtrlTempSensor ? "\n└ Temp: (${settings?.extTmpTempSensor?.currentTemperature}${tempScaleStr})" : ""
-							paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
-						}
+					section(getDmtSectionDesc(humCtrlPrefix())) {
+						def pageDesc = getDayModeTimeDesc(pName)
+						href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
+								image: getAppImg("cal_filter_icon.png")
 					}
 				}
 			}
