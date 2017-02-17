@@ -88,8 +88,6 @@ def uninstallPage() {
 		section("") {
 			if(parent) {
 				paragraph "This will uninstall the ${app?.label} Automation!"
-			} else {
-				paragraph "This will uninstall the App, All Automation Apps and Child Devices.\n\nPlease make sure that any devices created by this app are removed from any routines/rules/smartapps before tapping Remove."
 			}
 		}
 		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
@@ -1278,6 +1276,7 @@ def isWatchdogConfigured() {
 
 def remSenPrefix() { return "remSen" }
 
+/*
 def remSenLock(val, myId) {
 	def res = false
 	if(val && myId && !parent) {
@@ -1304,6 +1303,7 @@ def remSenUnlock(val, myId) {
 	}
 	return res
 }
+*/
 
 //Requirements Section
 def remSenCoolTempsReq() { return (settings?.remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false }
