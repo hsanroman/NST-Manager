@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.6.0" }
-def appVerDate() { "2-17-2017" }
+def appVerDate() { "2-19-2017" }
 
 preferences {
 	//startPage
@@ -1703,7 +1703,7 @@ def devCustomizePageDesc() {
 
 def getDevicesDesc(startNewLine=true) {
 	def pDev = settings?.thermostats || settings?.protects || settings?.cameras
-	def vDev = settings?.vthermostats || settings?.presDevice || settings?.weatherDevice
+	def vDev = atomicState?.vThermostats || settings?.presDevice || settings?.weatherDevice
 	def str = ""
 	str += pDev ? "${startNewLine ? "\n" : ""}Physical Devices:" : ""
 	str += settings?.thermostats ? "\n • [${settings?.thermostats?.size()}] Thermostat${(settings?.thermostats?.size() > 1) ? "s" : ""}" : ""
@@ -1711,7 +1711,7 @@ def getDevicesDesc(startNewLine=true) {
 	str += settings?.cameras ? "\n • [${settings?.cameras?.size()}] Camera${(settings?.cameras?.size() > 1) ? "s" : ""}" : ""
 
 	str += vDev ? "${pDev ? "\n" : ""}\nVirtual Devices:" : ""
-	str += atomicState?.vthermostats ? "\n • [${atomicState?.vthermostats?.size()}] Virtual Thermostat${(atomicState?.vthermostats?.size() > 1) ? "s" : ""}" : ""
+	str += atomicState?.vThermostats ? "\n • [${atomicState?.vThermostats?.size()}] Virtual Thermostat${(atomicState?.vThermostats?.size() > 1) ? "s" : ""}" : ""
 	str += settings?.presDevice ? "\n • [1] Presence Device" : ""
 	str += settings?.weatherDevice ? "\n • [1] Weather Device" : ""
 	str += (!settings?.thermostats && !settings?.protects && !settings?.cameras && !settings?.presDevice && !settings?.weatherDevice) ? "\n • No Devices Selected" : ""
@@ -1734,7 +1734,7 @@ def getDevChgDesc() {
 	log.debug "getDevChgDesc | result: $result"
 	def res = []
 	def opts = ["added", "removed"]
-	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
+	def keys = ["thermostats", "vThermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	opts?.each { t ->
 		def str = ""
 		if(result?."${t}"?.size()) {
@@ -1774,7 +1774,7 @@ def getDevChgDesc() {
 
 def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 	//LogTrace("compareDevMap(map1, map2, $added, $deleted, $lastkey)")
-	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
+	def keys = ["thermostats", "vThermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	for(m1 in map1) {
 		def keyVal = m1?.key.toString()
 		def m1Key = map1?."${keyVal}"
@@ -1813,7 +1813,7 @@ def compareDevMap(map1, map2, added, deleted, lastkey=null) {
 
 def currentDevMap(update=false) {
 	def res = [:]
-	def keys = ["thermostats", "vthermostats", "protects", "cameras", "presDevice", "weatherDevice"]
+	def keys = ["thermostats", "vThermostats", "protects", "cameras", "presDevice", "weatherDevice"]
 	try {
 		keys?.each { key ->
 			def items = [:]
@@ -2276,7 +2276,7 @@ def buildSettingsMap() {
 */
 def createAutoBackupJson() {
 	//log.trace "createAutoBackupJson..."
-	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData"]
+	def noShow = ["curAlerts", "curAstronomy", "curForecast", "curWeather", "detailEventHistory", "detailExecutionHistory", "evalExecutionHistory", "activeSchedData", "resetAllData"]
 	for(def i=1; i <= 8; i++) { noShow.push("schMot_${i}_MotionActiveDt"); noShow.push("schMot_${i}_MotionInActiveDt"); noShow.push("schMot_${i}_oldMotionActive"); }
 	def stData = getState()?.sort()?.findAll { !(it.key in noShow) }
 	def stateData = [:]
@@ -2316,9 +2316,13 @@ def createAutoBackupJson() {
 	return resultJson
 }
 
+// Child Method
 // This is only necessary in the manager code to allow the backup to be created for migration to the new automation file
 def backupConfigToFirebase() {
 	//log.trace "backupConfigToFirebase..."
+	unschedule()
+	unsubscribe()
+	uninstAutomationApp() 			// Cleanup any parent state this child owns
 	def data = createAutoBackupJson()
 	return parent?.sendAutomationBackupData(data, app.id)
 }
@@ -2458,6 +2462,7 @@ def callRestoreState(child, restId) {
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
 			//child?.settingUpdate("restoreCompleted", true, "bool")
+			child?.finishFixState(true)		// Let child finish cleaning its state
 			return true
 		} else {
 			LogAction("Backup Data not found: ${child.label}   RestoreID: ${restId}", "error", true)
@@ -3169,7 +3174,7 @@ def setNeedChildUpdate() {
 }
 
 def getLocationPresence() {
-	def away = atomicState?.structData[atomicState?.structures]?.away ?: null
+	def away = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.away : null
 	return (away != null) ? away.toString() : null
 }
 
@@ -5180,12 +5185,14 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 	} else {
 		tstat = d1
 		tStatPhys = tstat?.currentNestType == "physical" ? true : false
-		if(!tStatPhys && tval) { LogAction("addRemoveVthermostat: Creating a virtual thermostat on a virtual thermostat device child", "error", true) }
+		if(!tStatPhys && tval) { LogAction("addRemoveVthermostat: Cannot create a virtual thermostat on a virtual thermostat device child", "error", true) }
 	}
 
 	def devId = "v${odevId}"
 
-	if(atomicState?."vThermostat${devId}" && myID != atomicState?."vThermostatChildAppId${devId}") {
+	def migrate = migrationInProgress()
+
+	if(!migrate && atomicState?."vThermostat${devId}" && myID != atomicState?."vThermostatChildAppId${devId}") {
 		LogAction("addRemoveVthermostat() not ours ${myID} ${atomicState?."vThermostat${devId}"} ${atomicState?."vThermostatChildAppId${devId}"}", "trace", true)
 		//atomicState?."vThermostat${devId}" = false
 		//atomicState?."vThermostatChildAppId${devId}" = null
@@ -5204,16 +5211,16 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 	} else {
 		atomicState."vThermostat${devId}" = tval
 		if(tval && !atomicState?."vThermostatChildAppId${devId}") {
-			LogAction("addRemoveVthermostat() creating virtual thermostat tracking ${tstat}", "trace", true)
+			LogAction("addRemoveVthermostat() marking for create virtual thermostat tracking ${tstat}", "trace", true)
 			atomicState."vThermostatChildAppId${devId}" = myID
 			atomicState?."vThermostatMirrorId${devId}" = odevId
 			def vtlist = atomicState?.vThermostats ?: [:]
 			vtlist[devId] = "${tstat.label.toString()}"
 			atomicState.vThermostats = vtlist
-			runIn(10, "updated", [overwrite: true])  // create what is needed
+			if(!migrate) { runIn(10, "updated", [overwrite: true]) }  // create what is needed
 
 		} else if(!tval && atomicState?."vThermostatChildAppId${devId}") {
-			LogAction("addRemoveVthermostat() removing virtual thermostat tracking ${tstat}", "trace", true)
+			LogAction("addRemoveVthermostat() marking for remove virtual thermostat tracking ${tstat}", "trace", true)
 			atomicState."vThermostatChildAppId${devId}" = null
 			atomicState?."vThermostatMirrorId${devId}" = null
 
@@ -5234,7 +5241,7 @@ def addRemoveVthermostat(tstatdni, tval, myID) {
 			}
 			vtlist = newlist
 			atomicState.vThermostats = vtlist
-			runIn(10, "updated", [overwrite: true])  // delete what is needed
+			if(!migrate) { runIn(10, "updated", [overwrite: true]) }  // create what is needed
 		} else {
 			LogAction("addRemoveVthermostat() unexpected operation state ${myID} ${atomicState?."vThermostat${devId}"} ${atomicState?."vThermostatChildAppId${devId}"}", "warn", true)
 			return false
@@ -5714,16 +5721,18 @@ LogAction("finishFixState found remote sensor configured", "info", true)
 
 void settingUpdate(name, value, type=null) {
 	LogAction("settingUpdate($name, $value, $type)...", "trace", false)
-	try {
+//	try {
 		//if(name && value && type) {
 		if(name && type) {
 			app?.updateSetting("$name", [type: "$type", value: value])
 		}
 		//else if (name && value && type == null){ app?.updateSetting(name.toString(), value) }
 		else if (name && type == null){ app?.updateSetting(name.toString(), value) }
+/*
 	} catch(e) {
 		log.error "settingUpdate Exception:", ex
 	}
+*/
 }
 
 def stateUpdate(key, value) {
@@ -5921,7 +5930,7 @@ def daysOk(days) {
 
 // parent only Method
 def notificationTimeOk() {
-	try {
+//	try {
 		def strtTime = null
 		def stopTime = null
 		def now = new Date()
@@ -5938,10 +5947,12 @@ def notificationTimeOk() {
 		if(strtTime && stopTime) {
 			return timeOfDayIsBetween(strtTime, stopTime, new Date(), getTimeZone()) ? false : true
 		} else { return true }
+/*
 	} catch (ex) {
 		log.error "notificationTimeOk Exception:", ex
 		sendExceptionData(ex, "notificationTimeOk")
 	}
+*/
 }
 
 def time2Str(time) {
@@ -7125,11 +7136,11 @@ def migrationInProgress() {
 def uninstAutomationApp() {
 	//LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
-	def migrate = parent?.migrationInProgress()
+	//def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
 		def myID = getMyLockId()
-		if(schMotTstat && myID && parent && !migrate) {
-		//if(schMotTstat && myID && parent) {
+		//if(schMotTstat && myID && parent && !migrate) {
+		if(schMotTstat && myID && parent) {
 			if(parent?.addRemoveVthermostat(schMotTstat.deviceNetworkId, false, myID)) {
 				LogAction("uninstAutomationApp: cleanup virtual thermostat", "debug", true)
 			}
@@ -7238,18 +7249,19 @@ def leakWatSensorEvt(evt) { return }
 def conWatContactEvt(evt) { return }
 def extTmpGenericEvt(evt) { return }
 
+/*
 def automationsInst() {
-	atomicState.isNestModesConfigured = 	isNestModesConfigured() ? true : false
-	atomicState.isWatchdogConfigured = 		isWatchdogConfigured() ? true : false
-	atomicState.isSchMotConfigured = 		isSchMotConfigured() ? true : false
+	atomicState.isNestModesConfigured =		isNestModesConfigured() ? true : false
+	atomicState.isWatchdogConfigured =		isWatchdogConfigured() ? true : false
+	atomicState.isSchMotConfigured =		isSchMotConfigured() ? true : false
 
-	atomicState.isLeakWatConfigured = 		isLeakWatConfigured() ? true : false
-	atomicState.isConWatConfigured = 		isConWatConfigured() ? true : false
-	atomicState.isExtTmpConfigured = 		isExtTmpConfigured() ? true : false
+	atomicState.isLeakWatConfigured =		isLeakWatConfigured() ? true : false
+	atomicState.isConWatConfigured =		isConWatConfigured() ? true : false
+	atomicState.isExtTmpConfigured =		isExtTmpConfigured() ? true : false
 	atomicState.isRemSenConfigured =		isRemSenConfigured() ? true : false
-	atomicState.isTstatSchedConfigured = 	isTstatSchedConfigured() ? true : false
-	atomicState.isFanCtrlConfigured = 		isFanCtrlConfigured() ? true : false
-	atomicState.isFanCircConfigured = 		isFanCircConfigured() ? true : false
+	atomicState.isTstatSchedConfigured =		isTstatSchedConfigured() ? true : false
+	atomicState.isFanCtrlConfigured =		isFanCtrlConfigured() ? true : false
+	atomicState.isFanCircConfigured =		isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
 }
 
@@ -7263,13 +7275,13 @@ def getAutomationsInstalled() {
 		case "schMot":
 			def tmp = [:]
 			tmp[aType] = []
-			if(isLeakWatConfigured()) 		{ tmp[aType].push("leakWat") }
-			if(isConWatConfigured()) 		{ tmp[aType].push("conWat") }
-			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
+			if(isLeakWatConfigured())		{ tmp[aType].push("leakWat") }
+			if(isConWatConfigured())		{ tmp[aType].push("conWat") }
+			if(isExtTmpConfigured())		{ tmp[aType].push("extTmp") }
 			if(isRemSenConfigured())		{ tmp[aType].push("remSen") }
-			if(isTstatSchedConfigured()) 	{ tmp[aType].push("tSched") }  // This is number of schedules active
-			if(isFanCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
-			if(isFanCircConfigured()) 		{ tmp[aType].push("fanCirc") }
+			if(isTstatSchedConfigured())		{ tmp[aType].push("tSched") }  // This is number of schedules active
+			if(isFanCtrlConfigured())		{ tmp[aType].push("fanCtrl") }
+			if(isFanCircConfigured())		{ tmp[aType].push("fanCirc") }
 			if(tmp?.size()) { list.push(tmp) }
 			break
 		case "watchDog":
@@ -7279,6 +7291,7 @@ def getAutomationsInstalled() {
 	//LogAction("getAutomationsInstalled List: $list", "debug", false)
 	return list
 }
+*/
 
 def getAutomationType() {
 	return atomicState?.automationType ?: null
@@ -7581,7 +7594,6 @@ def schMotCheck() {
 		parent?.sendExceptionData(ex, "schMotCheck", true, getAutoType())
 	}
 }
-*/
 
 def storeLastEventData(evt) {
 	if(evt) {
@@ -7662,6 +7674,7 @@ def getAverageValue(items) {
 	} else { val = item }
 	return val.toInteger()
 }
+*/
 
 def getInputToStringDesc(inpt, addSpace = null) {
 	def cnt = 0
@@ -7738,6 +7751,7 @@ private getDeviceSupportedCommands(dev) {
 	return dev?.supportedCommands.findAll { it as String }
 }
 
+/*
 def checkFanSpeedSupport(dev) {
 	def req = ["lowSpeed", "medSpeed", "highSpeed"]
 	def devCnt = 0
@@ -7749,9 +7763,10 @@ def checkFanSpeedSupport(dev) {
 	//log.debug "checkFanSpeedSupport (speed: $speed | devCnt: $devCnt)"
 	return (speed && devCnt == 3) ? true : false
 }
+*/
 
 def getTstatCapabilities(tstat, autoType, dyn = false) {
-	try {
+//	try {
 		def canCool = true
 		def canHeat = true
 		def hasFan = true
@@ -7762,10 +7777,12 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
 		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
 		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
+/*
 	} catch (ex) {
 		log.error "getTstatCapabilities Exception:", ex
 		parent?.sendExceptionData(ex, "getTstatCapabilities", true, getAutoType())
 	}
+*/
 }
 
 def getSafetyTemps(tstat, usedefault=true) {
@@ -7903,6 +7920,7 @@ def getTstatPresence(tstat) {
 	return pres
 }
 
+/*
 def setTstatMode(tstat, mode) {
 	def result = false
 	try {
@@ -7945,7 +7963,7 @@ def setMultipleTstatMode(tstats, mode) {
 	}
 	return result
 }
-
+*/
 
 /******************************************************************************
 *					Keep These Methods						  *
