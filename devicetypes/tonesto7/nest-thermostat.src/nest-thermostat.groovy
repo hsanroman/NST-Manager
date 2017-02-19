@@ -452,7 +452,7 @@ void processEvent(data) {
 			state.voiceReportPrefs = eventData?.vReportPrefs
 			autoSchedDataEvent(eventData?.autoSchedData)
 			state?.devBannerMsgData = eventData?.devBannerData ?: null
-			log.debug "bannerMsgData: ${state?.devBannerMsgData}"
+			//log.debug "bannerMsgData: ${state?.devBannerMsgData}"
 			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
@@ -762,7 +762,8 @@ def targetTempEvent(Double targetTemp) {
 def thermostatSetpointEvent(Double targetTemp) {
 	def temp = device.currentState("thermostatSetpoint")?.value.toString()
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
-	if(isStateChange(device, "thermostatSetPoint", rTargetTemp.toString())) {
+	//if(isStateChange(device, "thermostatSetPoint", rTargetTemp.toString())) {
+	if(!temp.equals(rTargetTemp.toString())) {
 		Logger("UPDATED | thermostatSetPoint Temperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
 		sendEvent(name:'thermostatSetpoint', value: rTargetTemp, unit: state?.tempUnit, descriptionText: "thermostatSetpoint Temperature is ${rTargetTemp}${tUnitStr()}", displayed: false, isStateChange: true)
 	} else { LogAction("thermostatSetpoint is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
@@ -1246,35 +1247,35 @@ void levelUpDown(tempVal, chgType = null) {
 			pauseEvent("true")
 			switch (hvacMode) {
 				case "heat":
-					Logger("Sending changeSetpoint(Temp: ${targetVal})")
 					if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
 					thermostatSetpointEvent(targetVal)
 					heatingSetpointEvent(targetVal)
 					if (!chgType) { chgType = "" }
 					scheduleChangeSetpoint()
+					Logger("Sending changeSetpoint(Temp: ${targetVal})")
 					break
 				case "cool":
-					Logger("Sending changeSetpoint(Temp: ${targetVal})")
 					if (state?.oldCool == null) { state.oldCool = curCoolpoint}
 					thermostatSetpointEvent(targetVal)
 					coolingSetpointEvent(targetVal)
 					if (!chgType) { chgType = "" }
 					scheduleChangeSetpoint()
+					Logger("Sending changeSetpoint(Temp: ${targetVal})")
 					break
 				case "auto":
 					if (chgType) {
 						switch (chgType) {
 							case "cool":
-								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								if (state?.oldCool == null) { state.oldCool = curCoolpoint}
 								coolingSetpointEvent(targetVal)
 								scheduleChangeSetpoint()
+								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								break
 							case "heat":
-								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								if (state?.oldHeat == null) { state.oldHeat = curHeatpoint}
 								heatingSetpointEvent(targetVal)
 								scheduleChangeSetpoint()
+								Logger("Sending changeSetpoint(Temp: ${targetVal})")
 								break
 							default:
 								Logger("Can not change temp while in this mode ($chgType}!!!", "warn")
@@ -1327,7 +1328,7 @@ def GetTimeDiffSeconds(lastDate) {
 
 def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
-	try {
+//	try {
 		if(strtDate) {
 			//if(strtDate?.contains("dtNow")) { return 10000 }
 			def now = new Date()
@@ -1340,9 +1341,12 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 			//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 			return diff
 		} else { return null }
+/*
 	} catch (ex) {
 		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
+		return null
 	}
+*/
 }
 // Nest does not allow temp changes in away modes
 def canChangeTemp() {
@@ -1370,7 +1374,7 @@ def canChangeTemp() {
 
 void changeSetpoint() {
 	//LogAction("changeSetpoint()... ($val)", "trace")
-	try {
+//	try {
 		if ( canChangeTemp() ) {
 
 			def md
@@ -1434,12 +1438,14 @@ void changeSetpoint() {
 			}
 		}
 		pauseEvent("false")
+/*
 	}
 	catch (ex) {
 		pauseEvent("false")
 		log.error "changeSetpoint Exception:", ex
 		exceptionDataHandler(ex.message, "changeSetpoint")
 	}
+*/
 }
 
 // Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
@@ -1448,7 +1454,7 @@ void setHeatingSetpoint(temp, manChg=false) {
 }
 
 void setHeatingSetpoint(Double reqtemp, manChg=false) {
-	try {
+//	try {
 		LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
 		def tempUnit = state?.tempUnit
@@ -1507,11 +1513,13 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 		if(result) {
 			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 		}
+/*
 	}
 	catch (ex) {
 		log.error "setHeatingSetpoint Exception:", ex
 		exceptionDataHandler(ex.message, "setHeatingSetpoint")
 	}
+*/
 }
 
 void setCoolingSetpoint(temp, manChg=false) {
@@ -1519,7 +1527,7 @@ void setCoolingSetpoint(temp, manChg=false) {
 }
 
 void setCoolingSetpoint(Double reqtemp, manChg=false) {
-	try {
+//	try {
 		LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
 		def hvacMode = getHvacMode()
 		def temp = 0.0
@@ -1579,18 +1587,20 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 		if(result) {
 			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 		}
+/*
 	}
 	catch (ex) {
 		log.error "setCoolingSetpoint Exception:", ex
 		exceptionDataHandler(ex.message, "setCoolingSetpoint")
 	}
+*/
 }
 
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
 void setPresence() {
-	try {
+//	try {
 		LogAction("setPresence()...", "trace")
 		def pres = getNestPresence()
 		LogAction("Current Nest Presence: ${pres}", "trace")
@@ -1600,57 +1610,67 @@ void setPresence() {
 		else if (pres == "home") {
 			if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
 		}
+/*
 	}
 	catch (ex) {
 		log.error "setPresence Exception:", ex
 		exceptionDataHandler(ex.message, "setPresence")
 	}
+*/
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
 void away() {
-	try {
+//	try {
 		LogAction("away()...", "trace")
 		setAway()
+/*
 	}
 	catch (ex) {
 		log.error "away Exception:", ex
 		exceptionDataHandler(ex.message, "away")
 	}
+*/
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
 void present() {
-	try {
+//	try {
 		LogAction("present()...", "trace")
 		setHome()
+/*
 	}
 	catch (ex) {
 		log.error "present Exception:", ex
 		exceptionDataHandler(ex.message, "present")
 	}
+*/
 }
 
 def setAway() {
-	try {
+//	try {
 		LogAction("setAway()...", "trace")
 		if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
+/*
 	}
 	catch (ex) {
 		log.error "setAway Exception:", ex
 		exceptionDataHandler(ex.message, "setAway")
 	}
+*/
 }
 
 def setHome() {
-	try {
+//	try {
 		LogAction("setHome()...", "trace")
 		if (parent.setStructureAway(this, "false", virtType()) ) { presenceEvent("home") }
+/*
 	}
 	catch (ex) {
 		log.error "setHome Exception:", ex
 		exceptionDataHandler(ex.message, "setHome")
 	}
+*/
 }
 
 /************************************************************************************************
@@ -1669,7 +1689,7 @@ def getHvacModes() {
 }
 
 def changeMode() {
-	try {
+//	try {
 		//LogAction("changeMode..")
 		def currentMode = getHvacMode()
 		def lastTriedMode = currentMode ?: "off"
@@ -1678,15 +1698,17 @@ def changeMode() {
 		def nextMode = next(lastTriedMode)
 		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
 		setHvacMode(nextMode)
+/*
 	}
 	catch (ex) {
 		log.error "changeMode Exception:", ex
 		exceptionDataHandler(ex.message, "changeMode")
 	}
+*/
 }
 
 def setHvacMode(nextMode) {
-	try {
+//	try {
 		LogAction("setHvacMode(${nextMode})")
 		if (nextMode in getHvacModes()) {
 			state.lastTriedMode = nextMode
@@ -1694,15 +1716,17 @@ def setHvacMode(nextMode) {
 		} else {
 			Logger("Invalid Mode '$nextMode'")
 		}
+/*
 	}
 	catch (ex) {
 		log.error "setHvacMode Exception:", ex
 		exceptionDataHandler(ex.message, "setHvacMode")
 	}
+*/
 }
 
 def doChangeMode() {
-	try {
+//	try {
 		def currentMode = device.currentState("nestThermostatMode")?.value
 		LogAction("doChangeMode()  currentMode:  ${currentMode}")
 		def errflag = true
@@ -1740,11 +1764,13 @@ def doChangeMode() {
 			Logger("doChangeMode call to change mode failed: ${currentMode}", "warn")
 			refresh()
 		}
+/*
 	}
 	catch (ex) {
 		log.error "doChangeMode Exception:", ex
 		exceptionDataHandler(ex.message, "doChangeMode")
 	}
+*/
 }
 
 void off(manChg=false) {
