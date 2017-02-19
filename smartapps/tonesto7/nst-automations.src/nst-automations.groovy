@@ -249,7 +249,7 @@ def fixState() {
 	return result
 }
 
-void finishFixState() {
+void finishFixState(migrate=false) {
 	LogAction("finishFixState", "info", false)
 	if(!parent) {
 /*
@@ -302,7 +302,7 @@ void finishFixState() {
 		}
 */
 	} else {
-		if(atomicState?.resetAllData) {
+		if(atomicState?.resetAllData || migrate) {
 			def tstat = settings?.schMotTstat
 			if(tstat) {
 LogAction("finishFixState found tstat", "info", true)
@@ -521,6 +521,9 @@ def createAutoBackupJson() {
 }
 
 def backupConfigToFirebase() {
+	unschedule()
+	unsubscribe()
+	uninstAutomationApp()			// Cleanup any parent state this child owns
 	def data = createAutoBackupJson()
 	return parent?.sendAutomationBackupData(data, app.id)
 }
@@ -672,11 +675,11 @@ def initAutoApp() {
 def uninstAutomationApp() {
 	//LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
-	def migrate = parent?.migrationInProgress()
+	//def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
 		def myID = getMyLockId()
-		//if(schMotTstat && myID && parent) {
-		if(schMotTstat && myID && parent && !migrate) {
+		if(schMotTstat && myID && parent) {
+		//if(schMotTstat && myID && parent && !migrate) {
 			if(parent?.addRemoveVthermostat(schMotTstat.deviceNetworkId, false, myID)) {
 				LogAction("uninstAutomationApp: cleanup virtual thermostat", "debug", true)
 			}
