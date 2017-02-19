@@ -2852,7 +2852,7 @@ def extTmpTempCheck(cTimeOut = false) {
 								rmsg = "extTmpTempCheck: Restoring '${extTmpTstat?.label}' to '${strCapitalize(lastMode)}' mode: "
 								def needAlarm = false
 								if(!safetyOk) {
-									rmsg += "External Temp Safefy Temps reached"
+									rmsg += "External Temp Safety Temps reached"
 									needAlarm = true
 								} else if(!schedOk) {
 									rmsg += "the schedule does not allow automation control"
@@ -3122,7 +3122,7 @@ def conWatCheck(cTimeOut = false) {
 								rmsg = "Restoring '${conWatTstat?.label}' to '${strCapitalize(lastMode)}' mode: "
 								def needAlarm = false
 								if(!safetyOk) {
-									rmsg += "Global Safefy Values reached"
+									rmsg += "Global Safety Values reached"
 									needAlarm = true
 								} else if(timeOut) {
 									rmsg += "(${getEnumValue(longTimeSecEnum(), conWatOffTimeout)}) Timeout reached"
@@ -3364,7 +3364,7 @@ def leakWatCheck() {
 								rmsg = "Restoring '${leakWatTstat?.label}' to '${strCapitalize(lastMode)}' mode: "
 								def needAlarm = false
 								if(!safetyOk) {
-									rmsg += "External Temp Safefy Temps reached"
+									rmsg += "External Temp Safety Temps reached"
 									needAlarm = true
 								} else {
 									rmsg += "ALL leak sensors 'Dry' for (${getEnumValue(longTimeSecEnum(), leakWatOnDelay)})"
@@ -4459,7 +4459,7 @@ def schMotModePage() {
 				str += (atomicState?.schMotTstatHasFan) ? "\n• FanMode: (${strCapitalize(tstat?.currentThermostatFanMode)})" : "\n• No Fan on HVAC system"
 				str += "\n• Presence: (${strCapitalize(getTstatPresence(tstat))})"
 				def safetyTemps = getSafetyTemps(tstat)
-					str +=  safetyTemps ? "\n• Safefy Temps:\n  └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
+					str +=  safetyTemps ? "\n• Safety Temps:\n  └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
 					str +=  "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
 				paragraph "${str}", title: "${tstat.displayName} Zone Status", state: (str != "" ? "complete" : null), image: getAppImg("info_icon2.png")
 
