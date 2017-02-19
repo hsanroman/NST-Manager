@@ -2021,6 +2021,7 @@ def isAutoAppInst() {
 def getInstAutoTypesDesc() {
 	def dat = ["nestMode":0,"watchDog":0, "disabled":0, "schMot":["tSched":0, "remSen":0, "fanCtrl":0, "fanCirc":0, "conWat":0, "extTmp":0, "leakWat":0]]
 	def disItems = []
+	def nItems = [:]
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
 		def ver
@@ -2048,7 +2049,6 @@ def getInstAutoTypesDesc() {
 					break
 				case "schMot":
 					def ai = a?.getAutomationsInstalled()
-					def nItems = [:]
 					if(ai) {
 						ai?.each { aut ->
 							aut?.each { it2 ->
