@@ -1924,7 +1924,7 @@ def initialize() {
 
 	if(atomicState?.resetAllData || settings?.resetAllData) {
 		if(fixState()) { return }	// runIn of fixState will call initAutoApp() or initManagerApp()
-		settingUpdate("resetAllData", "false", "bool")
+		if (!parent) { settingUpdate("resetAllData", "false", "bool") }
 	}
 	if(parent) {
 		runIn(6, "initAutoApp", [overwrite: true])
@@ -2247,7 +2247,7 @@ def checkMigrationRequired() {
 	else if(atomicState?.installData?.usingNewAutoFile == true) { return false }
 	if(allowMigration()) {
 		if((versionStr2Int(appVersion()) >= 454 && !atomicState?.autoMigrationComplete == true)) {
-			LogAction("checkIfSwupdated: Scheduled Migration Process to New Automation File...(5 seconds)", "info", true)
+			LogAction("checkMigrationRequired: Scheduled Migration Process to New Automation File...(5 seconds)", "info", true)
 			//atomicState?.migrationInProgress == true
 			runIn(5, "doAutoMigrationProcess", [overwrite: true])
 			return true
@@ -2371,7 +2371,7 @@ void doAutoMigrationProcess() {
 		cApps?.each { ca ->
 			if(backupAutomation(ca)) {
 				LogAction("backed up ${ca?.label}", "debug", true)
-			} else { log.debug "skipping backup of the new style automation" }
+			} else { LogAction("skipping backup of the new style automation ${ca.label}", "debug", true) }
 		}
 		runIn(15, "processAutoRestore", [overwrite:true])
 		LogAction("Scheduled restore process for (15 seconds)...", "info", true)
@@ -2461,8 +2461,6 @@ def callRestoreState(child, restId) {
 			newData?.value?.stateData?.each { sKey ->
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
-			//child?.settingUpdate("restoreCompleted", true, "bool")
-			child?.finishFixState(true)		// Let child finish cleaning its state
 			return true
 		} else {
 			LogAction("Backup Data not found: ${child.label}   RestoreID: ${restId}", "error", true)
@@ -2832,7 +2830,7 @@ def processResponse(resp, data) {
 			if(resp?.hasError()) {
 				def rCode = resp?.getStatus() ?: null
 				def errJson = resp?.getErrorJson() ?: null
-				log.debug "rCode: $rCode | errJson: $errJson"
+				//log.debug "rCode: $rCode | errJson: $errJson"
 				apiRespHandler(rCode, errJson, "processResponse($type)")
 			}
 			apiIssueEvent(true)
@@ -3931,7 +3929,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				apiIssueEvent(true)
 				atomicState?.lastCmdSentStatus = "failed"
 				result = false
-				apiRespHandler(resp?.status, resp?.data, "nestResponse")
+				apiRespHandler(resp?.status, resp?.data, "procNestApiCmd")
 			}
 		}
 	} catch (ex) {
@@ -3939,7 +3937,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 		atomicState?.lastCmdSentStatus = "failed"
 		cmdProcState(false)
 		if (ex instanceof groovyx.net.http.HttpResponseException) {
-			apiRespHandler(ex?.response?.status, ex?.response?.data, "nestResponse")
+			apiRespHandler(ex?.response?.status, ex?.response?.data, "procNestApiCmd")
 		} else {
 			log.error "procNestApiCmd Exception: ($type | $obj:$objVal)", ex
 			sendExceptionData(ex, "procNestApiCmd")
@@ -3949,7 +3947,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 }
 
 def apiRespHandler(code, errJson, methodName) {
-	log.warn "[$methodName] | Status: (${code}) | Error Message: ${errJson}"
+	LogAction("[$methodName] | Status: (${code}) | Error Message: ${errJson}", "warn", true)
 	if (!(code?.toInteger() in [200, 307])) {
 		def result = ""
 		def errMsg = errJson?.message != null ? errJson?.message : null
@@ -5624,13 +5622,14 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!parent) {
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete" ]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete", "vThermostats" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
 			unschedule()
 			unsubscribe()
 			atomicState.pollingOn = false
+			atomicState?.pollBlocked = true
 			result = true
 		} else if(atomicState?.resetAllData && !resetAllData) {
 			LogAction("fixState: resetting ALL toggle", "info", true)
@@ -7102,10 +7101,12 @@ def automationNestModeEnabled(val) {
 }
 
 def initAutoApp() {
+/*
 	if (settings["automationTypeFlag"] && settings["restoreCompleted"] != true) {
 		log.debug "automationType: ${settings?.automationTypeFlag}"
 		parent?.callRestoreState(app, settings?.restoreId?.toString())
 	}
+*/
 
 	unschedule()
 	unsubscribe()
