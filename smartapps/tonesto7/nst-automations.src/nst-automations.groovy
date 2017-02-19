@@ -214,7 +214,7 @@ def fixState() {
 	if(!parent) {
 /*
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive", "resetAllData", "pollingOn", "apiCommandCnt"]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "resetAllData", "pollingOn", "apiCommandCnt"]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -230,6 +230,7 @@ def fixState() {
 	} else {
 		if(!atomicState?.resetAllData && parent?.settings?.resetAllData) { // automation cleanup called from update() -> initAutoApp()
 			def data = getState()?.findAll { !(it?.key in [ "automationType", "disableAutomation", "oldremSenTstat", "leakWatRestoreMode", "conWatRestoreMode", "extTmpRestoreMode", "extTmpTstatOffRequested", "conWatTstatOffRequested", "leakWatTstatOffRequested", "resetAllData", "extTmpLastDesiredTemp", "restoreId", "restoredFromBackup", "restoreCompleted", "automationTypeFlag", "newAutomationFile", "installData" ]) }
+//  "watchDogAlarmActive", "extTmpAlarmActive", "conWatAlarmActive", "leakWatAlarmActive",
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -321,7 +322,7 @@ LogAction("finishFixState found remote sensor configured", "info", true)
 					}
 				}
 			}
-			initAutoApp()
+			if(!migrate) { initAutoApp() }
 			//updated()
 		}
 	}
@@ -556,6 +557,7 @@ def initAutoApp() {
 	else if (restoreId != null && restoreComplete == false) {
 		LogAction("Restored AutomationType: (${settings?.automationTypeFlag})", "info", true)
 		if(parent?.callRestoreState(app, restoreId)) {
+			finishFixState(true)
 			parent?.postChildRestore(restoreId)
 			if(parent?.keepBackups() != true) { parent?.removeAutomationBackupData(restoreId) }
 			settingUpdate("restoreCompleted", true, "bool")
@@ -4426,7 +4428,7 @@ def schMotModePage() {
 		def tempScaleStr = "°${tempScale}"
 		section("Configure Thermostat") {
 			input name: "schMotTstat", type: "capability.thermostat", title: "Select Thermostat?", multiple: false, submitOnChange: true, required: true, image: getAppImg("thermostat_icon.png")
-			log.debug "schMotTstat: ${schMotTstat}"
+			//log.debug "schMotTstat: ${schMotTstat}"
 			def tstat = settings?.schMotTstat
 			def tstatMir = settings?.schMotTstatMir
 			if(tstat) {
