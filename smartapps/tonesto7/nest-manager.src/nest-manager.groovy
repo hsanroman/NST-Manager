@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.6.0" }
-def appVerDate() { "2-19-2017" }
+def appVerDate() { "2-20-2017" }
 
 preferences {
 	//startPage
@@ -2537,7 +2537,7 @@ def poll(force = false, type = null) {
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
 		//if(pollTime < 60 || pollStrTime < 60) {
-		if(pollTime < 60 && inReview()) {
+		if(pollTime < 60 && inReview() && !atomicState?.apiRateLimited) {
 			if(atomicState?.pollTock) {
 				atomicState.pollTock = false
 				runIn(30, "pollFollow", [overwrite: true])
@@ -2646,7 +2646,7 @@ def getApiData(type = null) {
 	//LogTrace("getApiData($type)")
 	LogAction("getApiData($type)", "info", false)
 	def result = false
-	if(!type) { return result }
+	if(!type || !atomicState?.authToken) { return result }
 
 	def tPath = (type == "str") ? "/structures" : ((type == "dev") ? "/devices" : "/")
 	try {
@@ -2750,7 +2750,7 @@ def getApiData(type = null) {
 def queueGetApiData(type = null, newUrl = null) {
 	LogTrace("queueGetApiData($type,$newUrl)")
 	def result = false
-	if(!type) { return result }
+	if(!type || !atomicState?.authToken) { return result }
 
 	def tPath = (type == "str") ? "/structures" : ((type == "dev") ? "/devices" : "/")
 	try {
@@ -3817,6 +3817,8 @@ def finishWorkQ(cmd, result) {
 def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false) {
 	LogTrace("queueProcNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, qnum: ${qnum},  isRedirUri: ${redir}")
 	def result = false
+	if(!atomicState?.authToken) { return result }
+
 	try {
 		def urlPath = "/${type}/${typeId}"
 		def data = new JsonBuilder("${obj}":objVal)
@@ -3903,6 +3905,8 @@ def nestResponse(resp, data) {
 def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 	LogTrace("procNestApiCmd: typeId: ${typeId}, type: ${type}, obj: ${obj}, objVal: ${objVal}, qnum: ${qnum},  isRedirUri: ${redir}")
 	def result = false
+	if(!atomicState?.authToken) { return result }
+
 	try {
 		def urlPath = redir ? "" : "/${type}/${typeId}"
 		def data = new JsonBuilder("${obj}":objVal)
@@ -3975,9 +3979,11 @@ def apiRespHandler(code, errJson, methodName) {
 				break
 			case 401:
 				result =  !errMsg ? "Authentication ERROR, Please try refreshing your login under Authentication settings..." : errMsg
+				revokeNestToken()
 				break
 			case 403:
 				result =  !errMsg ? "Forbidden: Your Login Credentials are Invalid..." : errMsg
+				revokeNestToken()
 				break
 			case 429:
 				result =  !errMsg ? "Requests are currently being blocked because of API Rate Limiting..." : errMsg
