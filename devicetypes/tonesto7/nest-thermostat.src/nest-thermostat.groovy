@@ -3164,7 +3164,6 @@ def getGraphHTML() {
 						// Optional parameters
 						direction: 'horizontal',
 				    	loop: true,
-						//loopedSlides: 4,
                         effect: 'coverflow',
                         coverflow: {
 						  rotate: 50,
@@ -3173,12 +3172,6 @@ def getGraphHTML() {
 						  modifier: 1,
 						  slideShadows : true
 						},
-						// onClick: (swiper, event) => {
-					    //     let element = event.target;
-					    //     //specific element that was clicked i.e.: p or img tag
-						// 	swiper.slideNext()
-						// 	console.log("next slide...")
-					    // },
 						onTap: (swiper, event) => {
 					        let element = event.target;
 					        //specific element that was clicked i.e.: p or img tag
@@ -3197,20 +3190,17 @@ def getGraphHTML() {
 						paginationClickable: true
 					})
 
-					// console.log(window.location.href)
 					 function reloadTest() {
 						var url = "https://"
 					 	url += window.location.host.toString()
 						url += "/api/devices/${device?.getId()}/graphHTML"
-						console.log("url: " + url)
-						document.getElementById("myspan2").textContent = "URL: " + url.toString();
 					 	window.location = url;
-						//window.location.reload(true)
 					 }
 				</script>
-				<p id="myspan2"/>
-				<div style="text-align: center; position: relative;">
-					<input class="pageFooterBtn" type="button" value="Reload Test" onclick="reloadTest()">
+				<div class="pageFooterBtn">
+				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTest()">
+					  <span>&#10227;</span> Refresh
+				    </button>
 				</div>
 			</body>
 		</html>

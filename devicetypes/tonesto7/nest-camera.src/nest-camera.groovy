@@ -145,7 +145,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 9, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 7, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
@@ -259,6 +259,8 @@ def processEvent() {
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
 
+			state?.devBannerMsgData = eventData?.devBannerData ?: null
+			log.debug "bannerMsgData: ${state?.devBannerMsgData}"
 			publicShareUrlEvent(results?.public_share_url)
 			onlineStatusEvent(results?.is_online?.toString())
 			isStreamingEvent(results?.is_streaming)
@@ -1048,6 +1050,8 @@ def getCamHtml() {
 		def pubVidUrl = state?.public_share_url
 		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml() : hideCamHtml()
 
+		def devBrdCastData = state?.brdcastData ?: null
+
 		def mainHtml = """
 		<!DOCTYPE html>
 		<html>
@@ -1059,116 +1063,139 @@ def getCamHtml() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet" href="${getCssData()}"/>
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css", "text", "css")}" />
 
-				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
-				<script type="text/javascript">
-					${getCamBtnJsData()}
-				</script>
-				<style>
-					.vex.vex-theme-top .vex-content {
-						width: 100%;
-						padding: 3px;
-					}
-				</style>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js", "text", "javascript")}"></script>
 			</head>
 			<body>
 				${clientBl}
 				${updateAvail}
-				<br></br>
-				<table>
-				  <col width="45%">
-				  <col width="45%">
-				  <tbody>
-					<tr>
-					  <td><a class="event-data button red">View\nLast Event</a></td>
-					  <td><a class="other-info button">Show\nDevice Info</a></td>
-					</tr>
-				  </tbody>
-				</table>
-				<br></br>
-				<script>
-					\$('.event-data').click(function(){
-						vex.dialog.alert({ unsafeMessage: `
-							${camHtml}
-						`})
-					});
+				<div class="swiper-container">
+					<!-- Additional required wrapper -->
+					<div class="swiper-wrapper">
+						<!-- Slides -->
 
-					\$('.other-info').click(function(){
-						vex.dialog.alert({ unsafeMessage: `
-						<table>
-						  <col width="50%">
-						  <col width="50%">
-						  <thead>
-							<th style="font-size: 16px;">Network Status</th>
-							<th style="font-size: 16px;">API Status</th>
-						  </thead>
-						  <tbody>
-							<tr>
-							  <td>${state?.onlineStatus.toString()}</td>
-							  <td>${state?.apiStatus}</td>
-							</tr>
-						  </tbody>
-						</table>
-						<table>
-						  <tr>
-							<th style="font-size: 16px;">Firmware Version</th>
-							<th style="font-size: 16px;">Debug</th>
-							<th style="font-size: 16px;">Device Type</th>
-						  </tr>
-						  <td>v${state?.softwareVer.toString()}</td>
-						  <td>${state?.debugStatus}</td>
-						  <td>${state?.devTypeVer.toString()}</td>
-						</table>
-						<table>
-						  <col width="50%">
-						  <col width="50%">
-							<thead>
-							  <th style="font-size: 16px;">Video History (Min.)</th>
-							  <th style="font-size: 16px;">Video History (Max.)</th>
-							</thead>
-							<tbody>
+						${camHtml}
+
+						<div class="swiper-slide">
+							<table>
+							  <col width="50%">
+							  <col width="50%">
+							  <thead>
+								<th style="font-size: 16px;">Network Status</th>
+								<th style="font-size: 16px;">API Status</th>
+							  </thead>
+							  <tbody>
+								<tr>
+								  <td>${state?.onlineStatus.toString()}</td>
+								  <td>${state?.apiStatus}</td>
+								</tr>
+							  </tbody>
+							</table>
+							<table>
 							  <tr>
-								<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
-								<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
+								<th style="font-size: 16px;">Firmware Version</th>
+								<th style="font-size: 16px;">Debug</th>
+								<th style="font-size: 16px;">Device Type</th>
 							  </tr>
-						  </tbody>
-						</table>
-						<table>
-						  <col width="33%">
-						  <col width="33%">
-						  <col width="33%">
-						  <thead>
-							<th style="font-size: 16px;">Public Video</th>
-							<th style="font-size: 16px;">Mic Status</th>
-						  </thead>
-						  <tbody>
-							<tr>
-							  <td>${state?.publicShareEnabled.toString()}</td>
-							  <td>${state?.audioInputEnabled.toString()}</td>
-							</tr>
-						  </tbody>
-						</table>
-						<table>
-						   <thead>
-							 <th style="font-size: 16px;">Last Online Change</th>
-							 <th style="font-size: 16px;">Data Last Received</th>
-						   </thead>
-						   <tbody>
-							 <tr>
-							   <td class="dateTimeText">${state?.lastConnection.toString()}</td>
-							   <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-							 </tr>
-						   </tbody>
-						 </table>
-					`})
-					});
+							  <td>v${state?.softwareVer.toString()}</td>
+							  <td>${state?.debugStatus}</td>
+							  <td>${state?.devTypeVer.toString()}</td>
+							</table>
+							<table>
+							  <col width="50%">
+							  <col width="50%">
+								<thead>
+								  <th style="font-size: 16px;">Video History (Min.)</th>
+								  <th style="font-size: 16px;">Video History (Max.)</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td>${getRecTimeDesc(state?.minVideoHistoryHours) ?: "Not Available"}</td>
+									<td>${getRecTimeDesc(state?.maxVideoHistoryHours) ?: "Not Available"}</td>
+								  </tr>
+							  </tbody>
+							</table>
+							<table>
+							  <col width="33%">
+							  <col width="33%">
+							  <col width="33%">
+							  <thead>
+								<th style="font-size: 16px;">Public Video</th>
+								<th style="font-size: 16px;">Mic Status</th>
+							  </thead>
+							  <tbody>
+								<tr>
+								  <td>${state?.publicShareEnabled.toString()}</td>
+								  <td>${state?.audioInputEnabled.toString()}</td>
+								</tr>
+							  </tbody>
+							</table>
+							<table>
+							   <thead>
+								 <th style="font-size: 16px;">Last Online Change</th>
+								 <th style="font-size: 16px;">Data Last Received</th>
+							   </thead>
+							   <tbody>
+								 <tr>
+								   <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+								   <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+								 </tr>
+							   </tbody>
+							 </table>
+						</div>
+					</div>
+					<!-- If we need pagination -->
+					<div class="swiper-pagination"></div>
+					<div style="text-align: center;">
+						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
+					</div>
+				</div>
+				<script>
+					var mySwiper = new Swiper ('.swiper-container', {
+						// Optional parameters
+						direction: 'horizontal',
+				    	loop: true,
+                        effect: 'coverflow',
+                        coverflow: {
+						  rotate: 50,
+						  stretch: 0,
+						  depth: 100,
+						  modifier: 1,
+						  slideShadows : true
+						},
+						onTap: (swiper, event) => {
+					        let element = event.target;
+					        //specific element that was clicked i.e.: p or img tag
+							swiper.slideNext()
+					    },
+						slidesPerView: 1,
+						spaceBetween: 30,
+						autoHeight: true,
+						iOSEdgeSwipeDetection: true,
+						parallax: true,
+						slideToClickedSlide: true,
+
+					    pagination: '.swiper-pagination',
+						paginationHide: false,
+						paginationClickable: true
+					})
+					 function reloadTest() {
+						var url = "https://"
+					 	url += window.location.host.toString()
+						url += "/api/devices/${device?.getId()}/getCamHTML"
+						console.log("url: " + url)
+					 	window.location = url;
+					 }
 				</script>
+				<div class="pageFooterBtn">
+				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTest()">
+					  <span>&#10227;</span> Refresh
+				    </button>
+				</div>
 			</body>
 		</html>
 		"""
@@ -1201,12 +1228,12 @@ def showCamHtml() {
 	def lastEvtBtn = (!state?.isStreaming || !animationUrl) ? "" : """<a href="#" onclick="toggle_visibility('animation');" class="button red">Last Event</a>"""
 
 	def data = """
-		<div class="hideable" id="still">
+		<div class="swiper-slide">
 			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Image</h4>
 			<img src="${pubSnapUrl}" width="100%"/>
 			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
 		</div>
-		<div class="hideable" id="animation" style="display:none">
+		<div class="swiper-slide">
 			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
 			<img src="${animationUrl}" width="100%"/>
 			<table>
@@ -1231,19 +1258,6 @@ def showCamHtml() {
 				  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
 				  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
 				  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
-				</tr>
-			  </tbody>
-			</table>
-		</div>
-		<br></br>
-		<div class="centerText">
-			<table>
-			  <col width="48%">
-			  <col width="48%">
-			  <tbody>
-				<tr>
-				  <td>${imgBtn}</td>
-				  <td>${lastEvtBtn}</td>
 				</tr>
 			  </tbody>
 			</table>
