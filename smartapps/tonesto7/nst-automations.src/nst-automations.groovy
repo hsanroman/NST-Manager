@@ -105,7 +105,7 @@ def installed() {
 }
 
 def updated() {
-	LogAction("${app.label} Updated..."/*with settings: ${settings}*/, "debug", true)
+	LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	initialize()
 	sendNotificationEvent("${appName()} has updated settings")
 	atomicState?.lastUpdatedDt = getDtNow()
@@ -677,11 +677,9 @@ def initAutoApp() {
 def uninstAutomationApp() {
 	//LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
-	//def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
 		def myID = getMyLockId()
 		if(schMotTstat && myID && parent) {
-		//if(schMotTstat && myID && parent && !migrate) {
 			if(parent?.addRemoveVthermostat(schMotTstat.deviceNetworkId, false, myID)) {
 				LogAction("uninstAutomationApp: cleanup virtual thermostat", "debug", true)
 			}
@@ -2414,6 +2412,17 @@ def isHumCtrlConfigured() {
 	return ((settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) && settings?.humCtrlHumidity && settings?.humCtrlSwitches) ? true : false
 }
 
+def getDeviceVarAvg(items, var) {
+	def tmpAvg = []
+	def tempVal = 0
+	if(!items) { return tempVal }
+	else {
+		tmpAvg = items*."${var}"
+		if(tmpAvg && tmpAvg?.size() > 0) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
+	}
+	return tempVal.toDouble()
+}
+
 def humCtrlSwitchDesc(showOpt = true) {
 	if(settings?.humCtrlSwitches) {
 		def cCnt = settings?.humCtrlSwitches?.size() ?: 0
@@ -2442,11 +2451,11 @@ def humCtrlHumidityDesc() {
 		def cCnt = settings?.humCtrlHumidity?.size() ?: 0
 		def str = ""
 		def cnt = 0
-		str += "Sensor Status:"
+		str += "\nSensor Status (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")})\n│"
 		settings?.humCtrlHumidity?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentHumidity) ?: "Not Set"
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${val})"
 		}
 		return str
 	}
@@ -2496,7 +2505,8 @@ def humCtrlCheck() {
 		def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 		def curTstatOperState = tstat?.currentThermostatOperatingState.toString()
 		def curTstatFanMode = tstat?.currentThermostatFanMode.toString()
-		def curHum = humCtrlHumidity?.currentHumidity?.toInteger()
+		//def curHum = humCtrlHumidity?.currentHumidity
+		def curHum = getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")
 		def curExtTemp = getHumCtrlTemperature()
 		def maxHum = getMaxHumidity(curExtTemp, curHum)
 		def schedOk = humCtrlScheduleOk()
@@ -2504,7 +2514,7 @@ def humCtrlCheck() {
 		LogAction("humCtrlCheck: ( Humidity: (${curHum}) | External Temp: (${curExtTemp}) | Max Humidity: (${maxHum}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) )", "info", true)
 
 		if(atomicState?.haveRunHumidifier == null) { atomicState.haveRunHumidifier = false }
-		def savedHaveRun = atomicState.haveRunHumidifier
+		def savedHaveRun = atomicState?.haveRunHumidifier
 
 		def humOn = false
 
@@ -4636,9 +4646,9 @@ def schMotModePage() {
 				input (name: "schMotHumidityControl", type: "bool", title: "Turn Humidifier On / Off?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("external_temp_icon.png"))
 				if(settings?.schMotHumidityControl) {
 					def humDesc = ""
-					humDesc += (settings?.humCtrlSwitches && humCtrlSwitchDesc()) ? "${humCtrlSwitchDesc()}" : ""
-					humDesc += (settings?.humCtrlHumidity && humCtrlHumidityDesc()) ? "${humCtrlHumidityDesc()}" : ""
-					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "Settings:" : ""
+					humDesc += (settings?.humCtrlSwitches) ? "${humCtrlSwitchDesc()}" : ""
+					humDesc += (settings?.humCtrlHumidity) ? "${humCtrlHumidityDesc()}" : ""
+					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "\nSettings:" : ""
 					humDesc += (!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) ? "\n • Sensor: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? "\n • Weather: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?."${humCtrlPrefix()}Modes" || settings?."${humCtrlPrefix()}Days" || (settings?."${humCtrlPrefix()}StartTime" && settings?."${humCtrlPrefix()}StopTime")) ?
@@ -4761,6 +4771,7 @@ def tstatConfigAutoPage(params) {
 		case "humCtrl":
 			pName = humCtrlPrefix()
 			pTitle = "Humidifier Automation"
+			break
 		case "extTmp":
 			pName = extTmpPrefix()
 			pTitle = "Thermostat/External Temps Automation"
@@ -5029,8 +5040,20 @@ def tstatConfigAutoPage(params) {
 // TODO needs new icon
 					input "humCtrlSwitches", "capability.switch", title: "Select Switches?", required: reqinp, submitOnChange: true, multiple: true,
 							image: getAppImg("fan_ventilation_icon.png")
+
+/*
+this does not work...
+					if(atomicState?.oldhumCtrlSwitches != settings?.humCtrlSwitches) {
+						atomicState.haveRunHumidifier = false
+						if(settings?.humCtrlSwitches) { humCtrlSwitches*.off() }
+						if(atomicState?.oldhumCtrlSwitches) { atomicState?.oldhumCtrlSwitches*.off() }
+						atomicState?.oldhumCtrlSwitches = settings?.humCtrlSwitches
+						log.warn "found different oldhum vs. humctrlSwitches"
+					}
+*/
 					if(settings?.humCtrlSwitches) {
-						paragraph "${humCtrlSwitchDesc(false)}", state: humCtrlSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+						def t0 = humCtrlSwitchDesc(false)
+						paragraph "${t0}", state: t0 ? "complete" : null, image: getAppImg("blank_icon.png")
 					}
 				}
 				if(settings?.humCtrlSwitches) {
@@ -5046,7 +5069,7 @@ def tstatConfigAutoPage(params) {
 					section("Indoor Humidity Measurement") {
 						def req = !settings?.humCtrlHumidity ? true : false
 // TODO need new icon
-						input name: "humCtrlHumidity", type: "capability.relativeHumidityMeasurement", title: "Which Humidity Sensor(s)?", multiple: false, submitOnChange: true, required: req,
+						input name: "humCtrlHumidity", type: "capability.relativeHumidityMeasurement", title: "Which Humidity Sensor(s)?", multiple: true, submitOnChange: true, required: req,
 								image: getAppImg("contact_icon.png")
 						if(settings?.humCtrlHumidity) {
 							def str = ""
@@ -6809,14 +6832,27 @@ def alarmActionsEnum() {
 
 def getEnumValue(enumName, inputName) {
 	def result = "unknown"
+	def resultList = []
+	def inputIsList = getObjType(inputName) == "List" ? true : false
 	if(enumName) {
 		enumName?.each { item ->
+			if(inputIsList) {
+				inputName?.each { inp ->
+					if(item?.key.toString() == inp?.toString()) {
+						resultList.push(item?.value)
+					}
+				}
+			} else
 			if(item?.key.toString() == inputName?.toString()) {
 				result = item?.value
 			}
 		}
 	}
-	return result
+	if(inputIsList) {
+		return resultList
+	} else {
+		return result
+	}
 }
 
 def getSunTimeState() {
