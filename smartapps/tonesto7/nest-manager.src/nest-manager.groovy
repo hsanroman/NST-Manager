@@ -6864,7 +6864,7 @@ def sendInstallSlackNotif() {
 	sendDataToSlack(json, "", "post", "New Client Slack Notif")
 }
 
-def getDbExceptPath() { return atomicState?.appData?.database?.exceptionPath ?: "newexceptionData" }
+def getDbExceptPath() { return atomicState?.appData?.database?.newexceptionPath ?: "newexceptionData" }
 def getDbRemDiagPath() { return atomicState?.appData?.database?.remoteDiagPath ?: "remoteDiagLogs" }
 
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
