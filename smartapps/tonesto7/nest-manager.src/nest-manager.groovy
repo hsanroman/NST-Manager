@@ -4434,8 +4434,8 @@ def clientBlacklisted() {
 			if(curBlState != isBL) {
 				atomicState?.clientBlacklisted = isBL
 			}
-		}
-	}
+		} else { atomicState?.clientBlacklisted = false }
+	} else { atomicState?.clientBlacklisted = false }
 }
 
 def broadcastCheck() {
