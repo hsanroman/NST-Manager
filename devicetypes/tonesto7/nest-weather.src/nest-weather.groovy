@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.2" }
+def devVer() { return "4.5.3" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -1146,27 +1146,6 @@ def getSunriseSunset() {
 	}
 }
 
-
-def forecastDay(day) {
-	if(!state?.curForecast) { return }
-	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
-	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
-	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
-	def forecastTxt = ""
-
-	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
-	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
- 	def forecastImage = """<div class=\"centerText\"><img src="${foreImgB64}" style="width:64px;height:64px;"></div>"""
-	if ( wantMetric() ) {
-		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
-	} else {
-		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}</p>"
-	}
-	def modalClose = "' }); }); </script>"
-
-	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
-}
-
 String getDataString(Integer seriesIndex) {
 	def dataString = ""
 	def dataTable = []
@@ -1437,15 +1416,70 @@ def getMaxTemp() {
 	return list?.max()
 }
 
+def getTempUnitStr() {
+	def tempStr = "°F"
+	if ( wantMetric() ) {
+		tempStr = "°C"
+	}
+	return tempStr
+}
+
 def incHtmlLoadCnt() 		{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
 def incForecastBtnTapCnt() 	{ state?.forecastBtnTapCnt = (state?.forecastBtnTapCnt ? state?.forecastBtnTapCnt.toInteger()+1 : 1); return ""; }
 def getMetricCntData() {
 	return [weatHtmlLoadCnt:(state?.htmlLoadCnt ?: 0)]//, forecastBtnTapCnt:(state?.forecastBtnTapCnt ?: 0)]
 }
 
+def getWeatherAlertHtml() {
+	def wAlertHtml = ""
+	def alertCnt = state?.walertCount as Integer
+	//log.debug "Weather Alert Count: ${state.walertCount}"   // count of current alerts
+
+	if(alertCnt > 0) {
+		for(int i=1; i < alertCnt.toInteger()+1; i++) {
+			if(state?."walert${i}" && state?."walertMessage${i}") {
+				wAlertHtml += """
+					<div class="redAlertBanner"><a class=\"alert-modal${i}\">${alertCnt > 1 ? "Alert ${i}: " : ""}${state?."walert${i}"}</a></div>
+					<script>
+						\$('.alert-modal${i}').click(function(){
+							vex.dialog.alert({ unsafeMessage: `
+								<h2 class="alertModalTitle">${alertCnt > 1 ? "#${i}: " : ""}${state?."walert${i}"}</h2>
+								<p>${state?."walertMessage${i}"}</p>
+							`, className: 'vex-theme-top' })
+						});
+					</script>
+				"""
+				//log.debug "Alert $i Description: ${state."walert${i}"}"   // description  1,2,3
+				//log.debug "Alert $i Message: ${state."walertMessage${i}"}"  // full message
+			}
+		}
+	}
+	return wAlertHtml
+}
+
+def forecastDay(day) {
+	if(!state?.curForecast) { return }
+	def dayName = "<b>${state.curForecast.forecast.txt_forecast.forecastday[day].title} </b><br>"
+	def foreImgB64 = getWeatherImg(state.curForecast.forecast.txt_forecast.forecastday[day].icon_url)
+	def forecastImageLink = """<a class=\"${day}-modal\"><img src="${foreImgB64}" style="width:64px;height:64px;"></a><br>"""
+	def forecastTxt = ""
+
+	def modalHead = "<script> \$('.${day}-modal').click(function(){vex.dialog.alert({unsafeMessage: ' "
+	def modalTitle = " <h2>${state.curForecast.forecast.txt_forecast.forecastday[day].title}</h2>"
+ 	def forecastImage = """<div class=\"centerText\"><img src="${foreImgB64}" style="width:64px;height:64px;"></div>"""
+	if ( wantMetric() ) {
+		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext_metric}</p>"
+	} else {
+		forecastTxt = "<p>${state.curForecast.forecast.txt_forecast.forecastday[day].fcttext}</p>"
+	}
+	def modalClose = "' }); }); </script>"
+
+	return dayName + forecastImageLink + modalHead + modalTitle + forecastImage + forecastTxt + modalClose
+}
+
 def getWeatherHTML() {
 	try {
-		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
+		def tempStr = getTempUnitStr()
 		if(!state?.curWeather || !state?.curForecast) {
 			return hideWeatherHtml()
 		}
@@ -1454,222 +1488,135 @@ def getWeatherHTML() {
 		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
 
-		def tempStr = "°F"
-		if ( wantMetric() ) {
-			tempStr = "°C"
-		}
-
-		def hData = ""
-		if(state?.showGraphs) {
-			if (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0) {
-				def minval = getMinTemp()
-				def minstr = "minValue: ${minval},"
-
-				def maxval = getMaxTemp()
-				def maxstr = "maxValue: ${maxval},"
-
-				def differ = maxval - minval
-				//LogAction("differ ${differ}", "trace")
-				//if (differ > (maxval/4) || differ < (wantMetric() ? 7:15) ) {
-					minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
-					//if (differ < (wantMetric() ? 7:15) ) {
-					maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
-					//}
-				//}
-
-				hData = """
-						<script type="text/javascript">
-					google.charts.load('current', {packages: ['corechart']});
-					google.charts.setOnLoadCallback(drawGraph);
-					function drawGraph() {
-						var data = new google.visualization.DataTable();
-						data.addColumn('timeofday', 'time');
-						data.addColumn('number', 'Temp (Yesterday)');
-						data.addColumn('number', 'Dew (Yesterday)');
-						data.addColumn('number', 'Temp (Today)');
-						data.addColumn('number', 'Dew (Today)');
-						data.addColumn('number', 'Humidity (Yest)');
-						data.addColumn('number', 'Humidity (Today)');
-						data.addRows([
-							${getDataString(1)}
-							${getDataString(2)}
-							${getDataString(3)}
-							${getDataString(4)}
-							${getDataString(5)}
-							${getDataString(6)}
-						]);
-						var options = {
-							width: '100%',
-							height: '100%',
-							animation: {
-								duration: 1500,
-								startup: true
-							},
-							hAxis: {
-								format: 'H:mm',
-								minValue: [${getStartTime()},0,0],
-								slantedText: true,
-								slantedTextAngle: 30
-							},
-							series: {
-								0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
-								1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
-								2: {targetAxisIndex: 1, color: '#FF0000'},
-								3: {targetAxisIndex: 1, color: '#004CFF'},
-								4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
-								5: {targetAxisIndex: 0, color: '#B8B8B8'}
-							},
-							vAxes: {
-								0: {
-									title: 'Humidity (%)',
-									format: 'decimal',
-									minValue: 0,
-									maxValue: 100,
-									textStyle: {color: '#B8B8B8'},
-									titleTextStyle: {color: '#B8B8B8'}
-								},
-								1: {
-									title: 'Temperature (${tempStr})',
-									format: 'decimal',
-									${minstr}
-									${maxstr}
-									textStyle: {color: '#FF0000'},
-									titleTextStyle: {color: '#FF0000'}
-								}
-							},
-							legend: {
-								position: 'bottom',
-								maxLines: 4,
-								textStyle: {color: '#000000'}
-							},
-							chartArea: {
-								left: '12%',
-								right: '18%',
-								top: '3%',
-								bottom: '20%',
-								height: '85%',
-								width: '100%'
-							}
-						};
-						var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
-						chart.draw(data, options);
-					}
-				</script>
-				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-				<div id="chart_div" style="width: 100%; height: 225px;"></div>
-				"""
-			} else {
-				hData = """
-					<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-					<br></br>
-					<div class="centerText">
-					<p>Waiting for more data to be collected</p>
-					<p>This may take at a couple hours</p>
-					</div>
-				"""
-			}
-		}
-
-		def wAlertHtml = ""
-		def alertCnt = state?.walertCount as Integer
-		//log.debug "Weather Alert Count: ${state.walertCount}"   // count of current alerts
-
-		if(alertCnt > 0) {
-			for(int i=1; i < alertCnt.toInteger()+1; i++) {
-				if(state?."walert${i}" && state?."walertMessage${i}") {
-					wAlertHtml += """
-						<div class="redAlertBanner"><a class=\"alert-modal${i}\">${alertCnt > 1 ? "Alert ${i}: " : ""}${state?."walert${i}"}</a></div>
-						<script>
-							\$('.alert-modal${i}').click(function(){
-								vex.dialog.alert({ unsafeMessage: `
-									<h2 class="alertModalTitle">${alertCnt > 1 ? "#${i}: " : ""}${state?."walert${i}"}</h2>
-									<p>${state?."walertMessage${i}"}</p>
-								`, className: 'vex-theme-top' })
-							});
-						</script>
-					"""
-					//log.debug "Alert $i Description: ${state."walert${i}"}"   // description  1,2,3
-					//log.debug "Alert $i Message: ${state."walertMessage${i}"}"  // full message
-				}
-			}
-		}
-
 		def devBrdCastData = state?.brdcastData
 
 		def mainHtml = """
-		<!DOCTYPE html>
-		<html>
-			<head>
-				<meta http-equiv="cache-control" content="max-age=0"/>
-				<meta http-equiv="cache-control" content="no-cache"/>
-				<meta http-equiv="expires" content="0"/>
-				<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
-				<meta http-equiv="pragma" content="no-cache"/>
-				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
-			 	<link rel="stylesheet prefetch" href="${getCssData()}"/>
-				<script type="text/javascript" src="${getChartJsData()}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<meta http-equiv="cache-control" content="max-age=0"/>
+					<meta http-equiv="cache-control" content="no-cache"/>
+					<meta http-equiv="expires" content="0"/>
+					<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+					<meta http-equiv="pragma" content="no-cache"/>
+					<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
+				 	<link rel="stylesheet prefetch" href="${getCssData()}"/>
+					<script type="text/javascript" src="${getChartJsData()}"></script>
+					<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+					<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+					<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
-				<style>
-					.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
-				</style>
-			</head>
-			<body>
-				${clientBl}
-				${updateAvail}
-				<div class="container">
+					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
+					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
+					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
+					<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
 
-				${wAlertHtml}
+					<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+					<style>
+						.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
+						.swiper-container {
+						    width: 95%;
+						    min-height: 400px;
+						    padding: 10px;
+						}
+					</style>
+				</head>
+				<body>
+					${clientBl}
+					${updateAvail}
+					<div class="container">
+						${getWeatherAlertHtml()}
+						<h4>Current Weather Conditions</h4>
+						<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
+						<div class="row">
+							<div class="six columns">
+								<b>Feels Like:</b> ${getFeelslike()} <br>
+								<b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+								<b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
+								<b>Dew Point: </b>${getDewpoint()}<br>
+								<b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
+								<b>Visibility:</b> ${getVisibility()} <br>
+								<b>Lux:</b> ${getLux()}<br>
+								<b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
+								<b>Wind:</b> ${state?.windStr} <br>
+							</div>
+							<div class="six columns">
+								<img class="offset-by-two eight columns" src="${getWeatherImg(state?.curWeather?.current_observation?.icon_url)}"> <br>
+								<h2>${getTemp()}</h2>
+								<h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+							</div>
+						</div>
+						<div class="row topBorder">
+							<div class="centerText four columns">${forecastDay(0)}</div>
+							<div class="centerText four columns">${forecastDay(1)}</div>
+							<div class="centerText four columns">${forecastDay(2)}</div>
+						</div>
+						<div class="row">
+							<div class="centerText four columns">${forecastDay(3)}</div>
+							<div class="centerText four columns">${forecastDay(4)}</div>
+							<div class="centerText four columns">${forecastDay(5)}</div>
+						</div>
+						<div class="row">
+							<div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
+							<div class="centerText four columns">${forecastDay(7)}</div>
+						</div>
+						<p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
 
-				<h4>Current Weather Conditions</h4>
-				<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
-					<div class="row">
-						<div class="six columns">
-							<b>Feels Like:</b> ${getFeelslike()} <br>
-							<b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
-							<b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
-							<b>Dew Point: </b>${getDewpoint()}<br>
-							<b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
-							<b>Visibility:</b> ${getVisibility()} <br>
-							<b>Lux:</b> ${getLux()}<br>
-							<b>Sunrise:</b> ${state?.localSunrise} <br> <b>Sunset: </b> ${state?.localSunset} <br>
-							<b>Wind:</b> ${state?.windStr} <br>
-						</div>
-						<div class="six columns">
-							<img class="offset-by-two eight columns" src="${getWeatherImg(state?.curWeather?.current_observation?.icon_url)}"> <br>
-							<h2>${getTemp()}</h2>
-							<h1 class ="offset-by-two topBorder">${state.curWeatherCond}</h1>
+						${historyGraphHtml()}
+
+						<div class="row topBorder">
+							<div class="centerText offset-by-three six columns">
+								<b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
+								<b>${state?.curWeather?.current_observation?.observation_time}</b>
+							</div>
 						</div>
 					</div>
-					<div class="row topBorder">
-						<div class="centerText four columns">${forecastDay(0)}</div>
-						<div class="centerText four columns">${forecastDay(1)}</div>
-						<div class="centerText four columns">${forecastDay(2)}</div>
+					<script>
+						// var mySwiper = new Swiper ('.swiper-container', {
+						// 	direction: 'horizontal',
+						// 	initialSlide: 0,
+						// 	lazyLoading: true,
+						// 	loop: false,
+						// 	slidesPerView: '1',
+						// 	centeredSlides: true,
+						// 	spaceBetween: 100,
+						// 	autoHeight: false,
+						// 	keyboardControl: true,
+						// 	mousewheelControl: true,
+						// 	iOSEdgeSwipeDetection: true,
+						// 	iOSEdgeSwipeThreshold: 20,
+						// 	parallax: true,
+						// 	slideToClickedSlide: true,
+						//
+						// 	effect: 'coverflow',
+						// 	coverflow: {
+						// 	  rotate: 50,
+						// 	  stretch: 0,
+						// 	  depth: 100,
+						// 	  modifier: 1,
+						// 	  slideShadows : true
+						// 	},
+						// 	onTap: function(s, e) {
+						// 		s.slideNext(false);
+						// 		if (s.clickedIndex >= s.slides.length) {
+						// 			s.slideTo(0, 400, false)
+						// 		}
+						// 	},
+						// 	pagination: '.swiper-pagination',
+						// 	paginationHide: false,
+						// 	paginationClickable: true
+						// })
+						function reloadWeatherPage() {
+							var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
+							window.location = url;
+						}
+					</script>
+					<div class="pageFooterBtn">
+					    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadWeatherPage()">
+						  <span>&#10227;</span> Refresh
+					    </button>
 					</div>
-					<div class="row">
-						<div class="centerText four columns">${forecastDay(3)}</div>
-						<div class="centerText four columns">${forecastDay(4)}</div>
-						<div class="centerText four columns">${forecastDay(5)}</div>
-					</div>
-					<div class="row">
-						<div class="centerText offset-by-two four columns">${forecastDay(6)}</div>
-						<div class="centerText four columns">${forecastDay(7)}</div>
-					</div>
-					<p style="font-size: 12px; font-weight: normal; text-align: center;">Tap Icon to View Forecast</p>
-					<div class="row topBorder">
-						<div class="centerText offset-by-three six columns">
-							<b>Station Id: ${state?.curWeather?.current_observation?.station_id}</b>
-							<b>${state?.curWeather?.current_observation?.observation_time}</b>
-						</div>
-					</div>
-					</div>
-					<br></br>
-					${hData}
+
 				</body>
 			</html>
 		"""
@@ -1679,6 +1626,115 @@ def getWeatherHTML() {
 	catch (ex) {
 		log.error "getWeatherHTML Exception:", ex
 		exceptionDataHandler(ex.message, "getWeatherHTML")
+	}
+}
+
+def historyGraphHtml() {
+	def html = ""
+	if(state?.showGraphs) {
+		if (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0) {
+			def minval = getMinTemp()
+			def minstr = "minValue: ${minval},"
+
+			def maxval = getMaxTemp()
+			def maxstr = "maxValue: ${maxval},"
+
+			def differ = maxval - minval
+			//LogAction("differ ${differ}", "trace")
+			minstr = "minValue: ${(minval - (wantMetric() ? 2:5))},"
+			maxstr = "maxValue: ${(maxval + (wantMetric() ? 2:5))},"
+
+			html = """
+			  <script type="text/javascript">
+				google.charts.load('current', {packages: ['corechart']});
+				google.charts.setOnLoadCallback(drawGraph);
+				function drawGraph() {
+					var data = new google.visualization.DataTable();
+					data.addColumn('timeofday', 'time');
+					data.addColumn('number', 'Temp (Yesterday)');
+					data.addColumn('number', 'Dew (Yesterday)');
+					data.addColumn('number', 'Temp (Today)');
+					data.addColumn('number', 'Dew (Today)');
+					data.addColumn('number', 'Humidity (Yest)');
+					data.addColumn('number', 'Humidity (Today)');
+					data.addRows([
+						${getDataString(1)}
+						${getDataString(2)}
+						${getDataString(3)}
+						${getDataString(4)}
+						${getDataString(5)}
+						${getDataString(6)}
+					]);
+					var options = {
+						width: '100%',
+						height: '100%',
+						animation: {
+							duration: 1500,
+							startup: true
+						},
+						hAxis: {
+							format: 'H:mm',
+							minValue: [${getStartTime()},0,0],
+							slantedText: true,
+							slantedTextAngle: 30
+						},
+						series: {
+							0: {targetAxisIndex: 1, color: '#FFC2C2', lineWidth: 1},
+							1: {targetAxisIndex: 1, color: '#D1DFFF', lineWidth: 1},
+							2: {targetAxisIndex: 1, color: '#FF0000'},
+							3: {targetAxisIndex: 1, color: '#004CFF'},
+							4: {targetAxisIndex: 0, color: '#D2D2D2', lineWidth: 1},
+							5: {targetAxisIndex: 0, color: '#B8B8B8'}
+						},
+						vAxes: {
+							0: {
+								title: 'Humidity (%)',
+								format: 'decimal',
+								minValue: 0,
+								maxValue: 100,
+								textStyle: {color: '#B8B8B8'},
+								titleTextStyle: {color: '#B8B8B8'}
+							},
+							1: {
+								title: 'Temperature (${tempStr})',
+								format: 'decimal',
+								${minstr}
+								${maxstr}
+								textStyle: {color: '#FF0000'},
+								titleTextStyle: {color: '#FF0000'}
+							}
+						},
+						legend: {
+							position: 'bottom',
+							maxLines: 4,
+							textStyle: {color: '#000000'}
+						},
+						chartArea: {
+							left: '12%',
+							right: '18%',
+							top: '3%',
+							bottom: '20%',
+							height: '85%',
+							width: '100%'
+						}
+					};
+					var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+					chart.draw(data, options);
+				}
+			</script>
+			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+			<div id="chart_div" style="width: 100%; height: 225px;"></div>
+			"""
+		} else {
+			html = """
+				<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+				<br></br>
+				<div class="centerText">
+				<p>Waiting for more data to be collected</p>
+				<p>This may take at a couple hours</p>
+				</div>
+			"""
+		}
 	}
 }
 
