@@ -761,8 +761,7 @@ def getAutoIcon(type) {
 				return getAppImg("leak_icon.png")
 				break
 			case "humCtrl":
-// TODO fix icon
-				return getAppImg("external_temp_icon.png")
+				return getAppImg("humidity_automation_icon.png")
 				break
 			case "extTmp":
 				return getAppImg("external_temp_icon.png")
@@ -4666,7 +4665,7 @@ def schMotModePage() {
 			}
 			section("Humidity Control:") {
 				def desc = ""
-				input (name: "schMotHumidityControl", type: "bool", title: "Turn Humidifier On / Off?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("external_temp_icon.png"))
+				input (name: "schMotHumidityControl", type: "bool", title: "Turn Humidifier On / Off?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("humidity_automation_icon.png"))
 				if(settings?.schMotHumidityControl) {
 					def humDesc = ""
 					humDesc += (settings?.humCtrlSwitches) ? "${humCtrlSwitchDesc()}" : ""
@@ -5099,7 +5098,7 @@ this does not work...
 						def req = !settings?.humCtrlHumidity ? true : false
 // TODO need new icon
 						input name: "humCtrlHumidity", type: "capability.relativeHumidityMeasurement", title: "Which Humidity Sensor(s)?", multiple: true, submitOnChange: true, required: req,
-								image: getAppImg("contact_icon.png")
+								image: getAppImg("humidity_icon.png")
 						if(settings?.humCtrlHumidity) {
 							def str = ""
 							str += settings?.humCtrlHumidity ? "${humCtrlHumidityDesc()}\n" : ""
@@ -5129,7 +5128,7 @@ this does not work...
 							if(settings?.humCtrlTempSensor) {
 								def str = ""
 								str += settings?.humCtrlTempSensor ? "Sensor Status:" : ""
-								str += settings?.humCtrlTempSensor ? "\n└ Temp: (${settings?.extTmpTempSensor?.currentTemperature}${tempScaleStr})" : ""
+								str += settings?.humCtrlTempSensor ? "\n└ Temp: (${settings?.humCtrlTempSensor?.currentTemperature}${tempScaleStr})" : ""
 								paragraph "${str}", state: (str != "" ? "complete" : null), image: getAppImg("instruct_icon.png")
 							}
 						}
