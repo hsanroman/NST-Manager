@@ -953,13 +953,16 @@ def notifPrefPage() {
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
 			}
 			section("Alert Configurations:") {
-				def appDesc = getAppNotifDesc() ? "${getAppNotifDesc()}\n\n" : ""
+				def t1 = getAppNotifDesc()
+				def appDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "App Notifications", description: "${appDesc}Tap to configure", params: [pType:"app"], state: (appDesc != "" ? "complete" : null),
 				 		image: getAppImg("nst_manager_icon.png")
-				def devDesc = getDevNotifDesc() ? "${getDevNotifDesc()}\n\n" : ""
+				t1 = getDevNotifDesc()
+				def devDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "Device Notifications", description: "${devDesc}Tap to configure", params: [pType:"dev"], state: (devDesc != "" ? "complete" : null),
 						image: getAppImg("thermostat_icon.png")
-				def autoDesc = getAutoNotifDesc() ? "${getAutoNotifDesc()}\n\n" : ""
+				t1 = getAutoNotifDesc()
+				def autoDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "Automation Notifications", description: "${autoDesc}Tap to configure", params: [pType:"auto"], state: (autoDesc != "" ? "complete" : null),
 						image: getAppImg("automation_icon.png")
 			}
@@ -2019,7 +2022,7 @@ def isAutoAppInst() {
 }
 
 def getInstAutoTypesDesc() {
-	def dat = ["nestMode":0,"watchDog":0, "disabled":0, "schMot":["tSched":0, "remSen":0, "fanCtrl":0, "fanCirc":0, "conWat":0, "extTmp":0, "leakWat":0]]
+	def dat = ["nestMode":0,"watchDog":0, "disabled":0, "schMot":["tSched":0, "remSen":0, "fanCtrl":0, "fanCirc":0, "conWat":0, "extTmp":0, "leakWat":0, "humCtrl":0]]
 	def disItems = []
 	def nItems = [:]
 	childApps?.each { a ->
