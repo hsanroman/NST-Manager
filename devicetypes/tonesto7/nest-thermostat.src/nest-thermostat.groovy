@@ -3074,7 +3074,7 @@ def getGraphHTML() {
 
 						${chartHtml}
 
-						<div class="swiper-slide"></div>
+
 					</div>
 					<!-- If we need pagination -->
 					<div class="swiper-pagination"></div>
@@ -3086,13 +3086,17 @@ def getGraphHTML() {
 				<script>
 					var mySwiper = new Swiper ('.swiper-container', {
 						direction: 'horizontal',
+						initialSlide: 0,
 						lazyLoading: true,
-						loop: true,
+						loop: false,
 						slidesPerView: '1',
 						centeredSlides: true,
 						spaceBetween: 100,
 						autoHeight: false,
+						keyboardControl: true,
+            			mousewheelControl: true,
 						iOSEdgeSwipeDetection: true,
+						iOSEdgeSwipeThreshold: 20,
 						parallax: true,
 						slideToClickedSlide: true,
 
@@ -3104,9 +3108,11 @@ def getGraphHTML() {
 						  modifier: 1,
 						  slideShadows : true
 						},
-						onTap: (swiper, event) => {
-							let element = event.target;
-							swiper.slideNext()
+						onTap: function(s, e) {
+							s.slideNext(false);
+							if (s.clickedIndex >= s.slides.length) {
+								s.slideTo(0, 400, false)
+							}
 						},
 						pagination: '.swiper-pagination',
 						paginationHide: false,
