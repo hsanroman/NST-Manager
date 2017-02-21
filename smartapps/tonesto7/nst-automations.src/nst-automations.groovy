@@ -2509,7 +2509,7 @@ def getMaxHumidity(curExtTemp, curHum) {
 def humCtrlScheduleOk() { return autoScheduleOk(humCtrlPrefix()) }
 
 def humCtrlCheck() {
-	LogAction("humCtrlCheck", "trace", true)
+	LogAction("humCtrlCheck", "trace", false)
 	def pName = humCtrlPrefix()
 	try {
 		def execTime = now()
@@ -2585,7 +2585,8 @@ def humCtrlCheck() {
 					}
 				}
 			} else {
-				if(swOn && savedHaveRun) {
+				//if(swOn && savedHaveRun) {
+				if(swOn) {
 					LogAction("humCtrlCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw}' Switch (OFF)", "info", true)
 					storeLastAction("Turned Off (${sw})", getDtNow())
 					sw.off()
@@ -2594,6 +2595,7 @@ def humCtrlCheck() {
 					if(swOn && !savedHaveRun) {
 						LogAction("humCtrlCheck: Saved have run state shows switch ${sw} turned ON outside of automation requests", "info", true)
 					}
+					atomicState.haveRunHumidifier = false
 				}
 			}
 		}
@@ -2616,7 +2618,7 @@ def isExtTmpConfigured() {
 }
 
 def getExtConditions( doEvent = false ) {
-	LogAction("getExtConditions", "trace", true)
+	//LogAction("getExtConditions", "trace", true)
 	if(atomicState?.NeedwUpd && parent?.getWeatherDeviceInst()) {
 		def cur = parent?.getWData()
 		def weather = parent.getWeatherDevice()
