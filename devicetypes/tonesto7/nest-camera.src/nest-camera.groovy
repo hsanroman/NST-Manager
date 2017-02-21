@@ -145,7 +145,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 7, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 9, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
@@ -1064,11 +1064,17 @@ def getCamHtml() {
 				<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet" href="${getCssData()}"/>
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css", "text", "css")}" />
 
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js", "text", "javascript")}"></script>
+
+				<style>
+					.swiper-container {
+						width: 95%;
+						min-height: 400px;
+						padding: 10px;
+					}
+				</style>
 			</head>
 			<body>
 				${clientBl}
@@ -1156,11 +1162,19 @@ def getCamHtml() {
 				</div>
 				<script>
 					var mySwiper = new Swiper ('.swiper-container', {
-						// Optional parameters
 						direction: 'horizontal',
-				    	loop: true,
-                        effect: 'coverflow',
-                        coverflow: {
+						lazyLoading: true,
+						loop: true,
+						slidesPerView: '1',
+						centeredSlides: true,
+						spaceBetween: 100,
+						autoHeight: false,
+						iOSEdgeSwipeDetection: true,
+						parallax: true,
+						slideToClickedSlide: true,
+
+						effect: 'coverflow',
+						coverflow: {
 						  rotate: 50,
 						  stretch: 0,
 						  depth: 100,
@@ -1168,31 +1182,20 @@ def getCamHtml() {
 						  slideShadows : true
 						},
 						onTap: (swiper, event) => {
-					        let element = event.target;
-					        //specific element that was clicked i.e.: p or img tag
+							let element = event.target;
 							swiper.slideNext()
-					    },
-						slidesPerView: 1,
-						spaceBetween: 30,
-						autoHeight: true,
-						iOSEdgeSwipeDetection: true,
-						parallax: true,
-						slideToClickedSlide: true,
-
-					    pagination: '.swiper-pagination',
+						},
+						pagination: '.swiper-pagination',
 						paginationHide: false,
 						paginationClickable: true
 					})
-					 function reloadTest() {
-						var url = "https://"
-					 	url += window.location.host.toString()
-						url += "/api/devices/${device?.getId()}/getCamHTML"
-						console.log("url: " + url)
-					 	window.location = url;
-					 }
+					function reloadCamPage() {
+					    var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getCamHtml"
+					    window.location = url;
+					}
 				</script>
 				<div class="pageFooterBtn">
-				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTest()">
+				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadCamPage()">
 					  <span>&#10227;</span> Refresh
 				    </button>
 				</div>
@@ -1229,11 +1232,6 @@ def showCamHtml() {
 
 	def data = """
 		<div class="swiper-slide">
-			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Image</h4>
-			<img src="${pubSnapUrl}" width="100%"/>
-			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
-		</div>
-		<div class="swiper-slide">
 			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
 			<img src="${animationUrl}" width="100%"/>
 			<table>
@@ -1261,6 +1259,11 @@ def showCamHtml() {
 				</tr>
 			  </tbody>
 			</table>
+		</div>
+		<div class="swiper-slide">
+			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Image</h4>
+			<img src="${pubSnapUrl}" width="100%"/>
+			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
 		</div>
 	"""
 }
