@@ -5679,7 +5679,7 @@ def schMotCheck() {
 		if(getLastschMotEvalSec() < schWaitVal) {
 			def schChkVal = ((schWaitVal - getLastschMotEvalSec()) < 30) ? 30 : (schWaitVal - getLastschMotEvalSec())
 			scheduleAutomationEval(schChkVal)
-			LogAction("Remote Sensor: Too Soon to Evaluate Actions; Re-Evaluation in (${schChkVal} seconds)", "info", true)
+			LogAction("Too Soon to Evaluate Actions; Re-Evaluation in (${schChkVal} seconds)", "info", true)
 			return
 		}
 
