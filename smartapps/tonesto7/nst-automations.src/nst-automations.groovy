@@ -2462,11 +2462,11 @@ def humCtrlHumidityDesc() {
 		def cCnt = settings?.humCtrlHumidity?.size() ?: 0
 		def str = ""
 		def cnt = 0
-		str += "\nSensor Status (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")})\n│"
+		str += "\nSensor Status (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")}%)\n│"
 		settings?.humCtrlHumidity?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentHumidity) ?: "Not Set"
-			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${val})"
+			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${val}%)"
 		}
 		return str
 	}
@@ -2509,7 +2509,7 @@ def getMaxHumidity(curExtTemp, curHum) {
 def humCtrlScheduleOk() { return autoScheduleOk(humCtrlPrefix()) }
 
 def humCtrlCheck() {
-	LogAction("humCtrlCheck", "trace", false)
+	LogAction("humCtrlCheck", "trace", true)
 	def pName = humCtrlPrefix()
 	try {
 		def execTime = now()
@@ -2616,7 +2616,7 @@ def isExtTmpConfigured() {
 }
 
 def getExtConditions( doEvent = false ) {
-	//LogTrace("getExtConditions")
+	LogAction("getExtConditions", "trace", true)
 	if(atomicState?.NeedwUpd && parent?.getWeatherDeviceInst()) {
 		def cur = parent?.getWData()
 		def weather = parent.getWeatherDevice()
@@ -4997,7 +4997,7 @@ def tstatConfigAutoPage(params) {
 
 			if(configType == "leakWat") {
 				section("When Leak is Detected, Turn Off this Thermostat") {
-					def req = (settings?.leakWatSensors || setting?.schMotTstat) ? true : false
+					def req = (settings?.leakWatSensors || settings?.schMotTstat) ? true : false
 					input name: "leakWatSensors", type: "capability.waterSensor", title: "Which Leak Sensor(s)?", multiple: true, submitOnChange: true, required: req,
 							image: getAppImg("water_icon.png")
 					if(settings?.leakWatSensors) {
@@ -5695,7 +5695,7 @@ def schMotCheck() {
 		}
 		if(settings?.schMotExternalTempOff) {
 			if(isExtTmpConfigured()) {
-				if(setting?.extTmpUseWeather) { getExtConditions() }
+				if(settings?.extTmpUseWeather) { getExtConditions() }
 				extTmpTempCheck()
 			}
 		}
@@ -5709,7 +5709,7 @@ def schMotCheck() {
 		}
 		if(settings?.schMotHumidityControl) {
 			if(isHumCtrlConfigured()) {
-				if(setting?.humCtrlUseWeather) { getExtConditions() }
+				if(settings?.humCtrlUseWeather) { getExtConditions() }
 				humCtrlCheck()
 			}
 		}
