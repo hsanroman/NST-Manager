@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "4.6.0" }
-def appVerDate() { "2-17-2017" }
+def appVerDate() { "2-21-2017" }
 
 preferences {
 	//startPage
@@ -2485,21 +2485,23 @@ def getHumCtrlTemperature() {
 	return extTemp
 }
 
-def getMaxHumidity(curExtTemp, curHum) {
-	def maxhum = 45
-	if(curExtTemp != null && curHum) {
-		if(curExtTemp >= adj_temp(40) && curHum < 45) {
-			;
-		} else if(curExtTemp >= adj_temp(32) && curHum < 40) {
+def getMaxHumidity(curExtTemp) {
+	def maxhum = 15
+	if(curExtTemp != null) {
+		if(curExtTemp >= adj_temp(40)) {
+			maxhum = 45
+		} else if(curExtTemp >= adj_temp(32)) {
 			maxhum = 40
-		} else if(curExtTemp >= adj_temp(20) && curHum < 35) {
+		} else if(curExtTemp >= adj_temp(20)) {
 			maxhum = 35
-		} else if(curExtTemp >= adj_temp(10) && curHum < 30) {
+		} else if(curExtTemp >= adj_temp(10)) {
 			maxhum = 30
-		} else if(curExtTemp >= adj_temp(0) && curHum < 25) {
+		} else if(curExtTemp >= adj_temp(0)) {
 			maxhum = 25
-		} else if(curExtTemp >= adj_temp(-10) && curHum < 20) {
+		} else if(curExtTemp >= adj_temp(-10)) {
 			maxhum = 20
+		} else if(curExtTemp >= adj_temp(-20)) {
+			maxhum = 15
 		}
 	}
 	return maxhum
@@ -2520,7 +2522,7 @@ def humCtrlCheck() {
 		//def curHum = humCtrlHumidity?.currentHumidity
 		def curHum = getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")
 		def curExtTemp = getHumCtrlTemperature()
-		def maxHum = getMaxHumidity(curExtTemp, curHum)
+		def maxHum = getMaxHumidity(curExtTemp)
 		def schedOk = humCtrlScheduleOk()
 
 		LogAction("humCtrlCheck: ( Humidity: (${curHum}) | External Temp: (${curExtTemp}) | Max Humidity: (${maxHum}) | HvacMode: (${hvacMode}) | OperatingState: (${curTstatOperState}) )", "info", true)
