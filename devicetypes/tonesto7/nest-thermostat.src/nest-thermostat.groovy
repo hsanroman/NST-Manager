@@ -227,7 +227,7 @@ metadata {
 		standardTile("blank", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "default", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 8, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 11, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
@@ -1032,7 +1032,7 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	if(!state?.curAutoSchedData == schedData) {
+	if(!state?.curAutoSchedData || state?.curAutoSchedData != schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 		state?.curAutoSchedData = schedData
 	}
@@ -1328,25 +1328,18 @@ def GetTimeDiffSeconds(lastDate) {
 
 def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
-//	try {
-		if(strtDate) {
-			//if(strtDate?.contains("dtNow")) { return 10000 }
-			def now = new Date()
-			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
-			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
-			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
-			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
-			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-			def diff = (int) (long) (stop - start) / 1000
-			//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
-			return diff
-		} else { return null }
-/*
-	} catch (ex) {
-		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
-		return null
-	}
-*/
+	if(strtDate) {
+		//if(strtDate?.contains("dtNow")) { return 10000 }
+		def now = new Date()
+		def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+		def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+		def diff = (int) (long) (stop - start) / 1000
+		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+		return diff
+	} else { return null }
 }
 // Nest does not allow temp changes in away modes
 def canChangeTemp() {
@@ -1374,78 +1367,68 @@ def canChangeTemp() {
 
 void changeSetpoint() {
 	//LogAction("changeSetpoint()... ($val)", "trace")
-//	try {
-		if ( canChangeTemp() ) {
+	if ( canChangeTemp() ) {
+		def md
+		def hvacMode = getHvacMode()
+		def curHeatpoint = getHeatTemp()
+		def curCoolpoint = getCoolTemp()
 
-			def md
-			def hvacMode = getHvacMode()
-			def curHeatpoint = getHeatTemp()
-			def curCoolpoint = getCoolTemp()
+		LogAction("changeSetpoint()... hvacMode: ${hvacMode} curHeatpoint: ${curHeatpoint}  curCoolpoint: ${curCoolpoint} oldCool: ${state?.oldCool} oldHeat: ${state?.oldHeat}", "trace")
 
-			LogAction("changeSetpoint()... hvacMode: ${hvacMode} curHeatpoint: ${curHeatpoint}  curCoolpoint: ${curCoolpoint} oldCool: ${state?.oldCool} oldHeat: ${state?.oldHeat}", "trace")
+		switch (hvacMode) {
+			case "heat":
+				state.oldHeat = null
+				setHeatingSetpoint(curHeatpoint,true)
+				break
+			case "cool":
+				state.oldCool = null
+				setCoolingSetpoint(curCoolpoint,true)
+				break
+			case "auto":
+				if ( (state?.oldCool != null) && (state?.oldHeat == null) ) { md = "cool"}
+				if ( (state?.oldCool == null) && (state?.oldHeat != null) ) { md = "heat"}
+				if ( (state?.oldCool != null) && (state?.oldHeat != null) ) { md = "both"}
 
-			switch (hvacMode) {
-				case "heat":
-					state.oldHeat = null
-					setHeatingSetpoint(curHeatpoint,true)
-					break
-				case "cool":
-					state.oldCool = null
-					setCoolingSetpoint(curCoolpoint,true)
-					break
-				case "auto":
-					if ( (state?.oldCool != null) && (state?.oldHeat == null) ) { md = "cool"}
-					if ( (state?.oldCool == null) && (state?.oldHeat != null) ) { md = "heat"}
-					if ( (state?.oldCool != null) && (state?.oldHeat != null) ) { md = "both"}
-
-					def heatFirst
-					if(md) {
-						if (curHeatpoint >= curCoolpoint) {
-							Logger("changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint}", "warn")
-						} else {
-							if("${md}" == "heat") { state.oldHeat = null; setHeatingSetpoint(curHeatpoint) }
-							else if ("${md}" == "cool") { state.oldCool = null; setCoolingSetpoint(curCoolpoint) }
-							else if ("${md}" == "both") {
-								if (curHeatpoint <= state.oldHeat) { heatfirst = true }
-								else if (curCoolpoint >= state.oldCool) { heatFirst = false }
-								else if (curHeatpoint > state.oldHeat) { heatFirst = false }
-								else { heatFirst = true }
-								if (heatFirst) {
-									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint,true)
-									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint,true)
-								} else {
-									state.oldCool = null
-									setCoolingSetpoint(curCoolpoint,true)
-									state.oldHeat = null
-									setHeatingSetpoint(curHeatpoint,true)
-								}
+				def heatFirst
+				if(md) {
+					if (curHeatpoint >= curCoolpoint) {
+						Logger("changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint}", "warn")
+					} else {
+						if("${md}" == "heat") { state.oldHeat = null; setHeatingSetpoint(curHeatpoint) }
+						else if ("${md}" == "cool") { state.oldCool = null; setCoolingSetpoint(curCoolpoint) }
+						else if ("${md}" == "both") {
+							if (curHeatpoint <= state.oldHeat) { heatfirst = true }
+							else if (curCoolpoint >= state.oldCool) { heatFirst = false }
+							else if (curHeatpoint > state.oldHeat) { heatFirst = false }
+							else { heatFirst = true }
+							if (heatFirst) {
+								state.oldHeat = null
+								setHeatingSetpoint(curHeatpoint,true)
+								state.oldCool = null
+								setCoolingSetpoint(curCoolpoint,true)
+							} else {
+								state.oldCool = null
+								setCoolingSetpoint(curCoolpoint,true)
+								state.oldHeat = null
+								setHeatingSetpoint(curHeatpoint,true)
 							}
 						}
-					} else {
-						Logger("changeSetpoint: Invalid Temp Type received... ${md}", "warn")
-						state.oldCool = null
-						state.oldHeat = null
 					}
-					break
-				default:
-					if (curHeatpoint > curCoolpoint) {
-						Logger("changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint} ${val}", "warn")
-					}
-					//thermostatSetpointEvent(temp)
-					break
-			}
+				} else {
+					Logger("changeSetpoint: Invalid Temp Type received... ${md}", "warn")
+					state.oldCool = null
+					state.oldHeat = null
+				}
+				break
+			default:
+				if (curHeatpoint > curCoolpoint) {
+					Logger("changeSetpoint: Invalid Temp Type received in auto mode... ${curHeatpoint} ${curCoolpoint} ${val}", "warn")
+				}
+				//thermostatSetpointEvent(temp)
+				break
 		}
-		pauseEvent("false")
-/*
 	}
-	catch (ex) {
-		pauseEvent("false")
-		log.error "changeSetpoint Exception:", ex
-		exceptionDataHandler(ex.message, "changeSetpoint")
-	}
-*/
+	pauseEvent("false")
 }
 
 // Nest Only allows F temperatures as #.0  and C temperatures as either #.0 or #.5
@@ -1454,72 +1437,64 @@ void setHeatingSetpoint(temp, manChg=false) {
 }
 
 void setHeatingSetpoint(Double reqtemp, manChg=false) {
-//	try {
-		LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
-		def hvacMode = getHvacMode()
-		def tempUnit = state?.tempUnit
-		def temp = 0.0
-		def canHeat = state?.can_heat.toBoolean()
-		def result = false
-		def locked = state?.tempLockOn.toBoolean()
+	LogAction("setHeatingSetpoint()... ($reqtemp)", "trace")
+	def hvacMode = getHvacMode()
+	def tempUnit = state?.tempUnit
+	def temp = 0.0
+	def canHeat = state?.can_heat.toBoolean()
+	def result = false
+	def locked = state?.tempLockOn.toBoolean()
 
-		LogAction("Heat Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
-		if(canHeat && state?.nestHvac_mode != "eco") {
-			switch (tempUnit) {
-				case "C":
-					temp = Math.round(reqtemp.round(1) * 2) / 2.0f
-					if (temp) {
-						if (temp < 9.0) { temp = 9.0 }
-						if (temp > 32.0 ) { temp = 32.0 }
-						LogAction("Sending Heat Temp ($temp)")
-						if (hvacMode == 'auto') {
-							parent.setTargetTempLow(this, tempUnit, temp, virtType())
-							heatingSetpointEvent(temp)
-						}
-						if (hvacMode == 'heat') {
-							parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
-							thermostatSetpointEvent(temp)
-							heatingSetpointEvent(temp)
-						}
+	LogAction("Heat Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
+	if(canHeat && state?.nestHvac_mode != "eco") {
+		switch (tempUnit) {
+			case "C":
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				if (temp) {
+					if (temp < 9.0) { temp = 9.0 }
+					if (temp > 32.0 ) { temp = 32.0 }
+					LogAction("Sending Heat Temp ($temp)")
+					if (hvacMode == 'auto') {
+						parent.setTargetTempLow(this, tempUnit, temp, virtType())
+						heatingSetpointEvent(temp)
 					}
-					result = true
-					break
-				case "F":
-					temp = reqtemp.round(0).toInteger()
-					if (temp) {
-						if (temp < 50) { temp = 50 }
-						if (temp > 90) { temp = 90 }
-						LogAction("Sending Heat Temp ($temp)")
-						if (hvacMode == 'auto') {
-							parent.setTargetTempLow(this, tempUnit, temp, virtType())
-							heatingSetpointEvent(temp)
-						}
-						if (hvacMode == 'heat') {
-							parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
-							thermostatSetpointEvent(temp)
-							heatingSetpointEvent(temp)
-						}
+					if (hvacMode == 'heat') {
+						parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
+						thermostatSetpointEvent(temp)
+						heatingSetpointEvent(temp)
 					}
-					result = true
-					break
-				default:
-					Logger("no Temperature data $tempUnit")
+				}
+				result = true
 				break
-			}
-		} else {
-			Logger("Skipping heat change")
-			result = false
+			case "F":
+				temp = reqtemp.round(0).toInteger()
+				if (temp) {
+					if (temp < 50) { temp = 50 }
+					if (temp > 90) { temp = 90 }
+					LogAction("Sending Heat Temp ($temp)")
+					if (hvacMode == 'auto') {
+						parent.setTargetTempLow(this, tempUnit, temp, virtType())
+						heatingSetpointEvent(temp)
+					}
+					if (hvacMode == 'heat') {
+						parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
+						thermostatSetpointEvent(temp)
+						heatingSetpointEvent(temp)
+					}
+				}
+				result = true
+				break
+			default:
+				Logger("no Temperature data $tempUnit")
+			break
 		}
-		if(result) {
-			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
-		}
-/*
+	} else {
+		Logger("Skipping heat change")
+		result = false
 	}
-	catch (ex) {
-		log.error "setHeatingSetpoint Exception:", ex
-		exceptionDataHandler(ex.message, "setHeatingSetpoint")
+	if(result) {
+		if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 	}
-*/
 }
 
 void setCoolingSetpoint(temp, manChg=false) {
@@ -1527,150 +1502,102 @@ void setCoolingSetpoint(temp, manChg=false) {
 }
 
 void setCoolingSetpoint(Double reqtemp, manChg=false) {
-//	try {
-		LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
-		def hvacMode = getHvacMode()
-		def temp = 0.0
-		def tempUnit = state?.tempUnit
-		def canCool = state?.can_cool.toBoolean()
-		def result = false
-		def locked = state?.tempLockOn.toBoolean()
+	LogAction("setCoolingSetpoint()... ($reqtemp)", "trace")
+	def hvacMode = getHvacMode()
+	def temp = 0.0
+	def tempUnit = state?.tempUnit
+	def canCool = state?.can_cool.toBoolean()
+	def result = false
+	def locked = state?.tempLockOn.toBoolean()
 
-		LogAction("Cool Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
-		if(canCool && state?.nestHvac_mode != "eco") {
-			switch (tempUnit) {
-				case "C":
-					temp = Math.round(reqtemp.round(1) * 2) / 2.0f
-					if (temp) {
-						if (temp < 9.0) { temp = 9.0 }
-						if (temp > 32.0) { temp = 32.0 }
-						LogAction("Sending Cool Temp ($temp)")
-						if (hvacMode == 'auto') {
-							parent.setTargetTempHigh(this, tempUnit, temp, virtType())
-							coolingSetpointEvent(temp)
-						}
-						if (hvacMode == 'cool') {
-							parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
-							thermostatSetpointEvent(temp)
-							coolingSetpointEvent(temp)
-						}
+	LogAction("Cool Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
+	if(canCool && state?.nestHvac_mode != "eco") {
+		switch (tempUnit) {
+			case "C":
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				if (temp) {
+					if (temp < 9.0) { temp = 9.0 }
+					if (temp > 32.0) { temp = 32.0 }
+					LogAction("Sending Cool Temp ($temp)")
+					if (hvacMode == 'auto') {
+						parent.setTargetTempHigh(this, tempUnit, temp, virtType())
+						coolingSetpointEvent(temp)
 					}
-					result = true
-					break
+					if (hvacMode == 'cool') {
+						parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
+						thermostatSetpointEvent(temp)
+						coolingSetpointEvent(temp)
+					}
+				}
+				result = true
+				break
 
-				case "F":
-					temp = reqtemp.round(0).toInteger()
-					if (temp) {
-						if (temp < 50) { temp = 50 }
-						if (temp > 90) { temp = 90 }
-						LogAction("Sending Cool Temp ($temp)")
-						if (hvacMode == 'auto') {
-							parent.setTargetTempHigh(this, tempUnit, temp, virtType())
-							coolingSetpointEvent(temp)
-						}
-						if (hvacMode == 'cool') {
-							parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
-							thermostatSetpointEvent(temp)
-							coolingSetpointEvent(temp)
-						}
+			case "F":
+				temp = reqtemp.round(0).toInteger()
+				if (temp) {
+					if (temp < 50) { temp = 50 }
+					if (temp > 90) { temp = 90 }
+					LogAction("Sending Cool Temp ($temp)")
+					if (hvacMode == 'auto') {
+						parent.setTargetTempHigh(this, tempUnit, temp, virtType())
+						coolingSetpointEvent(temp)
 					}
-					result = true
-					break
-				default:
-						Logger("no Temperature data $tempUnit")
-					break
-			}
-		} else {
-			Logger("Skipping cool change")
-			result = false
+					if (hvacMode == 'cool') {
+						parent.setTargetTemp(this, tempUnit, temp, hvacMode, virtType())
+						thermostatSetpointEvent(temp)
+						coolingSetpointEvent(temp)
+					}
+				}
+				result = true
+				break
+			default:
+					Logger("no Temperature data $tempUnit")
+				break
 		}
-		if(result) {
-			if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
-		}
-/*
+	} else {
+		Logger("Skipping cool change")
+		result = false
 	}
-	catch (ex) {
-		log.error "setCoolingSetpoint Exception:", ex
-		exceptionDataHandler(ex.message, "setCoolingSetpoint")
+	if(result) {
+		if(manChg) { incManTmpChgCnt() } else { incProgTmpChgCnt() }
 	}
-*/
 }
 
 /************************************************************************************************
 |									NEST PRESENCE FUNCTIONS										|
 *************************************************************************************************/
 void setPresence() {
-//	try {
-		LogAction("setPresence()...", "trace")
-		def pres = getNestPresence()
-		LogAction("Current Nest Presence: ${pres}", "trace")
-		if(pres == "auto-away" || pres == "away") {
-			if (parent.setStructureAway(this, "false", virtType())) { presenceEvent("home") }
-		}
-		else if (pres == "home") {
-			if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
-		}
-/*
+	LogAction("setPresence()...", "trace")
+	def pres = getNestPresence()
+	LogAction("Current Nest Presence: ${pres}", "trace")
+	if(pres == "auto-away" || pres == "away") {
+		if (parent.setStructureAway(this, "false", virtType())) { presenceEvent("home") }
 	}
-	catch (ex) {
-		log.error "setPresence Exception:", ex
-		exceptionDataHandler(ex.message, "setPresence")
+	else if (pres == "home") {
+		if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
 	}
-*/
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
 void away() {
-//	try {
-		LogAction("away()...", "trace")
-		setAway()
-/*
-	}
-	catch (ex) {
-		log.error "away Exception:", ex
-		exceptionDataHandler(ex.message, "away")
-	}
-*/
+	LogAction("away()...", "trace")
+	setAway()
 }
 
 // backward compatibility for previous nest thermostat (and rule machine)
 void present() {
-//	try {
-		LogAction("present()...", "trace")
-		setHome()
-/*
-	}
-	catch (ex) {
-		log.error "present Exception:", ex
-		exceptionDataHandler(ex.message, "present")
-	}
-*/
+	LogAction("present()...", "trace")
+	setHome()
 }
 
 def setAway() {
-//	try {
-		LogAction("setAway()...", "trace")
-		if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
-/*
-	}
-	catch (ex) {
-		log.error "setAway Exception:", ex
-		exceptionDataHandler(ex.message, "setAway")
-	}
-*/
+	LogAction("setAway()...", "trace")
+	if (parent.setStructureAway(this, "true", virtType())) { presenceEvent("away") }
 }
 
 def setHome() {
-//	try {
-		LogAction("setHome()...", "trace")
-		if (parent.setStructureAway(this, "false", virtType()) ) { presenceEvent("home") }
-/*
-	}
-	catch (ex) {
-		log.error "setHome Exception:", ex
-		exceptionDataHandler(ex.message, "setHome")
-	}
-*/
+	LogAction("setHome()...", "trace")
+	if (parent.setStructureAway(this, "false", virtType()) ) { presenceEvent("home") }
 }
 
 /************************************************************************************************
@@ -3067,16 +2994,12 @@ def getGraphHTML() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
 
-				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-top.css", "text", "css")}" />
-
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
+
 				<script type="text/javascript" src="${getChartJsData()}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 			</head>
 			<body>
 				${clientBl}
@@ -3101,9 +3024,6 @@ def getGraphHTML() {
 								</tr>
 							  </tbody>
 							</table>
-						</div>
-						${chartHtml}
-						<div class="swiper-slide">
 							<table>
 							<col width="40%">
 							<col width="20%">
@@ -3148,8 +3068,13 @@ def getGraphHTML() {
 								<td class="dateTimeText">${state?.lastConnection.toString()}</td>
 								<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
 							  </tr>
+							</tbody>
 						  </table>
 						</div>
+
+						${chartHtml}
+
+						<div class="swiper-slide"></div>
 					</div>
 					<!-- If we need pagination -->
 					<div class="swiper-pagination"></div>
@@ -3158,14 +3083,21 @@ def getGraphHTML() {
 						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
 					</div>
 				</div>
-
 				<script>
 					var mySwiper = new Swiper ('.swiper-container', {
-						// Optional parameters
 						direction: 'horizontal',
-				    	loop: true,
-                        effect: 'coverflow',
-                        coverflow: {
+						lazyLoading: true,
+						loop: true,
+						slidesPerView: '1',
+						centeredSlides: true,
+						spaceBetween: 100,
+						autoHeight: false,
+						iOSEdgeSwipeDetection: true,
+						parallax: true,
+						slideToClickedSlide: true,
+
+						effect: 'coverflow',
+						coverflow: {
 						  rotate: 50,
 						  stretch: 0,
 						  depth: 100,
@@ -3173,32 +3105,20 @@ def getGraphHTML() {
 						  slideShadows : true
 						},
 						onTap: (swiper, event) => {
-					        let element = event.target;
-					        //specific element that was clicked i.e.: p or img tag
+							let element = event.target;
 							swiper.slideNext()
-							console.log("next slide...")
-					    },
-						slidesPerView: 1,
-						spaceBetween: 30,
-						autoHeight: true,
-						iOSEdgeSwipeDetection: true,
-						parallax: true,
-						slideToClickedSlide: true,
-
-					    pagination: '.swiper-pagination',
+						},
+						pagination: '.swiper-pagination',
 						paginationHide: false,
 						paginationClickable: true
 					})
-
-					 function reloadTest() {
-						var url = "https://"
-					 	url += window.location.host.toString()
-						url += "/api/devices/${device?.getId()}/graphHTML"
-					 	window.location = url;
-					 }
+					function reloadTstatPage() {
+						var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML"
+						window.location = url;
+					}
 				</script>
 				<div class="pageFooterBtn">
-				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTest()">
+				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()">
 					  <span>&#10227;</span> Refresh
 				    </button>
 				</div>
@@ -3360,16 +3280,6 @@ def showChartHtml() {
 	//log.debug lStr
 
 	def data = """
-		<!-- Slides -->
-		<div class="swiper-slide">
-			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-			<div id="main_graph" style="width: 100%; height: 325px;"></div>
-		</div>
-		<div class="swiper-slide">
-		  <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
-		  <div id="use_graph" style="width: 100%; height: 325px;"></div>
-		</div>
-
 		<script type="text/javascript">
 			google.charts.load('current', {packages: ['corechart']});
 			google.charts.setOnLoadCallback(drawHistoryGraph);
@@ -3476,11 +3386,11 @@ def showChartHtml() {
 					colors: ['#FF9900', '#0066FF', '#884ae5'],
 					chartArea: {
 					  left: '15%',
-					  right: '20%',
-					  top: '10%',
+					  right: '23%',
+					  top: '7%',
 					  bottom: '10%',
 					  height: '100%',
-					  width: '80%'
+					  width: '90%'
 					}
 				};
 
@@ -3493,6 +3403,14 @@ def showChartHtml() {
 				columnWrapper.draw()
 			}
 		  </script>
+		  <div class="swiper-slide">
+  			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
+  			<div id="main_graph" style="width: 100%; height: 425px;"></div>
+  		  </div>
+  		  <div class="swiper-slide">
+  		    <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
+  		    <div id="use_graph" style="width: 100%; height: 425px;"></div>
+  		  </div>
 	  """
 	return data
 }
