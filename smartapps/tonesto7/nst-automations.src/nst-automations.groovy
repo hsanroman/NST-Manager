@@ -424,8 +424,9 @@ def mainAutoPage(params) {
 					if(autoType == "watchDog") {
 						//paragraph title:"Watch your Nest Location for Events:", ""
 						def watDesc = ""
-						watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && getVoiceNotifConfigDesc("watchDog")) ?
-								"\n\nVoice Notifications:${getVoiceNotifConfigDesc("watchDog")}" : ""
+						def t1 = getVoiceNotifConfigDesc("watchDog")
+						watDesc += (settings["${getAutoType()}AllowSpeechNotif"] && (settings["${getAutoType()}SpeechDevices"] || settings["${getAutoType()}SpeechMediaPlayer"]) && t1) ?
+								"\n\nVoice Notifications:${t1}" : ""
 						def watDogDesc = isWatchdogConfigured() ? "${watDesc}" : null
 						href "watchDogPage", title: "Nest Location Watchdog", description: watDogDesc ?: "Tap to configure", state: (watDogDesc ? "complete" : null), image: getAppImg("watchdog_icon.png")
 					}
@@ -881,23 +882,30 @@ def subscribeToEvents() {
 					subscribe(humCtrlSwitches, "switch", automationGenericEvt)
 					subscribe(humCtrlHumidity, "humidity", automationGenericEvt)
 					if(!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) { subscribe(humCtrlTempSensor, "temperature", automationGenericEvt, [filterEvents: false]) }
-				}
-			}
-			if(settings?.schMotHumidityControl || settings?.schMotExternalTempOff) {
-				if(settings?.extTmpUseWeather || settings?.humCtrlUseWeather) {
-					atomicState.NeedwUpd = true
-					if(parent?.getWeatherDeviceInst()) {
-						def weather = parent?.getWeatherDevice()
-						if(weather) {
-							subscribe(weather, "temperature", extTmpGenericEvt)
-							subscribe(weather, "dewpoint", extTmpGenericEvt)
-						}
-					} else { LogAction("No weather device found", "error", true) }
+					if(settings?.humCtrlUseWeather) {
+						atomicState.NeedwUpd = true
+						if(parent?.getWeatherDeviceInst()) {
+							def weather = parent?.getWeatherDevice()
+							if(weather) {
+								subscribe(weather, "temperature", automationGenericEvt)
+							}
+						} else { LogAction("No weather device found", "error", true) }
+					}
 				}
 			}
 
 			if(settings?.schMotExternalTempOff) {
 				if(isExtTmpConfigured()) {
+					if(settings?.extTmpUseWeather) {
+						atomicState.NeedwUpd = true
+						if(parent?.getWeatherDeviceInst()) {
+							def weather = parent?.getWeatherDevice()
+							if(weather) {
+								subscribe(weather, "temperature", extTmpGenericEvt)
+								subscribe(weather, "dewpoint", extTmpGenericEvt)
+							}
+						} else { LogAction("No weather device found", "error", true) }
+					}
 					if(!settings?.extTmpUseWeather && settings?.extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpGenericEvt, [filterEvents: false]) }
 					atomicState.extTmpChgWhileOnDt = getDtNow()
 					atomicState.extTmpChgWhileOffDt = getDtNow()
@@ -1174,6 +1182,9 @@ def automationGenericEvt(evt) {
 	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(isRemSenConfigured() && settings?.vthermostat) {
 		atomicState.needChildUpdate = true
+	}
+	if(settings?.humCtrlUseWeather && isHumCtrlConfigured()) {
+		atomicState.NeedwUpd = true
 	}
 	doTheEvent(evt)
 }
@@ -2501,6 +2512,8 @@ def humCtrlCheck() {
 	LogAction("humCtrlCheck", "trace", false)
 	def pName = humCtrlPrefix()
 	try {
+		def execTime = now()
+
 		def tstat = schMotTstat
 		def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 		def curTstatOperState = tstat?.currentThermostatOperatingState.toString()
@@ -2584,6 +2597,8 @@ def humCtrlCheck() {
 				}
 			}
 		}
+		storeExecutionHistory((now()-execTime), "humCtrlCheck")
+
 	} catch (ex) {
 		log.error "humCtrlCheck Exception:", ex
 		parent?.sendExceptionData(ex, "humCtrlCheck", true, getAutoType())
@@ -3532,14 +3547,15 @@ def nestModePresPage() {
 		if(!nModeHomeModes && !nModeAwayModes && !nModeSwitch) {
 			section("(Optional) Set Nest Presence using Presence Sensor:") {
 				//paragraph "Choose a Presence Sensor(s) to use to set your Nest to Home/Away", image: getAppImg("instruct_icon")
-				def presDesc = nModePresenceDesc() ? "\n\n${nModePresenceDesc()}\n\nTap to modify" : "Tap to configure"
+				def t0 = nModePresenceDesc()
+				def presDesc = t0 ? "\n\n${t0}\n\nTap to modify" : "Tap to configure"
 				input "nModePresSensor", "capability.presenceSensor", title: "Select Presence Sensor(s)", description: presDesc, multiple: true, submitOnChange: true, required: false,
 						image: getAppImg("presence_icon.png")
 				if(nModePresSensor) {
 					if(nModePresSensor.size() > 1) {
 						paragraph "Nest Location will be set to 'Away' when all Presence sensors leave and will return to 'Home' when someone arrives", title: "How this Works!", image: getAppImg("instruct_icon.png")
 					}
-					paragraph "${nModePresenceDesc()}", state: "complete", image: getAppImg("instruct_icon.png")
+					paragraph "${t0}", state: "complete", image: getAppImg("instruct_icon.png")
 				}
 			}
 		}
@@ -4539,7 +4555,8 @@ def schMotModePage() {
 					input (name: "schMotOperateFan", type: "bool", title: "${titStr}?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("fan_control_icon.png"))
 					if(settings?.schMotOperateFan) {
 						def fanCtrlDescStr = ""
-						fanCtrlDescStr += getFanSwitchDesc() ? "${getFanSwitchDesc()}" : ""
+						def t0 = getFanSwitchDesc()
+						fanCtrlDescStr += t0 ? "${t0}" : ""
 						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
 						href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
 								required: true, image: getAppImg("configure_icon.png")
@@ -4597,13 +4614,15 @@ def schMotModePage() {
 					input (name: "schMotWaterOff", type: "bool", title: "Turn Off if Water Leak is detected?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("leak_icon.png"))
 					if(settings?.schMotWaterOff) {
 						def leakDesc = ""
-						leakDesc += (settings?.leakWatSensors && leakWatSensorsDesc()) ? "${leakWatSensorsDesc()}" : ""
+						def t0 = leakWatSensorsDesc()
+						leakDesc += (settings?.leakWatSensors && t0) ? "${t0}" : ""
 						leakDesc += (settings?.leakWatSensors) ? "\n\nSettings:" : ""
 						leakDesc += settings?.leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.leakWatOnDelay)})" : ""
 						leakDesc += "\n • Last Mode: (${strCapitalize(atomicState?.leakWatRestoreMode) ?: "Not Set"})"
 						leakDesc += (settings?.leakWatModes || settings?.leakWatDays || (settings?.leakWatStartTime && settings?.leakWatStopTime)) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(leakWatPrefix()) ? "ON" : "OFF"})" : ""
-						leakDesc += getNotifConfigDesc(leakWatPrefix()) ? "\n\n${getNotifConfigDesc(leakWatPrefix())}" : ""
+						def t1 = getNotifConfigDesc(leakWatPrefix())
+						leakDesc += t1 ? "\n\n${t1}" : ""
 						leakDesc += (settings?.leakWatSensors) ? "\n\nTap to modify" : ""
 						def leakWatDesc = isLeakWatConfigured() ? "${leakDesc}" : null
 						href "tstatConfigAutoPage", title: "Leak Sensor Automation", description: leakWatDesc ?: "Tap to configure", params: ["configType":"leakWat"], required: true, state: (leakWatDesc ? "complete" : null),
@@ -4620,7 +4639,8 @@ def schMotModePage() {
 					input (name: "schMotContactOff", type: "bool", title: "Set ECO if Door/Window Contact Open?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("open_window.png"))
 					if(settings?.schMotContactOff) {
 						def conDesc = ""
-						conDesc += (settings?.conWatContacts && conWatContactDesc()) ? "${conWatContactDesc()}" : ""
+						def t0 = conWatContactDesc()
+						conDesc += (settings?.conWatContacts && t0) ? "${t0}" : ""
 						conDesc += settings?.conWatContacts ? "\n\nSettings:" : ""
 						conDesc += settings?.conWatOffDelay ? "\n • Eco Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOffDelay)})" : ""
 						conDesc += settings?.conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOnDelay)})" : ""
@@ -4628,7 +4648,8 @@ def schMotModePage() {
 						conDesc += "\n • Last Mode: (${strCapitalize(atomicState?.conWatRestoreMode) ?: "Not Set"})"
 						conDesc += (settings?."${conWatPrefix()}Modes" || settings?."${conWatPrefix()}Days" || (settings?."${conWatPrefix()}StartTime" && settings?."${conWatPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(conWatPrefix()) ? "ON" : "OFF"})" : ""
-						conDesc += getNotifConfigDesc(conWatPrefix()) ? "\n\n${getNotifConfigDesc(conWatPrefix())}" : ""
+						def t1 = getNotifConfigDesc(conWatPrefix())
+						conDesc += t1 ? "\n\n${t1}" : ""
 						conDesc += (settings?.conWatContacts) ? "\n\nTap to modify" : ""
 						def conWatDesc = isConWatConfigured() ? "${conDesc}" : null
 						href "tstatConfigAutoPage", title: "Contact Sensors Config", description: conWatDesc ?: "Tap to configure", params: ["configType":"conWat"], required: true, state: (conWatDesc ? "complete" : null),
@@ -4676,7 +4697,8 @@ def schMotModePage() {
 						extDesc += "\n • Last Mode: (${strCapitalize(atomicState?.extTmpRestoreMode) ?: "Not Set"})"
 						extDesc += (settings?."${extTmpPrefix()}Modes" || settings?."${extTmpPrefix()}Days" || (settings?."${extTmpPrefix()}StartTime" && settings?."${extTmpPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(extTmpPrefix()) ? "ON" : "OFF"})" : ""
-						extDesc += getNotifConfigDesc(extTmpPrefix()) ? "\n\n${getNotifConfigDesc(extTmpPrefix())}" : ""
+						def t0 = getNotifConfigDesc(extTmpPrefix())
+						extDesc += t0 ? "\n\n${t0}" : ""
 						extDesc += ((settings?.extTmpTempSensor || settings?.extTmpUseWeather) ) ? "\n\nTap to modify" : ""
 						def extTmpDesc = isExtTmpConfigured() ? "${extDesc}" : null
 						href "tstatConfigAutoPage", title: "External Temps Config", description: extTmpDesc ?: "Tap to configure", params: ["configType":"extTmp"], required: true, state: (extTmpDesc ? "complete" : null),
@@ -4821,7 +4843,8 @@ def tstatConfigAutoPage(params) {
 					input "${pName}FanSwitches", "capability.switch", title: "Select Fan Switches?", required: reqinp, submitOnChange: true, multiple: true,
 							image: getAppImg("fan_ventilation_icon.png")
 					if(settings?."${pName}FanSwitches") {
-						paragraph "${getFanSwitchDesc(false)}", state: getFanSwitchDesc() ? "complete" : null, image: getAppImg("blank_icon.png")
+						def t0 = getFanSwitchDesc(false)
+						paragraph "${t0}", state: t0 ? "complete" : null, image: getAppImg("blank_icon.png")
 					}
 				}
 				if(settings["${pName}FanSwitches"]) {
@@ -5043,14 +5066,18 @@ def tstatConfigAutoPage(params) {
 
 /*
 this does not work...
-					if(atomicState?.oldhumCtrlSwitches != settings?.humCtrlSwitches) {
+*/
+					def t00 = settings[humCtrlSwitches].collect { it?.getId() }
+					def t1 = atomicState?.oldhumCtrlSwitches
+					def t2 = t1.collect { it?.getId() }
+					if(t2 != t00) {
 						atomicState.haveRunHumidifier = false
 						if(settings?.humCtrlSwitches) { humCtrlSwitches*.off() }
-						if(atomicState?.oldhumCtrlSwitches) { atomicState?.oldhumCtrlSwitches*.off() }
+						if(t1) { t1*.off() }
 						atomicState?.oldhumCtrlSwitches = settings?.humCtrlSwitches
 						log.warn "found different oldhum vs. humctrlSwitches"
 					}
-*/
+
 					if(settings?.humCtrlSwitches) {
 						def t0 = humCtrlSwitchDesc(false)
 						paragraph "${t0}", state: t0 ? "complete" : null, image: getAppImg("blank_icon.png")
@@ -5083,9 +5110,9 @@ this does not work...
 						} else {
 							if(!settings?.humCtrlTempSensor) {
 								input "humCtrlUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-								if(settings?.humCtrlUseWeather){
+								atomicState.NeedwUpd = true
+								if(settings?.humCtrlUseWeather) {
 									if(atomicState?.curWeather == null) {
-										atomicState.NeedwUpd = true
 										getExtConditions()
 									}
 									def tmpVal = (tempScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
@@ -5120,9 +5147,9 @@ this does not work...
 					} else {
 						if(!settings?.extTmpTempSensor) {
 							input "extTmpUseWeather", "bool", title: "Use Local Weather as External Sensor?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("weather_icon.png")
-							if(settings?.extTmpUseWeather){
+							atomicState.NeedwUpd = true
+							if(settings?.extTmpUseWeather) {
 								if(atomicState?.curWeather == null) {
-									atomicState.NeedwUpd = true
 									getExtConditions()
 								}
 								def tmpVal = (tempScale == "C") ? atomicState?.curWeatherTemp_c : atomicState?.curWeatherTemp_f
@@ -5964,9 +5991,12 @@ def getNotifConfigDesc(pName) {
 		str += (settings?."${pName}NotifRecips") ? "${str != "" ? "\n" : ""} • Contacts: (${settings?."${pName}NotifRecips"?.size()})" : ""
 		str += (settings?."${pName}UsePush") ? "\n • Push Messages: Enabled" : ""
 		str += (settings?."${pName}NotifPhones") ? "\n • SMS: (${settings?."${pName}NotifPhones"?.size()})" : ""
-		str += getVoiceNotifConfigDesc(pName) ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${getVoiceNotifConfigDesc(pName)}") : ""
-		str += getAlarmNotifConfigDesc(pName) ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${getAlarmNotifConfigDesc(pName)}") : ""
-		str += getAlertNotifConfigDesc(pName) ? "\n${getAlertNotifConfigDesc(pName)}" : ""
+		def t0 = getVoiceNotifConfigDesc(pName)
+		str += t0 ? ("${(str != "") ? "\n\n" : "\n"}Voice Status:${t0}") : ""
+		def t1 = getAlarmNotifConfigDesc(pName)
+		str += t1 ? ("${(str != "") ? "\n\n" : "\n"}Alarm Status:${t1}") : ""
+		def t2 = getAlertNotifConfigDesc(pName)
+		str += t2 ? "\n${t2}" : ""
 	}
 	return (str != "") ? "${str}" : null
 }
