@@ -28,6 +28,7 @@ metadata {
 		command "refresh"
 		command "log"
 
+		attribute "devVer", "string"
 		attribute "apiStatus", "string"
 		attribute "debugOn", "string"
 		attribute "devTypeVer", "string"
@@ -320,6 +321,9 @@ def deviceVerEvent(ver) {
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
 	def newData = state.updateAvailable ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
+	if(isStateChange(device, "devVer", dVer.toString())) {
+		sendEvent(name: 'devVer', value: dVer, displayed: false)
+	}
 	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
