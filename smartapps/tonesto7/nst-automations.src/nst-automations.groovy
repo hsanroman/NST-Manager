@@ -2574,7 +2574,8 @@ def humCtrlCheck() {
 		settings?.humCtrlSwitches?.each { sw ->
 			def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
 			if(turnOn) {
-				if(!swOn && !savedHaveRun) {
+				//if(!swOn && !savedHaveRun) {
+				if(!swOn) {
 					LogAction("humCtrlCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw}' Switch (ON)", "info", true)
 					sw.on()
 					swOn = true
