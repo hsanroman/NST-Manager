@@ -1036,10 +1036,10 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	if(schedData && (!state?.curAutoSchedData || state?.curAutoSchedData != schedData)) {
+	if(state?.curAutoSchedData != schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
-		state?.curAutoSchedData = schedData
 	}
+	state?.curAutoSchedData = schedData
 }
 
 def canHeatCool(canHeat, canCool) {
