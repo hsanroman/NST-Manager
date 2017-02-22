@@ -2338,6 +2338,7 @@ def sendAutomationBackupData(data, appId) {
 		sendFirebaseData(data, "backupData/clients/${atomicState?.installationId}/automationApps/${appId}.json", null, "Automation ($appId) Backup", true)
 	} catch (ex) {
 		LogAction("sendAutomationBackupData Exception: ${ex}", "error", true)
+		return false
 	}
 }
 
@@ -2374,9 +2375,13 @@ void doAutoMigrationProcess() {
 	def cApps = getChildApps()
 	if(cApps) {
 		cApps?.each { ca ->
-			if(backupAutomation(ca)) {
+			def t0 = ca?.settings?.restoredFromBackup
+			if(t0 == null && backupAutomation(ca)) {
 				LogAction("backed up ${ca?.label}", "debug", true)
-			} else { LogAction("skipping backup of the new style automation ${ca.label}", "debug", true) }
+			} else {
+				if(t0) { LogAction("skipping backup of the new style automation ${ca.label}", "debug", true) }
+				else { LogAction("backup failed of automation ${ca.label}", "warn", true) }
+			}
 		}
 		runIn(15, "processAutoRestore", [overwrite:true])
 		LogAction("Scheduled restore process for (15 seconds)...", "info", true)
@@ -2392,7 +2397,6 @@ void doAutoMigrationProcess() {
 	PARENT METHOD
 */
 def backupAutomation(child) {
-	if(child?.settings?.restoredFromBackup != null) { return false }
 	if(child?.backupConfigToFirebase()) {
 		child?.stateUpdate("lastBackupDt", getDtNow())
 		return true
