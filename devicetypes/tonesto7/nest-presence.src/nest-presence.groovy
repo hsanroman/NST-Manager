@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.5.1" }
+def devVer() { return "4.5.3" }
 
 // for the UI
 metadata {
@@ -28,6 +28,7 @@ metadata {
 		command "setHome"
 		command "setAway"
 
+		attribute "devVer", "string"
 		attribute "lastConnection", "string"
 		attribute "apiStatus", "string"
 		attribute "debugOn", "string"
@@ -220,6 +221,9 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+	if(isStateChange(device, "devVer", dVer.toString())) {
+		sendEvent(name: 'devVer', value: dVer, displayed: false)
+	}
 	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
