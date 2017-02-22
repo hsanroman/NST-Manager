@@ -5,7 +5,7 @@
  *	Contributor: Ben W. (@desertBlade)
  *  Graphing Modeled on code from Andreas Amann (@ahndee)
  *
- * Modelled after the EcoBee thermostat under Templates in the IDE
+ * Modeled after the EcoBee thermostat under Templates in the IDE
  * Copyright (C) 2017 Anthony S.
  * Licensing Info: Located at https://raw.githubusercontent.com/tonesto7/nest-manager/master/LICENSE.md
  */
@@ -1036,7 +1036,7 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	if(!state?.curAutoSchedData || state?.curAutoSchedData != schedData) {
+	if(schedData && (!state?.curAutoSchedData || state?.curAutoSchedData != schedData)) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 		state?.curAutoSchedData = schedData
 	}
