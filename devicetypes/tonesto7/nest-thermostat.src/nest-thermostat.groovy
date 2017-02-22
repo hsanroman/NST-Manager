@@ -1036,7 +1036,8 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	if(state?.curAutoSchedData != schedData) {
+	def t0 = state?.curAutoSchedData
+	if(schedData && t0 != schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
 	state?.curAutoSchedData = schedData
