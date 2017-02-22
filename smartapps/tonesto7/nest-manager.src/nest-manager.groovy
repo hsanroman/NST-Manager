@@ -2563,12 +2563,14 @@ def poll(force = false, type = null) {
 		else if(!force) {
 			def allowAsync = false
 			def metstr = "sync"
+			def sstr = ""
 			if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
 				allowAsync = true
 				metstr = "async"
 			}
 			if(ok2PollStruct()) {
-				LogAction("Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})", "info", true)
+				//LogAction("Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})", "info", true)
+				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})"
 				if(allowAsync) {
 					str = queueGetApiData("str")
 				} else {
@@ -2576,7 +2578,9 @@ def poll(force = false, type = null) {
 				}
 			}
 			if(ok2PollDevice()) {
-				LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
+				//LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
+				sstr += str != "" ? " | " : ""
+				sstr += "Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})"
 				if(allowAsync) {
 					dev = queueGetApiData("dev")
 				} else {
@@ -2584,13 +2588,16 @@ def poll(force = false, type = null) {
 				}
 			}
 			if(ok2PollMetaData()) {
-				LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
+				//LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
+				sstr += str != "" ? " | " : ""
+				sstr += "Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})"
 				if(allowAsync) {
 					meta = queueGetApiData("meta")
 				} else {
 					meta = getApiData("meta")
 				}
 			}
+			if(sstr != "") { LogAction("${sstr}", "info", true) }
 			if(allowAsync) { return }
 		}
 		finishPoll(str, dev)
@@ -2918,8 +2925,8 @@ def updateChildData(force = false) {
 				curWeatherTemp = getTemperatureScale() == "C" ? (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
-		//def devices = app.getChildDevices(true)
-		def devices = getAllChildDevices()
+		def devices = app.getChildDevices(true)
+		//def devices = getAllChildDevices()
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
