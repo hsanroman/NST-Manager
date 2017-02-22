@@ -2914,6 +2914,7 @@ def updateChildData(force = false) {
 				curWeatherTemp = getTemperatureScale() == "C" ? (cur?.current_observation?.temp_c ? Math.round(cur?.current_observation?.temp_c.toDouble()) : null) : (cur?.current_observation?.temp_f ? Math.round(cur?.current_observation?.temp_f).toInteger() : null)
 			}
 		}
+		//def devices = app.getChildDevices(true)
 		def devices = getAllChildDevices()
 		devices?.each {
 			def devId = it?.deviceNetworkId
@@ -2944,7 +2945,8 @@ def updateChildData(force = false) {
 						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
 						it?.label = newlbl?.toString()
 					}
-					def t1 = it?.devVer()
+					//def t1 = it?.devVer()
+					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.tDevVer = t1 ?: ""
 					if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
@@ -2974,7 +2976,8 @@ def updateChildData(force = false) {
 						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
 						it?.label = newlbl?.toString()
 					}
-					def t1 = it?.devVer()
+					//def t1 = it?.devVer()
+					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.pDevVer = t1 ?: ""
 					if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect?.val)) {
 						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
@@ -3002,7 +3005,8 @@ def updateChildData(force = false) {
 						LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
 						it?.label = newlbl?.toString()
 					}
-					def t1 = it?.devVer()
+					//def t1 = it?.devVer()
+					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.camDevVer = t1 ?: ""
 					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera?.val)) {
 						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
@@ -3025,7 +3029,8 @@ def updateChildData(force = false) {
 				atomicState."oldPresData${devId}" = pDataChecksum
 				pDataChecksum = atomicState."oldPresData${devId}"
 				if(force || nforce || (oldPresData != pDataChecksum)) {
-					def t1 = it?.devVer()
+					//def t1 = it?.devVer()
+					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.presDevVer = t1 ?: ""
 					if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence?.val)) {
 						LogTrace("UpdateChildData >> Presence id: ${devId}")
@@ -3047,7 +3052,8 @@ def updateChildData(force = false) {
 				atomicState."oldWeatherData${devId}" = wDataChecksum
 				wDataChecksum = atomicState."oldWeatherData${devId}"
 				if(force || nforce || (oldWeatherData != wDataChecksum)) {
-					def t1 = it?.devVer()
+					//def t1 = it?.devVer()
+					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.weatDevVer = t1 ?: ""
 					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather?.val)) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
@@ -3143,7 +3149,8 @@ def updateChildData(force = false) {
 							LogAction("Changing name from ${origlbl} to ${newlbl}", "info", true)
 							it?.label = newlbl?.toString()
 						}
-						def t1 = it?.devVer()
+						//def t1 = it?.devVer()
+						def t1 = it?.currentState("devVer")?.value?.toString()
 						atomicState?.vtDevVer = t1 ?: ""
 						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
@@ -7598,7 +7605,7 @@ def schMotCheck() {
 		}
 		if(settings?.schMotExternalTempOff) {
 			if(isExtTmpConfigured()) {
-				if(setting?.extTmpUseWeather) { getExtConditions() }
+				if(settings?.extTmpUseWeather) { getExtConditions() }
 				extTmpTempCheck()
 			}
 		}
