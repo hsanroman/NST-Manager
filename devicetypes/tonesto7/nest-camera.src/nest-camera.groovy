@@ -36,6 +36,7 @@ metadata {
 		command "cltLiveStreamStart"
 		//command "testBtn"
 
+		attribute "devVer", "string"
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
 		attribute "lastOnline", "string"
@@ -350,6 +351,9 @@ def deviceVerEvent(ver) {
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
 	// if(!curData?.equals(newData)) {
+	if(isStateChange(device, "devVer", dVer.toString())) {
+		sendEvent(name: 'devVer', value: dVer, displayed: false)
+	}
 	if(isStateChange(device, "devTypeVer", newData?.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
