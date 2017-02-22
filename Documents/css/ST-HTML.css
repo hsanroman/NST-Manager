@@ -407,9 +407,11 @@ tr {
 	font-size: 4.6vw;
   background: #00a1db;
 }
+
 .sched col {
 	font-size: 4.0vw;
 }
+
 .sched th, h5 {
 	background: gray;
 }
@@ -449,4 +451,24 @@ tr {
 
 .vex.vex-theme-default .vex-content {
     width: 95%; padding: 3px;
+}
+
+.alarmImg {
+  vertical-align: top;
+  width:100px; height:100px;
+}
+
+.alarmWarnCap {
+    display: block;
+    color: #f9871c;
+}
+
+.alarmEmerCap {
+    display: block;
+    color: #fa472f;
+}
+
+.alarmClearCap {
+    display: block;
+    color: #1ef53c;
 }

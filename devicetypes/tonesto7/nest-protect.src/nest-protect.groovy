@@ -517,10 +517,10 @@ def debugOnEvent(debug) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "issue" : "ok"
+	def newStat = issue ? "Has Issue" : "Good"
 	state?.apiStatus = newStat
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
-		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
+		Logger("UPDATED | API Status is: (${newStat.toString().capitalize()}) | Original State: (${curStat.toString().capitalize()})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
@@ -686,34 +686,48 @@ def getCarbonImg() {
 	def carbonVal = device.currentState("nestCarbonMonoxide")?.value
 	//values in ST are tested, clear, detected
 	//values from nest are ok, warning, emergency
+	def img = ""
+	def caption = "${carbonVal?.toString().toUpperCase()}"
+	def captionClass = ""
 	switch(carbonVal) {
 		case "warning":
-			return getImgBase64(getImg("co_warn_tile.png"), "png")
+			img = getImgBase64(getImg("co2_warn_status.png"), "png")
+			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			return getImgBase64(getImg("co_emergency_tile.png"), "png")
+			img = getImgBase64(getImg("co2_emergency_status.png"), "png")
+			captionClass = "alarmEmerCap"
 			break
 		default:
-			return getImgBase64(getImg("co_clear_tile.png"), "png")
+			img = getImgBase64(getImg("co2_clear_status.png"), "png")
+			captionClass = "alarmClearCap"
 			break
 	}
+	return ["img":img, "caption": caption, "captionClass":captionClass]
 }
 
 def getSmokeImg() {
 	def smokeVal = device.currentState("nestSmoke")?.value
 	//values in ST are tested, clear, detected
 	//values from nest are ok, warning, emergency
+	def img = ""
+	def caption = "${smokeVal?.toString().toUpperCase()}"
+	def captionClass = ""
 	switch(smokeVal) {
 		case "warning":
-			return getImgBase64(getImg("smoke_warn_tile.png"), "png")
+			img = getImgBase64(getImg("smoke_warn_status.png"), "png")
+			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			return getImgBase64(getImg("smoke_emergency_tile.png"), "png")
+			img = getImgBase64(getImg("smoke_emergency_status.png"), "png")
+			captionClass = "alarmEmerCap"
 			break
 		default:
-			return getImgBase64(getImg("smoke_clear_tile.png"), "png")
+			img = getImgBase64(getImg("smoke_clear_status.png"), "png")
+			captionClass = "alarmClearCap"
 			break
 	}
+	return ["img":img, "caption": caption, "captionClass":captionClass]
 }
 
 def getImgBase64(url,type) {
@@ -826,6 +840,8 @@ def getInfoHtml() {
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
+		def smokeImg = getSmokeImg()
+		def carbonImg = getCarbonImg()
 		def html = """
 		<!DOCTYPE html>
 		<html>
@@ -837,15 +853,24 @@ def getInfoHtml() {
 				<meta http-equiv="pragma" content="no-cache"/>
 				<meta name="viewport" content="width = device-width, user-scalable=no, initial-scale=1.0">
                 <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
-				<script type="text/javascript" src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js", "text", "javascript")}"></script>
 
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-default.css", "text", "css")}" />
-				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<style>
-					.vex.vex-theme-default .vex-content {
-						width: 98%; padding: 3px;
+					.alarmImg {
+					  vertical-align: top;
+					  width:60px; height:60px;
+					}
+					.alarmWarnCap {
+						display: block;
+						color: black;
+					}
+					.alarmEmerCap {
+						display: block;
+						color: black;
+					}
+					.alarmClearCap {
+						display: block;
+						color: black;
 					}
 				</style>
 			</head>
@@ -854,72 +879,80 @@ def getInfoHtml() {
 			  ${testModeHTML}
 			  ${clientBl}
 			  ${updateAvail}
-			  <div class="row">
-				<div class="offset-by-two four columns centerText">
-				  <img class='alarmImg' src="${getCarbonImg()}">
-				</div>
-				<div class="four columns centerText">
-				  <img class='alarmImg' src="${getSmokeImg()}">
-				</div>
-			  </div>
-				<br></br>
-				<table>
-				  <tbody>
-					<tr>
-					  <td><p class="centerText"><a class="more-info button">More Info</a></p></td>
-					</tr>
-				  </tbody>
-				</table>
-				<br></br>
+			  <table>
+			    <col width="48%">
+			    <col width="48%">
+			    <thead>
+				  <th>Smoke Detector</th>
+				  <th>Carbon Monoxide</th>
+			    </thead>
+			    <tbody>
+				  <tr>
+				    <td>
+						<img class='alarmImg' src="${smokeImg?.img}">
+						<span class="${smokeImg?.captionClass}">${smokeImg?.caption}</span>
+					</td>
+				    <td>
+						<img class='alarmImg' src="${carbonImg?.img}">
+						<span class="${carbonImg?.captionClass}">${carbonImg?.caption}</span>
+					</td>
+				  </tr>
+			    </tbody>
+			  </table>
+			  <table>
+				<col width="50%">
+				  <col width="50%">
+					<thead>
+					  <th>Network Status</th>
+					  <th>API Status</th>
+					</thead>
+					<tbody>
+					  <tr>
+						<td>${state?.onlineStatus.toString()}</td>
+						<td>${state?.apiStatus}</td>
+					  </tr>
+					</tbody>
+			  </table>
+			  <table>
+				<col width="40%">
+				<col width="20%">
+				<col width="40%">
+				<thead>
+				  <th>Firmware Version</th>
+				  <th>Debug</th>
+				  <th>Device Type</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td>v${state?.softwareVer.toString()}</td>
+					<td>${state?.debugStatus}</td>
+					<td>${state?.devTypeVer.toString()}</td>
+				  </tr>
+				</tbody>
+			  </table>
+			  <table>
+				<thead>
+				  <th>Last Check-In</th>
+				  <th>Data Last Received</th>
+				</thead>
+				<tbody>
+				  <tr>
+					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+				  </tr>
+				</tbody>
+			  </table>
 			  <script>
-				  \$('.more-info').click(function(){
-					  vex.dialog.alert({ unsafeMessage: `
-						  <table>
-							<col width="50%">
-							  <col width="50%">
-								<thead>
-								  <th>Network Status</th>
-								  <th>API Status</th>
-								</thead>
-								<tbody>
-								  <tr>
-									<td>${state?.onlineStatus.toString()}</td>
-									<td>${state?.apiStatus}</td>
-								  </tr>
-								</tbody>
-						  </table>
-						  <table>
-							<col width="40%">
-							<col width="20%">
-							<col width="40%">
-							<thead>
-							  <th>Firmware Version</th>
-							  <th>Debug</th>
-							  <th>Device Type</th>
-							</thead>
-							<tbody>
-							  <tr>
-								<td>v${state?.softwareVer.toString()}</td>
-							  	<td>${state?.debugStatus}</td>
-							  	<td>${state?.devTypeVer.toString()}</td>
-							  </tr>
-							</tbody>
-						  </table>
-						  <table>
-							<thead>
-							  <th>Nest Last Checked-In</th>
-							  <th>Data Last Received</th>
-							</thead>
-							<tbody>
-							  <tr>
-								<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-								<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-							  </tr>
-							</tbody>
-						  </table>
-				  	  `})
-			  	  });
+				  function reloadProtPage() {
+					  var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getInfoHtml"
+					  window.location = url;
+				  }
 			  </script>
+			  <div class="pageFooterBtn">
+				  <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadProtPage()">
+					<span>&#10227;</span> Refresh
+				  </button>
+			  </div>
 			</body>
 		</html>
 		"""
