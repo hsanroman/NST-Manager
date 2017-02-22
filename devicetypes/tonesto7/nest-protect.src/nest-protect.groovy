@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.5.1" }
+def devVer() { return "4.5.3" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -30,6 +30,7 @@ metadata {
 		command "runCoTest"
 		command "runBatteryTest"
 
+		attribute "devVer", "string"
 		attribute "alarmState", "string"
 		attribute "batteryState", "string"
 		attribute "battery", "string"
@@ -399,6 +400,9 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
+	if(isStateChange(device, "devVer", dVer.toString())) {
+		sendEvent(name: 'devVer', value: dVer, displayed: false)
+	}
 	if(isStateChange(device, "devTypeVer", newData.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
