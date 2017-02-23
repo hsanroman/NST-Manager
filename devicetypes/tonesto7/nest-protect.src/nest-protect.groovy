@@ -855,24 +855,6 @@ def getInfoHtml() {
                 <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
-				<style>
-					.alarmImg {
-					  vertical-align: top;
-					  width:60px; height:60px;
-					}
-					.alarmWarnCap {
-						display: block;
-						color: black;
-					}
-					.alarmEmerCap {
-						display: block;
-						color: black;
-					}
-					.alarmClearCap {
-						display: block;
-						color: black;
-					}
-				</style>
 			</head>
 			<body>
 			  ${disclaimerMsg()}

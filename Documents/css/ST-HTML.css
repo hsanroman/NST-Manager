@@ -242,11 +242,6 @@ tr {
   width:30px; height:15px;
 }
 
-.alarmImg {
-  vertical-align: top;
-  width:60px; height:60px;
-}
-
 .leafImg {
   width: 25px;
   height: 25px;
@@ -311,7 +306,6 @@ tr {
   margin:2px;
 }
 
-
 /*<--Bootstrap button -->*/
 .btn {
     display: inline-block;
@@ -336,11 +330,9 @@ tr {
 }
 .btn-info {
   color: #fff;
-  background-color: #5bc0de;
-  border-color: #46b8da;
+  background-color: #00a1db;
+  border-color: #00a1db;
 }
-
-
 
 .red{
   background-color:#db3a00;
@@ -455,20 +447,17 @@ tr {
 
 .alarmImg {
   vertical-align: top;
-  width:100px; height:100px;
+  width:60px; height:60px;
 }
-
 .alarmWarnCap {
     display: block;
-    color: #f9871c;
+    color: gray;
 }
-
 .alarmEmerCap {
     display: block;
-    color: #fa472f;
+    color: gray;
 }
-
 .alarmClearCap {
     display: block;
-    color: #1ef53c;
+    color: gray;
 }
