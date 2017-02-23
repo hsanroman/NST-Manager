@@ -7677,13 +7677,13 @@ def storeExecutionHistory(val, method = null) {
 			atomicState?.lastExecutionTime = val ?: null
 			def list = atomicState?.evalExecutionHistory ?: []
 			def listSize = 30
-			addToList(val, list, listSize)
+			list = addToList(val, list, listSize)
 			if(list) { atomicState?.evalExecutionHistory = list }
 		}
 		if(!(method in ["watchDogCheck", "checkNestMode"])) {
 			def list = atomicState?.detailExecutionHistory ?: []
 			def listSize = 30
-			addToList([val, method], list, listSize)
+			list = addToList([val, method], list, listSize)
 			if(list) { atomicState?.detailExecutionHistory = list }
 		}
 	} catch (ex) {
