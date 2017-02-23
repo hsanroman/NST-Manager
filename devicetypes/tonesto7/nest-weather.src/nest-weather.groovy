@@ -1528,8 +1528,8 @@ def getWeatherHTML() {
 				<body>
 					${clientBl}
 					${updateAvail}
+					${getWeatherAlertHtml()}
 					<div class="container">
-						${getWeatherAlertHtml()}
 						<h4>Current Weather Conditions</h4>
 						<h1 class="bottomBorder"> ${state?.curWeather?.current_observation?.display_location?.full} </h1>
 						<div class="row">
