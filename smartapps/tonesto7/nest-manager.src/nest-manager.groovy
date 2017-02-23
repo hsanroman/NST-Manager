@@ -2564,13 +2564,14 @@ def poll(force = false, type = null) {
 			def allowAsync = false
 			def metstr = "sync"
 			def sstr = ""
+			def spaceStr = sstr != "" ? " | " : ""
 			if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
 				allowAsync = true
 				metstr = "async"
 			}
 			if(ok2PollStruct()) {
 				//LogAction("Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})", "info", true)
-				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})"
+				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago)"
 				if(allowAsync) {
 					str = queueGetApiData("str")
 				} else {
@@ -2579,8 +2580,8 @@ def poll(force = false, type = null) {
 			}
 			if(ok2PollDevice()) {
 				//LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
-				sstr += str != "" ? " | " : ""
-				sstr += "Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})"
+				log.debug "sstr: $sstr"
+				sstr += "${spaceStr}Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
 				if(allowAsync) {
 					dev = queueGetApiData("dev")
 				} else {
@@ -2589,15 +2590,14 @@ def poll(force = false, type = null) {
 			}
 			if(ok2PollMetaData()) {
 				//LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
-				sstr += str != "" ? " | " : ""
-				sstr += "Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})"
+				sstr += "${spaceStr}Updating Meta Data (Last Updated: ${getLastMetaPollSec()} seconds ago)"
 				if(allowAsync) {
 					meta = queueGetApiData("meta")
 				} else {
 					meta = getApiData("meta")
 				}
 			}
-			if(sstr != "") { LogAction("${sstr}", "info", true) }
+			if(sstr != "") { LogAction("${sstr} (${metstr})", "info", true) }
 			if(allowAsync) { return }
 		}
 		finishPoll(str, dev)
