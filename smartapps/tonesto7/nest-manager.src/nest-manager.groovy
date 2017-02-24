@@ -5175,7 +5175,7 @@ def addRemoveDevices(uninst = null) {
 
 		def delete
 		LogAction("devicesInUse: ${devsInUse}", "debug", false)
-		delete = getChildDevices().findAll { !devsInUse?.toString()?.contains(it?.deviceNetworkId) }
+		delete = app.getChildDevices(true).findAll { !devsInUse?.toString()?.contains(it?.deviceNetworkId) }
 
 		if(delete?.size() > 0) {
 			LogAction("Removing ${delete.size()} devices: ${delete}", "debug", true)
@@ -5333,7 +5333,7 @@ def removeTestDevs() {
 		def names = [ "testNestThermostat-Install123", "testNestPresence-Install123", "testNestProtect-Install123", "testNestWeather-Install123", "testNestCamera-Install123" ]
 		names?.each { dev ->
 			//log.debug "dev: $dev"
-			def delete = getChildDevices().findAll { it?.deviceNetworkId == dev }
+			def delete = app.getChildDevices(true).findAll { it?.deviceNetworkId == dev }
 			//log.debug "delete: ${delete}"
 			if(delete) {
 				delete.each { deleteChildDevice(it.deviceNetworkId) }
