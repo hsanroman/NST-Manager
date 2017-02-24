@@ -392,32 +392,7 @@ def mainAutoPage(params) {
 					}
 
 					if(autoType == "schMot") {
-						//paragraph title:"Thermostat Automation:", ""
-						def sDesc = ""
-						sDesc += settings?.schMotTstat ? "${settings?.schMotTstat?.label}" : ""
-						//sDesc += settings?.schMotTstat ? getTstatModeDesc() : ""
-
-						if(settings?.schMotWaterOff) {
-							sDesc += "\n • Turn Off if Leak Detected"
-						}
-						if(settings?.schMotContactOff) {
-							sDesc += "\n • Set ECO if Contact Open"
-						}
-						if(settings?.schMotExternalTempOff) {
-							sDesc += "\n • Set ECO based on External Temp"
-						}
-						if(settings?.schMotRemoteSensor) {
-							sDesc += "\n • Use Remote Temp Sensors"
-						}
-						if(isTstatSchedConfigured()) {
-							sDesc += "\n • Setpoint Schedules Created"
-						}
-						if(settings?.schMotOperateFan) {
-							sDesc += "\n • Control Fans with HVAC"
-						}
-
-						sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
-						def sModeDesc = isSchMotConfigured() ? "${sDesc}" : null
+						def sModeDesc = getSchMotConfigDesc()
 						href "schMotModePage", title: "Thermostat Automation Config", description: sModeDesc ?: "Tap to configure", state: (sModeDesc ? "complete" : null), image: getAppImg("thermostat_automation_icon.png")
 					}
 
@@ -438,7 +413,7 @@ def mainAutoPage(params) {
 					input "disableAutomationreq", "bool", title: "Disable this Automation?", required: false, defaultValue: atomicState?.disableAutomation, submitOnChange: true, image: getAppImg("disable_icon2.png")
 					setAutomationStatus(settings?.disableAutomationreq)
 				}
-				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
+				input ("showDebug", "bool", title: "Debug Option", description: "Show Automation Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("debug_icon.png"))
 				atomicState?.showDebug = showDebug
 			}
 			section("Automation Name:") {
@@ -454,6 +429,29 @@ def mainAutoPage(params) {
 			}
 			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible\n\nThis Automation will be removed completely")
 		}
+	}
+}
+
+def getSchMotConfigDesc(retAsList=false) {
+	def list = []
+	if(settings?.schMotWaterOff) { list.push("Turn Off if Leak Detected") }
+	if(settings?.schMotContactOff) { list.push("Set ECO if Contact Open") }
+	if(settings?.schMotExternalTempOff) { list.push("Set ECO based on External Temp") }
+	if(settings?.schMotRemoteSensor) { list.push("Use Remote Temp Sensors") }
+	if(isTstatSchedConfigured()) { list.push("Setpoint Schedules Created") }
+	if(settings?.schMotOperateFan) { list.push("Control Fans with HVAC") }
+	if(settings?.schMotHumidityControl) { list.push("Control Humidifier") }
+
+	if(retAsList) {
+		return isSchMotConfigured() ? list : null
+	} else {
+		def sDesc = ""
+		sDesc += settings?.schMotTstat ? "${settings?.schMotTstat?.label}" : ""
+		list?.each { ls ->
+			sDesc += "\n • ${ls}"
+		}
+		sDesc += settings?.schMotTstat ? "\n\nTap to modify" : ""
+		return isSchMotConfigured() ? "${sDesc}" : null
 	}
 }
 
@@ -2058,7 +2056,7 @@ def getFanSwitchDesc(showOpt = true) {
 	}
 	swDesc += settings?."${pName}FanSwitches" ? "${showOpt ? "\n" : ""}• Fan Switches:" : ""
 	def rmSwCnt = settings?."${pName}FanSwitches"?.size() ?: 0
-	settings?."${pName}FanSwitches"?.each { sw ->
+	settings?."${pName}FanSwitches"?.sort { it?.displayName }?.each { sw ->
 		swCnt = swCnt+1
 		swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n   └" : "\n   ├"}" : "\n   └"} ${sw?.label}: (${strCapitalize(sw?.currentSwitch)})"
 		swDesc += checkFanSpeedSupport(sw) ? "\n	 └ Current Spd: (${sw?.currentValue("currentState").toString()})" : ""
@@ -2439,7 +2437,7 @@ def humCtrlSwitchDesc(showOpt = true) {
 		def str = ""
 		def cnt = 0
 		str += "Switch Status:"
-		settings?.humCtrlSwitches?.each { dev ->
+		settings?.humCtrlSwitches?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentSwitch) ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
@@ -2448,7 +2446,7 @@ def humCtrlSwitchDesc(showOpt = true) {
 		if(showOpt) {
 			str += (settings?.humCtrlSwitchTriggerType || settings?.humCtrlSwitchHvacModeFilter) ? "\n\nSwitch Triggers:" : ""
 			str += (settings?.humCtrlSwitchTriggerType) ? "\n  • Switch Trigger: (${getEnumValue(switchRunEnum(true), settings?.humCtrlSwitchTriggerType)})" : ""
-			str += (settings?.humCtrlSwitchHvacModeFilter) ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?.humCtrlSwitchHvacModeFilter)})" : ""
+			str += (settings?.humCtrlSwitchHvacModeFilter) ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?.humCtrlSwitchHvacModeFilter).toString().replaceAll("\\[|\\]", "")})" : ""
 		}
 
 		return str
@@ -2461,8 +2459,8 @@ def humCtrlHumidityDesc() {
 		def cCnt = settings?.humCtrlHumidity?.size() ?: 0
 		def str = ""
 		def cnt = 0
-		str += "\nSensor Status (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")}%)\n│"
-		settings?.humCtrlHumidity?.each { dev ->
+		str += "Sensor Humidity (average): (${getDeviceVarAvg(settings.humCtrlHumidity, "currentHumidity")}%)"
+		settings?.humCtrlHumidity?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentHumidity) ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${val}%)"
@@ -3046,7 +3044,7 @@ def conWatContactDesc() {
 		def str = ""
 		def cnt = 0
 		str += "Contact Status:"
-		settings?.conWatContacts?.each { dev ->
+		settings?.conWatContacts?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentContact) ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
@@ -3313,7 +3311,7 @@ def leakWatSensorsDesc() {
 		def str = ""
 		def cnt = 0
 		str += "Leak Sensors:"
-		settings?.leakWatSensors?.each { dev ->
+		settings?.leakWatSensors?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
 			def val = strCapitalize(dev?.currentWater) ?: "Not Set"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: (${val})"
@@ -3612,7 +3610,7 @@ def nModePresenceDesc() {
 		def str = ""
 		def cnt = 0
 		str += "Presence Status:"
-		settings?.nModePresSensor?.each { dev ->
+		settings?.nModePresSensor?.sort { it?.displayName }?.each { dev ->
 			cnt = cnt+1
 			def presState = strCapitalize(dev?.currentPresence) ?: "No State"
 			str += "${(cnt >= 1) ? "${(cnt == cCnt) ? "\n└" : "\n├"}" : "\n└"} ${dev?.label}: ${(dev?.label?.toString()?.length() > 10) ? "\n${(cCnt == 1 || cnt == cCnt) ? "    " : "│"}└ " : ""}(${presState})"
@@ -4672,9 +4670,9 @@ def schMotModePage() {
 				if(settings?.schMotHumidityControl) {
 					def humDesc = ""
 					humDesc += (settings?.humCtrlSwitches) ? "${humCtrlSwitchDesc()}" : ""
-					humDesc += (settings?.humCtrlHumidity) ? "${humCtrlHumidityDesc()}" : ""
-					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "\nSettings:" : ""
-					humDesc += (!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) ? "\n • Sensor: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
+					humDesc += (settings?.humCtrlHumidity) ? "${settings?.humCtrlSwitches ? "\n\n" : ""}${humCtrlHumidityDesc()}" : ""
+					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "\n\nSettings:" : ""
+					humDesc += (!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) ? "\n • Temp Sensor: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? "\n • Weather: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?."${humCtrlPrefix()}Modes" || settings?."${humCtrlPrefix()}Days" || (settings?."${humCtrlPrefix()}StartTime" && settings?."${humCtrlPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(humCtrlPrefix()) ? "ON" : "OFF"})" : ""
@@ -6019,7 +6017,7 @@ def getVoiceNotifConfigDesc(pName) {
 		str += medias ? "${speaks ? "\n\n" : "\n"}• Media Players:" : ""
 		if(medias) {
 			def cnt = 1
-			medias?.each { str += it ? "\n│${cnt < medias.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
+			medias?.sort { it?.displayName }?.each { str += it ? "\n│${cnt < medias.size() ? "├" : "└"} $it" : ""; cnt = cnt+1; }
 		}
 		str += (medias && settings?."${pName}SpeechVolumeLevel") ? "\n├ Volume: (${settings?."${pName}SpeechVolumeLevel"})" : ""
 		str += (medias && settings?."${pName}SpeechAllowResume") ? "\n└ Resume: (${strCapitalize(settings?."${pName}SpeechAllowResume")})" : ""

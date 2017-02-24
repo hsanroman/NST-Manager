@@ -2025,6 +2025,7 @@ def getInstAutoTypesDesc() {
 	def dat = ["nestMode":0,"watchDog":0, "disabled":0, "schMot":["tSched":0, "remSen":0, "fanCtrl":0, "fanCirc":0, "conWat":0, "extTmp":0, "leakWat":0, "humCtrl":0]]
 	def disItems = []
 	def nItems = [:]
+	def schMotItems = []
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
 		def ver
@@ -2052,6 +2053,7 @@ def getInstAutoTypesDesc() {
 					break
 				case "schMot":
 					def ai = a?.getAutomationsInstalled()
+					schMotItems = a?.getSchMotConfigDesc(true)
 					if(ai) {
 						ai?.each { aut ->
 							aut?.each { it2 ->
@@ -2088,6 +2090,11 @@ def getInstAutoTypesDesc() {
 	str += (dat?.nestMode > 0) ? ((dat?.nestMode > 1) ? "\n• Nest Home/Away (${dat?.nestMode})" : "\n• Nest Home/Away (Active)") : ""
 	def sch = dat?.schMot.findAll { it?.value > 0}
 	str += (sch?.size()) ? "\n• Thermostat (${sch?.size()})" : ""
+	def scii = 1
+	schMotItems?.each { sci ->
+		str += "${scii == schMotItems?.size() ? "\n  └" : "\n  ├"} $sci"
+		scii = scii+1
+	}
 	str += (disItems?.size() > 0) ? "\n• Disabled: (${disItems?.size()})" : ""
 	return (str != "") ? str : null
 }
