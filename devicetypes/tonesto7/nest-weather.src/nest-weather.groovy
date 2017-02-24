@@ -42,6 +42,7 @@ metadata {
 		attribute "wind", "string"
 		attribute "windgust", "string"
 		attribute "windDir", "string"
+		attribute "wind_degrees", "string"
 		attribute "weatherIcon", "string"
 		attribute "forecastIcon", "string"
 		attribute "feelsLike", "string"
@@ -49,6 +50,9 @@ metadata {
 		attribute "uvindex", "string"
 		attribute "dewpoint", "string"
 		attribute "visibility", "string"
+		attribute "pressure_mb", "string"
+		attribute "pressure_in", "string"
+		attribute "pressure_trend", "string"
 		attribute "alert", "string"
 		attribute "alert2", "string"
 		attribute "alert3", "string"
@@ -512,7 +516,13 @@ def getWeatherConditions(Map weatData) {
 				}
 				def wdir = cur?.current_observation?.wind_dir
 				sendEvent(name: "windDir", value: wdir)
+				sendEvent(name: "wind_degrees", value: cur?.current_observation?.wind_degrees)
 				state.windStr = "From the ${wdir} at ${wspeed} Gusting to ${wgust}"
+
+				sendEvent(name: "pressure_mb", value: cur?.current_observation?.pressure_mb)
+				sendEvent(name: "pressure_in", value: cur?.current_observation?.pressure_in)
+				sendEvent(name: "pressure_trend", value: cur?.current_observation?.pressure_trend)
+
 				sendEvent(name: "timeZoneOffset", value: cur?.current_observation?.local_tz_offset)
 				def cityValue = "${cur?.current_observation?.display_location.city}, ${cur?.current_observation?.display_location.state}"
 				sendEvent(name: "city", value: cityValue)
