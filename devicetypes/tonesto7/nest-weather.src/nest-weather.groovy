@@ -1493,7 +1493,6 @@ def forecastDay(day) {
 
 def getWeatherHTML() {
 	try {
-		def tempStr = getTempUnitStr()
 		if(!state?.curWeather || !state?.curForecast) {
 			return hideWeatherHtml()
 		}
@@ -1647,6 +1646,7 @@ def historyGraphHtml() {
 	def html = ""
 	if(state?.showGraphs) {
 		if (state?.temperatureTable?.size() > 0 && state?.dewpointTable?.size() > 0) {
+			def tempStr = getTempUnitStr()
 			def minval = getMinTemp()
 			def minstr = "minValue: ${minval},"
 
