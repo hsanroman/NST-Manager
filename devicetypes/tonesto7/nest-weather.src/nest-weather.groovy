@@ -89,6 +89,7 @@ metadata {
 	preferences {
 		input "resetHistoryOnly", "bool", title: "Reset History Data", description: "", displayDuringSetup: false
 		input "resetAllData", "bool", title: "Reset All Stored Event Data", description: "", displayDuringSetup: false
+		input "weatherAlertFilters", "text", title: "Block Weather Alerts containing the following", description: "Seperate each item with a comma", displayDuringSetup: false
 	}
 }
 
@@ -127,6 +128,12 @@ void checkStateClear() {
 		state.resetHistoryOnly = false
 	}
 	//LogAction("Device State Data: ${getState()}")
+}
+
+def getWAlertFilters() {
+	def waf = settings?.weatherAlertFilters ?: []
+	def res = waf != [] ? waf?.toString().tokenize(";,") : []
+	state?.weatherAlertFilters = res
 }
 
 def initialize() {
@@ -208,7 +215,8 @@ def poll() {
 }
 
 def refresh() {
-	poll()
+	getWAlertFilters()
+	//poll()
 }
 
 // parent calls this method to queue data.
@@ -229,6 +237,7 @@ void processEvent() {
 	state.eventData = null
 	checkStateClear()
 	try {
+		getWAlertFilters()
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.useMilitaryTime = eventData?.mt ? true : false
@@ -695,7 +704,10 @@ def getWeatherAlerts(weatData) {
 
 						if(state?.weatherAlertNotify) {
 							if(statechange && !(thisKey in state.lastWeatherAlertNotif)) {
-								sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+								def waf = state?.weatherAlertFilters?.findAll { alert?.message.contains(it) }
+								if(!waf) {
+									sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+								}
 							}
 							newWalertNotif << thisKey
 						}
