@@ -2564,7 +2564,6 @@ def poll(force = false, type = null) {
 			def allowAsync = false
 			def metstr = "sync"
 			def sstr = ""
-			def spaceStr = sstr != "" ? " | " : ""
 			if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
 				allowAsync = true
 				metstr = "async"
@@ -2580,8 +2579,8 @@ def poll(force = false, type = null) {
 			}
 			if(ok2PollDevice()) {
 				//LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
-				log.debug "sstr: $sstr"
-				sstr += "${spaceStr}Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
+				sstr += sstr != "" ? " | " : ""
+				sstr += "Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
 				if(allowAsync) {
 					dev = queueGetApiData("dev")
 				} else {
@@ -2590,7 +2589,8 @@ def poll(force = false, type = null) {
 			}
 			if(ok2PollMetaData()) {
 				//LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
-				sstr += "${spaceStr}Updating Meta Data (Last Updated: ${getLastMetaPollSec()} seconds ago)"
+				sstr += sstr != "" ? " | " : ""
+				sstr += "Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago)"
 				if(allowAsync) {
 					meta = queueGetApiData("meta")
 				} else {
@@ -4699,7 +4699,8 @@ def reqSchedInfoRprt(child, report=true) {
 
 def getVoiceRprtCnt() {
 	def cnt = 0
-	def devs = getAllChildDevices()
+	//def devs = getAllChildDevices()
+	def devs = app.getChildDevices(true)
 	if(devs?.size() >= 1) {
 		devs?.each { dev ->
 			def rCnt = dev?.getDataByName("voiceRprtCnt")
@@ -6499,7 +6500,8 @@ def childDevDataPage() {
 	def rVal = (settings?.childDevPageRfsh && settings?.childDevDataPageDev) ? (settings?.childDevDataRfshVal ? settings?.childDevDataRfshVal.toInteger() : 180) : null
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
 		if(!atomicState?.diagDevStateFilters) { atomicState?.diagDevStateFilters = ["diagDevStateFilters"] }
-		def devices = getAllChildDevices()
+		def devices = app.getChildDevices(true)
+		//def devices = getAllChildDevices()
 		section("Device Selection:") {
 			input(name: "childDevDataPageDev", title: "Select Device(s) to View", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
 			if(!settings?.childDevDataPageDev) { paragraph "Please select a device to view!", required: true, state: null }
@@ -6655,7 +6657,8 @@ def getChildStateKeys(type) {
 	def objs
 	switch (type) {
 		case "device":
-			objs = getAllChildDevices()
+			//objs = getAllChildDevices()
+			objs = app.getChildDevices(true)
 			break
 		case "childapp":
 			objs = getAllChildApps()
@@ -6861,7 +6864,7 @@ def renderInstallId() {
 }
 
 def sendInstallData() {
-	sendFirebaseData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json")
+	sendFirebaseData(createInstallDataJson(), "installData/clients/${atomicState?.installationId}.json", null, "heartbeat")
 }
 
 def removeInstallData() {
@@ -7004,7 +7007,7 @@ def processFirebaseResponse(resp, data) {
 			if(typeDesc?.toString() == "Remote Diag Logs") {
 
 			} else {
-				atomicState?.lastAnalyticUpdDt = getDtNow()
+				if(typeDesc?.toString() == "heartbeat") { atomicState?.lastAnalyticUpdDt = getDtNow() }
 			}
 			result = true
 		}
