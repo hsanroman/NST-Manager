@@ -681,7 +681,7 @@ def getWeatherAlerts(weatData) {
 						walertMessage = walertMessage.replaceAll(/\n/, '<br> ')
 
 						state."walert${cntr}" = walert
-						state."walertMessage${cntr}" = walertMessage
+						state."walertMessage${cntr}" = walertMessage.take(400)
 
 						if(state?.weatherAlertNotify) {
 							if(statechange && !(thisKey in state.lastWeatherAlertNotif)) {
