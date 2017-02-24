@@ -3603,7 +3603,6 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 				}
 			} else {
 				tempQueue << cmdData
-				schedQ = true
 			}
 			atomicState."cmdQ${qnum}" = tempQueue
 
@@ -3616,11 +3615,9 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			}
 
 			LogAction("${str} in Queue ${qnum} (qsize: ${tempQueue?.size()}): $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
-			if(schedQ) {
-				atomicState?.pollBlocked = true
-				atomicState?.lastQcmd = cmdData
-				schedNextWorkQ(childId)
-			}
+			atomicState?.pollBlocked = true
+			atomicState?.lastQcmd = cmdData
+			schedNextWorkQ(childId)
 			return true
 
 		} else {
