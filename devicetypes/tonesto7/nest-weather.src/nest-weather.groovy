@@ -139,6 +139,7 @@ def getWAlertFilters() {
 def initialize() {
 	Logger("initialized...")
 	verifyHC()
+	getWAlertFilters()
 }
 
 void installed() {
@@ -215,8 +216,7 @@ def poll() {
 }
 
 def refresh() {
-	getWAlertFilters()
-	//poll()
+	poll()
 }
 
 // parent calls this method to queue data.
@@ -237,7 +237,6 @@ void processEvent() {
 	state.eventData = null
 	checkStateClear()
 	try {
-		getWAlertFilters()
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
 			state.useMilitaryTime = eventData?.mt ? true : false
@@ -666,6 +665,7 @@ def getWeatherAlerts(weatData) {
 					def newAlerts = false
 					def newWalertNotif = []
 
+					getWAlertFilters()
 					alerts.each { alert ->
 						def thisKey = alert.type + alert.date_epoch
 						if(alert?.description == null) {
