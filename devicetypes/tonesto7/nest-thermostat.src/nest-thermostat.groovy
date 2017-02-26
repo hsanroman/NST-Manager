@@ -1223,28 +1223,42 @@ void levelUpDown(tempVal, chgType = null) {
 				curThermSetpoint = targetVal
 			}
 		}
+		def locked = state?.tempLockOn.toBoolean()
+		def curMinTemp
+		def curMaxTemp
 
+		if(locked) {
+			curMinTemp = device.currentState("lockedTempMin")?.doubleValue
+			curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
+		}
+		if (tempUnit == "C" ) {
+			if(curMinTemp < 9.0) { curMinTemp = 9.0 }
+			if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
+		} else {
+			if(curMinTemp < 50) { curMinTemp = 50 }
+			if(curMaxTemp > 90) { curMaxTemp = 90 }
+		}
 		if (upLevel) {
 			//LogAction("Increasing by 1 increment")
 			if (tempUnit == "C" ) {
 				targetVal = targetVal.toDouble() + 0.5
-				if (targetVal < 9.0) { targetVal = 9.0 }
-				if (targetVal > 32.0 ) { targetVal = 32.0 }
+				if(targetVal < curMinTemp) { targetVal = curMinTemp }
+				if(targetVal > curMaxTemp) { targetVal = curMaxTemp }
 			} else {
 				targetVal = targetVal.toDouble() + 1.0
-				if (targetVal < 50.0) { targetVal = 50 }
-				if (targetVal > 90.0) { targetVal = 90 }
+				if(targetVal < curMinTemp) { targetVal = curMinTemp }
+				if(targetVal > curMaxTemp) { targetVal = curMaxTemp }
 			}
 		} else {
 			//LogAction("Reducing by 1 increment")
 			if (tempUnit == "C" ) {
 				targetVal = targetVal.toDouble() - 0.5
-				if (targetVal < 9.0) { targetVal = 9.0 }
-				if (targetVal > 32.0 ) { targetVal = 32.0 }
+				if(targetVal < curMinTemp) { targetVal = curMinTemp }
+				if(targetVal > curMaxTemp) { targetVal = curMaxTemp }
 			} else {
 				targetVal = targetVal.toDouble() - 1.0
-				if (targetVal < 50.0) { targetVal = 50 }
-				if (targetVal > 90.0) { targetVal = 90 }
+				if(targetVal < curMinTemp) { targetVal = curMinTemp }
+				if(targetVal > curMaxTemp) { targetVal = curMaxTemp }
 			}
 		}
 
@@ -1449,15 +1463,23 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	def canHeat = state?.can_heat.toBoolean()
 	def result = false
 	def locked = state?.tempLockOn.toBoolean()
+	def curMinTemp
+	def curMaxTemp
 
+	if(locked) {
+		curMinTemp = device.currentState("lockedTempMin")?.doubleValue
+		curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
+	}
 	LogAction("Heat Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
 	if(canHeat && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
 				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
+				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if (temp) {
-					if (temp < 9.0) { temp = 9.0 }
-					if (temp > 32.0 ) { temp = 32.0 }
+					if(temp < curMinTemp) { temp = curMinTemp }
+					if(temp > curMaxTemp) { temp = curMaxTemp }
 					LogAction("Sending Heat Temp ($temp)")
 					if (hvacMode == 'auto') {
 						parent.setTargetTempLow(this, tempUnit, temp, virtType())
@@ -1473,9 +1495,11 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 				break
 			case "F":
 				temp = reqtemp.round(0).toInteger()
+				if(curMinTemp < 50) { curMinTemp = 50 }
+				if(curMaxTemp > 90) { curMaxTemp = 90 }
 				if (temp) {
-					if (temp < 50) { temp = 50 }
-					if (temp > 90) { temp = 90 }
+					if(temp < curMinTemp) { temp = curMinTemp }
+					if(temp > curMaxTemp) { temp = curMaxTemp }
 					LogAction("Sending Heat Temp ($temp)")
 					if (hvacMode == 'auto') {
 						parent.setTargetTempLow(this, tempUnit, temp, virtType())
@@ -1514,15 +1538,23 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	def canCool = state?.can_cool.toBoolean()
 	def result = false
 	def locked = state?.tempLockOn.toBoolean()
+	def curMinTemp
+	def curMaxTemp
 
+	if(locked) {
+		curMinTemp = device.currentState("lockedTempMin")?.doubleValue
+		curMaxTemp = device.currentState("lockedTempMax")?.doubleValue
+	}
 	LogAction("Cool Temp Received: ${reqtemp} (${tempUnit}) Locked: ${locked}")
 	if(canCool && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
 				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
+				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if (temp) {
-					if (temp < 9.0) { temp = 9.0 }
-					if (temp > 32.0) { temp = 32.0 }
+					if(temp < curMinTemp) { temp = curMinTemp }
+					if(temp > curMaxTemp) { temp = curMaxTemp }
 					LogAction("Sending Cool Temp ($temp)")
 					if (hvacMode == 'auto') {
 						parent.setTargetTempHigh(this, tempUnit, temp, virtType())
@@ -1539,9 +1571,11 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 
 			case "F":
 				temp = reqtemp.round(0).toInteger()
+				if(curMinTemp < 50) { curMinTemp = 50 }
+				if(curMaxTemp > 90) { curMaxTemp = 90 }
 				if (temp) {
-					if (temp < 50) { temp = 50 }
-					if (temp > 90) { temp = 90 }
+					if(temp < curMinTemp) { temp = curMinTemp }
+					if(temp > curMaxTemp) { temp = curMaxTemp }
 					LogAction("Sending Cool Temp ($temp)")
 					if (hvacMode == 'auto') {
 						parent.setTargetTempHigh(this, tempUnit, temp, virtType())
