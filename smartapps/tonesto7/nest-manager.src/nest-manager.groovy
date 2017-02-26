@@ -2836,6 +2836,7 @@ def processResponse(resp, data) {
 					atomicState?.structData = resp?.json
 					atomicState.needChildUpd = true
 					str = true
+					atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 					locationPresNotify(getLocationPresence())
 				}
 				atomicState.qstrRequested = false
