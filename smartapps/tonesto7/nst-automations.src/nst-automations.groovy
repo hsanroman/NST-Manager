@@ -417,15 +417,15 @@ def mainAutoPage(params) {
 				atomicState?.showDebug = showDebug
 			}
 			section("Automation Name:") {
-				if(autoType == "watchDog") {
-					paragraph "${app?.label}"
-				} else {
+//				if(autoType == "watchDog") {
+//					paragraph "${app?.label}"
+//				} else {
 					def newName = getAutoTypeLabel()
 					label title: "Label this Automation:", description: "Suggested Name: ${newName}", defaultValue: newName, required: true, wordWrap: true, image: getAppImg("name_tag_icon.png")
 					if(!atomicState?.isInstalled) {
 						paragraph "Make sure to name it something that you can easily recgonize."
 					}
-				}
+//				}
 			}
 			remove("Remove this Automation!", "WARNING!!!", "Last Chance to Stop!!!\nThis action is not reversible\n\nThis Automation will be removed completely")
 		}
