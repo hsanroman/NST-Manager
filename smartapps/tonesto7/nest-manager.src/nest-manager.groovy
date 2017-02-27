@@ -2849,6 +2849,11 @@ def processResponse(resp, data) {
 					LogAction("API Device Data HAS Changed", "debug", true)
 					atomicState?.deviceData = resp?.json
 					dev = true
+
+			//		atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
+			//		atomicState.protects = settings?.protects ? coState(settings?.protects) : null
+			//		atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
+
 				}
 				atomicState.qdevRequested = false
 			}
@@ -7060,7 +7065,7 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 				if(typeDesc.toString() == "Remote Diag Logs") {
 
 				} else {
-					atomicState?.lastAnalyticUpdDt = getDtNow()
+					if(typeDesc?.toString() == "heartbeat") { atomicState?.lastAnalyticUpdDt = getDtNow() }
 				}
 				result = true
 			}
