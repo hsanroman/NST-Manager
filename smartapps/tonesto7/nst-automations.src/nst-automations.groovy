@@ -244,7 +244,7 @@ def fixState() {
 	}
 	if(result) {
 		atomicState.resetAllData = true
-		LogAction("fixState: State Data: before: $before  after: ${getStateSizePerc()}", "info", true)
+		LogAction("fixState: State Data: before: $before after: ${getStateSizePerc()}", "info", true)
 		runIn(20, "finishFixState", [overwrite: true])
 	}
 	return result
@@ -358,9 +358,9 @@ def mainAutoPage(params) {
 	else { atomicState.automationType = params?.autoType; autoType = params?.autoType }
 
 	// If the selected automation has not been configured take directly to the config page.  Else show main page
-	if(autoType == "nMode" && !isNestModesConfigured())   { return nestModePresPage() }
-	else if(autoType == "watchDog" && !isWatchdogConfigured()) { return watchDogPage() }
-	else if(autoType == "schMot" && !isSchMotConfigured())     { return schMotModePage() }
+	if(autoType == "nMode" && !isNestModesConfigured())		{ return nestModePresPage() }
+	else if(autoType == "watchDog" && !isWatchdogConfigured())	{ return watchDogPage() }
+	else if(autoType == "schMot" && !isSchMotConfigured())		{ return schMotModePage() }
 
 	else {
 		// Main Page Entries
@@ -621,8 +621,8 @@ def initAutoApp() {
 				}
 				//LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
 				atomicState."sched${cnt}restrictions" = newscd
-				atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0)  ? true : false
-				atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0)  ? true : false
+				atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0) ? true : false
+				atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0) ? true : false
 				atomicState."schedule${cnt}MotionEnabled" = (newscd?.m0) ? true : false
 				atomicState."schedule${cnt}SensorEnabled" = (newscd?.sen0) ? true : false
 				//atomicState."schedule${cnt}FanCtrlEnabled" = (newscd?.fan0) ? true : false
@@ -644,7 +644,7 @@ def initAutoApp() {
 				cnt += 1
 			}
 			atomicState.scheduleTimersActive = timersActive
-			atomicState.lastSched = null  // clear automation state of schedule in use
+			atomicState.lastSched = null	// clear automation state of schedule in use
 			atomicState.scheduleSchedActiveCount = numact
 		}
 
@@ -1206,7 +1206,7 @@ def watchDogPage() {
 			def pageDesc = getNotifConfigDesc(pName)
 			href "setNotificationPage", title: "Configured Alerts", description: pageDesc, params: ["pName":"${pName}", "allowSpeech":true, "allowAlarm":true, "showSchedule":true],
 					state: (pageDesc ? "complete" : null), image: getAppImg("notification_icon.png")
-			input "watDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?",  required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_on_icon.png")
+			input "watDogNotifMissedEco", "bool", title: "Notify When Away and Not in Eco Mode?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("switch_on_icon.png")
 		}
 		//remove("Remove ${app?.label}!", "Last Chance!!!", "Warning!!! This action is not reversible\n\nThis Automation will be removed completely")
 	}
@@ -1264,7 +1264,7 @@ def watchDogCheck() {
 
 def watchDogAlarmActions(dev, dni, actType) {
 	def pName = watchDogPrefix()
-	//def allowNotif = (settings["${pName}NotificationsOn"] && (settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"] || settings["${pName}UsePush"]))  ? true : false
+	//def allowNotif = (settings["${pName}NotificationsOn"] && (settings["${pName}NotifRecips"] || settings["${pName}NotifPhones"] || settings["${pName}UsePush"])) ? true : false
 	def allowNotif = settings["${pName}NotificationsOn"] ? true : false
 	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 	def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -1345,10 +1345,10 @@ def remSenUnlock(val, myId) {
 */
 
 //Requirements Section
-def remSenCoolTempsReq() { return (settings?.remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false }
-def remSenHeatTempsReq() { return (settings?.remSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false }
-def remSenDayHeatTempOk()   { return (!remSenHeatTempsReq() || (remSenHeatTempsReq() && remSenDayHeatTemp)) ? true : false }
-def remSenDayCoolTempOk()   { return (!remSenCoolTempsReq() || (remSenCoolTempsReq() && remSenDayCoolTemp)) ? true : false }
+def remSenCoolTempsReq()	{ return (settings?.remSenRuleType in [ "Cool", "Heat_Cool", "Cool_Circ", "Heat_Cool_Circ" ]) ? true : false }
+def remSenHeatTempsReq()	{ return (settings?.remSenRuleType in [ "Heat", "Heat_Cool", "Heat_Circ", "Heat_Cool_Circ" ]) ? true : false }
+def remSenDayHeatTempOk()	{ return (!remSenHeatTempsReq() || (remSenHeatTempsReq() && remSenDayHeatTemp)) ? true : false }
+def remSenDayCoolTempOk()	{ return (!remSenCoolTempsReq() || (remSenCoolTempsReq() && remSenDayCoolTemp)) ? true : false }
 
 def isRemSenConfigured() {
 	def devOk = (settings?.remSensorDay) ? true : false
@@ -1491,7 +1491,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 				//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow())
 				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
 			}
-			return  true // let all this take effect
+			return true // let all this take effect
 		} else {
 			LogAction("Remote Sensor: COOL - CoolSetpoint is already (${chgval}°${getTemperatureScale()}) ", "info", true)
 		}
@@ -1500,7 +1500,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 		log.error "remSendoSetCool Exception:", ex
 		parent?.sendExceptionData(ex, "remSendoSetCool", true, getAutoType())
 	}
-	return  false
+	return false
 }
 
 def remSendoSetHeat(chgval, onTemp, offTemp) {
@@ -1531,7 +1531,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 				//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow())
 				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
 			}
-			return  true // let all this take effect
+			return true // let all this take effect
 		} else {
 			LogAction("Remote Sensor: HEAT - HeatSetpoint is already (${chgval}°${getTemperatureScale()})", "info", true)
 		}
@@ -1540,7 +1540,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 		log.error "remSendoSetHeat Exception:", ex
 		parent?.sendExceptionData(ex, "remSendoSetHeat", true, getAutoType())
 	}
-	return  false
+	return false
 }
 
 /*
@@ -1568,7 +1568,7 @@ private remSenCheck() {
 			noGoDesc += !remSenTstat ? "Missing Required Thermostat device" : ""
 			LogAction("Remote Sensor NOT Evaluating Status: ${noGoDesc}", "warn", true)
 		} else {
-			//log.info "remSenCheck:  Evaluating Event"
+			//log.info "remSenCheck: Evaluating Event"
 
 			def hvacMode = remSenTstat ? remSenTstat?.currentnestThermostatMode.toString() : null
 			if(hvacMode in [ "off", "eco"] ) {
@@ -1635,7 +1635,7 @@ private remSenCheck() {
 						def offTemp = reqSenCoolSetPoint
 						chgval = curTstatTemp + tempChangeVal
 						if(remSendoSetCool(chgval, onTemp, offTemp)) {
-							noGoDesc +=  "   Turning off COOL due to mode change"
+							noGoDesc += "   Turning off COOL due to mode change"
 						}
 						atomicState?.remSenCoolOn = false
 					}
@@ -1649,7 +1649,7 @@ private remSenCheck() {
 						def offTemp = reqSenHeatSetPoint
 						chgval = curTstatTemp - tempChangeVal
 						if(remSendoSetHeat(chgval, onTemp, offTemp)) {
-							noGoDesc +=  "   Turning off HEAT due to mode change"
+							noGoDesc += "   Turning off HEAT due to mode change"
 						}
 						atomicState?.remSenHeatOn = false
 					}
@@ -1784,8 +1784,8 @@ private remSenCheck() {
 			// if all thermostats (primary and mirrors) are Nest, then AC/HEAT & fan may be off (or set back) with away mode. (depends on user's home/away assist settings in Nest)
 			// if thermostats were not all Nest, then non Nest units could still be on for AC/HEAT or FAN
 			// current presumption in this implementation is:
-			//      they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.   (They could be mirrored from primary)
-			//      all thermostats in an automation are in the same Nest structure, so that all share home/away settings
+			//	they are all nests or integrated with Nest (Works with Nest) as we don't have away/home temps for each mirror thermostats.  (They could be mirrored from primary)
+			//	all thermostats in an automation are in the same Nest structure, so that all share home/away settings
 			//
 */
 		storeExecutionHistory((now() - execTime), "remSenCheck")
@@ -1952,7 +1952,7 @@ def getRemSenHeatSetTemp() {
 
 
 // TODO When a temp change is sent to virtual device, it lasts for 4 hours, next turn off, or next schedule change, then we return to automation settings
-// Other choices could be to change the schedule setpoint permanently if one is active,  or allow folks to set timer
+// Other choices could be to change the schedule setpoint permanently if one is active, or allow folks to set timer
 
 def getLastOverrideCoolSec() { return !atomicState?.lastOverrideCoolDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastOverrideCoolDt, null, "getLastOverrideCoolSec").toInteger() }
 def getLastOverrideHeatSec() { return !atomicState?.lastOverrideHeatDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastOverrideHeatDt, null, "getLastOverrideHeatSec").toInteger() }
@@ -2145,7 +2145,7 @@ def fanCtrlCheck() {
 }
 
 def getReqSetpointTemp(curTemp, reqHeatSetPoint, reqCoolSetPoint) {
-	LogAction("getReqSetpointTemp: Current Temp: ${curTemp} Req Heat: ${reqHeatSetPoint}  Req Cool: ${reqCoolSetPoint}", "info", false)
+	LogAction("getReqSetpointTemp: Current Temp: ${curTemp} Req Heat: ${reqHeatSetPoint} Req Cool: ${reqCoolSetPoint}", "info", false)
 	def tstat = schMotTstat
 
 	def hvacMode = tstat ? tstat?.currentThermostatMode.toString() : null
@@ -2161,7 +2161,7 @@ def getReqSetpointTemp(curTemp, reqHeatSetPoint, reqCoolSetPoint) {
 		def heatDiff = Math.abs(curTemp - reqHeatSetPoint)
 		opType = coolDiff < heatDiff ? "cool" : "heat"
 	}
-	def temp = (opType == "cool") ?  reqCoolSetPoint.toDouble() : reqHeatSetPoint.toDouble()
+	def temp = (opType == "cool") ? reqCoolSetPoint.toDouble() : reqHeatSetPoint.toDouble()
 	return ["req":temp, "type":opType]
 	//return temp
 }
@@ -2172,7 +2172,7 @@ def doFanOperation(tempDiff) {
 	try {
 		def tstat = schMotTstat
 
-		def curTstatTemp = tstat ?  getRemoteSenTemp().toDouble() : null
+		def curTstatTemp = tstat ? getRemoteSenTemp().toDouble() : null
 		def curCoolSetpoint = getRemSenCoolSetTemp()
 		def curHeatSetpoint = getRemSenHeatSetTemp()
 
@@ -2208,11 +2208,11 @@ def doFanOperation(tempDiff) {
 				break
 		}
 /*
-		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  1) {
+		if( settings?."${pName}FanSwitchTriggerType".toInteger() == 1) {
 			def validOperModes = ["heating", "cooling"]
 			hvacFanOn = (curTstatOperState in ["heating", "cooling"]) ? true : false
 		}
-		if( settings?."${pName}FanSwitchTriggerType".toInteger() ==  2) {
+		if( settings?."${pName}FanSwitchTriggerType".toInteger() == 2) {
 			hvacFanOn = (curTstatFanMode in ["on", "circulate"]) ? true : false
 		}
 		//if(settings?."${pName}FanSwitchHvacModeFilter" != "any" && (settings?."${pName}FanSwitchHvacModeFilter" != hvacMode)) {
@@ -2342,7 +2342,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 				def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > 600) ? true : false
 				if(!timeSinceLastRunOk) {
 					def remaining = 600 - getLastRemSenFanRunDtSec()
-					LogAction("Circulate Fan Run: Want to STOP Fan  Delaying for wait period 600, remaining ${remaining} seconds", "info", true)
+					LogAction("Circulate Fan Run: Want to STOP Fan Delaying for wait period 600, remaining ${remaining} seconds", "info", true)
 					remaining = remaining > 20 ? remaining : 20
 					remaining = remaining < 60 ? remaining : 60
 					scheduleAutomationEval(remaining)
@@ -2379,7 +2379,7 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 
 	LogAction(" ├ adjust: ${adjust}}°${getTemperatureScale()}", "debug", false)
 	LogAction(" ├ operType: (${strCapitalize(operType)})", "debug", false)
-	LogAction(" ├ Sensor Temp: ${senTemp}°${getTemperatureScale()} |  Requested Setpoint Temp: ${reqsetTemp}°${getTemperatureScale()}", "debug", false)
+	LogAction(" ├ Sensor Temp: ${senTemp}°${getTemperatureScale()} | Requested Setpoint Temp: ${reqsetTemp}°${getTemperatureScale()}", "debug", false)
 
 	def ontemp
 	def offtemp
@@ -2395,7 +2395,7 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 		if((senTemp < offtemp) && (senTemp >= (ontemp + adjust))) { turnOn = true }
 	}
 
-	LogAction(" ├ onTemp: ${ontemp}   | offTemp: ${offtemp}}°${getTemperatureScale()}", "debug", false)
+	LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}°${getTemperatureScale()}", "debug", false)
 	LogAction(" ├ FanAlreadyOn: (${strCapitalize(fanOn)})", "debug", false)
 	LogAction(" ┌ Final Result: (${strCapitalize(turnOn)})", "debug", false)
 	LogAction("getCirculateFanTempOk: ", "debug", false)
@@ -2510,6 +2510,7 @@ def humCtrlScheduleOk() { return autoScheduleOk(humCtrlPrefix()) }
 def humCtrlCheck() {
 	LogAction("humCtrlCheck", "trace", false)
 	def pName = humCtrlPrefix()
+	if(atomicState?.disableAutomation) { return }
 	try {
 		def execTime = now()
 
@@ -2684,8 +2685,8 @@ def getDesiredTemp(curMode) {
 	def desiredCoolTemp = getRemSenCoolSetTemp()
 	def desiredTemp = 0
 	if(desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
-	if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp  }
-	if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0  }
+	if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp }
+	if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0 }
 	if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
 
 	LogAction("getDesiredTemp: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
@@ -2701,7 +2702,7 @@ def extTmpTempOk() {
 		def extTmpTstatMir = settings?.schMotTstatMir
 
 		def execTime = now()
-		def intTemp = extTmpTstat ?  getRemoteSenTemp().toDouble() : null
+		def intTemp = extTmpTstat ? getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
 		def curMode = extTmpTstat.currentnestThermostatMode.toString()
 		def dpLimit = getComfortDewpoint(extTmpTstat)
@@ -2847,7 +2848,7 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			def lastDesired = atomicState?.extTmpLastDesiredTemp   // this catches scheduled temp or hvac mode changes
 			def desiredTemp = getDesiredTemp(curMode)
-			if(desiredTemp) { atomicState?.extTmpLastDesiredTemp =  desiredTemp }
+			if(desiredTemp) { atomicState?.extTmpLastDesiredTemp = desiredTemp }
 
 			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) { atomicState.extTmpChgWhileOnDt = getDtNow() }
 
@@ -3235,7 +3236,7 @@ def conWatCheck(cTimeOut = false) {
 						} else { LogAction("conWatCheck: Error turning themostat to ECO", "warn", true) }
 					} else {
 						if(getConWatRestoreDelayBetweenDtSec() < (getConWatRestoreDelayBetweenVal() - 2)) {
-							def remaining = getConWatRestoreDelayBetweenVal() -  getConWatRestoreDelayBetweenDtSec()
+							def remaining = getConWatRestoreDelayBetweenVal() - getConWatRestoreDelayBetweenDtSec()
 							LogAction("conWatCheck: | Skipping ECO change: delay since last restore not met (${getEnumValue(longTimeSecEnum(), conWatRestoreDelayBetween)})", "info", false)
 							remaining = remaining > 20 ? remaining : 20
 							remaining = remaining < 60 ? remaining : 60
@@ -3487,7 +3488,7 @@ def leakWatCheck() {
 
 def leakWatSensorEvt(evt) {
 	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
-	if(atomicState?.disableAutomation) {  return }
+	if(atomicState?.disableAutomation) { return }
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
 		def isModeOff = (curMode == "off") ? true : false
@@ -3676,7 +3677,7 @@ def adjustEco(on) {
 					d1?.eco()
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
-				LogAction("adjustEco: CURMODE: ${curMode}   ON: ${on} PREVMODE: ${prevMode}", "trace", false)
+				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
 				if(!on && curMode in ["eco"]) {
 					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
@@ -3991,7 +3992,7 @@ def getCurrentSchedule() {
 	}
 	if(ccnt > schedList?.size()) { noSched = true }
 	else { mySched = ccnt }
-	//LogAction("getCurrentSchedule:  mySched: $mySched  noSched: $noSched  ccnt: $ccnt res1: $res1", "trace", false)
+	//LogAction("getCurrentSchedule: mySched: $mySched noSched: $noSched ccnt: $ccnt res1: $res1", "trace", false)
 	return mySched
 }
 
@@ -4489,21 +4490,21 @@ def schMotModePage() {
 				str += (atomicState?.schMotTstatHasFan) ? "\n• FanMode: (${strCapitalize(tstat?.currentThermostatFanMode)})" : "\n• No Fan on HVAC system"
 				str += "\n• Presence: (${strCapitalize(getTstatPresence(tstat))})"
 				def safetyTemps = getSafetyTemps(tstat)
-					str +=  safetyTemps ? "\n• Safety Temps:\n  └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
-					str +=  "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
+					str += safetyTemps ? "\n• Safety Temps:\n  └ Min: ${safetyTemps.min}°${getTemperatureScale()}/Max: ${safetyTemps.max}${tempScaleStr}" : ""
+					str += "\n• Virtual: (${tstat?.currentNestType.toString() == "virtual" ? "True" : "False"})"
 				paragraph "${str}", title: "${tstat.displayName} Zone Status", state: (str != "" ? "complete" : null), image: getAppImg("info_icon2.png")
 
 				if(!tStatPhys) {      // if virtual thermostat, check if physical thermostat is in mirror list
 					def mylist = [ deviceNetworkId:"${tstat.deviceNetworkId.toString().replaceFirst("v", "")}" ]
 					dupTstat1 = checkThermostatDupe(mylist, tstatMir)
 					if(dupTstat1) {
-						paragraph "ERROR:\nThe Virtual version of the Primary Thermostat was found in Mirror Thermostat List.\nPlease Correct to Proceed", required: true, state: null,  image: getAppImg("error_icon.png")
+						paragraph "ERROR:\nThe Virtual version of the Primary Thermostat was found in Mirror Thermostat List.\nPlease Correct to Proceed", required: true, state: null, image: getAppImg("error_icon.png")
 					}
 				} else {	      // if physcial thermostat, see if virtual version is in mirror list
 					def mylist = [ deviceNetworkId:"v${tstat.deviceNetworkId.toString()}" ]
 					dupTstat2 = checkThermostatDupe(mylist, tstatMir)
 					if(dupTstat2) {
-						paragraph "ERROR:\nThe Virtual version of the Primary Thermostat was found in Mirror Thermostat List.\nPlease Correct to Proceed", required: true, state: null,  image: getAppImg("error_icon.png")
+						paragraph "ERROR:\nThe Virtual version of the Primary Thermostat was found in Mirror Thermostat List.\nPlease Correct to Proceed", required: true, state: null, image: getAppImg("error_icon.png")
 					}
 				}
 				dupTstat3 = checkThermostatDupe(tstat, tstatMir)  // make sure thermostat is not in mirror list
@@ -4553,7 +4554,7 @@ def schMotModePage() {
 				if(tStatPhys || settings?.schMotOperateFan) {
 					def desc = ""
 					def titStr = "Run External Fan while HVAC is Operating"
-					if(atomicState?.schMotTstatHasFan) { titStr +=  " or Use HVAC Fan for Circulation" }
+					if(atomicState?.schMotTstatHasFan) { titStr += " or Use HVAC Fan for Circulation" }
 					input (name: "schMotOperateFan", type: "bool", title: "${titStr}?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("fan_control_icon.png"))
 					if(settings?.schMotOperateFan) {
 						def fanCtrlDescStr = ""
@@ -4978,8 +4979,8 @@ def tstatConfigAutoPage(params) {
 
 							section("(Optional) Create a Virtual Nest Thermostat:") {
 								input(name: "vthermostat", type: "bool", title:"Create Virtual Nest Thermostat", required: false, submitOnChange: true, image: getAppImg("thermostat_icon.png"))
-								if(settings?.vthermostat != null  && !parent?.addRemoveVthermostat(tstat.deviceNetworkId, vthermostat, getMyLockId())) {
-									paragraph "Unable to ${(vthermostat ? "enable" : "disable")} Virtual Thermostat!.  Please Correct", image: getAppImg("error_icon.png")
+								if(settings?.vthermostat != null && !parent?.addRemoveVthermostat(tstat.deviceNetworkId, vthermostat, getMyLockId())) {
+									paragraph "Unable to ${(vthermostat ? "enable" : "disable")} Virtual Thermostat!. Please Correct", image: getAppImg("error_icon.png")
 								}
 							}
 
@@ -5279,11 +5280,11 @@ def getScheduleList() {
 	if(maxCnt > 8) { maxCnt = 8 }
 	if(maxCnt < atomicState?.lastScheduleList?.size()) {
 		maxCnt = atomicState?.lastScheduleList?.size()
-		LogAction("A schedule size issue has occurred.  The configured schedule size is smaller than the previous configuration restoring previous schedule size.", "warn", true)
+		LogAction("A schedule size issue has occurred. The configured schedule size is smaller than the previous configuration restoring previous schedule size.", "warn", true)
 	}
 	def list = 1..maxCnt
 	atomicState?.lastScheduleList = list
-	return  list
+	return list
 }
 
 def showUpdateSchedule(sNum=null,hideStr=null) {
@@ -5299,14 +5300,14 @@ def showUpdateSchedule(sNum=null,hideStr=null) {
 			if(sNum?.toInteger() == scd?.toInteger()) {
 				lact = act
 				act = settings["${sLbl}SchedActive"]
-				def schName =  settings["${sLbl}name"]
+				def schName = settings["${sLbl}name"]
 				editSchedule("secData":["scd":scd, "schName":schName, "hideable":(sNum ? false : true), "hidden":(act || (!act && scd == 1)) ? true : false, "hideStr":hideStr])
 			}
 		} else {
 			lact = act
 			act = settings["${sLbl}SchedActive"]
 			if (lact || act) {
-				def schName =  settings["${sLbl}name"]
+				def schName = settings["${sLbl}name"]
 				editSchedule("secData":["scd":scd, "schName":schName, "hideable":true, "hidden":(act || (!act && scd == 1)) ? true : false, "hideStr":hideStr])
 			}
 		}
@@ -6124,7 +6125,7 @@ def getDayModeTimeDesc(pName) {
 	def days = getInputToStringDesc(dayInput)
 	def modes = getInputToStringDesc(modeInput)
 	str += ((startTime && stopTime) || modes || days) ? "${!inverted ? "When" : "When Not"}:" : ""
-	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}"  : ""
+	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}" : ""
 	str += days ? "${(startTime || stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
 	str += modes ? "${(startTime || stopTime || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
 	str += (str != "") ? "\n\nTap to modify" : ""
@@ -6203,7 +6204,7 @@ def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
 	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 	def ok2Notify = parent.getOk2Notify()
 
-	LogAction("sendEventVoiceNotifications($vMsg, $pName)   ok2Notify: $ok2Notify", "trace", false)
+	LogAction("sendEventVoiceNotifications($vMsg, $pName) ok2Notify: $ok2Notify", "trace", false)
 	if(allowNotif && allowSpeech) {
 		if(ok2Notify && (settings["${pName}SpeechDevices"] || settings["${pName}SpeechMediaPlayer"])) {
 			sendTTS(vMsg, pName)
@@ -6262,7 +6263,7 @@ def alarm0FollowUp(val) {
 
 def alarm1FollowUp(val) {
 	def autoType = val.autoType
-	LogAction("alarm1FollowUp  autoType: $autoType  a2DelayVal: ${getAlert2DelayVal(autoType)}", "debug", true)
+	LogAction("alarm1FollowUp autoType: $autoType a2DelayVal: ${getAlert2DelayVal(autoType)}", "debug", true)
 	def aDev = settings["${autoType}AlarmDevices"]
 	if(aDev) {
 		aDev?.off()
@@ -6312,7 +6313,7 @@ def alarmEvtSchedCleanup(autoType) {
 }
 
 def sendEventAlarmAction(evtNum, autoType) {
-	LogAction("sendEventAlarmAction  evtNum: $evtNum  autoType: $autoType", "info", true)
+	LogAction("sendEventAlarmAction evtNum: $evtNum autoType: $autoType", "info", true)
 	try {
 		def resval = false
 		def allowNotif = settings?."${autoType}NotificationsOn" ? true : false
@@ -6703,10 +6704,10 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 		curCoolSetpoint = getTstatSetpoint(tstat, "cool")
 		curHeatSetpoint = getTstatSetpoint(tstat, "heat")
 		def diff = getTemperatureScale() == "C" ? 2.0 : 3.0
-		reqCool =  coolSetpoint?.toDouble() ?: null
-		reqHeat =  heatSetpoint?.toDouble() ?: null
+		reqCool = coolSetpoint?.toDouble() ?: null
+		reqHeat = heatSetpoint?.toDouble() ?: null
 
-		if(!reqCool && !reqHeat) { retVal = false; setStr += "Missing COOL and HEAT Setpoints"  }
+		if(!reqCool && !reqHeat) { retVal = false; setStr += "Missing COOL and HEAT Setpoints" }
 
 		if(hvacMode in ["auto"]) {
 			if(!reqCool && reqHeat) { reqCool = (double) (curCoolSetpoint > (reqHeat + diff)) ? curCoolSetpoint : (reqHeat + diff) }
@@ -6957,24 +6958,24 @@ def stateCleanup() {
 *								STATIC METHODS								  *
 *******************************************************************************/
 
-def getAutoAppChildName()   { return getChildName("Nest Automations") }
+def getAutoAppChildName()	{ return getChildName("Nest Automations") }
 def getWatDogAppChildName()	{ return getChildName("Nest Location ${location.name} Watchdog") }
 
-def getChildName(str)     	{ return "${str}${appDevName()}" }
+def getChildName(str)		{ return "${str}${appDevName()}" }
 
 def getServerUrl()			{ return "https://graph.api.smartthings.com" }
 def getShardUrl()			{ return getApiServerUrl() }
-def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
-def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
+def getHelpPageUrl()			{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
+def getAutoHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/${gitPath()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/${gitPath()}/Images/Devices/$imgName" : "" }
 
 def getChildAppVer(appName) { return appName?.appVersion() ? "v${appName?.appVersion()}" : "" }
-def getUse24Time()      	{ return useMilitaryTime ? true : false }
+def getUse24Time()			{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
-def getStateSize()      { return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSize()			{ return state?.toString().length() }
+def getStateSizePerc()			{ return (int) ((stateSize/100000)*100).toDouble().round(0) }
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -7182,7 +7183,7 @@ def LogTrace(msg, logSrc=null) {
 }
 
 def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
-	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
+	def isDbg = parent ? ((atomicState?.showDebug || showDebug) ? true : false) : (appDebug ? true : false)
 	def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
 	if(showAlways) { Logger(msg, type, theLogSrc) }
 	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
@@ -7259,7 +7260,7 @@ def appInfoDesc()	{
 	str += "\n• ${textModified()}"
 	return str
 }
-def textVersion()   { return "Version: ${appVersion()}" }
-def textModified()  { return "Updated: ${appVerDate()}" }
-def stIdeLink()     { return "https://graph.api.smartthings.com" }
-def appDesc()      { return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
+def textVersion()	{ return "Version: ${appVersion()}" }
+def textModified()	{ return "Updated: ${appVerDate()}" }
+def stIdeLink()		{ return "https://graph.api.smartthings.com" }
+def appDesc()		{ return "This SmartApp is used to integrate your Nest devices with SmartThings and to enable built-in automations" }
