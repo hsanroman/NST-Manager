@@ -1225,7 +1225,7 @@ void levelUpDown(tempVal, chgType = null) {
 		}
 		def locked = state?.tempLockOn.toBoolean()
 		def curMinTemp
-		def curMaxTemp
+		def curMaxTemp = 100.0
 
 		if(locked) {
 			curMinTemp = device.currentState("lockedTempMin")?.doubleValue
@@ -1464,7 +1464,7 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	def result = false
 	def locked = state?.tempLockOn.toBoolean()
 	def curMinTemp
-	def curMaxTemp
+	def curMaxTemp = 100.0
 
 	if(locked) {
 		curMinTemp = device.currentState("lockedTempMin")?.doubleValue
@@ -1539,7 +1539,7 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	def result = false
 	def locked = state?.tempLockOn.toBoolean()
 	def curMinTemp
-	def curMaxTemp
+	def curMaxTemp = 100.0
 
 	if(locked) {
 		curMinTemp = device.currentState("lockedTempMin")?.doubleValue
