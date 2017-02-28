@@ -93,6 +93,7 @@ metadata {
 		attribute "previousthermostatMode", "string"
 		attribute "whoMadeChanges", "string"
 		attribute "whoMadeChangesDesc", "string"
+		attribute "whoSetEcoMode", "string"
 	}
 
 	simulator {
@@ -548,6 +549,7 @@ void processEvent(data) {
 			getSomeData(true)
 			lastUpdatedEvent() //I don't know that this is needed any more
 			checkHealth()
+			ecoDescEvent()
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -850,6 +852,16 @@ def presenceEvent(presence) {
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
+def ecoDescEvent() {
+	def curMode = device?.currentnestThermostatMode
+	def curEcoDesc = device?.currentState("whoSetEcoMode") ?: null
+	def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : curEcoDesc
+	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
+		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
+		sendEvent(name: "whoSetEcoMode", value: newEcoDesc)
+	} else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})") }
+}
+
 def hvacModeEvent(mode) {
 	def hvacMode = !state?.hvac_mode ? device.currentState("thermostatMode")?.value.toString() : state.hvac_mode
 	def newMode = (mode == "heat-cool") ? "auto" : mode
@@ -862,7 +874,7 @@ def hvacModeEvent(mode) {
 	if(!hvacMode.equals(newMode)) {
 		Logger("UPDATED | Hvac Mode is (${newMode.toString().capitalize()}) | Original State: (${hvacMode.toString().capitalize()})")
 		sendEvent(name: "thermostatMode", value: newMode, descriptionText: "HVAC mode is ${newMode} mode", displayed: true, isStateChange: true)
-	} else { LogAction("Hvac Mode is (${newMode}) | Original State: (${hvacMode})") }
+	}
 
 	def oldnestmode = state?.nestHvac_mode
 	newMode = (mode == "heat-cool") ? "auto" : mode

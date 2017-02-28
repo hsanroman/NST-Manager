@@ -1157,6 +1157,12 @@ void sendAutoActionToDevice(dev, evtName, evtVal) {
 	}
 }
 
+void sendEcoActionDescToDevice(dev, desc) {
+	if(dev && desc) {
+		sendEvent(dev, "name":"whoSetEcoMode", "value":desc)
+	}
+}
+
 def getAutomationStats() {
 	return [
 		"lastUpdatedDt":atomicState?.lastUpdatedDt,
@@ -2874,7 +2880,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
-							if(setTstatMode(extTmpTstat, lastMode)) {
+							if(setTstatMode(extTmpTstat, lastMode, pName)) {
 								storeLastAction("Restored Mode ($lastMode)", getDtNow(), "extTmp", extTmpTstat)
 								atomicState?.extTmpRestoreMode = null
 								atomicState?.extTmpTstatOffRequested = false
@@ -2884,7 +2890,7 @@ def extTmpTempCheck(cTimeOut = false) {
 								unschedTimeoutRestore(pName)
 
 								if(extTmpTstatMir) {
-									if(setMultipleTstatMode(extTmpTstatMir, lastMode)) {
+									if(setMultipleTstatMode(extTmpTstatMir, lastMode, pName)) {
 										LogAction("Mirroring (${lastMode}) Restore to ${extTmpTstatMir}", "info", true)
 									}
 								}
@@ -2956,7 +2962,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						atomicState?.extTmpRestoreMode = curMode
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${strCapitalize(atomicState?.extTmpRestoreMode)}) mode", "info", true)
 						scheduleAutomationEval(60)
-						if(setTstatMode(extTmpTstat, "eco")) {
+						if(setTstatMode(extTmpTstat, "eco", pName)) {
 							storeLastAction("Set Thermostat to ECO", getDtNow(), "extTmp", extTmpTstat)
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
@@ -2965,7 +2971,7 @@ def extTmpTempCheck(cTimeOut = false) {
 							modeEco = true
 							rmsg = "${extTmpTstat.label} turned 'ECO': External Temp is at the temp threshold for (${getEnumValue(longTimeSecEnum(), extTmpOffDelay)})"
 							if(extTmpTstatMir) {
-								if(setMultipleTstatMode(extTmpTstatMir, "eco")) {
+								if(setMultipleTstatMode(extTmpTstatMir, "eco", pName)) {
 									LogAction("Mirroring (ECO) Mode to ${extTmpTstatMir}", "info", true)
 								}
 							}
@@ -3155,7 +3161,7 @@ def conWatCheck(cTimeOut = false) {
 						if(atomicState?.conWatRestoreMode) { lastMode = atomicState?.conWatRestoreMode }
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
-							if(setTstatMode(conWatTstat, lastMode)) {
+							if(setTstatMode(conWatTstat, lastMode, pName)) {
 								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow(), "conWat", conWatTstat)
 								atomicState?.conWatRestoreMode = null
 								atomicState?.conWatTstatOffRequested = false
@@ -3166,7 +3172,7 @@ def conWatCheck(cTimeOut = false) {
 								modeOff = false
 
 								if(conWatTstatMir) {
-									if(setMultipleTstatMode(conWatTstatMir, lastMode)) {
+									if(setMultipleTstatMode(conWatTstatMir, lastMode, pName)) {
 										LogAction("Mirroring (${lastMode}) Restore to ${conWatTstatMir}", "info", true)
 									}
 								}
@@ -3237,13 +3243,13 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: Saving ${conWatTstat?.label} mode (${strCapitalize(atomicState?.conWatRestoreMode)})", "info", true)
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
-						if(setTstatMode(conWatTstat, "eco")) {
+						if(setTstatMode(conWatTstat, "eco", pName)) {
 							storeLastAction("Turned Off $conWatTstat", getDtNow(), "conWat", conWatTstat)
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
 							if(conWatTstatMir) {
-								if(setMultipleTstatMode(conWatTstatMir, "eco")) {
+								if(setMultipleTstatMode(conWatTstatMir, "eco", pName)) {
 									LogAction("Mirroring (ECO) Mode to ${conWatTstatMir}", "info", true)
 								}
 							}
@@ -3401,14 +3407,14 @@ def leakWatCheck() {
 						if(atomicState?.leakWatRestoreMode) { lastMode = atomicState?.leakWatRestoreMode }
 						if(lastMode && (lastMode != curMode || !safetyOk)) {
 							scheduleAutomationEval(60)
-							if(setTstatMode(leakWatTstat, lastMode)) {
+							if(setTstatMode(leakWatTstat, lastMode, pName)) {
 								storeLastAction("Restored Mode ($lastMode) to $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
 								atomicState?.leakWatTstatOffRequested = false
 								atomicState?.leakWatRestoreMode = null
 								atomicState?.leakWatRestoredDt = getDtNow()
 
 								if(leakWatTstatMir) {
-									if(setMultipleTstatMode(leakWatTstatMir, lastmode)) {
+									if(setMultipleTstatMode(leakWatTstatMir, lastmode, pName)) {
 										LogAction("leakWatCheck: Mirroring Restoring Mode (${lastMode}) to ${leakWatTstatMir}", "info", true)
 									}
 								}
@@ -3473,13 +3479,13 @@ def leakWatCheck() {
 					LogAction("leakWatCheck: Saving ${leakWatTstat?.label} mode (${strCapitalize(atomicState?.leakWatRestoreMode)})", "info", true)
 					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
-					if(setTstatMode(leakWatTstat, "off")) {
+					if(setTstatMode(leakWatTstat, "off", pName)) {
 						storeLastAction("Turned Off $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
 						atomicState?.leakWatTstatOffRequested = true
 						atomicState?.leakWatDryDt = getDtNow()
 
 						if(leakWatTstatMir) {
-							if(setMultipleTstatMode(leakWatTstatMir, "off")) {
+							if(setMultipleTstatMode(leakWatTstatMir, "off", pName)) {
 								LogAction("leakWatCheck: Mirroring (Off) Mode to ${leakWatTstatMir}", "info", true)
 							}
 						}
@@ -3687,7 +3693,6 @@ def adjustCameras(on) {
 def adjustEco(on, senderAutoType=null) {
 	def tstats = parent?.getTstats()
 	def foundTstats
-	def ecoSet = false
 	if(tstats) {
 		foundTstats = tstats?.collect { dni ->
 			def d1 = parent.getThermostatDevice(dni)
@@ -3696,15 +3701,14 @@ def adjustEco(on, senderAutoType=null) {
 				def curMode = d1?.currentnestThermostatMode?.toString()
 				if(on && !(curMode in ["eco", "off"])) {
 					didstr = "ECO"
-					d1?.eco()
-					ecoSet = true
+					setTstatMode(d1, "eco", senderAutoType)
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
 				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
 				if(!on && curMode in ["eco"]) {
 					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
-						d1?."$prevMode"()
+						setTstatMode(d1, prevMode, senderAutoType)
 					}
 				}
 				if(didstr) {
@@ -3715,7 +3719,6 @@ def adjustEco(on, senderAutoType=null) {
 			} else { LogAction("adjustEco NO D1", "warn", true) }
 		}
 	}
-	atomicState?.whoSetEcoMode = !ecoSet ? null : senderAutoType
 }
 
 def setAway(away) {
@@ -3807,7 +3810,7 @@ def checkNestMode() {
 				LogAction("checkNestMode: ${awayDesc} Nest 'Away'", "info", true)
 				didsomething = true
 				if(nModeSetEco) {
-					adjustEco(true, "nMode")
+					adjustEco(true, pName)
 				}
 				setAway(true)
 				atomicState?.nModeTstatLocAway = true
@@ -3823,7 +3826,7 @@ def checkNestMode() {
 				storeLastAction("Set Nest Location (Home)", getDtNow())
 				setAway(false)
 				atomicState?.nModeTstatLocAway = false
-				if(nModeSetEco) { adjustEco(false) }
+				if(nModeSetEco) { adjustEco(false, pName) }
 				if(allowNotif) {
 					sendEventPushNotifications("${homeDesc} Nest 'Home'", "Info", pName)
 				}
@@ -4398,12 +4401,13 @@ def setTstatTempCheck() {
 
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
 				if(newHvacMode && (newHvacMode.toString() != curMode)) {
-					if(setTstatMode(schMotTstat, newHvacMode)) {
+					if(setTstatMode(schMotTstat, newHvacMode, pName)) {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow(), "schMot", tstat)
+						sendEcoActionDescToDevice(schMotTstat, "schMot")
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
 					if(tstatMir) {
-						if(setMultipleTstatMode(tstatMir, newHvacMode)) {
+						if(setMultipleTstatMode(tstatMir, newHvacMode, pName)) {
 							LogAction("Mirroring (${newHvacMode}) to ${tstatMir}", "info", true)
 						}
 					}
@@ -6662,7 +6666,7 @@ def getTstatPresence(tstat) {
 	return pres
 }
 
-def setTstatMode(tstat, mode) {
+def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
 	try {
 		if(mode) {
@@ -6671,6 +6675,9 @@ def setTstatMode(tstat, mode) {
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
 			else if(mode == "eco") { tstat.eco(); result = true }
+
+			sendEcoActionDescToDevice(tstat, (mode == "eco" ? autoType : null))
+
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
 			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
 		} else {
@@ -6684,12 +6691,12 @@ def setTstatMode(tstat, mode) {
 	return result
 }
 
-def setMultipleTstatMode(tstats, mode) {
+def setMultipleTstatMode(tstats, mode, autoType=null) {
 	def result = false
 	try {
 		if(tstats && mode) {
 			tstats?.each { ts ->
-				if(setTstatMode(ts, mode)) {
+				if(setTstatMode(ts, mode, autoType)) {
 					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
 					storeLastAction("Set ${ts} to (${mode})", getDtNow())
 					result = true
