@@ -91,6 +91,8 @@ metadata {
 		attribute "pauseUpdates", "string"
 		attribute "nestReportData", "string"
 		attribute "previousthermostatMode", "string"
+		attribute "whoMadeChanges", "string"
+		attribute "whoMadeChangesDesc", "string"
 	}
 
 	simulator {

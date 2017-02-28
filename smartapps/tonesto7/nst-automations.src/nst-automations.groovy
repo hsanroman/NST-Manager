@@ -27,7 +27,7 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.6.0" }
+def appVersion() { "4.6.1" }
 def appVerDate() { "2-28-2017" }
 
 preferences {
@@ -1151,6 +1151,12 @@ def runAutomationEval() {
 	}
 }
 
+void sendAutoActionToDevice(dev, evtName, evtVal) {
+	if(dev && evtName && evtVal) {
+		sendEvent(dev, "name":evtName, "value":evtVal)
+	}
+}
+
 def getAutomationStats() {
 	return [
 		"lastUpdatedDt":atomicState?.lastUpdatedDt,
@@ -1163,9 +1169,13 @@ def getAutomationStats() {
 	]
 }
 
-def storeLastAction(actionDesc, actionDt) {
+def storeLastAction(actionDesc, actionDt, autoType=null, dev=null) {
 	if(actionDesc && actionDt) {
-		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt]
+		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt, "autoType":autoType]
+		if(dev) {
+			sendAutoActionToDevice(dev, "whoMadeChanges", autoType)
+			sendAutoActionToDevice(dev, "whoMadeChangesDesc", actionDesc)
+		}
 	}
 }
 
@@ -1176,7 +1186,7 @@ def getAutoActionData() {
 }
 
 def automationGenericEvt(evt) {
-	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName}] | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(isRemSenConfigured() && settings?.vthermostat) {
 		atomicState.needChildUpdate = true
 	}
@@ -1366,7 +1376,7 @@ def getLastMotionInActiveSec(mySched) {
 }
 
 def automationMotionEvt(evt) {
-	LogAction("Event | Motion Sensor: '${evt?.displayName}' Motion is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' Motion is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		storeLastEventData(evt)
@@ -1410,9 +1420,9 @@ def automationMotionEvt(evt) {
 			delay = delay < 60 ? delay : 60
 			scheduleAutomationEval(delay)
 		} else {
-			def str = "Event | Skipping Motion Check: "
+			def str = "Motion Event | Skipping Motion Check: "
 			if(mySched) {
-				str += "Motion Sensor is Not Used in Active Schedule (${mySched} - ${getSchedLbl(getCurrentSchedule())})"
+				str += "Motion Sensor is Not Used in Active Schedule (#${mySched} - ${getSchedLbl(getCurrentSchedule())})"
 			} else {
 				str += "No Active Schedule"
 			}
@@ -2327,7 +2337,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 		}
 		LogAction("Circulate Fan: Activating '${tstat?.displayName}'' Fan for ${strCapitalize(operType)}ING Circulation", "debug", true)
 		tstat?.fanOn()
-		storeLastAction("Turned ${tstat} Fan 'On'", getDtNow())
+		storeLastAction("Turned ${tstat} Fan 'On'", getDtNow(), "fanCtrl", tstat)
 		if(tstatsMir) {
 			tstatsMir?.each { mt ->
 				LogAction("Circulate Fan: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan", "debug", true)
@@ -2351,7 +2361,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 			}
 			LogAction("Circulate Fan: Turning OFF '${remSenTstat?.displayName}' Fan that was used for ${strCapitalize(operType)}ING Circulation", "info", true)
 			tstat?.fanAuto()
-			storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow())
+			storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow(), "fanCtrl", tstat)
 			if(tstatsMir) {
 				tstatsMir?.each { mt ->
 					LogAction("Circulate Fan: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan", "info", true)
@@ -2865,7 +2875,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(extTmpTstat, lastMode)) {
-								storeLastAction("Restored Mode ($lastMode)", getDtNow())
+								storeLastAction("Restored Mode ($lastMode)", getDtNow(), "extTmp", extTmpTstat)
 								atomicState?.extTmpRestoreMode = null
 								atomicState?.extTmpTstatOffRequested = false
 								atomicState?.extTmpRestoredDt = getDtNow()
@@ -2947,7 +2957,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${strCapitalize(atomicState?.extTmpRestoreMode)}) mode", "info", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(extTmpTstat, "eco")) {
-							storeLastAction("Set Thermostat to ECO", getDtNow())
+							storeLastAction("Set Thermostat to ECO", getDtNow(), "extTmp", extTmpTstat)
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -2992,7 +3002,7 @@ def extTmpTempCheck(cTimeOut = false) {
 }
 
 def extTmpGenericEvt(evt) {
-	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
 	storeLastEventData(evt)
 	extTmpDpOrTempEvt("${evt?.name}")
 }
@@ -3043,7 +3053,7 @@ def autoStateDesc(autotype) {
 	def str = ""
 	def t0 = atomicState?."${autotype}RestoreMode"
 	def t1 = atomicState?."${autotype}TstatOffRequested"
-	str += "State:"
+	str += "ECO State:"
 	str += "\n • Mode Adjusted: (${t0 != null ? "TRUE" : "FALSE"})"
 	str += "\n •   Last Mode: (${strCapitalize(t0) ?: "Not Set"})"
 	str += t1 ? "\n •   Last Eco Requested: (${t1})" : ""
@@ -3146,7 +3156,7 @@ def conWatCheck(cTimeOut = false) {
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(conWatTstat, lastMode)) {
-								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow())
+								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow(), "conWat", conWatTstat)
 								atomicState?.conWatRestoreMode = null
 								atomicState?.conWatTstatOffRequested = false
 								atomicState?.conWatRestoredDt = getDtNow()
@@ -3228,7 +3238,7 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "eco")) {
-							storeLastAction("Turned Off $conWatTstat", getDtNow())
+							storeLastAction("Turned Off $conWatTstat", getDtNow(), "conWat", conWatTstat)
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -3279,7 +3289,7 @@ def conWatCheck(cTimeOut = false) {
 }
 
 def conWatContactEvt(evt) {
-	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
@@ -3392,7 +3402,7 @@ def leakWatCheck() {
 						if(lastMode && (lastMode != curMode || !safetyOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(leakWatTstat, lastMode)) {
-								storeLastAction("Restored Mode ($lastMode) to $leakWatTstat", getDtNow())
+								storeLastAction("Restored Mode ($lastMode) to $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
 								atomicState?.leakWatTstatOffRequested = false
 								atomicState?.leakWatRestoreMode = null
 								atomicState?.leakWatRestoredDt = getDtNow()
@@ -3464,7 +3474,7 @@ def leakWatCheck() {
 					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
 					if(setTstatMode(leakWatTstat, "off")) {
-						storeLastAction("Turned Off $leakWatTstat", getDtNow())
+						storeLastAction("Turned Off $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
 						atomicState?.leakWatTstatOffRequested = true
 						atomicState?.leakWatDryDt = getDtNow()
 
@@ -3498,7 +3508,7 @@ def leakWatCheck() {
 }
 
 def leakWatSensorEvt(evt) {
-	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
@@ -3638,7 +3648,7 @@ def isNestModesConfigured() {
 }
 
 def nModeGenericEvt(evt) {
-	LogAction("Event | ${evt?.name}: From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	storeLastEventData(evt)
 	if(nModeDelay) {
@@ -3674,9 +3684,10 @@ def adjustCameras(on) {
 	}
 }
 
-def adjustEco(on) {
+def adjustEco(on, senderAutoType=null) {
 	def tstats = parent?.getTstats()
 	def foundTstats
+	def ecoSet = false
 	if(tstats) {
 		foundTstats = tstats?.collect { dni ->
 			def d1 = parent.getThermostatDevice(dni)
@@ -3686,6 +3697,7 @@ def adjustEco(on) {
 				if(on && !(curMode in ["eco", "off"])) {
 					didstr = "ECO"
 					d1?.eco()
+					ecoSet = true
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
 				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
@@ -3697,12 +3709,13 @@ def adjustEco(on) {
 				}
 				if(didstr) {
 					LogAction("adjustEco($on): | Thermostat: ${d1?.displayName} setting to HVAC mode $didstr was $curMode", "trace", true)
-					storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow())
+					storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow(), senderAutoType, d1)
 				}
 				return d1
 			} else { LogAction("adjustEco NO D1", "warn", true) }
 		}
 	}
+	atomicState?.whoSetEcoMode = !ecoSet ? null : senderAutoType
 }
 
 def setAway(away) {
@@ -3719,7 +3732,7 @@ def setAway(away) {
 				}
 				def didstr = away ? "AWAY" : "HOME"
 				LogAction("setAway($away): | Thermostat: ${d1?.displayName} setting to $didstr", "trace", true)
-				storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow())
+				storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow(), "nMode", d1)
 				return d1
 			} else { LogAction("setaway NO D1", "warn", true) }
 		}
@@ -3731,7 +3744,7 @@ def setAway(away) {
 		}
 		def didstr = away ? "AWAY" : "HOME"
 		LogAction("setAway($away): | Setting structure to $didstr", "trace", true)
-		storeLastAction("Set structure to $didstr", getDtNow())
+		storeLastAction("Set structure to $didstr", getDtNow(), "nMode", d1)
 	}
 }
 
@@ -3794,7 +3807,7 @@ def checkNestMode() {
 				LogAction("checkNestMode: ${awayDesc} Nest 'Away'", "info", true)
 				didsomething = true
 				if(nModeSetEco) {
-					adjustEco(true)
+					adjustEco(true, "nMode")
 				}
 				setAway(true)
 				atomicState?.nModeTstatLocAway = true
@@ -4322,7 +4335,7 @@ def setTstatTempCheck() {
 		def samemode = lastMode == curMode ? true : false
 
 		def mySched = getCurrentSchedule()
-		log.debug "mySched: $mySched"
+		log.debug "Tstat Temp Check | Current Schedule: ${mySched ?: "None Active"}"
 		def noSched = (mySched == null) ? true : false
 
 		def previousSched = atomicState?.lastSched
@@ -4386,7 +4399,7 @@ def setTstatTempCheck() {
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
 				if(newHvacMode && (newHvacMode.toString() != curMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode)) {
-						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow())
+						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow(), "schMot", tstat)
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
 					if(tstatMir) {
