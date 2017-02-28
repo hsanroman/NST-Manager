@@ -55,6 +55,9 @@ metadata {
 		command "changeMode"
 		command "changeFanMode"
 		command "updateNestReportData"
+		command "whoSetEco"
+		command "ecoDescEvent"
+		command "whoMadeChanges"
 
 		attribute "devVer", "string"
 		attribute "temperatureUnit", "string"
@@ -550,6 +553,8 @@ void processEvent(data) {
 			lastUpdatedEvent() //I don't know that this is needed any more
 			checkHealth()
 			ecoDescEvent()
+			log.debug "whoSetEcoMode | ${device?.currentState("whoSetEcoMode")?.value}"
+			log.debug "whoMadeChanges | ${device?.currentState("whoMadeChanges")?.value}: ${device?.currentState("whoMadeChangesDesc")?.value}"
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -711,7 +716,7 @@ def lastCheckinEvent(checkin, isOnline) {
 
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
+		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Previous Check-in: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 
 		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "Online" : "Offline" }
@@ -852,10 +857,22 @@ def presenceEvent(presence) {
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
-def ecoDescEvent() {
-	def curMode = device?.currentnestThermostatMode
-	def curEcoDesc = device?.currentState("whoSetEcoMode") ?: null
-	def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : curEcoDesc
+def whoMadeChanges(data) {
+	log.debug "whoMadeChanges: $data"
+	// def curChgs = device?.currentState("whoMadeChanges")?.value.toString()
+	// def curChgs = device?.currentState("whoMadeChangesDes")?.value.toString()
+	// def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
+	// def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : curEcoDesc
+	// if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
+	// 	Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
+	// 	sendEvent(name: "whoSetEcoMode", value: newEcoDesc)
+	// } else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})") }
+}
+
+def ecoDescEvent(val) {
+	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
+	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
+	def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : (val ?: curEcoDesc)
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
 		sendEvent(name: "whoSetEcoMode", value: newEcoDesc)

@@ -1151,15 +1151,15 @@ def runAutomationEval() {
 	}
 }
 
-void sendAutoActionToDevice(dev, evtName, evtVal) {
-	if(dev && evtName && evtVal) {
-		sendEvent(dev, "name":evtName, "value":evtVal)
+void sendAutoChgToDevice(dev, autoType, chgDesc) {
+	if(dev && autoType && chgDesc) {
+		dev?.whoMadeChanges(["type":autoType.toString(), "desc":actionDesc?.toString()])
 	}
 }
 
 void sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		sendEvent(dev, "name":"whoSetEcoMode", "value":desc)
+		dev?.ecoDescEvent(desc.toString())
 	}
 }
 
@@ -1177,10 +1177,9 @@ def getAutomationStats() {
 
 def storeLastAction(actionDesc, actionDt, autoType=null, dev=null) {
 	if(actionDesc && actionDt) {
-		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt, "autoType":autoType]
+		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt]
 		if(dev) {
-			sendAutoActionToDevice(dev, "whoMadeChanges", autoType)
-			sendAutoActionToDevice(dev, "whoMadeChangesDesc", actionDesc)
+			sendAutoChgToDevice(dev, autoType, actionDesc)
 		}
 	}
 }
@@ -1382,7 +1381,7 @@ def getLastMotionInActiveSec(mySched) {
 }
 
 def automationMotionEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' Motion is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' | Motion is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		storeLastEventData(evt)
@@ -3008,7 +3007,7 @@ def extTmpTempCheck(cTimeOut = false) {
 }
 
 def extTmpGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	storeLastEventData(evt)
 	extTmpDpOrTempEvt("${evt?.name}")
 }

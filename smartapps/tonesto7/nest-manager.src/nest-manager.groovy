@@ -93,6 +93,9 @@ preferences {
 	page(name: "backupStubDataPage")
 	page(name: "backupRemoveDataPage")
 	page(name: "backupPage")
+
+	page(name: "pageIntegrateIFTTT")
+	page(name: "pageIntegrateIFTTTConfirm")
 }
 
 mappings {
@@ -104,6 +107,7 @@ mappings {
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
 		//path("/receiveEventData")	{action: [POST: "receiveEventData"]}
+		path("/ifttt/:eventName") 	{action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	}
 }
 
@@ -244,9 +248,14 @@ def mainPage() {
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 						image: getAppImg("notification_icon2.png")
 			}
+			section("IFTTT Integration:") {
+				def iftttConnected = atomicState?.modules && atomicState?.modules?.ifttt && settings["iftttEnabled"] && atomicState?.modules?.ifttt?.connected
+				href "pageIntegrateIFTTT", title: "IFTTT", description: iftttConnected ? "Connected" : "Not configured", state: (iftttConnected ? "complete" : null), submitOnChange: true, required: false
+			}
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
+
 		}
 		incMainLoadCnt()
 		devPageFooter("mainLoadCnt", execTime)
@@ -614,6 +623,79 @@ def voiceRprtPrefPage() {
 		}
 		incVrprtPrefLoadCnt()
 	}
+}
+
+/************************************************
+ *					IFTTT CODE					*
+ ************************************************/
+
+def getIftttKey() {
+	def module = atomicState.modules["ifttt"]
+	return (module && module?.connected ? module?.key : null)
+}
+
+def pageIntegrateIFTTT() {
+	return dynamicPage(name: "pageIntegrateIFTTT", title: "IFTTT Integration", nextPage: settings?.iftttEnabled ? "pageIntegrateIFTTTConfirm" : null) {
+		section() {
+			paragraph "CoRE can optionally integrate with IFTTT (IF This Then That) via the Maker channel, triggering immediate events to IFTTT. To enable IFTTT, please login to your IFTTT account and connect the Maker channel. You will be provided with a key that needs to be entered below", required: false
+			input "iftttEnabled", "bool", title: "Enable IFTTT", submitOnChange: true, required: false
+			if (settings?.iftttEnabled) href name: "", title: "IFTTT Maker channel", required: false, style: "external", url: "https://www.ifttt.com/maker", description: "tap to go to IFTTT and connect the Maker channel"
+		}
+		if (settings?.iftttEnabled) {
+			section("IFTTT Maker key"){
+				input("iftttKey", "string", title: "Key", description: "Your IFTTT Maker key", required: false)
+			}
+		}
+		def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}/api_ifttt")
+		log.debug "ifftt endpoint url: $apiUrl"
+	}
+}
+
+def pageIntegrateIFTTTConfirm() {
+	if (testIFTTT()) {
+		return dynamicPage(name: "pageIntegrateIFTTTConfirm", nextPage: "mainPage", title: "IFTTT Integration") {
+			section(){
+				paragraph "Congratulations! You have successfully connected CoRE to IFTTT."
+			}
+		}
+	} else {
+		return dynamicPage(name: "pageIntegrateIFTTTConfirm",  title: "IFTTT Integration") {
+			section(){
+				paragraph "Sorry, the credentials you provided for IFTTT are invalid. Please go back and try again."
+			}
+		}
+	}
+}
+
+def testIFTTT() {
+	def res = false
+	def modules = atomicState?.modules ?: [:]
+	modules?.ifttt = ["key": settings?.iftttKey, "connected": false]
+	if (settings?.iftttKey) {
+		//verify the key
+		httpGet("https://maker.ifttt.com/trigger/test/with/key/${settings?.iftttKey}") { response ->
+			if (response?.status == 200) {
+				log.debug "response (${response?.status}): ${response?.data}"
+				if(response?.data == "Congratulations! You've fired the test event") {
+					modules?.ifttt["connected"] = true
+					res = true
+				}
+			}
+		}
+	}
+	atomicState?.modules = modules
+	return res
+}
+
+def api_ifttt() {
+	def data = request?.JSON
+	log.debug "ifttt event received: ${data}"
+	def eventName = params?.eventName
+	if (eventName) {
+		log.debug "ifttt Event: ${eventName}"
+		//sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "NST has received an IFTTT event: $eventName", data: data])
+	}
+	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
 
 def pollPrefPage() {
@@ -3462,6 +3544,7 @@ def setHvacMode(child, mode, virtual=false) {
 						LogAction("setHvacMode: Invalid Request: ${mode}", "warn", true)
 						break
 				}
+				sendEcoActionDescToDevice(pChild, (mode == "eco" ? "User Changed (ST)" : null))
 			} else { LogAction("setHvacMode - CANNOT Set Thermostat${pdevId} Mode: (${mode}) child ${pChild}", "warn", true) }
 		}
 	} else {
@@ -3709,6 +3792,12 @@ private getRecentSendCmd(qnum) {
 private setRecentSendCmd(qnum, val) {
 	atomicState."recentSendCmd${qnum}" = val
 	return
+}
+
+void sendEcoActionDescToDevice(dev, desc) {
+	if(dev && desc) {
+		dev?.ecoDescEvent(desc.toString())
+	}
 }
 
 private getLastCmdSentSeconds(qnum) { return atomicState?."lastCmdSentDt${qnum}" ? GetTimeDiffSeconds(atomicState?."lastCmdSentDt${qnum}", null, "getLastCmdSentSeconds") : 3601 }
