@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "4.6.0" }
-def appVerDate() { "2-21-2017" }
+def appVerDate() { "2-28-2017" }
 
 preferences {
 	//startPage
@@ -2834,7 +2834,7 @@ def extTmpTempCheck(cTimeOut = false) {
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
-			if(!modeOff && atomicState.extTmpTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
+			if(!modeOff && atomicState?.extTmpTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
 				LogAction("extTmpTempCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				atomicState.extTmpTstatOffRequested = false
@@ -3039,6 +3039,17 @@ def extTmpDpOrTempEvt(type) {
 *******************************************************************************/
 def conWatPrefix() { return "conWat" }
 
+def autoStateDesc(autotype) {
+	def str = ""
+	def t0 = atomicState?."${autotype}RestoreMode"
+	def t1 = atomicState?."${autotype}TstatOffRequested"
+	str += "State:"
+	str += "\n • Mode Adjusted: (${t0 != null ? "TRUE" : "FALSE"})"
+	str += "\n •   Last Mode: (${strCapitalize(t0) ?: "Not Set"})"
+	str += t1 ? "\n •   Last Eco Requested: (${t1})" : ""
+	return str != "" ? str : null
+}
+
 def conWatContactDesc() {
 	if(settings?.conWatContacts) {
 		def cCnt = settings?.conWatContacts?.size() ?: 0
@@ -3109,7 +3120,7 @@ def conWatCheck(cTimeOut = false) {
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 
-			if(!modeOff && atomicState.conWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
+			if(!modeOff && atomicState?.conWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
 				LogAction("conWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState?.conWatRestoreMode = null
 				atomicState?.conWatTstatOffRequested = false
@@ -3361,7 +3372,7 @@ def leakWatCheck() {
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
 
-			if(!modeOff && atomicState.leakWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
+			if(!modeOff && atomicState?.leakWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
 				LogAction("leakWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState?.leakWatRestoreMode = null
 				atomicState?.leakWatTstatOffRequested = false
@@ -4619,9 +4630,9 @@ def schMotModePage() {
 						def leakDesc = ""
 						def t0 = leakWatSensorsDesc()
 						leakDesc += (settings?.leakWatSensors && t0) ? "${t0}" : ""
+						leakDesc += settings?.leakWatSensors ? "\n\n${autoStateDesc("leakWat")}" : ""
 						leakDesc += (settings?.leakWatSensors) ? "\n\nSettings:" : ""
 						leakDesc += settings?.leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.leakWatOnDelay)})" : ""
-						leakDesc += "\n • Last Mode: (${strCapitalize(atomicState?.leakWatRestoreMode) ?: "Not Set"})"
 						leakDesc += (settings?.leakWatModes || settings?.leakWatDays || (settings?.leakWatStartTime && settings?.leakWatStopTime)) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(leakWatPrefix()) ? "ON" : "OFF"})" : ""
 						def t1 = getNotifConfigDesc(leakWatPrefix())
@@ -4644,11 +4655,11 @@ def schMotModePage() {
 						def conDesc = ""
 						def t0 = conWatContactDesc()
 						conDesc += (settings?.conWatContacts && t0) ? "${t0}" : ""
+						conDesc += settings?.conWatContacts ? "\n\n${autoStateDesc("conWat")}" : ""
 						conDesc += settings?.conWatContacts ? "\n\nSettings:" : ""
 						conDesc += settings?.conWatOffDelay ? "\n • Eco Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOffDelay)})" : ""
 						conDesc += settings?.conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOnDelay)})" : ""
 						conDesc += settings?.conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n     └ (${getEnumValue(longTimeSecEnum(), settings?.conWatRestoreDelayBetween)})" : ""
-						conDesc += "\n • Last Mode: (${strCapitalize(atomicState?.conWatRestoreMode) ?: "Not Set"})"
 						conDesc += (settings?."${conWatPrefix()}Modes" || settings?."${conWatPrefix()}Days" || (settings?."${conWatPrefix()}StartTime" && settings?."${conWatPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(conWatPrefix()) ? "ON" : "OFF"})" : ""
 						def t1 = getNotifConfigDesc(conWatPrefix())
@@ -4690,6 +4701,7 @@ def schMotModePage() {
 					input (name: "schMotExternalTempOff", type: "bool", title: "Set ECO if External Temp is near comfort settings?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("external_temp_icon.png"))
 					if(settings?.schMotExternalTempOff) {
 						def extDesc = ""
+						extDesc += (settings?.extTmpUseWeather || settings?.extTmpTempSensor) ? "${autoStateDesc("extTmp")}\n\n" : ""
 						extDesc += (settings?.extTmpUseWeather || settings?.extTmpTempSensor) ? "Settings:" : ""
 						extDesc += (!settings?.extTmpUseWeather && settings?.extTmpTempSensor) ? "\n • Sensor: (${getExtTmpTemperature()}${tempScaleStr})" : ""
 						extDesc += (settings?.extTmpUseWeather && !settings?.extTmpTempSensor) ? "\n • Weather: (${getExtTmpTemperature()}${tempScaleStr})" : ""
@@ -4697,7 +4709,6 @@ def schMotModePage() {
 						extDesc += settings?.extTmpDiffVal ? "\n • Threshold: (${settings?.extTmpDiffVal}${tempScaleStr})" : ""
 						extDesc += settings?.extTmpOffDelay ? "\n • ECO Delay: (${getEnumValue(longTimeSecEnum(), settings?.extTmpOffDelay)})" : ""
 						extDesc += settings?.extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.extTmpOnDelay)})" : ""
-						extDesc += "\n • Last Mode: (${strCapitalize(atomicState?.extTmpRestoreMode) ?: "Not Set"})"
 						extDesc += (settings?."${extTmpPrefix()}Modes" || settings?."${extTmpPrefix()}Days" || (settings?."${extTmpPrefix()}StartTime" && settings?."${extTmpPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(extTmpPrefix()) ? "ON" : "OFF"})" : ""
 						def t0 = getNotifConfigDesc(extTmpPrefix())
