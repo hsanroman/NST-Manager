@@ -2948,6 +2948,22 @@ def getMaxTemp() {
 	return list?.max()
 }
 
+def testSetHeat(value) {
+	if(value != null) {
+		setHeatingSetpoint(value, true)
+		return true
+	}
+	return false
+}
+
+def testSetCool(value) {
+	if(value != null) {
+		setCoolingSetpoint(value, true)
+		return true
+	}
+	return false
+}
+
 def getGraphHTML() {
 	try {
 		checkVirtualStatus()
@@ -3083,23 +3099,24 @@ def getGraphHTML() {
 					// }
 				    //
 				    //   \$inputRange.rangeslider('update');
-					function sendSetpoint(value) {
-						console.log("curInputId value: " + value);
-						if(curInputId != null && curInputId == "heatSliderObj" && value != null) {
-						  setTimeout(function(){
-							console.info("set heatSetpoint to: " + value + " | result: ${setHeatingSetpoint(value, true)}")
-						  }, 3000);
-						  //console.info("set heatSetpoint to: " + value + " | result: ${setHeatingSetpoint(value, true)}")
-						}
-						else if(curInputId != null && curInputId == "coolSliderObj" && value != null) {
-						  setTimeout(function(){
-							console.info("set coolSetpoint to: " + value + " | result: ${setCoolingSetpoint(value, true)}")
-						  }, 3000);
-						  //console.info("set coolSetpoint to: " + value + " | result: ${setCoolingSetpoint(value, true)}")
-						}
-					}
+
 
 				});
+				function sendSetpoint(value) {
+					console.log("curInputId value: " + value);
+					if(curInputId != null && curInputId == "heatSliderObj" && value != null) {
+					  setTimeout(function() {
+						def result = ${testSetHeat(value);
+						console.info("set heatSetpoint to: " + value + " | result: " + result);
+					  }, 3000);
+					}
+					else if(curInputId != null && curInputId == "coolSliderObj" && value != null) {
+					  setTimeout(function(){
+						def result = ${testSetCool(value);
+						console.info("set coolSetpoint to: " + value + " | result: " + result);
+					  }, 3000);
+					}
+				}
 			</script>
 			<section class="tempSliders">
 				<table>
