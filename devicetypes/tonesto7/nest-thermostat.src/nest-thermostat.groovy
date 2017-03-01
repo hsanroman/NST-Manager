@@ -55,9 +55,8 @@ metadata {
 		command "changeMode"
 		command "changeFanMode"
 		command "updateNestReportData"
-		command "whoSetEco"
-		command "ecoDescEvent", ["string"]
-		command "whoMadeChanges"
+		command "ecoDesc", ["string"]
+		command "whoMadeChanges", ["string", "string"]
 
 		attribute "devVer", "string"
 		attribute "temperatureUnit", "string"
@@ -143,13 +142,6 @@ metadata {
 		valueTile("temp2", "device.temperature", width: 2, height: 2, decoration: "flat") {
 			state("default", label:'${currentValue}°', icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/nest_like.png",
 					backgroundColors: getTempColors())
-		}
-		standardTile("mode2", "device.nestThermostatMode", width: 2, height: 2, decoration: "flat") {
-			state("off",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/off_icon.png")
-			state("heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_icon.png")
-			state("cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/cool_icon.png")
-			state("auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/heat_cool_icon.png")
-			state("eco",  icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/eco_icon.png")
 		}
 		standardTile("thermostatMode", "device.nestThermostatMode", width:2, height:2, decoration: "flat") {
 			state("off", 	action:"changeMode", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
@@ -280,14 +272,9 @@ def getTempColors() {
 	}
 }
 
-def getRange() {
-	def retVal = "50..90"
-//getTemperatureScale() == "C" wantMetric()
-	if (compileForC()) {
-		retVal = "9..32"
-	}
-	return retVal
-}
+def getRange() { return compileForC() ? "9..32" : "50..90" }
+def lowRange() { return compileForC() ? 9 : 50 }
+def highRange() { return compileForC() ? 32 : 90 }
 
 mappings {
 	path("/graphHTML") {action: [GET: "getGraphHTML"]}
@@ -552,9 +539,6 @@ void processEvent(data) {
 			getSomeData(true)
 			lastUpdatedEvent() //I don't know that this is needed any more
 			checkHealth()
-
-			log.debug "whoSetEcoMode | ${device?.currentState("whoSetEcoMode")?.value}"
-			log.debug "whoMadeChanges | ${device?.currentState("whoMadeChanges")?.value}: ${device?.currentState("whoMadeChangesDesc")?.value}"
 		}
 		//This will return all of the devices state data to the logs.
 		//LogAction("Device State Data: ${getState()}")
@@ -804,6 +788,7 @@ def heatingSetpointEvent(Double tempVal) {
 			def hvacMode = getHvacMode()
 			if (hvacMode in ["auto", "heat"]) { disp = true }
 			sendEvent(name:'heatingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Heat Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "heat")
+			state?.allowHeat = true
 		} else { LogAction("Heat Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
@@ -820,6 +805,7 @@ def coolingSetpointEvent(Double tempVal) {
 			def hvacMode = getHvacMode()
 			if (hvacMode in ["auto", "cool"]) { disp = true }
 			sendEvent(name:'coolingSetpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Cool Setpoint is ${rTempVal}${tUnitStr()}" , displayed: disp, isStateChange: true, state: "cool")
+			state?.allowCool = true
 		} else { LogAction("Cool Setpoint is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})") }
 	}
 }
@@ -857,24 +843,25 @@ def presenceEvent(presence) {
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
-def whoMadeChanges(data) {
-	log.debug "whoMadeChanges: $data"
-	// def curChgs = device?.currentState("whoMadeChanges")?.value.toString()
-	// def curChgs = device?.currentState("whoMadeChangesDes")?.value.toString()
-	// def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
-	// def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : curEcoDesc
-	// if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
-	// 	Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
-	// 	sendEvent(name: "whoSetEcoMode", value: newEcoDesc)
-	// } else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})") }
+def whoMadeChanges(autoType, desc ) {
+	log.debug "whoMadeChanges: $autoType: $desc"
+	def curType = device?.currentState("whoMadeChanges")?.value
+	def curDesc = device?.currentState("whoMadeChangesDesc")?.value
+	def newChgType = autoType ?: "Not Set"
+	def newChgDesc = desc ?: "Not Set"
+	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString())) {
+		Logger("UPDATED | Automation Changes Made by (${newChgType}: ${newChgDesc}) | Original State: (${curType}: ${curDesc})")
+		sendEvent(name: "whoMadeChanges", value: newChgType)
+		sendEvent(name: "whoMadeChangesDesc", value: newChgDesc)
+	} else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curType}: ${curDesc})") }
 }
 
 def ecoDescEvent(val) {
 	log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
-	def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : (val ?: curEcoDesc)
-	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode"
+	def newEcoDesc = (curMode == "eco" && curEcoDesc == null) ? "external" : (val ?: "Not Set")
+	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
 		sendEvent(name: "whoSetEcoMode", value: newEcoDesc)
@@ -1070,6 +1057,7 @@ def keepAwakeEvent() {
 
 def autoSchedDataEvent(schedData) {
 	def t0 = state?.curAutoSchedData
+	log.debug "schedData: $t0"
 	if(schedData && t0 != schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
@@ -1104,10 +1092,12 @@ def isEmergencyHeat(val) {
 
 def clearHeatingSetpoint() {
 	sendEvent(name:'heatingSetpoint', value: "",  descriptionText: "Clear Heating Setpoint" , display: false, displayed: true )
+	state?.allowHeat = false
 }
 
 def clearCoolingSetpoint() {
 	sendEvent(name:'coolingSetpoint', value: "",  descriptionText: "Clear Cooling Setpoint" , display: false, displayed: true)
+	state?.allowCool = false
 }
 
 def getCoolTemp() {
@@ -1688,88 +1678,70 @@ def getHvacModes() {
 }
 
 def changeMode() {
-//	try {
-		//LogAction("changeMode..")
-		def currentMode = getHvacMode()
-		def lastTriedMode = currentMode ?: "off"
-		def modeOrder = getHvacModes()
-		def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
-		def nextMode = next(lastTriedMode)
-		LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
-		setHvacMode(nextMode)
-/*
-	}
-	catch (ex) {
-		log.error "changeMode Exception:", ex
-		exceptionDataHandler(ex.message, "changeMode")
-	}
-*/
+	//LogAction("changeMode..")
+	def currentMode = getHvacMode()
+	def lastTriedMode = currentMode ?: "off"
+	def modeOrder = getHvacModes()
+	def next = { modeOrder[modeOrder.indexOf(it) + 1] ?: modeOrder[0] }
+	def nextMode = next(lastTriedMode)
+	LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
+	setHvacMode(nextMode)
+	ecoDescEvent((nextMode == "eco" ? "User Changed (ST)" : null))
 }
 
 def setHvacMode(nextMode) {
-//	try {
-		LogAction("setHvacMode(${nextMode})")
-		if (nextMode in getHvacModes()) {
-			state.lastTriedMode = nextMode
-			"$nextMode"(true)
-		} else {
-			Logger("Invalid Mode '$nextMode'")
-		}
-/*
+	LogAction("setHvacMode(${nextMode})")
+	if (nextMode in getHvacModes()) {
+		state.lastTriedMode = nextMode
+		"$nextMode"(true)
+	} else {
+		Logger("Invalid Mode '$nextMode'")
 	}
-	catch (ex) {
-		log.error "setHvacMode Exception:", ex
-		exceptionDataHandler(ex.message, "setHvacMode")
-	}
-*/
 }
 
 def doChangeMode() {
-//	try {
-		def currentMode = device.currentState("nestThermostatMode")?.value
-		LogAction("doChangeMode()  currentMode:  ${currentMode}")
-		def errflag = true
-		switch(currentMode) {
-			case "auto":
-				if (parent.setHvacMode(this, "heat-cool", virtType())) {
-					errflag = false
-				}
-				break
-			case "heat":
-				if (parent.setHvacMode(this, "heat", virtType())) {
-					errflag = false
-				}
-				break
-			case "cool":
-				if (parent.setHvacMode(this, "cool", virtType())) {
-					errflag = false
-				}
-				break
-			case "off":
-				if (parent.setHvacMode(this, "off", virtType())) {
-					errflag = false
-				}
-				break
-			case "eco":
-				if (parent.setHvacMode(this, "eco", virtType())) {
-					errflag = false
-				}
-				break
-			default:
-				Logger("doChangeMode Received an Invalid Request: ${currentMode}", "warn")
-				break
-		}
-		if (errflag) {
-			Logger("doChangeMode call to change mode failed: ${currentMode}", "warn")
-			refresh()
-		}
-/*
+	def currentMode = device.currentState("nestThermostatMode")?.value
+	LogAction("doChangeMode()  currentMode:  ${currentMode}")
+	def errflag = true
+	switch(currentMode) {
+		case "auto":
+			if (parent.setHvacMode(this, "heat-cool", virtType())) {
+				errflag = false
+				ecoDescEvent(null)
+			}
+			break
+		case "heat":
+			if (parent.setHvacMode(this, "heat", virtType())) {
+				errflag = false
+				ecoDescEvent(null)
+			}
+			break
+		case "cool":
+			if (parent.setHvacMode(this, "cool", virtType())) {
+				errflag = false
+				ecoDescEvent(null)
+			}
+			break
+		case "off":
+			if (parent.setHvacMode(this, "off", virtType())) {
+				errflag = false
+				ecoDescEvent(null)
+			}
+			break
+		case "eco":
+			if (parent.setHvacMode(this, "eco", virtType())) {
+				errflag = false
+				ecoDescEvent("User Changed (ST)")
+			}
+			break
+		default:
+			Logger("doChangeMode Received an Invalid Request: ${currentMode}", "warn")
+			break
 	}
-	catch (ex) {
-		log.error "doChangeMode Exception:", ex
-		exceptionDataHandler(ex.message, "doChangeMode")
+	if (errflag) {
+		Logger("doChangeMode call to change mode failed: ${currentMode}", "warn")
+		refresh()
 	}
-*/
 }
 
 void off(manChg=false) {
@@ -2104,7 +2076,7 @@ def getChartJsData() {
 	return chartJsData
 }
 
-def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
+def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
 def getImg(imgName) { return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : "" }
@@ -3054,6 +3026,108 @@ def getGraphHTML() {
 				</table>
 			"""
 		}
+		def tempSliders = """
+			<style>
+				.tempSliders {
+					width: 95%;
+					padding: 20px;
+				}
+				.heatSlider .rangeslider__fill {
+					background: #FF3300;
+				}
+				.coolSlider .rangeslider__fill {
+					background: #0099FF;
+				}
+
+			</style>
+			<script>
+				var cancool = ${state?.allowCool == false ? false : true};
+				var canheat = ${state?.allowHeat == false ? false : true};
+
+				\$(document).ready(function() {
+					var \$document = \$(document);
+					var selector = '[data-rangeslider]';
+					var \$inputRange = \$(selector); /** * Example functionality to demonstrate a value feedback * and change the output's value. */
+					var curInputId = null;
+					function valueOutput(element) {
+						var value = element.value;
+						var output = element.parentNode.getElementsByTagName('output')[0];
+						output.innerHTML = value;
+					} /** * Initial value output */
+					for (var i = \$inputRange.length - 1; i >= 0; i--) {
+						valueOutput(\$inputRange[i]);
+					} /** * Update value output */
+					\$document.on('input', selector, function (e) {
+						valueOutput(e.target);
+						curInputId = \$(this).attr('id');
+					}); /** * Initialize the elements */
+					\$inputRange.rangeslider({
+						polyfill: false,
+						onSlideEnd: function (position, value) {
+					        //console.warn('onSlideEnd', 'position: ' + position, 'value: ' + value + " | id: " + curInputId);
+							sendSetpoint(value);
+					    },
+						onInit: function() {
+							if(cancool == false) {
+								//   \$(".coolTempSlide").asRange('disable');
+						  	}
+						  	if(canheat == false) {
+								//   \$(".heatTempSlide").asRange('disable');
+						  	}
+						}
+					});
+					// \$inputRange.prop("disabled", false);
+					// }
+					// else {
+					// 	\$inputRange.prop("disabled", true);
+					// }
+				    //
+				    //   \$inputRange.rangeslider('update');
+					function sendSetpoint(value) {
+						console.log("curInputId value: " + value);
+						if(curInputId != null && curInputId == "heatSliderObj" && value != null) {
+						  setTimeout(function(){
+							console.info("set heatSetpoint to: " + value + " | result: ${setHeatingSetpoint(value, true)}")
+						  }, 3000);
+						  //console.info("set heatSetpoint to: " + value + " | result: ${setHeatingSetpoint(value, true)}")
+						}
+						else if(curInputId != null && curInputId == "coolSliderObj" && value != null) {
+						  setTimeout(function(){
+							console.info("set coolSetpoint to: " + value + " | result: ${setCoolingSetpoint(value, true)}")
+						  }, 3000);
+						  //console.info("set coolSetpoint to: " + value + " | result: ${setCoolingSetpoint(value, true)}")
+						}
+					}
+
+				});
+			</script>
+			<section class="tempSliders">
+				<table>
+					<col width="48%">
+					<col width="48%">
+					<tbody>
+					  <tr>
+						<td>
+							<section id="top">
+								<div class="heatSlider">
+									<input id="heatSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getHeatTemp()}" data-rangeslider>
+									<output id="js-output">${getHeatTemp()}</output>
+								</div>
+							</section>
+						</td>
+						<td>
+							<section id="top">
+								<div class="coolSlider">
+									<input id="coolSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getCoolTemp()}" data-rangeslider>
+									<output id="js-output">${getCoolTemp()}</output>
+								</div>
+							</section>
+						</td>
+					  </tr>
+					</tbody>
+				</table>
+			</section>
+		"""
 
 		def html = """
 		<!DOCTYPE html>
@@ -3071,9 +3145,11 @@ def getGraphHTML() {
 
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/rangeslider.js/2.3.0/rangeslider.min.js", "text", "javascript")}"></script>
 			</head>
 			<body>
+				${tempSliders}
 				${clientBl}
 		  		${updateAvail}
 				<div class="swiper-container">
@@ -3143,10 +3219,7 @@ def getGraphHTML() {
 							</tbody>
 						  </table>
 						</div>
-
 						${chartHtml}
-
-
 					</div>
 					<!-- If we need pagination -->
 					<div class="swiper-pagination"></div>

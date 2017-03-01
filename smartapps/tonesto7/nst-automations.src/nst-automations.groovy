@@ -1153,13 +1153,13 @@ def runAutomationEval() {
 
 void sendAutoChgToDevice(dev, autoType, chgDesc) {
 	if(dev && autoType && chgDesc) {
-		dev?.whoMadeChanges(["type":autoType.toString(), "desc":actionDesc?.toString()])
+		dev?.whoMadeChanges(autoType, actionDesc)
 	}
 }
 
 void sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		dev?.ecoDescEvent(desc.toString())
+		dev?.ecoDesc(desc)
 	}
 }
 

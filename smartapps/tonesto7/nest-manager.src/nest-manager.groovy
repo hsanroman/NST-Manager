@@ -107,7 +107,7 @@ mappings {
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
 		//path("/receiveEventData")	{action: [POST: "receiveEventData"]}
-		path("/ifttt") 	{action: [GET: "api_ifttt", POST: "api_ifttt"]}
+		path("/iftttEvent") 	{action: [POST: "iftttEvent"]}
 	}
 }
 
@@ -687,15 +687,9 @@ def testIFTTT() {
 	return res
 }
 
-def api_ifttt() {
+def iftttEvent() {
 	def data = request?.JSON
 	log.debug "ifttt event received: ${data}"
-	def eventName = params?.eventName
-	if (eventName) {
-		log.debug "ifttt Event: ${eventName}"
-		//sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "NST has received an IFTTT event: $eventName", data: data])
-	}
-	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
 
 def pollPrefPage() {
@@ -3544,7 +3538,6 @@ def setHvacMode(child, mode, virtual=false) {
 						LogAction("setHvacMode: Invalid Request: ${mode}", "warn", true)
 						break
 				}
-				sendEcoActionDescToDevice(pChild, (mode == "eco" ? "User Changed (ST)" : null))
 			} else { LogAction("setHvacMode - CANNOT Set Thermostat${pdevId} Mode: (${mode}) child ${pChild}", "warn", true) }
 		}
 	} else {
@@ -3796,7 +3789,7 @@ private setRecentSendCmd(qnum, val) {
 
 void sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		dev?.ecoDescEvent(desc)
+		dev?.ecoDesc(desc)
 	}
 }
 
