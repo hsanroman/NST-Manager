@@ -56,7 +56,7 @@ metadata {
 		command "changeFanMode"
 		command "updateNestReportData"
 		command "whoSetEco"
-		command "ecoDescEvent"
+		command "ecoDescEvent", ["string"]
 		command "whoMadeChanges"
 
 		attribute "devVer", "string"
@@ -552,7 +552,7 @@ void processEvent(data) {
 			getSomeData(true)
 			lastUpdatedEvent() //I don't know that this is needed any more
 			checkHealth()
-			ecoDescEvent()
+
 			log.debug "whoSetEcoMode | ${device?.currentState("whoSetEcoMode")?.value}"
 			log.debug "whoMadeChanges | ${device?.currentState("whoMadeChanges")?.value}: ${device?.currentState("whoMadeChangesDesc")?.value}"
 		}
@@ -870,9 +870,11 @@ def whoMadeChanges(data) {
 }
 
 def ecoDescEvent(val) {
+	log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
 	def newEcoDesc = (curMode && curMode == "eco" && curEcoDesc == null) ? "external" : (val ?: curEcoDesc)
+	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
 		sendEvent(name: "whoSetEcoMode", value: newEcoDesc)

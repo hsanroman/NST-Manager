@@ -107,7 +107,7 @@ mappings {
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
 		//path("/receiveEventData")	{action: [POST: "receiveEventData"]}
-		path("/ifttt/:eventName") 	{action: [GET: "api_ifttt", POST: "api_ifttt"]}
+		path("/ifttt") 	{action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	}
 }
 
@@ -3796,7 +3796,7 @@ private setRecentSendCmd(qnum, val) {
 
 void sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		dev?.ecoDescEvent(desc.toString())
+		dev?.ecoDescEvent(desc)
 	}
 }
 
