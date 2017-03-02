@@ -1153,7 +1153,7 @@ def runAutomationEval() {
 
 void sendAutoChgToDevice(dev, autoType, chgDesc) {
 	if(dev && autoType && chgDesc) {
-		dev?.whoMadeChanges(autoType, actionDesc)
+		dev?.whoMadeChanges(autoType, chgDesc)
 	}
 }
 
@@ -1384,6 +1384,7 @@ def automationMotionEvt(evt) {
 	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' | Motion is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
+		// sendEcoActionDescToDevice(settings?.schMotTstat, "conWat")
 		storeLastEventData(evt)
 		def dorunIn = false
 		def delay = 120
@@ -2983,7 +2984,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						} else { LogAction("extTmpTempCheck: Error turning themostat to Eco", "warn", true) }
 					} else {
 						def remaining = getExtTmpOffDelayVal() - getExtTmpWhileOnDtSec()
-						LogAction("extTmpTempCheck: Delaying ECO for wait period ${getExtTmpOffDelayVal()}, remaining ${remaining}", "info", true)
+						LogAction("extTmpTempCheck: Delaying ECO for wait period ${getExtTmpOffDelayVal()} seconds | Wait time remaining: ${remaining} seconds", "info", true)
 						remaining = remaining > 20 ? remaining : 20
 						remaining = remaining < 60 ? remaining : 60
 						scheduleAutomationEval(remaining)
@@ -3243,7 +3244,7 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "eco", pName)) {
-							storeLastAction("Turned Off $conWatTstat", getDtNow(), "conWat", conWatTstat)
+							storeLastAction("Set $conWatTstat to 'ECO'", getDtNow(), "conWat", conWatTstat)
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -3269,7 +3270,7 @@ def conWatCheck(cTimeOut = false) {
 							scheduleAutomationEval(remaining)
 						} else {
 							def remaining = getConWatOffDelayVal() - getConWatOpenDtSec()
-							LogAction("conWatCheck: Delaying ECO for wait period ${getConWatOffDelayVal()}, remaining ${remaining}", "info", true)
+							LogAction("conWatCheck: Delaying ECO for wait period ${getConWatOffDelayVal()} seconds | Wait time remaining: ${remaining} seconds", "info", true)
 							remaining = remaining > 20 ? remaining : 20
 							remaining = remaining < 60 ? remaining : 60
 							scheduleAutomationEval(remaining)
@@ -4402,7 +4403,6 @@ def setTstatTempCheck() {
 				if(newHvacMode && (newHvacMode.toString() != curMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode, pName)) {
 						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow(), "schMot", tstat)
-						sendEcoActionDescToDevice(schMotTstat, "schMot")
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
 					if(tstatMir) {
@@ -6674,7 +6674,7 @@ def setTstatMode(tstat, mode, autoType=null) {
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
 			else if(mode == "eco") { tstat.eco(); result = true }
-
+			log.debug "setTstatMode mode action | type: $autoType"
 			sendEcoActionDescToDevice(tstat, (mode == "eco" ? autoType : null))
 
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }

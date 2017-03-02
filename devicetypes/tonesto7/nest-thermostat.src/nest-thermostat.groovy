@@ -55,7 +55,7 @@ metadata {
 		command "changeMode"
 		command "changeFanMode"
 		command "updateNestReportData"
-		command "ecoDesc", ["string"]
+		command "ecoDesc", "string"
 		command "whoMadeChanges", ["string", "string"]
 
 		attribute "devVer", "string"
@@ -226,7 +226,7 @@ metadata {
 		standardTile("blank", "device.heatingSetpoint", width: 1, height: 1, canChangeIcon: false, decoration: "flat") {
 			state "default", label: ''
 		}
-		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 11, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"graphHTML", action: "graphHTML", width: 6, height: 13, whitelist: ["www.gstatic.com", "raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		main("temp2")
 		details( ["temperature", "thermostatMode", "nestPresence", "thermostatFanMode",
@@ -277,7 +277,7 @@ def lowRange() { return compileForC() ? 9 : 50 }
 def highRange() { return compileForC() ? 32 : 90 }
 
 mappings {
-	path("/graphHTML") {action: [GET: "getGraphHTML"]}
+	path("/graphHTML") { action: [GET: "getGraphHTML"] }
 }
 
 void checkStateClear() {
@@ -1057,7 +1057,6 @@ def keepAwakeEvent() {
 
 def autoSchedDataEvent(schedData) {
 	def t0 = state?.curAutoSchedData
-	log.debug "schedData: $t0"
 	if(schedData && t0 != schedData) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
@@ -1686,7 +1685,7 @@ def changeMode() {
 	def nextMode = next(lastTriedMode)
 	LogAction("changeMode() currentMode: ${currentMode}   lastTriedMode:  ${lastTriedMode}  modeOrder:  ${modeOrder}   nextMode: ${nextMode}", "trace")
 	setHvacMode(nextMode)
-	ecoDescEvent((nextMode == "eco" ? "User Changed (ST)" : null))
+	//ecoDescEvent((nextMode == "eco" ? "User Changed (ST)" : null))
 }
 
 def setHvacMode(nextMode) {
@@ -1699,7 +1698,7 @@ def setHvacMode(nextMode) {
 	}
 }
 
-def doChangeMode() {
+def doChangeMode(manChg=false) {
 	def currentMode = device.currentState("nestThermostatMode")?.value
 	LogAction("doChangeMode()  currentMode:  ${currentMode}")
 	def errflag = true
@@ -1731,7 +1730,7 @@ def doChangeMode() {
 		case "eco":
 			if (parent.setHvacMode(this, "eco", virtType())) {
 				errflag = false
-				ecoDescEvent("User Changed (ST)")
+				if(manChg) { ecoDescEvent("User Changed (ST)") }
 			}
 			break
 		default:
@@ -1747,14 +1746,14 @@ def doChangeMode() {
 void off(manChg=false) {
 	LogAction("off()...", "trace")
 	hvacModeEvent("off")
-	doChangeMode()
+	doChangeMode(manChg)
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
 void heat(manChg=false) {
 	LogAction("heat()...", "trace")
 	hvacModeEvent("heat")
-	doChangeMode()
+	doChangeMode(manChg)
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
@@ -1766,21 +1765,21 @@ void emergencyHeat(manChg=false) {
 void cool(manChg=false) {
 	LogAction("cool()...", "trace")
 	hvacModeEvent("cool")
-	doChangeMode()
+	doChangeMode(manChg)
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
 void auto(manChg=false) {
 	LogAction("auto()...", "trace")
 	hvacModeEvent("auto")
-	doChangeMode()
+	doChangeMode(manChg)
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
 void eco(manChg=false) {
 	LogAction("eco()...", "trace")
 	hvacModeEvent("eco")
-	doChangeMode()
+	doChangeMode(manChg)
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
@@ -2948,17 +2947,27 @@ def getMaxTemp() {
 	return list?.max()
 }
 
+def handleHtmlTempChg(data) {
+	log.debug "handleHtmlTempChg($data)"
+	if(data.type == "cool") {
+		setCoolingSetpoint(data?.tempVal, true)
+	} else if (data?.type == "heat") {
+		setHeatingSetpoint(data?.tempVal, true)
+	}
+}
 def testSetHeat(value) {
+	//log.debug "testSetHeat($value)"
 	if(value != null) {
-		setHeatingSetpoint(value, true)
+		//runIn(3, "setHeatingSetpoint", [overwrite: true, data: [type:"cool", tempVal:value]])
 		return true
 	}
 	return false
 }
 
 def testSetCool(value) {
+	//log.debug "testSetCool($value)"
 	if(value != null) {
-		setCoolingSetpoint(value, true)
+		//runIn(3, "setCoolingSetpoint", [overwrite: true, data: [type:"cool", tempVal:value]])
 		return true
 	}
 	return false
@@ -2966,6 +2975,10 @@ def testSetCool(value) {
 
 def getGraphHTML() {
 	try {
+		def tempStr = "°F"
+		if ( wantMetric() ) {
+			tempStr = "°C"
+		}
 		checkVirtualStatus()
 		//LogAction("State Size: ${getStateSize()} (${getStateSizePerc()}%)")
 		def canHeat = state?.can_heat == true ? true : false
@@ -2986,12 +2999,29 @@ def getGraphHTML() {
 				state?.temperatureTableYesterday?.size() > 0 &&
 				state?.humidityTable?.size() > 0 &&
 				state?.coolSetpointTable?.size() > 0 &&
-				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : ""
+		);
+
+		def ecoDesc = device.currentValue("whoSetEcoMode")
+		def ecoDescHtml = ecoDesc && ecoDesc != "Not Set" ? """
+			<table class="sched">
+				<col width="90%">
+				<thead>
+					<th><h3>Who Set Eco Mode:</h3></th>
+				</thead>
+				<tbody>
+					<tr>
+						<td><output class="ecoDesc">${ecoDesc}</output></td>
+					</tr>
+				</tbody>
+			</table>
+			""" : ""
+
 		def schedData = state?.curAutoSchedData
 		def schedHtml = ""
 		if(schedData) {
 			schedHtml = """
-				<table class=sched>
+				<table class="sched">
 					<col width="90%">
 					<thead>
 						<th><h3>Active Schedule # (${schedData?.scdNum})</h3></th>
@@ -3026,7 +3056,7 @@ def getGraphHTML() {
 						</tr>
 					</tbody>
 				</table>
-				<table class=sched>
+				<table class="sched">
 					<col width="45%">
 					<col width="45%">
 					<thead>
@@ -3042,6 +3072,7 @@ def getGraphHTML() {
 				</table>
 			"""
 		}
+
 		def tempSliders = """
 			<style>
 				.tempSliders {
@@ -3054,69 +3085,98 @@ def getGraphHTML() {
 				.coolSlider .rangeslider__fill {
 					background: #0099FF;
 				}
-
+				output {
+				  display: block;
+				  text-align:center;
+				}
+				.ecoDesc output{
+					display: block;
+					text-align:center;
+				}
 			</style>
 			<script>
 				var cancool = ${state?.allowCool == false ? false : true};
 				var canheat = ${state?.allowHeat == false ? false : true};
+				var curInputId = null;
 
 				\$(document).ready(function() {
 					var \$document = \$(document);
 					var selector = '[data-rangeslider]';
-					var \$inputRange = \$(selector); /** * Example functionality to demonstrate a value feedback * and change the output's value. */
-					var curInputId = null;
+					var \$inputRange = \$(selector);
+
 					function valueOutput(element) {
 						var value = element.value;
 						var output = element.parentNode.getElementsByTagName('output')[0];
-						output.innerHTML = value;
-					} /** * Initial value output */
+						output.innerHTML = value+"${tempStr}";
+						//sendSetpoint(value);
+					}
+
 					for (var i = \$inputRange.length - 1; i >= 0; i--) {
 						valueOutput(\$inputRange[i]);
-					} /** * Update value output */
+					}
+
 					\$document.on('input', selector, function (e) {
 						valueOutput(e.target);
 						curInputId = \$(this).attr('id');
-					}); /** * Initialize the elements */
+					});
+
 					\$inputRange.rangeslider({
 						polyfill: false,
 						onSlideEnd: function (position, value) {
-					        //console.warn('onSlideEnd', 'position: ' + position, 'value: ' + value + " | id: " + curInputId);
 							sendSetpoint(value);
-					    },
-						onInit: function() {
-							if(cancool == false) {
-								//   \$(".coolTempSlide").asRange('disable');
-						  	}
-						  	if(canheat == false) {
-								//   \$(".heatTempSlide").asRange('disable');
-						  	}
-						}
+					    }
 					});
-					// \$inputRange.prop("disabled", false);
-					// }
-					// else {
-					// 	\$inputRange.prop("disabled", true);
-					// }
-				    //
-				    //   \$inputRange.rangeslider('update');
+					\$(document).on("pageinit",function(){
+						var \$inputRange = \$('input[type="range"]', e.target.parentNode);
 
-
+						if(curInputId == "coolSliderObj") {
+							\$inputRange.prop("disabled", cancool);
+						}
+						if(curInputId == "heatSliderObj") {
+							\$inputRange.prop("disabled", canheat);
+						}
+						\$inputRange.rangeslider('update');
+					});
 				});
+
 				function sendSetpoint(value) {
-					console.log("curInputId value: " + value);
-					if(curInputId != null && curInputId == "heatSliderObj" && value != null) {
-					  setTimeout(function() {
-						def result = ${testSetHeat(value);
-						console.info("set heatSetpoint to: " + value + " | result: " + result);
-					  }, 3000);
+					if(value && curInputId != null && curInputId.toString() == "heatSliderObj") {
+					  //setTimeout(function() {
+						//sendTempPost(value);
+						//var result = ${testSetHeat($value)}
+						//console.log("sending heatSetpoint of: " + value + " | result: " + result);
+					  //}, 3000);
 					}
-					else if(curInputId != null && curInputId == "coolSliderObj" && value != null) {
-					  setTimeout(function(){
-						def result = ${testSetCool(value);
-						console.info("set coolSetpoint to: " + value + " | result: " + result);
-					  }, 3000);
+					else if(value && curInputId != null && curInputId == "coolSliderObj") {
+					  //setTimeout(function(){
+						//sendTempPost(value);
+						//var result = ${testSetCool($value)}
+						//console.log("set coolSetpoint to: " + value + " | result: " + result);
+					  //}, 3000);
 					}
 				}
+				// function sendTempPost(type, tempVal) {
+				// 	var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML/setTemp"
+				// 	var http = new XMLHttpRequest();
+				// 	var jsonObj = [];
+				// 	item = {}
+			    //     item ["type"] = type;
+			    //     item ["tempVal"] = tempVal;
+			    //     jsonObj.push(item);
+				//
+				// 	var params = JSON.stringify(jsonObj);
+				// 	http.open("POST", url, true);
+				//
+				// 	//Send the proper header information along with the request
+				// 	http.setRequestHeader("Content-type", "application/json");
+				//
+				// 	http.onreadystatechange = function() {//Call a function when the state changes.
+				// 	    if(http.readyState == 4 && http.status == 200) {
+				// 	        alert(http.responseText);
+				// 	    }
+				// 	}
+				// 	http.send(params);
+				// }
 			</script>
 			<section class="tempSliders">
 				<table>
@@ -3127,16 +3187,18 @@ def getGraphHTML() {
 						<td>
 							<section id="top">
 								<div class="heatSlider">
+									<output id="js-output">${getHeatTemp()}${tempStr}</output>
+									<br>
 									<input id="heatSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getHeatTemp()}" data-rangeslider>
-									<output id="js-output">${getHeatTemp()}</output>
 								</div>
 							</section>
 						</td>
 						<td>
 							<section id="top">
 								<div class="coolSlider">
-									<input id="coolSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getCoolTemp()}" data-rangeslider>
 									<output id="js-output">${getCoolTemp()}</output>
+									<br>
+									<input id="coolSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getCoolTemp()}" data-rangeslider>
 								</div>
 							</section>
 						</td>
@@ -3164,9 +3226,23 @@ def getGraphHTML() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/rangeslider.js/2.3.0/rangeslider.min.js", "text", "javascript")}"></script>
+				<style>
+					button {
+						background: white;
+						background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.1));
+						border: 1px solid #ccc;
+						border-radius: 5px;
+						color: #404040;
+						display: block;
+						width: 30%;
+						padding: .5em;
+						outline: 0;
+					}
+				</style>
 			</head>
 			<body>
 				${tempSliders}
+				${ecoDescHtml}
 				${clientBl}
 		  		${updateAvail}
 				<div class="swiper-container">
