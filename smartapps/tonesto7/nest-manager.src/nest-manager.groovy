@@ -4764,8 +4764,8 @@ def reqSchedInfoRprt(child, report=true) {
 
 				if(curMode in ["eco"]) {
 			//if in eco mode, should read temps from thermostat vs. the automation
-					reqSenHeatSetPoint = getTstatSetpoint(tstat, "heat")
-					reqSenCoolSetPoint = getTstatSetpoint(tstat, "cool")
+					reqSenHeatSetPoint = tstat?.currentHeatingSetpoint
+					reqSenCoolSetPoint = tstat?.currentCoolingSetpoint
 				}
 				str += " The HVAC is currently "
 				str += curOper == "idle" ? " sitting idle " : " ${curOper} "

@@ -55,8 +55,8 @@ metadata {
 		command "changeMode"
 		command "changeFanMode"
 		command "updateNestReportData"
-		command "ecoDesc", "string"
-		command "whoMadeChanges", ["string", "string"]
+		command "ecoDesc", ["string"]
+		command "whoMadeChanges", ["string", "string", "string"]
 
 		attribute "devVer", "string"
 		attribute "temperatureUnit", "string"
@@ -95,6 +95,7 @@ metadata {
 		attribute "previousthermostatMode", "string"
 		attribute "whoMadeChanges", "string"
 		attribute "whoMadeChangesDesc", "string"
+		attribute "whoMadeChangesDescDt", "string"
 		attribute "whoSetEcoMode", "string"
 	}
 
@@ -843,24 +844,28 @@ def presenceEvent(presence) {
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
-def whoMadeChanges(autoType, desc ) {
-	log.debug "whoMadeChanges: $autoType: $desc"
+def whoMadeChanges(autoType, desc, dt) {
+	log.debug "whoMadeChanges: $autoType: $desc | dt: $dt"
 	def curType = device?.currentState("whoMadeChanges")?.value
 	def curDesc = device?.currentState("whoMadeChangesDesc")?.value
+	def curDt = device?.currentState("whoMadeChangesDescDt")?.value
 	def newChgType = autoType ?: "Not Set"
 	def newChgDesc = desc ?: "Not Set"
-	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString())) {
-		Logger("UPDATED | Automation Changes Made by (${newChgType}: ${newChgDesc}) | Original State: (${curType}: ${curDesc})")
+	def newChgDt = dt ?: "Not Set"
+	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString()) || isStateChange(device, "whoMadeChangesDescDt", newChgDt.toString())) {
+		Logger("UPDATED | Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})")
 		sendEvent(name: "whoMadeChanges", value: newChgType)
 		sendEvent(name: "whoMadeChangesDesc", value: newChgDesc)
-	} else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curType}: ${curDesc})") }
+		sendEvent(name: "whoMadeChangesDescDt", value: newChgDt)
+	} else { LogAction("Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})") }
 }
 
 def ecoDescEvent(val) {
 	log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
-	def newEcoDesc = (curMode == "eco" && curEcoDesc == null) ? "external" : (val ?: "Not Set")
+	def newEcoDesc = (curMode == "eco" && curEcoDesc == null) ? "Set Outside of SmartThings" : (val ?: "Not in Eco Mode")
+	state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : getDtNow()
 	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
@@ -2947,30 +2952,37 @@ def getMaxTemp() {
 	return list?.max()
 }
 
-def handleHtmlTempChg(data) {
-	log.debug "handleHtmlTempChg($data)"
-	if(data.type == "cool") {
-		setCoolingSetpoint(data?.tempVal, true)
-	} else if (data?.type == "heat") {
-		setHeatingSetpoint(data?.tempVal, true)
+def getAutoChgType(type) {
+	if(!type) { type = "nothing" }
+	switch(type) {
+		case "conWat":
+			return "Contact Watcher"
+		break
+		case "extTmp":
+			return "External Temp"
+		break
+		case "leakWat":
+			return "Leak Watcher"
+		break
+		case "fanCtrl":
+			return "Fan Control"
+		break
+		case "schMot":
+			return "Thermostat Schedule"
+		break
+		case "watchDog":
+			return "Watchdog"
+		break
+		case "nMode":
+			return "Nest Mode"
+		break
+		case "fanCirc":
+			return "Fan Circulation"
+		break
+		default:
+			return "Unknown Type"
+		break
 	}
-}
-def testSetHeat(value) {
-	//log.debug "testSetHeat($value)"
-	if(value != null) {
-		//runIn(3, "setHeatingSetpoint", [overwrite: true, data: [type:"cool", tempVal:value]])
-		return true
-	}
-	return false
-}
-
-def testSetCool(value) {
-	//log.debug "testSetCool($value)"
-	if(value != null) {
-		//runIn(3, "setCoolingSetpoint", [overwrite: true, data: [type:"cool", tempVal:value]])
-		return true
-	}
-	return false
 }
 
 def getGraphHTML() {
@@ -2999,213 +3011,92 @@ def getGraphHTML() {
 				state?.temperatureTableYesterday?.size() > 0 &&
 				state?.humidityTable?.size() > 0 &&
 				state?.coolSetpointTable?.size() > 0 &&
-				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : ""
-		);
+				state?.heatSetpointTable?.size() > 0) ? showChartHtml() : (state?.showGraphs ? hideChartHtml() : "")
 
-		def ecoDesc = device.currentValue("whoSetEcoMode")
-		def ecoDescHtml = ecoDesc && ecoDesc != "Not Set" ? """
-			<table class="sched">
-				<col width="90%">
-				<thead>
-					<th><h3>Who Set Eco Mode:</h3></th>
-				</thead>
-				<tbody>
-					<tr>
-						<td><output class="ecoDesc">${ecoDesc}</output></td>
-					</tr>
-				</tbody>
-			</table>
-			""" : ""
-
+		def whoSetEco = device?.currentValue("whoSetEcoMode")
+		def whoSetEcoDt = state?.ecoDescDt
+		def ecoDesc = ((whoSetEco == null || whoSetEco == "Not Set") ? "Not in Eco Mode" : (!whoSetEco in ["Not in Eco Mode", "Unknown"] ? "Eco Set By: ${whoSetEco}" :  whoSetEco))
+		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
 		def schedData = state?.curAutoSchedData
 		def schedHtml = ""
 		if(schedData) {
 			schedHtml = """
-				<table class="sched">
-					<col width="90%">
-					<thead>
-						<th><h3>Active Schedule # (${schedData?.scdNum})</h3></th>
-					</thead>
-					<tbody>
-						<tr>
-							<td>${schedData?.schedName}</td>
-						</tr>
-					</tbody>
-				</table>
-				<table class="sched">
-					<col width="50%">
-					<thead>
-						<th class="sched"><h3>Zone Status</h3></th>
-					</thead>
-					<tbody>
-						<tr>
-							<table>
-								<col width="50%">
-								<col width="50%">
-								<thead class="tempSrc">
-									<th>Temp Source:</th>
-									<th>Zone Temp:</th>
-								</thead>
-								<tbody class="sched">
-									<tr>
-										<td>${schedData?.tempSrcDesc}</td>
-										<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
-									</tr>
-								</tbody>
-							</table>
-						</tr>
-					</tbody>
-				</table>
-				<table class="sched">
-					<col width="45%">
-					<col width="45%">
-					<thead>
-						<th><h3>Desired Heat Temp</h3></th>
-						<th><h3>Desired Cool Temp</h3></th>
-					</thead>
-					<tbody>
-						<tr>
-							<td>${schedData?.reqSenHeatSetPoint ? "${schedData?.reqSenHeatSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
-							<td>${schedData?.reqSenCoolSetPoint ? "${schedData?.reqSenCoolSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
-						</tr>
-					</tbody>
-				</table>
+				<section class="sectionBg">
+					<h3>Automation Schedule</h3>
+					<table class="sched">
+						<col width="90%">
+						<thead class="tempSrc">
+							<th>Active Schedule</th>
+						</thead>
+						<tbody>
+							<tr><td>#${schedData?.scdNum} - ${schedData?.schedName}</td></tr>
+						</tbody>
+					</table>
+					<h4>Zone Status</h4>
+					<table class="sched">
+						<tbody>
+							<tr>
+								<table>
+									<col width="50%">
+									<col width="50%">
+									<thead class="tempSrc">
+										<th>Temp Source:</th>
+										<th>Zone Temp:</th>
+									</thead>
+									<tbody class="sched">
+										<tr>
+											<td>${schedData?.tempSrcDesc}</td>
+											<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
+										</tr>
+									</tbody>
+								</table>
+							</tr>
+						</tbody>
+					</table>
+					<table class="sched">
+						<col width="45%">
+						<col width="45%">
+						<thead class="tempSrc">
+							<th>Desired Heat Temp</th>
+							<th>Desired Cool Temp</th>
+						</thead>
+						<tbody>
+							<tr>
+								<td>${schedData?.reqSenHeatSetPoint ? "${schedData?.reqSenHeatSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+								<td>${schedData?.reqSenCoolSetPoint ? "${schedData?.reqSenCoolSetPoint}&deg;${state?.tempUnit}": "Not Available"}</td>
+							</tr>
+						</tbody>
+					</table>
+				</section>
+				<br>
 			"""
 		}
 
-		def tempSliders = """
-			<style>
-				.tempSliders {
-					width: 95%;
-					padding: 20px;
-				}
-				.heatSlider .rangeslider__fill {
-					background: #FF3300;
-				}
-				.coolSlider .rangeslider__fill {
-					background: #0099FF;
-				}
-				output {
-				  display: block;
-				  text-align:center;
-				}
-				.ecoDesc output{
-					display: block;
-					text-align:center;
-				}
-			</style>
-			<script>
-				var cancool = ${state?.allowCool == false ? false : true};
-				var canheat = ${state?.allowHeat == false ? false : true};
-				var curInputId = null;
-
-				\$(document).ready(function() {
-					var \$document = \$(document);
-					var selector = '[data-rangeslider]';
-					var \$inputRange = \$(selector);
-
-					function valueOutput(element) {
-						var value = element.value;
-						var output = element.parentNode.getElementsByTagName('output')[0];
-						output.innerHTML = value+"${tempStr}";
-						//sendSetpoint(value);
-					}
-
-					for (var i = \$inputRange.length - 1; i >= 0; i--) {
-						valueOutput(\$inputRange[i]);
-					}
-
-					\$document.on('input', selector, function (e) {
-						valueOutput(e.target);
-						curInputId = \$(this).attr('id');
-					});
-
-					\$inputRange.rangeslider({
-						polyfill: false,
-						onSlideEnd: function (position, value) {
-							sendSetpoint(value);
-					    }
-					});
-					\$(document).on("pageinit",function(){
-						var \$inputRange = \$('input[type="range"]', e.target.parentNode);
-
-						if(curInputId == "coolSliderObj") {
-							\$inputRange.prop("disabled", cancool);
-						}
-						if(curInputId == "heatSliderObj") {
-							\$inputRange.prop("disabled", canheat);
-						}
-						\$inputRange.rangeslider('update');
-					});
-				});
-
-				function sendSetpoint(value) {
-					if(value && curInputId != null && curInputId.toString() == "heatSliderObj") {
-					  //setTimeout(function() {
-						//sendTempPost(value);
-						//var result = ${testSetHeat($value)}
-						//console.log("sending heatSetpoint of: " + value + " | result: " + result);
-					  //}, 3000);
-					}
-					else if(value && curInputId != null && curInputId == "coolSliderObj") {
-					  //setTimeout(function(){
-						//sendTempPost(value);
-						//var result = ${testSetCool($value)}
-						//console.log("set coolSetpoint to: " + value + " | result: " + result);
-					  //}, 3000);
-					}
-				}
-				// function sendTempPost(type, tempVal) {
-				// 	var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/graphHTML/setTemp"
-				// 	var http = new XMLHttpRequest();
-				// 	var jsonObj = [];
-				// 	item = {}
-			    //     item ["type"] = type;
-			    //     item ["tempVal"] = tempVal;
-			    //     jsonObj.push(item);
-				//
-				// 	var params = JSON.stringify(jsonObj);
-				// 	http.open("POST", url, true);
-				//
-				// 	//Send the proper header information along with the request
-				// 	http.setRequestHeader("Content-type", "application/json");
-				//
-				// 	http.onreadystatechange = function() {//Call a function when the state changes.
-				// 	    if(http.readyState == 4 && http.status == 200) {
-				// 	        alert(http.responseText);
-				// 	    }
-				// 	}
-				// 	http.send(params);
-				// }
-			</script>
-			<section class="tempSliders">
-				<table>
-					<col width="48%">
-					<col width="48%">
-					<tbody>
-					  <tr>
-						<td>
-							<section id="top">
-								<div class="heatSlider">
-									<output id="js-output">${getHeatTemp()}${tempStr}</output>
-									<br>
-									<input id="heatSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getHeatTemp()}" data-rangeslider>
-								</div>
-							</section>
-						</td>
-						<td>
-							<section id="top">
-								<div class="coolSlider">
-									<output id="js-output">${getCoolTemp()}</output>
-									<br>
-									<input id="coolSliderObj" type="range" min="${lowRange()}" max="${highRange()}" step="${wantMetric() ? 0.5 : 1}" value="${getCoolTemp()}" data-rangeslider>
-								</div>
-							</section>
-						</td>
-					  </tr>
-					</tbody>
-				</table>
-			</section>
+		def chgDescHtml = """
+			${schedHtml == "" ? "" : """<div class="swiper-slide">"""}
+				<section class="sectionBg">
+					<h3>Last Automation Event</h3>
+					<table class="sched">
+						<col width="90%">
+						<thead class="tempSrc">
+							<th>${getAutoChgType(device?.currentValue("whoMadeChanges"))}</th>
+						</thead>
+						<tbody>
+							<tr><td>${device?.currentValue("whoMadeChangesDesc") ?: "Unknown"}</td></tr>
+							<tr><td class="dateTimeTextSmall">${device?.currentValue("whoMadeChangesDescDt") ?: ""}</td></tr>
+						</tbody>
+					</table>
+				</section>
+				<br>
+				<section class="sectionBg">
+					<h3>Eco Mode Event</h3>
+					<table class="sched">
+						<tbody>
+							<tr><td>${ecoDesc}</td></tr>
+						</tbody>
+					</table>
+				</section>
+			${schedHtml == "" ? "" : """</div>"""}
 		"""
 
 		def html = """
@@ -3225,24 +3116,10 @@ def getGraphHTML() {
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/rangeslider.js/2.3.0/rangeslider.min.js", "text", "javascript")}"></script>
 				<style>
-					button {
-						background: white;
-						background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.1));
-						border: 1px solid #ccc;
-						border-radius: 5px;
-						color: #404040;
-						display: block;
-						width: 30%;
-						padding: .5em;
-						outline: 0;
-					}
 				</style>
 			</head>
 			<body>
-				${tempSliders}
-				${ecoDescHtml}
 				${clientBl}
 		  		${updateAvail}
 				<div class="swiper-container">
@@ -3250,68 +3127,73 @@ def getGraphHTML() {
 					<div class="swiper-wrapper">
 						<!-- Slides -->
 						<div class="swiper-slide">
-							${schedHtml}
-							<table
-							  <col width="50%">
-							  <col width="50%">
-							  <thead>
-								<th>Time to Target</th>
-								<th>Sun Correction</th>
-							  </thead>
-							  <tbody>
-								<tr>
-								  <td>${timeToTarget}</td>
-								  <td>${sunCorrectStr}</td>
-								</tr>
-							  </tbody>
-							</table>
-							<table>
-							<col width="40%">
-							<col width="20%">
-							<col width="40%">
-							<thead>
-							  <th>Network Status</th>
-							  <th>Leaf</th>
-							  <th>API Status</th>
-							</thead>
-							<tbody>
-							  <tr>
-								<td>${state?.onlineStatus.toString()}</td>
-								<td><img src="${leafImg}" class="leafImg"></img></td>
-								<td>${state?.apiStatus}</td>
-							  </tr>
-							</tbody>
-						  </table>
-						  <table>
-							<col width="40%">
-							<col width="20%">
-							<col width="40%">
-							  <thead>
-							    <th>Firmware Version</th>
-							    <th>Debug</th>
-							    <th>Device Type</th>
-							  </thead>
-							<tbody>
-							  <tr>
-								<td>${state?.softwareVer.toString()}</td>
-								<td>${state?.debugStatus}</td>
-								<td>${state?.devTypeVer.toString()}</td>
-							  </tr>
-							</tbody>
-						  </table>
-						  <table>
-							<thead>
-							  <th>Nest Checked-In</th>
-							  <th>Data Last Received</th>
-							</thead>
-							<tbody>
-							  <tr>
-								<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-								<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-							  </tr>
-							</tbody>
-						  </table>
+							${schedHtml == "" ? "" : "${schedHtml}"}
+							<section class="sectionBg">
+								<h3>Device Info</h3>
+								<table class="devInfo">
+								  <col width="50%">
+								  <col width="50%">
+								  <thead>
+									<th>Time to Target</th>
+									<th>Sun Correction</th>
+								  </thead>
+								  <tbody>
+									<tr>
+									  <td>${timeToTarget}</td>
+									  <td>${sunCorrectStr}</td>
+									</tr>
+								  </tbody>
+								</table>
+								<table class="devInfo">
+								<col width="40%">
+								<col width="20%">
+								<col width="40%">
+								<thead>
+								  <th>Network Status</th>
+								  <th>Leaf</th>
+								  <th>API Status</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td>${state?.onlineStatus.toString()}</td>
+									<td><img src="${leafImg}" class="leafImg"></img></td>
+									<td>${state?.apiStatus}</td>
+								  </tr>
+								</tbody>
+							  </table>
+							  <table class="devInfo">
+								<col width="40%">
+								<col width="20%">
+								<col width="40%">
+								  <thead>
+								    <th>Firmware Version</th>
+								    <th>Debug</th>
+								    <th>Device Type</th>
+								  </thead>
+								<tbody>
+								  <tr>
+									<td>${state?.softwareVer.toString()}</td>
+									<td>${state?.debugStatus}</td>
+									<td>${state?.devTypeVer.toString()}</td>
+								  </tr>
+								</tbody>
+							  </table>
+							  <table class="devInfo">
+								<thead>
+								  <th>Nest Checked-In</th>
+								  <th>Data Last Received</th>
+								</thead>
+								<tbody>
+								  <tr>
+									<td class="dateTimeText">${state?.lastConnection.toString()}</td>
+									<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+								  </tr>
+								</tbody>
+							  </table>
+						   </section>
+						   ${schedHtml == "" ? """<br>${chgDescHtml}""" : ""}
 						</div>
+						${schedHtml == "" ? "" : """${chgDescHtml}"""}
 						${chartHtml}
 					</div>
 					<!-- If we need pagination -->
@@ -3648,12 +3530,16 @@ def showChartHtml() {
 			}
 		  </script>
 		  <div class="swiper-slide">
-  			<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-  			<div id="main_graph" style="width: 100%; height: 425px;"></div>
+		  	<section class="sectionBg">
+			  <h3>Event History</h3>
+	  		  <div id="main_graph" style="width: 100%; height: 425px;"></div>
+			</section>
   		  </div>
   		  <div class="swiper-slide">
-  		    <h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Usage History</h4>
-  		    <div id="use_graph" style="width: 100%; height: 425px;"></div>
+		  	<section class="sectionBg">
+				<h3>Usage History</h3>
+  		    	<div id="use_graph" style="width: 100%; height: 425px;"></div>
+			</section>
   		  </div>
 	  """
 	return data
@@ -3661,12 +3547,16 @@ def showChartHtml() {
 
 def hideChartHtml() {
 	def data = """
-	<h4 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Event History</h4>
-	<br></br>
-	<div class="centerText">
-	  <p>Waiting for more data to be collected...</p>
-	  <p>This may take a few hours</p>
-	</div>
+		<div class="swiper-slide">
+			<section class="sectionBg" style="min-height: 250px;">
+			  <h3>Event History</h3>
+			  <br>
+			  <div class="centerText">
+				<p>Waiting for more data to be collected...</p>
+				<p>This may take a few hours</p>
+			  </div>
+			</section>
+		</div>
 	"""
 	return data
 }
@@ -3957,7 +3847,7 @@ def getHeatUsageDesc(perc, tmStr, timeType) {
 			str += tmStr
 		}
 		else if (perc>=34 && perc<66) {
-			str += " it's like the weather was a bit chilly today because your device spent "
+			str += " it looks like the weather was a bit chilly today because your device spent "
 			str += tmStr
 			str += " trying to keep your home cozy "
 		}
