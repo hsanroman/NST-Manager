@@ -1072,14 +1072,14 @@ def getCamHtml() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 
 				<style>
-					body {
-						text-shadow: 0px 1px 2px darkgray;
-					}
-					.tempSrc th {
-						text-shadow: 0px 1px 2px lightgray;
-					}
 					.devInfo th {
-						text-shadow: 0px 1px 2px lightgray;
+						text-shadow: 1px 1px 0px lightgray;
+					}
+					.sectionBg {
+						box-shadow: 0 2px 2px rgba(0,0,0,0.16), 0 2px 2px rgba(0,0,0,0.23);
+					}
+					.sectionBg h3 {
+						text-shadow: 1px 1px 0px black;
 					}
 				</style>
 			</head>
@@ -1097,11 +1097,11 @@ def getCamHtml() {
 						  <section class="sectionBg">
 							<h3>Device Info</h3>
 							<table class="devInfo">
-							  <col width="50%">
-							  <col width="50%">
+							  <col width="40%">
+							  <col width="40%">
 							  <thead>
-								<th style="font-size: 16px;">Network Status</th>
-								<th style="font-size: 16px;">API Status</th>
+								<th>Network Status</th>
+								<th>API Status</th>
 							  </thead>
 							  <tbody>
 								<tr>
@@ -1111,25 +1111,14 @@ def getCamHtml() {
 							  </tbody>
 							</table>
 						  </section>
-						  <section class="sectionBg">
-							<table class="devInfo">
-							  <tr>
-								<th>Firmware Version</th>
-								<th>Debug</th>
-								<th>Device Type</th>
-							  </tr>
-							  <td>v${state?.softwareVer.toString()}</td>
-							  <td>${state?.debugStatus}</td>
-							  <td>${state?.devTypeVer.toString()}</td>
-							</table>
-						  </section>
+
 						  <section class="sectionBg">
 							<table class="devInfo">
 							  <col width="50%">
 							  <col width="50%">
 								<thead>
-								  <th style="font-size: 16px;">Video History (Min.)</th>
-								  <th style="font-size: 16px;">Video History (Max.)</th>
+								  <th>Video History (Min.)</th>
+								  <th>Video History (Max.)</th>
 								</thead>
 								<tbody>
 								  <tr>
@@ -1145,8 +1134,8 @@ def getCamHtml() {
 							  <col width="33%">
 							  <col width="33%">
 							  <thead>
-								<th style="font-size: 16px;">Public Video</th>
-								<th style="font-size: 16px;">Mic Status</th>
+								<th>Public Video</th>
+								<th>Mic Status</th>
 							  </thead>
 							  <tbody>
 								<tr>
@@ -1158,9 +1147,26 @@ def getCamHtml() {
 						  </section>
 						  <section class="sectionBg">
 							<table class="devInfo">
+							  <col width="40%">
+							  <col width="20%">
+							  <col width="40%">
+							  <thead>
+								<th>FW Version</th>
+								<th>Debug</th>
+								<th>Device Type</th>
+							  </thead>
+							  <tbody>
+								  <td>v${state?.softwareVer.toString()}</td>
+								  <td>${state?.debugStatus}</td>
+								  <td>${state?.devTypeVer.toString()}</td>
+							  </tbody>
+							</table>
+						  </section>
+						  <section class="sectionBg">
+							<table class="devInfo">
 							   <thead>
-								 <th style="font-size: 16px;">Last Online Change</th>
-								 <th style="font-size: 16px;">Data Last Received</th>
+								 <th>Last Online Change</th>
+								 <th>Data Last Received</th>
 							   </thead>
 							   <tbody>
 								 <tr>
@@ -1253,7 +1259,6 @@ def showCamHtml() {
 			<div style="padding: 5px;">
 				<section class="sectionBg">
 					<h3>Last Camera Event</h3>
-					<img src="${animationUrl}" width="100%"/>
 					<table class="devInfo">
 					  <tbody>
 						<tr>
@@ -1262,6 +1267,7 @@ def showCamHtml() {
 						</tr>
 					  </tbody>
 					</table>
+					<img src="${animationUrl}" width="100%"/>
 					<table class="devInfo">
 					  <col width="33%">
 					  <col width="33%">

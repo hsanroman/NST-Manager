@@ -3038,38 +3038,33 @@ def getGraphHTML() {
 					<h3>Automation Schedule</h3>
 					<table class="sched">
 						<col width="90%">
-						<thead class="tempSrc">
+						<thead class="devInfo">
 							<th>Active Schedule</th>
 						</thead>
 						<tbody>
 							<tr><td>#${schedData?.scdNum} - ${schedData?.schedName}</td></tr>
 						</tbody>
 					</table>
-					<h4>Zone Status</h4>
+					<h3>Zone Status</h3>
+
 					<table class="sched">
-						<tbody>
+						<col width="50%">
+						<col width="50%">
+						<thead class="devInfo">
+							<th>Temp Source:</th>
+							<th>Zone Temp:</th>
+						</thead>
+						<tbody class="sched">
 							<tr>
-								<table>
-									<col width="50%">
-									<col width="50%">
-									<thead class="tempSrc">
-										<th>Temp Source:</th>
-										<th>Zone Temp:</th>
-									</thead>
-									<tbody class="sched">
-										<tr>
-											<td>${schedData?.tempSrcDesc}</td>
-											<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
-										</tr>
-									</tbody>
-								</table>
+								<td>${schedData?.tempSrcDesc}</td>
+								<td>${schedData?.curZoneTemp}&deg;${state?.tempUnit}</td>
 							</tr>
 						</tbody>
 					</table>
 					<table class="sched">
 						<col width="45%">
 						<col width="45%">
-						<thead class="tempSrc">
+						<thead class="devInfo">
 							<th>Desired Heat Temp</th>
 							<th>Desired Cool Temp</th>
 						</thead>
@@ -3089,9 +3084,9 @@ def getGraphHTML() {
 			${schedHtml == "" ? "" : """<div class="swiper-slide">"""}
 				<section class="sectionBg">
 					<h3>Last Automation Event</h3>
-					<table class="sched">
+					<table class="devInfo">
 						<col width="90%">
-						<thead class="tempSrc">
+						<thead>
 							<th>${getAutoChgType(device?.currentValue("whoMadeChanges"))}</th>
 						</thead>
 						<tbody>
@@ -3103,7 +3098,7 @@ def getGraphHTML() {
 				<br>
 				<section class="sectionBg">
 					<h3>Eco Mode Event</h3>
-					<table class="sched">
+					<table class="devInfo">
 						<tbody>
 							<tr><td>${ecoDesc}</td></tr>
 							${ecoDescDt}
@@ -3131,14 +3126,15 @@ def getGraphHTML() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 				<style>
-					body {
-						text-shadow: 0px 1px 2px darkgray;
-					}
-					.tempSrc th {
-						text-shadow: 0px 1px 2px lightgray;
-					}
+
 					.devInfo th {
-						text-shadow: 0px 1px 2px lightgray;
+						text-shadow: 1px 1px 0px lightgray;
+					}
+					.sectionBg {
+						box-shadow: 0 2px 2px rgba(0,0,0,0.16), 0 2px 2px rgba(0,0,0,0.23);
+					}
+					.sectionBg h3 {
+						text-shadow: 1px 1px 0px black;
 					}
 				</style>
 			</head>

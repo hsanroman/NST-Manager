@@ -856,14 +856,14 @@ def getInfoHtml() {
 
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
 				<style>
-					body {
-						text-shadow: 0px 1px 2px darkgray;
-					}
-					.tempSrc th {
-						text-shadow: 0px 1px 2px lightgray;
-					}
 					.devInfo th {
-						text-shadow: 0px 1px 2px lightgray;
+						text-shadow: 1px 1px 0px lightgray;
+					}
+					.sectionBg {
+						box-shadow: 0 2px 2px rgba(0,0,0,0.16), 0 2px 2px rgba(0,0,0,0.23);
+					}
+					.sectionBg h3 {
+						text-shadow: 1px 1px 0px black;
 					}
 				</style>
 			</head>
