@@ -3004,6 +3004,9 @@ def getGraphHTML() {
 
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
+		log.debug "client: ${state?.mobileClientType}"
+		def refreshBtnHtml = state.mobileClientType == "ios" ?
+				"""<div class="pageFooterBtn"><button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
 		def chartHtml = (
 				state?.showGraphs &&
 				state?.temperatureTable?.size() > 0 &&
@@ -3243,11 +3246,7 @@ def getGraphHTML() {
 						window.location = url;
 					}
 				</script>
-				<div class="pageFooterBtn">
-				    <button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()">
-					  <span>&#10227;</span> Refresh
-				    </button>
-				</div>
+				${refreshBtnHtml}
 			</body>
 		</html>
 		"""
