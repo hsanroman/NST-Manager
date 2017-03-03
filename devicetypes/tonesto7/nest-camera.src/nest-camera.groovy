@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.5.1" }
+def devVer() { return "2.6.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -261,7 +261,6 @@ def processEvent() {
 			state.nestTimeZone = eventData?.tz ?: null
 
 			state?.devBannerMsgData = eventData?.devBannerData ?: null
-			log.debug "bannerMsgData: ${state?.devBannerMsgData}"
 			publicShareUrlEvent(results?.public_share_url)
 			onlineStatusEvent(results?.is_online?.toString())
 			isStreamingEvent(results?.is_streaming)
@@ -918,7 +917,7 @@ def getImg(imgName) {
 
 def getCSS(url = null){
 	def params = [
-		uri: (!url ? "https://raw.githubusercontent.com/desertblade/ST-HTMLTile-Framework/master/css/smartthings.css" : url?.toString()),
+		uri: (!url ? cssUrl() : url?.toString()),
 		contentType: "text/css"
 	]
 	httpGet(params)  { resp ->
@@ -953,7 +952,7 @@ def getCssData() {
 	return cssData
 }
 
-def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
+def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
 
 //this scrapes the public nest cam page for its unique id for using in render html tile
 include 'asynchttp_v1' //<<<<<This is currently in Beta
@@ -1070,12 +1069,12 @@ def getCamHtml() {
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
 
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 
 				<style>
 					.swiper-container {
 						width: 95%;
-						min-height: 400px;
+						min-height: 200px;
 						padding: 10px;
 					}
 				</style>
@@ -1091,7 +1090,9 @@ def getCamHtml() {
 						${camHtml}
 
 						<div class="swiper-slide">
-							<table>
+						  <section class="sectionBg">
+							<h3>Device Info</h3>
+							<table class="devInfo">
 							  <col width="50%">
 							  <col width="50%">
 							  <thead>
@@ -1105,17 +1106,21 @@ def getCamHtml() {
 								</tr>
 							  </tbody>
 							</table>
-							<table>
+						  </section>
+						  <section class="sectionBg">
+							<table class="devInfo">
 							  <tr>
-								<th style="font-size: 16px;">Firmware Version</th>
-								<th style="font-size: 16px;">Debug</th>
-								<th style="font-size: 16px;">Device Type</th>
+								<th>Firmware Version</th>
+								<th>Debug</th>
+								<th>Device Type</th>
 							  </tr>
 							  <td>v${state?.softwareVer.toString()}</td>
 							  <td>${state?.debugStatus}</td>
 							  <td>${state?.devTypeVer.toString()}</td>
 							</table>
-							<table>
+						  </section>
+						  <section class="sectionBg">
+							<table class="devInfo">
 							  <col width="50%">
 							  <col width="50%">
 								<thead>
@@ -1129,7 +1134,9 @@ def getCamHtml() {
 								  </tr>
 							  </tbody>
 							</table>
-							<table>
+						  </section>
+						  <section class="sectionBg">
+							<table class="devInfo">
 							  <col width="33%">
 							  <col width="33%">
 							  <col width="33%">
@@ -1144,7 +1151,9 @@ def getCamHtml() {
 								</tr>
 							  </tbody>
 							</table>
-							<table>
+						  </section>
+						  <section class="sectionBg">
+							<table class="devInfo">
 							   <thead>
 								 <th style="font-size: 16px;">Last Online Change</th>
 								 <th style="font-size: 16px;">Data Last Received</th>
@@ -1156,6 +1165,7 @@ def getCamHtml() {
 								 </tr>
 							   </tbody>
 							 </table>
+						   </section>
 						</div>
 					</div>
 					<!-- If we need pagination -->
@@ -1172,7 +1182,7 @@ def getCamHtml() {
 						slidesPerView: '1',
 						centeredSlides: true,
 						spaceBetween: 100,
-						autoHeight: false,
+						autoHeight: true,
 						iOSEdgeSwipeDetection: true,
 						parallax: true,
 						slideToClickedSlide: true,
@@ -1236,38 +1246,44 @@ def showCamHtml() {
 
 	def data = """
 		<div class="swiper-slide">
-			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Last Camera Event</h4>
-			<img src="${animationUrl}" width="100%"/>
-			<table>
-			  <tbody>
-				<tr>
-				  <td>${state?.lastEventDate ?: "Not Available"}</td>
-				  <td>${state?.lastEventTime ?: ""}</td>
-				</tr>
-			  </tbody>
-			</table>
-			<table>
-			  <col width="33%">
-			  <col width="33%">
-			  <col width="33%">
-			  <thead>
-				<th style="font-size: 16px;">Had Person?</th>
-				<th style="font-size: 16px;">Had Motion?</th>
-				<th style="font-size: 16px;">Had Sound?</th>
-			  </thead>
-			  <tbody>
-				<tr>
-				  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
-				  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
-				  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
-				</tr>
-			  </tbody>
-			</table>
+			<div style="padding: 5px;">
+				<section class="sectionBg">
+					<h3>Last Camera Event</h3>
+					<img src="${animationUrl}" width="100%"/>
+					<table class="devInfo">
+					  <tbody>
+						<tr>
+						  <td>${state?.lastEventDate ?: "Not Available"}</td>
+						  <td>${state?.lastEventTime ?: ""}</td>
+						</tr>
+					  </tbody>
+					</table>
+					<table class="devInfo">
+					  <col width="33%">
+					  <col width="33%">
+					  <col width="33%">
+					  <thead>
+						<th>Had Person?</th>
+						<th>Had Motion?</th>
+						<th>Had Sound?</th>
+					  </thead>
+					  <tbody>
+						<tr>
+						  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
+						  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
+						  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
+						</tr>
+					  </tbody>
+					</table>
+				</section>
+			</div>
 		</div>
 		<div class="swiper-slide">
-			<h4 style="font-size: 18px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5; padding: 4px;">Still Image</h4>
-			<img src="${pubSnapUrl}" width="100%"/>
-			<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
+			<section class="sectionBg">
+				<h3>Still Image</h3>
+				<img src="${pubSnapUrl}" width="100%"/>
+				<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
+			</section>
 		</div>
 	"""
 }

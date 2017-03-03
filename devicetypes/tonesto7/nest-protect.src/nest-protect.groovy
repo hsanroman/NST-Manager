@@ -134,7 +134,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 6)
+		htmlTile(name:"devInfoHtml", action: "getInfoHtml", width: 6, height: 8)
 
 		main "main2"
 		details(["alarmState", "devInfoHtml", "refresh"])
@@ -823,7 +823,7 @@ def getCssData() {
 	return cssData
 }
 
-def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
+def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
 def disclaimerMsg() {
 	if(!state?.disclaimerMsgShown) {
 		state.disclaimerMsgShown = true
@@ -861,69 +861,82 @@ def getInfoHtml() {
 			  ${testModeHTML}
 			  ${clientBl}
 			  ${updateAvail}
-			  <table>
-			    <col width="48%">
-			    <col width="48%">
-			    <thead>
-				  <th>Smoke Detector</th>
-				  <th>Carbon Monoxide</th>
-			    </thead>
-			    <tbody>
-				  <tr>
-				    <td>
-						<img class='alarmImg' src="${smokeImg?.img}">
-						<span class="${smokeImg?.captionClass}">${smokeImg?.caption}</span>
-					</td>
-				    <td>
-						<img class='alarmImg' src="${carbonImg?.img}">
-						<span class="${carbonImg?.captionClass}">${carbonImg?.caption}</span>
-					</td>
-				  </tr>
-			    </tbody>
-			  </table>
-			  <table>
-				<col width="50%">
-				  <col width="50%">
-					<thead>
-					  <th>Network Status</th>
-					  <th>API Status</th>
-					</thead>
-					<tbody>
-					  <tr>
-						<td>${state?.onlineStatus.toString()}</td>
-						<td>${state?.apiStatus}</td>
-					  </tr>
-					</tbody>
-			  </table>
-			  <table>
-				<col width="40%">
-				<col width="20%">
-				<col width="40%">
-				<thead>
-				  <th>Firmware Version</th>
-				  <th>Debug</th>
-				  <th>Device Type</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td>v${state?.softwareVer.toString()}</td>
-					<td>${state?.debugStatus}</td>
-					<td>${state?.devTypeVer.toString()}</td>
-				  </tr>
-				</tbody>
-			  </table>
-			  <table>
-				<thead>
-				  <th>Last Check-In</th>
-				  <th>Data Last Received</th>
-				</thead>
-				<tbody>
-				  <tr>
-					<td class="dateTimeText">${state?.lastConnection.toString()}</td>
-					<td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
-				  </tr>
-				</tbody>
-			  </table>
+			  <div style="padding: 10px;">
+				  <section class="sectionBg">
+					  <h3>Alarm Status</h3>
+					  <table class="devInfo">
+					    <col width="48%">
+					    <col width="48%">
+					    <thead>
+						  <th>Smoke Detector</th>
+						  <th>Carbon Monoxide</th>
+					    </thead>
+					    <tbody>
+						  <tr>
+						    <td>
+								<img class='alarmImg' src="${smokeImg?.img}">
+								<span class="${smokeImg?.captionClass}">${smokeImg?.caption}</span>
+							</td>
+						    <td>
+								<img class='alarmImg' src="${carbonImg?.img}">
+								<span class="${carbonImg?.captionClass}">${carbonImg?.caption}</span>
+							</td>
+						  </tr>
+					    </tbody>
+					  </table>
+				  </section>
+				  <br>
+				  <section class="sectionBg">
+					<h3>Device Info</h3>
+					<table class="devInfo">
+						<col width="50%">
+						<col width="50%">
+						<thead>
+						  <th>Network Status</th>
+						  <th>API Status</th>
+						</thead>
+						<tbody>
+						  <tr>
+							<td>${state?.onlineStatus.toString()}</td>
+							<td>${state?.apiStatus}</td>
+						  </tr>
+						</tbody>
+					</table>
+				</section>
+				<section class="sectionBg">
+					<table class="devInfo">
+						<col width="40%">
+						<col width="20%">
+						<col width="40%">
+						<thead>
+						  <th>Firmware Version</th>
+						  <th>Debug</th>
+						  <th>Device Type</th>
+						</thead>
+						<tbody>
+						  <tr>
+							<td>v${state?.softwareVer.toString()}</td>
+							<td>${state?.debugStatus}</td>
+							<td>${state?.devTypeVer.toString()}</td>
+						  </tr>
+						</tbody>
+				  	</table>
+				  </section>
+				  <section class="sectionBg">
+	  				<table class="devInfo">
+					  <thead>
+						<th>Last Check-In</th>
+						<th>Data Last Received</th>
+					  </thead>
+					  <tbody>
+						<tr>
+						  <td class="dateTimeText">${state?.lastConnection.toString()}</td>
+						  <td class="dateTimeText">${state?.lastUpdatedDt.toString()}</td>
+						</tr>
+					  </tbody>
+					</table>
+				  </section>
+				</div>
 			  <script>
 				  function reloadProtPage() {
 					  var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getInfoHtml"
