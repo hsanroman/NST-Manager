@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.5.3"}
+def devVer() { return "4.6.0"}
 
 // for the UI
 metadata {
@@ -3131,11 +3131,15 @@ def getGraphHTML() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 				<style>
-				.swiper-container {
-				    width: 95%;
-				    min-height: 200px;
-				    padding: 10px;
-				}
+					body {
+						text-shadow: 0px 1px 2px darkgray;
+					}
+					.tempSrc th {
+						text-shadow: 0px 1px 2px lightgray;
+					}
+					.devInfo th {
+						text-shadow: 0px 1px 2px lightgray;
+					}
 				</style>
 			</head>
 			<body>

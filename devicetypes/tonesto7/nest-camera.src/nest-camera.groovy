@@ -1072,10 +1072,14 @@ def getCamHtml() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 
 				<style>
-					.swiper-container {
-						width: 95%;
-						min-height: 200px;
-						padding: 10px;
+					body {
+						text-shadow: 0px 1px 2px darkgray;
+					}
+					.tempSrc th {
+						text-shadow: 0px 1px 2px lightgray;
+					}
+					.devInfo th {
+						text-shadow: 0px 1px 2px lightgray;
 					}
 				</style>
 			</head>

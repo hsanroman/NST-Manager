@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.5.3" }
+def devVer() { return "4.6.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -855,6 +855,17 @@ def getInfoHtml() {
                 <script type="text/javascript" src="${getFileBase64("https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js", "text", "javascript")}"></script>
 
 				<link rel="stylesheet prefetch" href="${getCssData()}"/>
+				<style>
+					body {
+						text-shadow: 0px 1px 2px darkgray;
+					}
+					.tempSrc th {
+						text-shadow: 0px 1px 2px lightgray;
+					}
+					.devInfo th {
+						text-shadow: 0px 1px 2px lightgray;
+					}
+				</style>
 			</head>
 			<body>
 			  ${disclaimerMsg()}
