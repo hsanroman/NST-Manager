@@ -1153,11 +1153,11 @@ def runAutomationEval() {
 
 void sendAutoChgToDevice(dev, autoType, chgDesc) {
 	if(dev && autoType && chgDesc) {
-		dev?.whoMadeChanges(autoType, chgDesc)
+		dev?.whoMadeChanges(autoType, chgDesc, getDtNow())
 	}
 }
 
-void sendEcoActionDescToDevice(dev, desc) {
+def sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
 		dev?.ecoDesc(desc)
 	}
@@ -1384,7 +1384,6 @@ def automationMotionEvt(evt) {
 	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' | Motion is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
-		// sendEcoActionDescToDevice(settings?.schMotTstat, "conWat")
 		storeLastEventData(evt)
 		def dorunIn = false
 		def delay = 120
@@ -4675,7 +4674,7 @@ def schMotModePage() {
 						conDesc += settings?.conWatContacts ? "\n\nSettings:" : ""
 						conDesc += settings?.conWatOffDelay ? "\n • Eco Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOffDelay)})" : ""
 						conDesc += settings?.conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOnDelay)})" : ""
-						conDesc += settings?.conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n     └ (${getEnumValue(longTimeSecEnum(), settings?.conWatRestoreDelayBetween)})" : ""
+						conDesc += settings?.conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n   └ (${getEnumValue(longTimeSecEnum(), settings?.conWatRestoreDelayBetween)})" : ""
 						conDesc += (settings?."${conWatPrefix()}Modes" || settings?."${conWatPrefix()}Days" || (settings?."${conWatPrefix()}StartTime" && settings?."${conWatPrefix()}StopTime")) ?
 							"\n • Evaluation Allowed: (${autoScheduleOk(conWatPrefix()) ? "ON" : "OFF"})" : ""
 						def t1 = getNotifConfigDesc(conWatPrefix())

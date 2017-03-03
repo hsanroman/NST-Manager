@@ -3787,7 +3787,7 @@ private setRecentSendCmd(qnum, val) {
 	return
 }
 
-void sendEcoActionDescToDevice(dev, desc) {
+def sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
 		dev?.ecoDesc(desc)
 	}
@@ -4116,7 +4116,7 @@ def apiRespHandler(code, errJson, methodName) {
 				result =  !errMsg ? "Received Response..." : errMsg
 				break
 		}
-		def failData = ["msg":result, "method":methodName, "dt":getDtNow()]
+		def failData = ["code":code, "msg":result, "method":methodName, "dt":getDtNow()]
 		atomicState?.apiCmdFailData = failData
 		failedCmdNotify(failData)
 		LogAction("$methodName error - (Status: $code - $result) - [ErrorLink: ${errJson?.type}]", "error", true)
@@ -4198,7 +4198,7 @@ def failedCmdNotify(failData) {
 	def nPrefs = atomicState?.notificationPrefs
 	def cmdFail = (nPrefs?.app?.api?.cmdFailMsg && failData?.msg != null) ? true : false
 	if(cmdFail) {
-		def msg = "\nThe (${atomicState?.lastCmdSent}) CMD sent to the API has failed.\nErrorMsg: ${failData?.msg}\nDT: ${failData?.dt}"
+		def msg = "\nThe (${atomicState?.lastCmdSent}) CMD sent to the API has failed.\nStatus Code: ${failData?.code}\nErrorMsg: ${failData?.msg}\nDT: ${failData?.dt}"
 		sendMsg("${app?.name} API CMD Failed", msg)
 		atomicState?.lastFailedCmdMsgDt = getDtNow()
 	}

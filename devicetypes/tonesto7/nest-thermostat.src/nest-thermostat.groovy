@@ -596,6 +596,10 @@ def isCodeUpdateAvailable(newVer, curVer) {
 	return result
 }
 
+def ecoDesc(val) {
+	ecoDescEvent(val)
+}
+
 def pauseEvent(val) {
 	def curData = device.currentState("pauseUpdates")?.value
 	if(isStateChange(device, "pauseUpdates", val.toString())) {
@@ -687,12 +691,11 @@ def debugOnEvent(debug) {
 def lastCheckinEvent(checkin, isOnline) {
 	//log.debug "lastCheckinEvent($checkin)"
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
 	def lastChk = device.currentState("lastConnection")?.value
 	def isOn = device.currentState("onlineStatus")?.value
 	def onlineStat = isOn ? isOn.toString() : "Offline"
-
-	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
 
 	def hcTimeout = getHcTimeout()
 	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
@@ -845,13 +848,16 @@ def presenceEvent(presence) {
 }
 
 def whoMadeChanges(autoType, desc, dt) {
-	log.debug "whoMadeChanges: $autoType: $desc | dt: $dt"
+	// log.debug "whoMadeChanges: $autoType: $desc | dt: $dt"
 	def curType = device?.currentState("whoMadeChanges")?.value
 	def curDesc = device?.currentState("whoMadeChangesDesc")?.value
 	def curDt = device?.currentState("whoMadeChangesDescDt")?.value
 	def newChgType = autoType ?: "Not Set"
 	def newChgDesc = desc ?: "Not Set"
-	def newChgDt = dt ?: "Not Set"
+	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
+	def newChgDt = tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", dt)) ?: "Not Set"
 	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString()) || isStateChange(device, "whoMadeChangesDescDt", newChgDt.toString())) {
 		Logger("UPDATED | Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})")
 		sendEvent(name: "whoMadeChanges", value: newChgType)
@@ -861,11 +867,15 @@ def whoMadeChanges(autoType, desc, dt) {
 }
 
 def ecoDescEvent(val) {
-	log.debug "ecoDescEvent($val)"
+	// log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
 	def newEcoDesc = (curMode == "eco" && curEcoDesc == null) ? "Set Outside of SmartThings" : (val ?: "Not in Eco Mode")
-	state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : getDtNow()
+
+	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+	def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
+	state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow()))
 	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
@@ -1062,7 +1072,7 @@ def keepAwakeEvent() {
 
 def autoSchedDataEvent(schedData) {
 	def t0 = state?.curAutoSchedData
-	if(schedData && t0 != schedData) {
+	if(schedData && t0.toString() != schedData.toString()) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
 	state?.curAutoSchedData = schedData
@@ -3004,7 +3014,6 @@ def getGraphHTML() {
 
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
-		log.debug "client: ${state?.mobileClientType}"
 		def refreshBtnHtml = state.mobileClientType == "ios" ?
 				"""<div class="pageFooterBtn"><button type="button" class="btn btn-info pageFooterBtn" onclick="reloadTstatPage()"><span>&#10227;</span> Refresh</button></div>""" : ""
 		def chartHtml = (
@@ -3018,7 +3027,8 @@ def getGraphHTML() {
 
 		def whoSetEco = device?.currentValue("whoSetEcoMode")
 		def whoSetEcoDt = state?.ecoDescDt
-		def ecoDesc = ((whoSetEco == null || whoSetEco == "Not Set") ? "Not in Eco Mode" : (!whoSetEco in ["Not in Eco Mode", "Unknown"] ? "Eco Set By: ${whoSetEco}" :  whoSetEco))
+		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "Not in Eco Mode"
+
 		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
 		def schedData = state?.curAutoSchedData
 		def schedHtml = ""
@@ -3096,6 +3106,7 @@ def getGraphHTML() {
 					<table class="sched">
 						<tbody>
 							<tr><td>${ecoDesc}</td></tr>
+							${ecoDescDt}
 						</tbody>
 					</table>
 				</section>
@@ -3120,6 +3131,11 @@ def getGraphHTML() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 				<style>
+				.swiper-container {
+				    width: 95%;
+				    min-height: 200px;
+				    padding: 10px;
+				}
 				</style>
 			</head>
 			<body>
@@ -3215,7 +3231,7 @@ def getGraphHTML() {
 						slidesPerView: '1',
 						centeredSlides: true,
 						spaceBetween: 100,
-						autoHeight: false,
+						autoHeight: true,
 						keyboardControl: true,
             			mousewheelControl: true,
 						iOSEdgeSwipeDetection: true,
