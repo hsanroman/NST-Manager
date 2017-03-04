@@ -426,7 +426,15 @@ void processEvent(data) {
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
+
+			def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
+			def newMode = device?.currentState("nestThermostatMode")?.value.toString()
+			if(newMode == "eco" && curMode != newMode) {
+				ecoDescEvent("Set Outside of SmartThings")
+			} else { ecoDescEvent(null, true) }
+				
+
 			hvacPreviousModeEvent(eventData?.data?.previous_hvac_mode.toString())
 			hasLeafEvent(eventData?.data?.has_leaf)
 			humidityEvent(eventData?.data?.humidity.toString())
@@ -856,7 +864,7 @@ def whoMadeChanges(autoType, desc, dt) {
 	def newChgDesc = desc ?: "Not Set"
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def newChgDt = tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", dt)) ?: "Not Set"
 	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString()) || isStateChange(device, "whoMadeChangesDescDt", newChgDt.toString())) {
 		Logger("UPDATED | Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})")
@@ -866,20 +874,22 @@ def whoMadeChanges(autoType, desc, dt) {
 	} else { LogAction("Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})") }
 }
 
-def ecoDescEvent(val) {
-	// log.debug "ecoDescEvent($val)"
+def ecoDescEvent(val, updChk=false) {
+	//log.debug "ecoDescEvent($val)"
 	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
-	def newEcoDesc = (curMode == "eco" && curEcoDesc == null) ? "Set Outside of SmartThings" : (val ?: "Not in Eco Mode")
 
-	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
-	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
-	state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow()))
-	log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
+	def newVal = updChk ? curEcoDesc : val
+	def newEcoDesc = (curMode == "eco") ? (newVal == null ? "Set Outside of SmartThings" : newVal) : "Not in Eco Mode"
+
+	//log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
 		Logger("UPDATED | whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})")
 		sendEvent(name: "whoSetEcoMode", value: newEcoDesc)
+		def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
+		def tf = new SimpleDateFormat(formatVal)
+		tf.setTimeZone(getTimeZone())
+		state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow()))
 	} else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})") }
 }
 
@@ -1071,9 +1081,10 @@ def keepAwakeEvent() {
 }
 
 def autoSchedDataEvent(schedData) {
-	def s0 = schedData
+	def s0 = [:]
+	s0 = schedData != null ? schedData : s0
 	def t0 = state?.curAutoSchedData
-	log.debug "s0: $s0 | t0: $t0"
+	//log.debug "s0: $s0 | t0: $t0"
 	if(s0 && t0 != s0) {
 		Logger("UPDATED | Automation Schedule Data for this device has been Updated", "info")
 	}
@@ -1748,6 +1759,7 @@ def doChangeMode(manChg=false) {
 			if (parent.setHvacMode(this, "eco", virtType())) {
 				errflag = false
 				if(manChg) { ecoDescEvent("User Changed (ST)") }
+				else { ecoDescEvent("A ST Automation") }
 			}
 			break
 		default:
@@ -3029,7 +3041,7 @@ def getGraphHTML() {
 
 		def whoSetEco = device?.currentValue("whoSetEcoMode")
 		def whoSetEcoDt = state?.ecoDescDt
-		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "Not in Eco Mode"
+		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of SmartThings", "A ST Automation"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
 
 		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
 		def schedData = state?.curAutoSchedData
@@ -3099,7 +3111,7 @@ def getGraphHTML() {
 				</section>
 				<br>
 				<section class="sectionBg">
-					<h3>Eco Mode Event</h3>
+					<h3>Eco Set By</h3>
 					<table class="devInfo">
 						<tbody>
 							<tr><td>${ecoDesc}</td></tr>
