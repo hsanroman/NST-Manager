@@ -431,7 +431,7 @@ void processEvent(data) {
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
 			def newMode = device?.currentState("nestThermostatMode")?.value.toString()
 			if(newMode == "eco" && curMode != newMode) {
-				ecoDescEvent("Set Outside of SmartThings")
+				ecoDescEvent("Set Outside of this DTH")
 			} else { ecoDescEvent(null, true) }
 				
 
@@ -880,7 +880,7 @@ def ecoDescEvent(val, updChk=false) {
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
 
 	def newVal = updChk ? curEcoDesc : val
-	def newEcoDesc = (curMode == "eco") ? (newVal == null ? "Set Outside of SmartThings" : newVal) : "Not in Eco Mode"
+	def newEcoDesc = (curMode == "eco") ? (newVal == null ? "Set Outside of this DTH" : newVal) : "Not in Eco Mode"
 
 	//log.debug "cur: $curEcoDesc | new: $newEcoDesc | curMode: $curMode | val: $val"
 	if(isStateChange(device, "whoSetEcoMode", newEcoDesc.toString())) {
@@ -889,7 +889,7 @@ def ecoDescEvent(val, updChk=false) {
 		def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 		def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
-		state?.ecoDescDt = (newEcoDesc in ["Set Outside of SmartThings", "Not in Eco Mode"]) ? null : tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow()))
+		state?.ecoDescDt = (newEcoDesc in ["Set Outside of this DTH", "Not in Eco Mode"]) ? null : tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow()))
 	} else { LogAction("whoSetEcoMode is (${newEcoDesc}) | Original State: (${curEcoDesc})") }
 }
 
@@ -3041,7 +3041,7 @@ def getGraphHTML() {
 
 		def whoSetEco = device?.currentValue("whoSetEcoMode")
 		def whoSetEcoDt = state?.ecoDescDt
-		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of SmartThings", "A ST Automation"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
+		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of this DTH", "A ST Automation"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
 
 		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
 		def schedData = state?.curAutoSchedData
