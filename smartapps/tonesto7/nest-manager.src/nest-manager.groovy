@@ -3033,7 +3033,7 @@ def updateChildData(force = false) {
 					comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax) ?: 0.0
 				}
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
-				def autoSchedData = reqSchedInfoRprt(it, false)
+				def autoSchedData = reqSchedInfoRprt(it, false) as Map
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
@@ -3236,7 +3236,7 @@ def updateChildData(force = false) {
 						}
 					}
 
-					def autoSchedData = reqSchedInfoRprt(it, false)
+					def autoSchedData = reqSchedInfoRprt(it, false) as Map
 					def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestvStatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
@@ -4228,25 +4228,27 @@ def appUpdateNotify() {
 	def on = atomicState?.notificationPrefs?.app?.updates?.updMsg
 	def wait = atomicState?.notificationPrefs?.app?.updates?.updMsgWait
 	if(!on || !wait) { return }
-	def appUpd = isAppUpdateAvail()
-	def autoappUpd = isAutoAppUpdateAvail()
-	def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
-	def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
-	def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
-	def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
-	def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
-	if((appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) && (getLastUpdMsgSec() > wait.toInteger())) {
-		def str = ""
-		str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
-		str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
-		str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
-		str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
-		str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
-		str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-		str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-		str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-		sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", false)
-		atomicState?.lastUpdMsgDt = getDtNow()
+	if(getLastUpdMsgSec() > wait.toInteger()) {
+		def appUpd = isAppUpdateAvail()
+		def autoappUpd = isAutoAppUpdateAvail()
+		def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
+		def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
+		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
+		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
+		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) {
+			atomicState?.lastUpdMsgDt = getDtNow()
+			def str = ""
+			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
+			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
+			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
+			str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
+			str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
+			str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+			str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+			str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
+			sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", false)
+		}
 	}
 }
 
