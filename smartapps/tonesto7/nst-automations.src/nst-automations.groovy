@@ -1159,7 +1159,7 @@ void sendAutoChgToDevice(dev, autoType, chgDesc) {
 
 def sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		dev?.ecoDesc(desc)
+		dev?.ecoDesc(desc)		// THIS ONLY WORKS ON NEST THERMOSTATS
 	}
 }
 
@@ -1179,7 +1179,7 @@ def storeLastAction(actionDesc, actionDt, autoType=null, dev=null) {
 	if(actionDesc && actionDt) {
 		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt]
 		if(dev) {
-			sendAutoChgToDevice(dev, autoType, actionDesc)
+			sendAutoChgToDevice(dev, autoType, actionDesc)		// THIS ONLY WORKS ON NEST THERMOSTATS
 		}
 	}
 }
@@ -1501,7 +1501,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 					if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(cHeat) }
 				}
 			}
-			if(setTstatAutoTemps(remSenTstat, chgval, cHeat)) {
+			if(setTstatAutoTemps(remSenTstat, chgval, cHeat, "remSen")) {
 				//LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${getTemperatureScale()}) ", "info", true)
 				//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow())
 				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
@@ -1541,7 +1541,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 					if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(cCool) }
 				}
 			}
-			if(setTstatAutoTemps(remSenTstat, cCool, chgval)) {
+			if(setTstatAutoTemps(remSenTstat, cCool, chgval, "remSen")) {
 				//LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${getTemperatureScale()})", "info", true)
 				//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow())
 				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
@@ -2135,7 +2135,7 @@ def fanCtrlCheck() {
 				if(schMotFanRuleType in ["Circ", "Cool_Circ", "Heat_Circ", "Heat_Cool_Circ"]) {
 					if(fanOn) {
 						LogAction("fantCtrlCheck: Turning OFF '${schMotTstat?.displayName}' Fan; Modes do not match evaluation", "info", true)
-						storeLastAction("Turned ${schMotTstat} Fan to (Auto)", getDtNow())
+						storeLastAction("Turned ${schMotTstat} Fan to (Auto)", getDtNow(), "fanCtrl", schMotTstat)
 						schMotTstat?.fanAuto()
 						if(schMotTstatMir) { schMotTstatMir*.fanAuto() }
 					}
@@ -2880,7 +2880,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(extTmpTstat, lastMode, pName)) {
-								storeLastAction("Restored Mode ($lastMode)", getDtNow(), "extTmp", extTmpTstat)
+								storeLastAction("Restored Mode ($lastMode)", getDtNow(), pName, extTmpTstat)
 								atomicState?.extTmpRestoreMode = null
 								atomicState?.extTmpTstatOffRequested = false
 								atomicState?.extTmpRestoredDt = getDtNow()
@@ -2962,7 +2962,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${strCapitalize(atomicState?.extTmpRestoreMode)}) mode", "info", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(extTmpTstat, "eco", pName)) {
-							storeLastAction("Set Thermostat to ECO", getDtNow(), "extTmp", extTmpTstat)
+							storeLastAction("Set Thermostat to ECO", getDtNow(), pName, extTmpTstat)
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -3161,7 +3161,7 @@ def conWatCheck(cTimeOut = false) {
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(conWatTstat, lastMode, pName)) {
-								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow(), "conWat", conWatTstat)
+								storeLastAction("Restored Mode ($lastMode) to $conWatTstat", getDtNow(), pName, conWatTstat)
 								atomicState?.conWatRestoreMode = null
 								atomicState?.conWatTstatOffRequested = false
 								atomicState?.conWatRestoredDt = getDtNow()
@@ -3243,7 +3243,7 @@ def conWatCheck(cTimeOut = false) {
 						LogAction("conWatCheck: ${openCtDesc}${getOpenContacts(conWatContacts).size() > 1 ? "are" : "is"} still Open: Turning 'OFF' '${conWatTstat?.label}'", "debug", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(conWatTstat, "eco", pName)) {
-							storeLastAction("Set $conWatTstat to 'ECO'", getDtNow(), "conWat", conWatTstat)
+							storeLastAction("Set $conWatTstat to 'ECO'", getDtNow(), pName, conWatTstat)
 							atomicState?.conWatTstatOffRequested = true
 							atomicState?.conWatCloseDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -3407,7 +3407,7 @@ def leakWatCheck() {
 						if(lastMode && (lastMode != curMode || !safetyOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(leakWatTstat, lastMode, pName)) {
-								storeLastAction("Restored Mode ($lastMode) to $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
+								storeLastAction("Restored Mode ($lastMode) to $leakWatTstat", getDtNow(), pName, leakWatTstat)
 								atomicState?.leakWatTstatOffRequested = false
 								atomicState?.leakWatRestoreMode = null
 								atomicState?.leakWatRestoredDt = getDtNow()
@@ -3479,7 +3479,7 @@ def leakWatCheck() {
 					LogAction("leakWatCheck: ${wetCtDesc}${getWetWaterSensors(leakWatSensors).size() > 1 ? "are" : "is"} Wet: Turning 'OFF' '${leakWatTstat?.label}'", "debug", true)
 					scheduleAutomationEval(60)
 					if(setTstatMode(leakWatTstat, "off", pName)) {
-						storeLastAction("Turned Off $leakWatTstat", getDtNow(), "leakWat", leakWatTstat)
+						storeLastAction("Turned Off $leakWatTstat", getDtNow(), pName, leakWatTstat)
 						atomicState?.leakWatTstatOffRequested = true
 						atomicState?.leakWatDryDt = getDtNow()
 
@@ -4401,7 +4401,7 @@ def setTstatTempCheck() {
 				def newHvacMode = (!useMotion ? hvacSettings?.hvacm : (hvacSettings?.mhvacm ?: hvacSettings?.hvacm))
 				if(newHvacMode && (newHvacMode.toString() != curMode)) {
 					if(setTstatMode(schMotTstat, newHvacMode, pName)) {
-						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow(), "schMot", tstat)
+						storeLastAction("Set ${tstat} Mode to ${strCapitalize(newHvacMode)}", getDtNow(), pName, tstat)
 						LogAction("setTstatTempCheck: Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "info", true)
 					} else { LogAction("setTstatTempCheck: Error Setting Thermostat Mode to '${strCapitalize(newHvacMode)}' on (${tstat})", "warn", true) }
 					if(tstatMir) {
@@ -4448,7 +4448,7 @@ def setTstatTempCheck() {
 					} else { coolTemp = null }
 				}
 				if(needChg) {
-					if(setTstatAutoTemps(settings?.schMotTstat, coolTemp?.toDouble(), heatTemp?.toDouble(), tstatMir)) {
+					if(setTstatAutoTemps(settings?.schMotTstat, coolTemp?.toDouble(), heatTemp?.toDouble(), pName, tstatMir)) {
 						//LogAction("setTstatTempCheck: [Temp Change | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp ]", "info", true)
 						//storeLastAction("Set ${tstat} Cool Setpoint ${coolTemp} Heat Setpoint ${heatTemp}", getDtNow())
 					} else {
@@ -6672,9 +6672,11 @@ def setTstatMode(tstat, mode, autoType=null) {
 			else if(mode == "heat") { tstat.heat(); result = true }
 			else if(mode == "cool") { tstat.cool(); result = true }
 			else if(mode == "off") { tstat.off(); result = true }
-			else if(mode == "eco") { tstat.eco(); result = true }
-			log.debug "setTstatMode mode action | type: $autoType"
-			sendEcoActionDescToDevice(tstat, (mode == "eco" ? autoType : null))
+			else if(mode == "eco") {
+				tstat.eco(); result = true
+				log.debug "setTstatMode mode action | type: $autoType"
+				if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+			}
 
 			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
 			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
@@ -6694,7 +6696,8 @@ def setMultipleTstatMode(tstats, mode, autoType=null) {
 	try {
 		if(tstats && mode) {
 			tstats?.each { ts ->
-				if(setTstatMode(ts, mode, autoType)) {
+//				if(setTstatMode(ts, mode, autoType)) {   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
+				if(setTstatMode(ts, mode)) {
 					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
 					storeLastAction("Set ${ts} to (${mode})", getDtNow())
 					result = true
@@ -6710,7 +6713,7 @@ def setMultipleTstatMode(tstats, mode, autoType=null) {
 	return result
 }
 
-def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
+def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, pName, mir=null) {
 
 	def retVal = false
 	def setStr = "No thermostat device"
@@ -6774,7 +6777,7 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 			setStr += "heatSetpoint: (${reqHeat}) "
 			if(reqHeat != curHeatSetpoint) {
 				tstat?.setHeatingSetpoint(reqHeat)
-				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}", getDtNow())
+				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}", getDtNow(), pName, tstat)
 				if(mir) { mir*.setHeatingSetpoint(reqHeat) }
 			}
 		}
@@ -6782,7 +6785,7 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 			setStr += "coolSetpoint: (${reqCool}) "
 			if(reqCool != curCoolSetpoint) {
 				tstat?.setCoolingSetpoint(reqCool)
-				storeLastAction("Set ${tstat} Cool Setpoint ${reqCool}", getDtNow())
+				storeLastAction("Set ${tstat} Cool Setpoint ${reqCool}", getDtNow(), pName, tstat)
 				if(mir) { mir*.setCoolingSetpoint(reqCool) }
 			}
 		}
@@ -6790,7 +6793,7 @@ def setTstatAutoTemps(tstat, coolSetpoint, heatSetpoint, mir=null) {
 			setStr += "heatSetpoint: (${reqHeat})"
 			if(reqHeat != curHeatSetpoint) {
 				tstat?.setHeatingSetpoint(reqHeat)
-				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}", getDtNow())
+				storeLastAction("Set ${tstat} Heat Setpoint ${reqHeat}", getDtNow(), pName, tstat)
 				if(mir) { mir*.setHeatingSetpoint(reqHeat) }
 			}
 		}
