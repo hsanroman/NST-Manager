@@ -3308,10 +3308,11 @@ def getLocationPresence() {
 }
 
 def apiIssues() {
-	def result = state?.apiIssuesList[4..-1].every { it == true } ? true : false
+	def t0 = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
+	def result = t0[3..-1].every { it == true } ? true : false
 	def dt = atomicState?.apiIssueDt
 	if(result) {
-		LogAction("Nest API Issues ${dt ? "may still be occurring. Status will clear when last 4 updates are good (Last 4 Updates: ${state?.apiIssuesList}) | Issues began at ($dt) " : "Detected (${getDtNow()})"}", "warn", true)
+		LogAction("Nest API Issues ${dt ? "may still be occurring. Status will clear when last 4 updates are good (Last 4 Updates: ${t0}) | Issues began at ($dt) " : "Detected (${getDtNow()})"}", "warn", true)
 	}
 	apiIssueType()
 	atomicState?.apiIssueDt = (result ? (dt ?: getDtNow()) : null)
@@ -3320,9 +3321,10 @@ def apiIssues() {
 
 def apiIssueType() {
 	def res = "none"
-	//this looks at the last 3 items added and determines whether issue is sporattic or outage
-	def items = state?.apiIssuesList[4..-1].findAll { it == true }
-	if(items?.size() >= 1 && items?.size() <= 2) { res = "sporattic" }
+	//this looks at the last 3 items added and determines whether issue is sporadic or outage
+	def t0 = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
+	def items = t0[3..-1].findAll { it == true }
+	if(items?.size() >= 1 && items?.size() <= 2) { res = "sporadic" }
 	else if(items?.size() >= 3) { res = "outage" }
 	//log.debug "apiIssueType: $res"
 	return res
@@ -3331,7 +3333,7 @@ def apiIssueType() {
 def issueListSize() { return 7 }
 
 def apiIssueEvent(issue, cmd = null) {
-	def list = state?.apiIssuesList ?: []
+	def list = atomicState?.apiIssuesList ?: [false, false, false, false, false, false, false]
 	def listSize = issueListSize()
 	if(list?.size() < listSize) {
 		list.push(issue)
@@ -3347,7 +3349,7 @@ def apiIssueEvent(issue, cmd = null) {
 		nList?.push(issue)
 		list = nList
 	}
-	if(list) { state?.apiIssuesList = list }
+	if(list) { atomicState?.apiIssuesList = list }
 }
 
 def ok2PollMetaData() {
