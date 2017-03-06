@@ -34,7 +34,6 @@ metadata {
 		command "streamingOff"
 		command "chgStreaming"
 		command "cltLiveStreamStart"
-		//command "testBtn"
 
 		attribute "devVer", "string"
 		attribute "softwareVer", "string"
@@ -218,8 +217,8 @@ def refresh() {
 def cltLiveStreamStart() {
 	//log.trace "video stream start()"
 	def url = getCamPlaylistURL().toString()
-	//def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
-	def imgUrl = state?.snapshot_url
+	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
+	//def imgUrl = state?.snapshot_url
 	def dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
 	def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)
 	sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the livestream", eventType: "VIDEO", displayed: false, isStateChange: true)
@@ -291,7 +290,6 @@ def processEvent() {
 			checkHealth()
 			// lastUpdatedEvent()
 		}
-		//log.debug "Device State Data: ${getState()}" //This will return all of the devices state data to the logs.
 		return null
 	}
 	catch (ex) {
@@ -591,11 +589,12 @@ def vidHistoryTimeEvent() {
 }
 
 def publicShareUrlEvent(url) {
-	// log.trace "publicShareUrlEvent($url)"
+	//log.trace "publicShareUrlEvent($url)"
 	if(url) {
 		if(!state?.public_share_url || state?.public_share_url != url) { state?.public_share_url = url }
 		def pubVidId = getPublicVidID()
 		def lastVidId = state?.lastPubVidId
+		//log.debug "Url: $url | Url(state): ${state?.public_share_url} | pubVidId: $pubVidId | lastVidId: $lastVidId | camUUID: ${state?.camUUID}"
 		if(lastVidId == null || lastVidId.toString() != pubVidId.toString()) {
 			state?.public_share_url = url
 			state?.lastPubVidId = pubVidId
@@ -607,7 +606,7 @@ def publicShareUrlEvent(url) {
 			if(camData && state?.lastCamApiServerData != camData) { state?.lastCamApiServerData = camData }
 		}
 	} else {
-		if(state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData) {
+		if(state?.public_share_url || state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData || state?.animation_url || state?.snapshot_url) {
 			state?.public_share_url = null
 			state?.pubVidId = null
 			state?.lastPubVidId = null
@@ -826,9 +825,6 @@ def getMetricCntData() {
 	]
 }
 
-def testBtn() {
-
-}
 /************************************************************************************************
 |										OTHER METHODS     										|
 *************************************************************************************************/
@@ -1010,6 +1006,7 @@ def getCamApiServerData(camUUID) {
 				uri: "https://www.dropcam.com/api/v1/cameras.get?id=${camUUID}"
 			]
 			httpGet(params)  { resp ->
+				//log.debug "resp: (status: ${resp?.status}) | data: ${resp?.data}"
 				state?.camApiServerData = resp?.data
 				return resp?.data ?: null
 			}
@@ -1051,7 +1048,7 @@ def getCamHtml() {
 		def pubVidUrl = state?.public_share_url
 		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml() : hideCamHtml()
 
-		def devBrdCastData = state?.brdcastData ?: null
+		//def devBrdCastData = state?.brdcastData ?: null
 
 		def mainHtml = """
 		<!DOCTYPE html>
@@ -1068,9 +1065,7 @@ def getCamHtml() {
 
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
-
 				<style>
-
 				</style>
 			</head>
 			<body>
@@ -1295,28 +1290,25 @@ def showCamHtml() {
 def hideCamHtml() {
 	def tClass = 'style="background-color: #bd2828;"'
 	def bClass = 'style="background-color: transparent; color: #bd2828;  text-shadow: 0px 0px 0px #bd2828;"'
-	def data = ""
-	data += """<div class="swiper-slide"><section class="sectionBg">"""
-
+	def d = """<div class="swiper-slide"><section class="sectionBg">"""
 	if(!state?.isStreaming && state?.isOnline) {
-		data += """<h3 ${tClass}>Live video streaming is Off</h3><br><h3 ${bClass}>Please Turn it back on and refresh this page...</h3>"""
+		d += """<h3 ${tClass}>Live video streaming is Off</h3><br><h3 ${bClass}>Please Turn it back on and refresh this page...</h3>"""
 	}
 	else if(!state?.camUUID) {
-		data += """<h3 ${tClass}>Camera ID Not Found...</h3><br><h3 ${bClass}>If this is your first time opening this device then try refreshing the page.</h3><br>
+		d += """<h3 ${tClass}>Camera ID Not Found...</h3><br><h3 ${bClass}>If this is your first time opening this device then try refreshing the page.</h3><br>
 			<h3 ${bClass}>If this message is still shown after a few minutes then please verify public video streaming is enabled for this camera</h3>"""
 	}
-	else if(!SSSstate?.public_share_url) {SS
-		data += """<h3 ${tClass}>Unable to Display Video Stream</h3><br><h3 ${bClass}>Please make sure that public video streaming is enabled at</h3><h3 ${bClass}>https://home.nest.com</h3>"""
+	else if(!state?.public_share_url) {SS
+		d += """<h3 ${tClass}>Unable to Display Video Stream</h3><br><h3 ${bClass}>Please make sure that public video streaming is enabled at</h3><h3 ${bClass}>https://home.nest.com</h3>"""
 	}
 	else if(!state?.isOnline) {
-		data += """<h3 ${tClass}>This Camera is Offline</h3><br><h3 ${bClass}>Please verify it has a Wi-Fi connection and refresh this page...</h3>"""
+		d += """<h3 ${tClass}>This Camera is Offline</h3><br><h3 ${bClass}>Please verify it has a Wi-Fi connection and refresh this page...</h3>"""
 	}
 	else {
-		data += """
-		<h3 ${tClass}>Unable to display the Live Video Stream</h3><br><br><br><h3 ${bClass}>An unknown issue has occurred...</h3><h3 ${bClass}>Please consult the Live Logs in the SmartThings IDE</h3>"""
+		d += """<h3 ${tClass}>Unable to display the Live Video Stream</h3><br><br><br><h3 ${bClass}>An unknown issue has occurred...</h3><h3 ${bClass}>Please consult the Live Logs in the SmartThings IDE</h3>"""
 	}
-	data += """</section></div>"""
-	return data
+	d += """</section></div>"""
+	return d
 }
 
 private def textDevName()   { return "Nest Camera${appDevName()}" }

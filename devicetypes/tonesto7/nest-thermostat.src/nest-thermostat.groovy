@@ -433,7 +433,7 @@ void processEvent(data) {
 			if(newMode == "eco" && curMode != newMode) {
 				ecoDescEvent("Set Outside of this DTH")
 			} else { ecoDescEvent(null, true) }
-				
+
 
 			hvacPreviousModeEvent(eventData?.data?.previous_hvac_mode.toString())
 			hasLeafEvent(eventData?.data?.has_leaf)
@@ -3140,16 +3140,6 @@ def getGraphHTML() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 				<style>
-
-					.devInfo th {
-						text-shadow: 1px 1px 0px lightgray;
-					}
-					.sectionBg {
-						box-shadow: 0 2px 2px rgba(0,0,0,0.16), 0 2px 2px rgba(0,0,0,0.23);
-					}
-					.sectionBg h3 {
-						text-shadow: 1px 1px 0px black;
-					}
 				</style>
 			</head>
 			<body>
