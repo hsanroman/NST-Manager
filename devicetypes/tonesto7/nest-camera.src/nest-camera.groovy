@@ -56,26 +56,24 @@ metadata {
 		attribute "onlineStatus", "string"
 	}
 
-	simulator {
-		// TODO: define status and reply messages here
-	}
+	simulator { }
 
 	tiles(scale: 2) {
 		multiAttributeTile(name: "videoPlayer", type: "videoPlayer", width: 6, height: 4) {
 			tileAttribute("device.switch", key: "CAMERA_STATUS") {
-				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", action: "switch.off", backgroundColor: "#79b821", defaultState: true)
+				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", action: "switch.off", backgroundColor: "#00A0DC", defaultState: true)
 				attributeState("off", label: "Inactive", icon: "st.camera.dlink-indoor", action: "switch.on", backgroundColor: "#ffffff")
-				attributeState("restarting", label: "Connecting", icon: "st.camera.dlink-indoor", backgroundColor: "#53a7c0")
-				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", action: "refresh.refresh", backgroundColor: "#F22000")
+				attributeState("restarting", label: "Connecting", icon: "st.camera.dlink-indoor", backgroundColor: "#00A0DC")
+				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", action: "refresh.refresh", backgroundColor: "#cccccc")
 			}
 			tileAttribute("device.errorMessage", key: "CAMERA_ERROR_MESSAGE") {
 				attributeState("errorMessage", label: "", value: "", defaultState: true)
 			}
 			tileAttribute("device.camera", key: "PRIMARY_CONTROL") {
-				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", backgroundColor: "#79b821", defaultState: true)
+				attributeState("on", label: "Active", icon: "st.camera.dlink-indoor", backgroundColor: "#00A0DC", defaultState: true)
 				attributeState("off", label: "Inactive", icon: "st.camera.dlink-indoor", backgroundColor: "#ffffff")
-				attributeState("restarting", label: "Connecting", icon: "st.camera.dlink-indoor", backgroundColor: "#53a7c0")
-				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", backgroundColor: "#F22000")
+				attributeState("restarting", label: "Connecting", icon: "st.camera.dlink-indoor", backgroundColor: "#00A0DC")
+				attributeState("unavailable", label: "Unavailable", icon: "st.camera.dlink-indoor", backgroundColor: "#cccccc")
 			}
 			tileAttribute("device.startLive", key: "START_LIVE") {
 				attributeState("live", action: "cltLiveStreamStart", defaultState: true)
@@ -160,6 +158,7 @@ metadata {
 mappings {
 	path("/getInHomeURL") {action: [GET: "getInHomeURL"]}
 	path("/getOutHomeURL") {action: [GET: "getOutHomeURL"]}
+
 	path("/getCamHtml") {action: [GET: "getCamHtml"]}
 }
 
@@ -219,10 +218,11 @@ def refresh() {
 def cltLiveStreamStart() {
 	//log.trace "video stream start()"
 	def url = getCamPlaylistURL().toString()
-	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
+	//def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
+	def imgUrl = state?.snapshot_url
 	def dataLiveVideo = [OutHomeURL: url, InHomeURL: url, ThumbnailURL: imgUrl, cookie: [key: "key", value: "value"]]
 	def evtData = groovy.json.JsonOutput.toJson(dataLiveVideo)
-	sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the livestream", eventType: "VIDEO", displayed: false, isStateChange  : true)
+	sendEvent(name: "stream", value: evtData.toString(), data: evtData, descriptionText: "Starting the livestream", eventType: "VIDEO", displayed: false, isStateChange: true)
 }
 
 // parent calls this method to queue data.
@@ -389,7 +389,7 @@ def lastOnlineEvent(dt) {
 def onlineStatusEvent(online) {
 	//log.trace "onlineStatusEvent($online)"
 	def isOn = device.currentState("onlineStatus")?.value
-	if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
+	//if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
 	def val = online.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = val.toString().capitalize()
 	state?.isOnline = (val == "online")
@@ -591,26 +591,30 @@ def vidHistoryTimeEvent() {
 }
 
 def publicShareUrlEvent(url) {
-	//log.trace "publicShareUrlEvent($url)"
+	// log.trace "publicShareUrlEvent($url)"
 	if(url) {
-		if(!state?.public_share_url) { state?.public_share_url = url }
+		if(!state?.public_share_url || state?.public_share_url != url) { state?.public_share_url = url }
 		def pubVidId = getPublicVidID()
 		def lastVidId = state?.lastPubVidId
 		if(lastVidId == null || lastVidId.toString() != pubVidId.toString()) {
 			state?.public_share_url = url
 			state?.lastPubVidId = pubVidId
 		}
-		if(!state?.camUUID) { getCamUUID(pubVidId) }
-		else {
+		if(!state?.camUUID) {
+			getCamUUID(pubVidId)
+		} else {
 			def camData = getCamApiServerData(state?.camUUID)
 			if(camData && state?.lastCamApiServerData != camData) { state?.lastCamApiServerData = camData }
 		}
 	} else {
 		if(state?.pubVidId || state?.lastPubVidId || state?.camUUID || state?.camApiServerData) {
+			state?.public_share_url = null
 			state?.pubVidId = null
 			state?.lastPubVidId = null
 			state?.camUUID = null
 			state?.camApiServerData = null
+			state?.animation_url = null
+			state?.snapshot_url = null
 			Logger("Cleared Cached Camera State Info because Sharing has been disabled or the Public ID is no longer available...", "warn")
 		}
 	}
@@ -649,14 +653,20 @@ def cameraStreamNotify(streaming) {
 	parent?.cameraStreamNotify(this, streaming)
 }
 
-def getHealthStatus() {
+def getStHealthStatus() {
 	return device?.getStatus()
 }
 
+def getNestHealthStatus() {
+	return device.currentState("onlineStatus")?.value.toString() == "ONLINE" ? "ONLINE" : "OFFLINE"
+}
+
 def checkHealth() {
-	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true) { return }
-	parent?.deviceHealthNotify(this, isOnline)
+	def isOnlineST = (getStHealthStatus() == "ONLINE") ? true : false
+	def isOnlineAPI = (getNestHealthStatus() == "ONLINE") ? true : false
+	if(isOnlineST && isOnlineAPI || state?.healthMsg != true) { return }
+	def val = (!isOnlineST || !isOnlineAPI)
+	parent?.deviceHealthNotify(this, val)
 }
 
 /************************************************************************************************
@@ -968,7 +978,7 @@ def getCamUUID(pubVidId) {
 				def params = [
 					uri: "https://video.nest.com/live/${pubVidId}",
 					requestContentType: 'text/html'
-				  ]
+				]
 				asynchttp_v1.get('camPageHtmlRespMethod', params)
 			} else {
 				return state?.camUUID
@@ -981,12 +991,14 @@ def getCamUUID(pubVidId) {
 }
 
 def camPageHtmlRespMethod(response, data) {
+	//log.debug "camPageHtmlRespMethod: ${response?.status}, ${response.getData()}"
 	if(response?.status != 408) {
 		def rData = response.getData()
+		log.debug
 		def url = (rData =~ /<meta.*property="og:image".*content="(.*)".*/)[0][1]
-		//log.debug "url: $url"
+		// log.debug "url: $url"
 		def uuid = (url =~ /(\?|\&)([^=]+)\=([^&]+)/)[0][3]
-		//log.debug "UUID: ${uuid}"
+		// log.debug "UUID: ${uuid}"
 		state.camUUID = uuid
 	} else { return }
 }
@@ -1031,20 +1043,6 @@ def getCamApiServer() {
 	return data ?: null
 }
 
-def getCamBtnJsData() {
-	def data =
-	"""
-	  function toggle_visibility(id) {
-		var id = document.getElementById(id);
-		var divsToHide = document.getElementsByClassName("hideable");
-		for (var i = 0; i < divsToHide.length; i++) {
-		  divsToHide[i].style.display = "none";
-		}
-		id.style.display = 'block'
-	  }
-	"""
-}
-
 def getCamHtml() {
 	try {
 		// These are used to determine the URL for the nest cam stream
@@ -1072,15 +1070,7 @@ def getCamHtml() {
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
 
 				<style>
-					.devInfo th {
-						text-shadow: 1px 1px 0px lightgray;
-					}
-					.sectionBg {
-						box-shadow: 0 2px 2px rgba(0,0,0,0.16), 0 2px 2px rgba(0,0,0,0.23);
-					}
-					.sectionBg h3 {
-						text-shadow: 1px 1px 0px black;
-					}
+
 				</style>
 			</head>
 			<body>
@@ -1089,10 +1079,7 @@ def getCamHtml() {
 				<div class="swiper-container">
 					<!-- Additional required wrapper -->
 					<div class="swiper-wrapper">
-						<!-- Slides -->
-
 						${camHtml}
-
 						<div class="swiper-slide">
 						  <section class="sectionBg">
 							<h3>Device Info</h3>
@@ -1178,7 +1165,6 @@ def getCamHtml() {
 						   </section>
 						</div>
 					</div>
-					<!-- If we need pagination -->
 					<div class="swiper-pagination"></div>
 					<div style="text-align: center;">
 						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
@@ -1291,34 +1277,45 @@ def showCamHtml() {
 		<div class="swiper-slide">
 			<section class="sectionBg">
 				<h3>Still Image</h3>
-				<img src="${pubSnapUrl}" width="100%"/>
-				<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
+				<table class="devInfo">
+				  <tbody>
+					<tr>
+					  <td>
+					  	<img src="${pubSnapUrl}" width="100%"/>
+					  	<h4 style="background: #696969; color: #f5f5f5; padding: 4px;">FYI: This image is only refreshed when this window is generated...</h4>
+					  </td>
+					</tr>
+				  </tbody>
+				</table>
 			</section>
 		</div>
 	"""
 }
 
 def hideCamHtml() {
-	def data = """<br><br>"""
-	data += """<div class="swiper-slide">"""
+	def tClass = 'style="background-color: #bd2828;"'
+	def bClass = 'style="background-color: transparent; color: #bd2828;  text-shadow: 0px 0px 0px #bd2828;"'
+	def data = ""
+	data += """<div class="swiper-slide"><section class="sectionBg">"""
+
 	if(!state?.isStreaming && state?.isOnline) {
-		data += """<h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Live Video Streaming is Currently Off</h3>
-			<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Please Turn it back on and refresh this page...</h3>"""
+		data += """<h3 ${tClass}>Live video streaming is Off</h3><br><h3 ${bClass}>Please Turn it back on and refresh this page...</h3>"""
 	}
 	else if(!state?.camUUID) {
-		data += """<h3>Camera ID Not Found...</h3><br></br><h3>If this is your First Try Please Refresh the Page!!!\nIf this message continues after a few minutes...Please verify public video streaming is enabled for this camera</h3>"""
+		data += """<h3 ${tClass}>Camera ID Not Found...</h3><br><h3 ${bClass}>If this is your first time opening this device then try refreshing the page.</h3><br>
+			<h3 ${bClass}>If this message is still shown after a few minutes then please verify public video streaming is enabled for this camera</h3>"""
 	}
-	else if(!state?.public_share_url) {
-		data += """<h3>Unable to Display Video Stream</h3><br></br><h3>Please make sure that public video streaming is enabled for this camera under https://home.nest.com</h3>"""
+	else if(!SSSstate?.public_share_url) {SS
+		data += """<h3 ${tClass}>Unable to Display Video Stream</h3><br><h3 ${bClass}>Please make sure that public video streaming is enabled at</h3><h3 ${bClass}>https://home.nest.com</h3>"""
 	}
 	else if(!state?.isOnline) {
-		data += """<h3>This Camera is Currently Offline</h3><br></br><h3>Please verify it has a Wi-Fi connection and refresh this page...</h3>"""
+		data += """<h3 ${tClass}>This Camera is Offline</h3><br><h3 ${bClass}>Please verify it has a Wi-Fi connection and refresh this page...</h3>"""
 	}
 	else {
-		data += """<h3>Unable to Display the Live Video Stream</h3><br></br><h3>An Unknown Issue has Occurred... Please consult the Live Logs in the SmartThings IDE</h3>"""
+		data += """
+		<h3 ${tClass}>Unable to display the Live Video Stream</h3><br><br><br><h3 ${bClass}>An unknown issue has occurred...</h3><h3 ${bClass}>Please consult the Live Logs in the SmartThings IDE</h3>"""
 	}
-	data += "<br><br>"
-	data += "</div>"
+	data += """</section></div>"""
 	return data
 }
 
