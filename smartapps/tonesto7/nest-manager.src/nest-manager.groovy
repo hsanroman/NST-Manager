@@ -93,9 +93,6 @@ preferences {
 	page(name: "backupStubDataPage")
 	page(name: "backupRemoveDataPage")
 	page(name: "backupPage")
-
-	page(name: "pageIntegrateIFTTT")
-	page(name: "pageIntegrateIFTTTConfirm")
 }
 
 mappings {
@@ -107,7 +104,6 @@ mappings {
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
 		//path("/receiveEventData")	{action: [POST: "receiveEventData"]}
-		path("/iftttEvent") 	{action: [POST: "iftttEvent"]}
 	}
 }
 
@@ -248,14 +244,9 @@ def mainPage() {
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 						image: getAppImg("notification_icon2.png")
 			}
-			section("IFTTT Integration:") {
-				def iftttConnected = atomicState?.modules && atomicState?.modules?.ifttt && settings["iftttEnabled"] && atomicState?.modules?.ifttt?.connected
-				href "pageIntegrateIFTTT", title: "IFTTT", description: iftttConnected ? "Connected" : "Not configured", state: (iftttConnected ? "complete" : null), submitOnChange: true, required: false
-			}
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
-
 		}
 		incMainLoadCnt()
 		devPageFooter("mainLoadCnt", execTime)
@@ -266,8 +257,8 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "Hello sorry to interupt but it is 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
-			str += "If you enjoy our software please remember that we have spent 1000's of hours of our spare time working on features and stability for this application and devices."
+			str += "Hello sorry to interupt but it has been 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
+			str += "If you enjoy our software please remember that we have spent thousand's of hours of our spare time working on features and stability for this application and devices."
 			str += "If you have already donated please ignore and thank you very much for your support!"
 
 			str += "\n\nThanks again for using ${appName()}"
@@ -282,7 +273,6 @@ def donationPage() {
 		atomicState?.installData = iData
 	}
 }
-
 
 def deviceSelectPage() {
 	def execTime = now()
@@ -623,73 +613,6 @@ def voiceRprtPrefPage() {
 		}
 		incVrprtPrefLoadCnt()
 	}
-}
-
-/************************************************
- *					IFTTT CODE					*
- ************************************************/
-
-def getIftttKey() {
-	def module = atomicState.modules["ifttt"]
-	return (module && module?.connected ? module?.key : null)
-}
-
-def pageIntegrateIFTTT() {
-	return dynamicPage(name: "pageIntegrateIFTTT", title: "IFTTT Integration", nextPage: settings?.iftttEnabled ? "pageIntegrateIFTTTConfirm" : null) {
-		section() {
-			paragraph "CoRE can optionally integrate with IFTTT (IF This Then That) via the Maker channel, triggering immediate events to IFTTT. To enable IFTTT, please login to your IFTTT account and connect the Maker channel. You will be provided with a key that needs to be entered below", required: false
-			input "iftttEnabled", "bool", title: "Enable IFTTT", submitOnChange: true, required: false
-			if (settings?.iftttEnabled) href name: "", title: "IFTTT Maker channel", required: false, style: "external", url: "https://www.ifttt.com/maker", description: "tap to go to IFTTT and connect the Maker channel"
-		}
-		if (settings?.iftttEnabled) {
-			section("IFTTT Maker key"){
-				input("iftttKey", "string", title: "Key", description: "Your IFTTT Maker key", required: false)
-			}
-		}
-		def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}/api_ifttt")
-		log.debug "ifftt endpoint url: $apiUrl"
-	}
-}
-
-def pageIntegrateIFTTTConfirm() {
-	if (testIFTTT()) {
-		return dynamicPage(name: "pageIntegrateIFTTTConfirm", nextPage: "mainPage", title: "IFTTT Integration") {
-			section(){
-				paragraph "Congratulations! You have successfully connected CoRE to IFTTT."
-			}
-		}
-	} else {
-		return dynamicPage(name: "pageIntegrateIFTTTConfirm",  title: "IFTTT Integration") {
-			section(){
-				paragraph "Sorry, the credentials you provided for IFTTT are invalid. Please go back and try again."
-			}
-		}
-	}
-}
-
-def testIFTTT() {
-	def res = false
-	def modules = atomicState?.modules ?: [:]
-	modules?.ifttt = ["key": settings?.iftttKey, "connected": false]
-	if (settings?.iftttKey) {
-		//verify the key
-		httpGet("https://maker.ifttt.com/trigger/test/with/key/${settings?.iftttKey}") { response ->
-			if (response?.status == 200) {
-				log.debug "response (${response?.status}): ${response?.data}"
-				if(response?.data == "Congratulations! You've fired the test event") {
-					modules?.ifttt["connected"] = true
-					res = true
-				}
-			}
-		}
-	}
-	atomicState?.modules = modules
-	return res
-}
-
-def iftttEvent() {
-	def data = request?.JSON
-	log.debug "ifttt event received: ${data}"
 }
 
 def pollPrefPage() {
@@ -5127,6 +5050,11 @@ def getThermostatDevice(dni) {
 	return null
 }
 
+def getLocHubId() {
+	def hubs = location?.hubs*.id.findAll { it }
+	return hubs[0] != null ? hubs[0].toString() : null
+}
+
 def addRemoveDevices(uninst = null) {
 	//LogTrace("addRemoveDevices")
 	def retVal = false
@@ -5144,7 +5072,7 @@ def addRemoveDevices(uninst = null) {
 					def d1 = getChildDevice(getNestTstatDni(dni))
 					if(!d1) {
 						def d1Label = getNestTstatLabel("${dni?.value}")
-						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, null, [label: "${d1Label}"])
+						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, getLocHubId(), [label: "${d1Label}"])
 						//d1.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5161,7 +5089,7 @@ def addRemoveDevices(uninst = null) {
 					def d2 = getChildDevice(getNestProtDni(dni).toString())
 					if(!d2) {
 						def d2Label = getNestProtLabel("${dni.value}")
-						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
+						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, getLocHubId(), [label: "${d2Label}"])
 						//d2.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d2?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5179,7 +5107,7 @@ def addRemoveDevices(uninst = null) {
 					def d3 = getChildDevice(dni)
 					if(!d3) {
 						def d3Label = getNestPresLabel()
-						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${d3Label}"])
+						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, getLocHubId(), [label: "${d3Label}"])
 						//d3.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
@@ -5199,7 +5127,7 @@ def addRemoveDevices(uninst = null) {
 					def d4 = getChildDevice(dni)
 					if(!d4) {
 						def d4Label = getNestWeatherLabel()
-						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
+						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, getLocHubId(), [label: "${d4Label}"])
 						//d4.take()
 						atomicState?.lastWeatherUpdDt = null
 						atomicState?.lastForecastUpdDt = null
@@ -5219,7 +5147,7 @@ def addRemoveDevices(uninst = null) {
 					def d5 = getChildDevice(getNestCamDni(dni).toString())
 					if(!d5) {
 						def d5Label = getNestCamLabel("${dni.value}")
-						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, null, [label: "${d5Label}"])
+						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, getLocHubId(), [label: "${d5Label}"])
 						//d5.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d5?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5237,7 +5165,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
+						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, getLocHubId(), [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
