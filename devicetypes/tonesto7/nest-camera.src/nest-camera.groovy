@@ -1299,7 +1299,8 @@ def showCamHtml() {
 }
 
 def hideCamHtml() {
-	def data = "<br></br><br></br>"
+	def data = """<br><br>"""
+	data += """<div class="swiper-slide">"""
 	if(!state?.isStreaming && state?.isOnline) {
 		data += """<h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Live Video Streaming is Currently Off</h3>
 			<br></br><h3 style="font-size: 22px; font-weight: bold; text-align: center; background: #00a1db; color: #f5f5f5;">Please Turn it back on and refresh this page...</h3>"""
@@ -1316,7 +1317,8 @@ def hideCamHtml() {
 	else {
 		data += """<h3>Unable to Display the Live Video Stream</h3><br></br><h3>An Unknown Issue has Occurred... Please consult the Live Logs in the SmartThings IDE</h3>"""
 	}
-	data += "<br></br><br></br>"
+	data += "<br><br>"
+	data += "</div>"
 	return data
 }
 
