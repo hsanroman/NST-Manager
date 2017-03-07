@@ -1153,13 +1153,21 @@ def runAutomationEval() {
 
 void sendAutoChgToDevice(dev, autoType, chgDesc) {
 	if(dev && autoType && chgDesc) {
-		dev?.whoMadeChanges(autoType, chgDesc, getDtNow())
+		try {
+			dev?.whoMadeChanges(autoType, chgDesc, getDtNow())
+		} catch (ex) {
+			log.error "sendAutoChgToDevice Exception:", ex
+		}
 	}
 }
 
 def sendEcoActionDescToDevice(dev, desc) {
 	if(dev && desc) {
-		dev?.ecoDesc(desc)		// THIS ONLY WORKS ON NEST THERMOSTATS
+		try {
+			dev?.ecoDesc(desc)		// THIS ONLY WORKS ON NEST THERMOSTATS
+		} catch (ex) {
+			log.error "sendEcoActionDescToDevice Exception:", ex
+		}
 	}
 }
 
@@ -6685,7 +6693,7 @@ def setTstatMode(tstat, mode, autoType=null) {
 		}
 	}
 	catch (ex) {
-		log.error "setTstatMode() Exception:", ex
+		log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
 		parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
 	}
 	return result
@@ -6693,23 +6701,25 @@ def setTstatMode(tstat, mode, autoType=null) {
 
 def setMultipleTstatMode(tstats, mode, autoType=null) {
 	def result = false
-	try {
+//	try {
 		if(tstats && mode) {
 			tstats?.each { ts ->
-//				if(setTstatMode(ts, mode, autoType)) {   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
-				if(setTstatMode(ts, mode)) {
+				if(setTstatMode(ts, mode, autoType)) {   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
 					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
 					storeLastAction("Set ${ts} to (${mode})", getDtNow())
 					result = true
 				} else {
+					LogAction("Failed Setting ${ts} Mode to (${mode})", "warn", true)
 					return false
 				}
 			}
+		} else {
+			LogAction("setMultipleTstatMode(${tstats}, $mode, $autoType) | Invalid or Missing tstats or Mode received: ${mode}", "warn", true)
 		}
-	} catch (ex) {
-		log.error "setMultipleTstatMode() Exception:", ex
-		parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
-	}
+//	} catch (ex) {
+//		log.error "setMultipleTstatMode() Exception:", ex
+//		parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
+//	}
 	return result
 }
 
