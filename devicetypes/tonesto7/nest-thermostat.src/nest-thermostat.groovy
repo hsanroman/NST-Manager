@@ -972,8 +972,8 @@ def lockedTempEvent(Double minTemp, Double maxTemp) {
 def safetyTempsEvent(safetyTemps) {
 	def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
 	def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
-	def newMinTemp = safetyTemps?.min.toDouble() ?: 0
-	def newMaxTemp = safetyTemps?.max.toDouble() ?: 0
+	def newMinTemp = safetyTemps && safetyTemps?.min ? safetyTemps?.min.toDouble() : 0
+	def newMaxTemp = safetyTemps && safetyTemps?.max ? safetyTemps?.max.toDouble() : 0
 
 	//def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	if(curMinTemp != newMinTemp || curMaxTemp != newMaxTemp) {
@@ -1011,7 +1011,7 @@ def comfortHumidityEvent(comfortHum) {
 	//def curMinHum = device.currentState("comfortHumidityMin")?.integerValue
 	def curMaxHum = device.currentState("comfortHumidityMax")?.integerValue
 	//def newMinHum = comfortHum?.min.toInteger() ?: 0
-	def newMaxHum = comfortHum?.toInteger() ?: 0
+	def newMaxHum = comfortHum ? comfortHum?.toInteger() : 0
 	//if(isStateChange(device, "comfortHumidityMin", newMinHum.toString()) || isStateChange(device, "comfortHumidityMax", newMaxHum.toString())) {
 	if(isStateChange(device, "comfortHumidityMax", newMaxHum.toString())) {
 		//LogAction("UPDATED | Comfort Humidity Minimum is (${newMinHum}) | Original Temp: (${curMinHum})")
