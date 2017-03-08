@@ -1601,8 +1601,8 @@ private remSenCheck() {
 				return
 			}
 
-			def reqSenHeatSetPoint = getRemSenHeatSetTemp()
-			def reqSenCoolSetPoint = getRemSenCoolSetTemp()
+			def reqSenHeatSetPoint = getRemSenHeatSetTemp(hvacMode)
+			def reqSenCoolSetPoint = getRemSenCoolSetTemp(hvacMode)
 			def theMin = getTemperatureScale() == "C" ? 0.3 : 0.6
 			def threshold = !remSenTempDiffDegrees ? 2.0 : Math.min(Math.max(remSenTempDiffDegrees.toDouble(),theMin), 4.0)
 
@@ -1903,72 +1903,75 @@ def fixTempSetting(Double temp) {
 	return newtemp
 }
 
-def getRemSenCoolSetTemp() {
+def getRemSenCoolSetTemp(curMode=null) {
 	def coolTemp
-	if(getLastOverrideCoolSec() < (3600 * 4)) {
-		if(atomicState?.coolOverride != null) {
-			coolTemp = fixTempSetting(atomicState?.coolOverride.toDouble())
-		}
-	} else { atomicState?.coolOverride = null }
+	if(curMode != "eco") {
+		if(getLastOverrideCoolSec() < (3600 * 4)) {
+			if(atomicState?.coolOverride != null) {
+				coolTemp = fixTempSetting(atomicState?.coolOverride.toDouble())
+			}
+		} else { atomicState?.coolOverride = null }
 
+		if(coolTemp == null) {
+			def mySched = getCurrentSchedule()
+			if(mySched) {
+				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
+				def hvacSettings = atomicState?."sched${mySched}restrictions"
+				coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
+			}
+			if(coolTemp == null && remSenDayCoolTemp) {
+				coolTemp = remSenDayCoolTemp.toDouble()
+			}
+
+			if(coolTemp == null) {
+				def desiredCoolTemp = getGlobalDesiredCoolTemp()
+				if(desiredCoolTemp) { coolTemp = desiredCoolTemp.toDouble() }
+			}
+
+			if(coolTemp) {
+				coolTemp = fixTempSetting(coolTemp)
+			}
+		}
+	}
 	if(coolTemp == null) {
-		def mySched = getCurrentSchedule()
-		if(mySched) {
-			def useMotion = atomicState?."motion${mySched}UseMotionSettings"
-			def hvacSettings = atomicState?."sched${mySched}restrictions"
-			coolTemp = !useMotion ? hvacSettings?.ctemp : hvacSettings?.mctemp ?: hvacSettings?.ctemp
-		}
-		if(coolTemp == null && remSenDayCoolTemp) {
-			coolTemp = remSenDayCoolTemp.toDouble()
-		}
-
-		if(coolTemp == null) {
-			def desiredCoolTemp = getGlobalDesiredCoolTemp()
-			if(desiredCoolTemp) { coolTemp = desiredCoolTemp.toDouble() }
-		}
-
-		if(coolTemp) {
-			coolTemp = fixTempSetting(coolTemp)
-		}
-
-		if(coolTemp == null) {
-			coolTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : coolTemp
-		}
+		coolTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : coolTemp
 	}
 	return coolTemp
 }
 
-def getRemSenHeatSetTemp() {
+def getRemSenHeatSetTemp(curMode=null) {
 	def heatTemp
-	if(getLastOverrideHeatSec() < (3600 * 4)) {
-		if(atomicState?.heatOverride != null) {
-			heatTemp = fixTempSetting(atomicState.heatOverride.toDouble())
+	if(curMode != "eco") {
+		if(getLastOverrideHeatSec() < (3600 * 4)) {
+			if(atomicState?.heatOverride != null) {
+				heatTemp = fixTempSetting(atomicState.heatOverride.toDouble())
+			}
+		} else { atomicState?.heatOverride = null }
+
+		if(heatTemp == null) {
+			def mySched = getCurrentSchedule()
+			if(mySched) {
+				def useMotion = atomicState?."motion${mySched}UseMotionSettings"
+				def hvacSettings = atomicState?."sched${mySched}restrictions"
+				heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
+			}
+			if(heatTemp == null && remSenDayHeatTemp) {
+				heatTemp = remSenDayHeatTemp.toDouble()
+			}
+
+			if(heatTemp == null) {
+				def desiredHeatTemp = getGlobalDesiredHeatTemp()
+				if(desiredHeatTemp) { heatTemp = desiredHeatTemp.toDouble() }
+			}
+
+			if(heatTemp) {
+				heatTemp = fixTempSetting(heatTemp)
+			}
 		}
-	} else { atomicState?.heatOverride = null }
+	}
 
 	if(heatTemp == null) {
-		def mySched = getCurrentSchedule()
-		if(mySched) {
-			def useMotion = atomicState?."motion${mySched}UseMotionSettings"
-			def hvacSettings = atomicState?."sched${mySched}restrictions"
-			heatTemp = !useMotion ? hvacSettings?.htemp : hvacSettings?.mhtemp ?: hvacSettings?.htemp
-		}
-		if(heatTemp == null && remSenDayHeatTemp) {
-			heatTemp = remSenDayHeatTemp.toDouble()
-		}
-
-		if(heatTemp == null) {
-			def desiredHeatTemp = getGlobalDesiredHeatTemp()
-			if(desiredHeatTemp) { heatTemp = desiredHeatTemp.toDouble() }
-		}
-
-		if(heatTemp) {
-			heatTemp = fixTempSetting(heatTemp)
-		}
-
-		if(heatTemp == null) {
-			heatTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : heatTemp
-		}
+		heatTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : heatTemp
 	}
 	return heatTemp
 }
@@ -2699,20 +2702,24 @@ def getExtTmpDewPoint() {
 }
 
 def getDesiredTemp(curMode) {
-	def modeOff = (curMode in ["off","eco"]) ? true : false
+	def modeOff = (curMode in ["off"]) ? true : false
+	def modeEco = (curMode in ["eco"]) ? true : false
 	def modeCool = (curMode == "cool") ? true : false
 	def modeHeat = (curMode == "heat") ? true : false
 	def modeAuto = (curMode == "auto") ? true : false
 
-	def desiredHeatTemp = getRemSenHeatSetTemp()
-	def desiredCoolTemp = getRemSenCoolSetTemp()
+	def desiredHeatTemp = getRemSenHeatSetTemp(curMode)
+	def desiredCoolTemp = getRemSenCoolSetTemp(curMode)
 	def desiredTemp = 0
 	if(desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
-	if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp }
-	if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0 }
+	else if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp }
+	else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && (modeAuto || modeEco) ) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0 }
+	else if(desiredHeatTemp && modeEco) { desiredTemp = desiredHeatTemp }
+	else if(desiredCoolTemp && modeEco) { desiredTemp = desiredCoolTemp }
+
 	if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
 
-	LogAction("getDesiredTemp: Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+	LogAction("getDesiredTemp: curMode: ${curMode} | Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
 
 	return desiredTemp
 }
@@ -2735,6 +2742,7 @@ def extTmpTempOk() {
 		def modeOff = (curMode == "off") ? true : false
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
+		def modeEco = (curMode == "eco") ? true : false
 
 		def canHeat = atomicState?.schMotTstatCanHeat
 		def canCool = atomicState?.schMotTstatCanCool
@@ -2767,11 +2775,14 @@ def extTmpTempOk() {
 			retval = false
 			tempOk = false
 			str = "within safety Temperatures "
+			LogAction("extTmpTempOk: Safety Temps not OK", "warn", true)
 		}
 
+		def desiredHeatTemp
+		def desiredCoolTemp
 		if(modeAuto && retval) {
-			def desiredHeatTemp = getRemSenHeatSetTemp()
-			def desiredCoolTemp = getRemSenCoolSetTemp()
+			desiredHeatTemp = getRemSenHeatSetTemp(curMode)
+			desiredCoolTemp = getRemSenCoolSetTemp(curMode)
 			if( !(extTemp > desiredHeatTemp+diffThresh && extTemp < desiredCoolTemp-diffThresh) ) {
 				retval = false
 				tempOk = false
@@ -2780,9 +2791,10 @@ def extTmpTempOk() {
 		}
 
 		def tempDiff
+		def desiredTemp
 
 		if(!modeAuto && retval) {
-			def desiredTemp = getDesiredTemp(curMode)
+			desiredTemp = getDesiredTemp(curMode)
 			if(!desiredTemp) {
 				desiredTemp = intTemp
 				LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
@@ -2790,7 +2802,7 @@ def extTmpTempOk() {
 			} else {
 				tempDiff = Math.abs(extTemp - desiredTemp)
 				str = "enough different (${tempDiff})"
-				//LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
+				LogAction("extTmpTempOk: Outside Temp: ${extTemp} | Desired Temp: ${desiredTemp} | Temp Threshold: ${diffThresh} | Actual Difference: ${tempDiff} | Outside Dew point: ${curDp} | Dew point Limit: ${dpLimit}", "debug", false)
 
 				if(diffThresh && tempDiff < diffThresh) {
 					retval = false
@@ -2807,10 +2819,19 @@ def extTmpTempOk() {
 					str = "less than"
 					if(extTempLow) { retval = false; tempOk = false }
 				}
-				LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow} | dpOk: ${dpOk}", "debug", false)
+				LogAction("extTmpTempOk: extTempHigh: ${extTempHigh} | extTempLow: ${extTempLow}", "debug", false)
 			}
 		}
-		LogAction("extTmpTempOk: ${retval} Desired Inside Temp: (${desiredTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${getTemperatureScale()}) Inside Temp: (${intTemp}) or Dewpoint: (${curDp}°${getTemperatureScale()}) is ${dpOk ? "ok" : "TOO HIGH"}", "info", false)
+		if(!dpOk) {
+			LogAction("extTmpTempOk: ${retval} Dewpoint: (${curDp}°${getTemperatureScale()}) is ${dpOk ? "ok" : "TOO HIGH"}", "info", false)
+		} else {
+			if(!modeAuto) {
+				LogAction("extTmpTempOk: ${retval} Desired Inside Temp: (${desiredTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} $diffThresh° of Outside Temp: (${extTemp}°${getTemperatureScale()}) Inside Temp: (${intTemp})", "info", false)
+			} else {
+				LogAction("extTmpTempOk: ${retval} Exterior Temperature (${extTemp}°${getTemperatureScale()}) is ${tempOk ? "" : "Not"} ${str} using $diffThresh° offset |  Inside Temp: (${intTemp})", "info", false)
+
+			}
+		}
 		storeExecutionHistory((now() - execTime), "extTmpTempOk")
 		return retval
 	} catch (ex) {
@@ -4438,7 +4459,7 @@ def setTstatTempCheck() {
 
 				if(!isModeOff && atomicState?.schMotTstatCanHeat) {
 					def oldHeat = getTstatSetpoint(tstat, "heat")
-					heatTemp = getRemSenHeatSetTemp()
+					heatTemp = getRemSenHeatSetTemp(curMode)
 					if(oldHeat != heatTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Heat Setpoint '${heatTemp}' on (${tstat}) | Old Setpoint: '${oldHeat}'", "info", false)
@@ -4448,7 +4469,7 @@ def setTstatTempCheck() {
 
 				if(!isModeOff && atomicState?.schMotTstatCanCool) {
 					def oldCool = getTstatSetpoint(tstat, "cool")
-					coolTemp = getRemSenCoolSetTemp()
+					coolTemp = getRemSenCoolSetTemp(curMode)
 					if(oldCool != coolTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Cool Setpoint '${coolTemp}' on (${tstat}) | Old Setpoint: '${oldCool}'", "info", false)
