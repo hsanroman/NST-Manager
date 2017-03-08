@@ -449,9 +449,9 @@ void processEvent(data) {
 			//onlineStatusEvent(eventData?.data?.is_online.toString())
 			apiStatusEvent(eventData?.apiIssues)
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
-			if(eventData?.safetyTemps) { safetyTempsEvent(eventData?.safetyTemps) }
-			if(eventData?.comfortHumidity) { comfortHumidityEvent(eventData?.comfortHumidity) }
-			if(eventData?.comfortDewpoint) { comfortDewpointEvent(eventData?.comfortDewpoint) }
+			safetyTempsEvent(eventData?.safetyTemps)
+			comfortHumidityEvent(eventData?.comfortHumidity)
+			comfortDewpointEvent(eventData?.comfortDewpoint)
 			state.voiceReportPrefs = eventData?.vReportPrefs
 			autoSchedDataEvent(eventData?.autoSchedData)
 			state?.devBannerMsgData = eventData?.devBannerData ?: null
@@ -1027,7 +1027,7 @@ def comfortDewpointEvent(comfortDew) {
 	//def curMinDew = device.currentState("comfortDewpointMin")?.integerValue
 	def curMaxDew = device.currentState("comfortDewpointMax")?.doubleValue
 	//def newMinDew = comfortDew?.min.toInteger() ?: 0
-	def newMaxDew = comfortDew?.toDouble() ?: 0.0
+	def newMaxDew = comfortDew ? comfortDew?.toDouble() : 0.0
 	//if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString()) || isStateChange(device, "comfortDewpointMin", newMinDew.toString())) {
 	if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString())) {
 		//LogAction("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
