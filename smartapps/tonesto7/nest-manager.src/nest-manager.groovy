@@ -2951,9 +2951,9 @@ def updateChildData(force = false) {
 				def defmax = fixTempSetting(atomicState?."${devId}_safety_temp_max") ?: 0.0
 				def safetyTemps = [ "min":defmin, "max":defmax ]
 
-				def comfortDewpoint = fixTempSetting(settings?."${devId}_comfort_dewpoint_max") ?: 0.0
+				def comfortDewpoint = fixTempSetting(settings?."${devId}_comfort_dewpoint_max" ?: null)
 				if(comfortDewpoint == 0) {
-					comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax) ?: 0.0
+					comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax ?: null)
 				}
 				def comfortHumidity = settings?."${devId}_comfort_humidity_max" ?: 80
 				def autoSchedData = reqSchedInfoRprt(it, false) as Map
@@ -3106,9 +3106,9 @@ def updateChildData(force = false) {
 					def defmin = fixTempSetting(atomicState?."${physdevId}_safety_temp_min") ?: 0.0
 					def defmax = fixTempSetting(atomicState?."${physdevId}_safety_temp_max") ?: 0.0
 					def safetyTemps = [ "min":defmin, "max":defmax ]
-					def comfortDewpoint = fixTempSetting(settings?."${physdevId}_comfort_dewpoint_max") ?: 0.0
+					def comfortDewpoint = fixTempSetting(settings?."${physdevId}_comfort_dewpoint_max" ?: null)
 					if(comfortDewpoint == 0) {
-						comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax) ?: 0.0
+						comfortDewpoint = fixTempSetting(settings?.locDesiredComfortDewpointMax ?: null)
 					}
 					def comfortHumidity = settings?."${physdevId}_comfort_humidity_max" ?: 80
 					def automationChildApp = getChildApps().find{ it.id == atomicState?."vThermostatChildAppId${devId}" }
