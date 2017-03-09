@@ -722,15 +722,16 @@ def lastCheckinEvent(checkin, isOnline) {
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
 
 	state?.onlineStatus = onlineStat
+	log.debug "onlineStatus: $onlineStat"
 	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
 		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat.toString(), displayed: false)
+		Logger("Device Health Status: ${device.getStatus()}")
 	}
 	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})") }
-
-	Logger("Device Health | Status: ${device.getStatus()} | LastActivityDt: ${device?.getLastActivity()}")
 }
 
 def lastUpdatedEvent(sendEvt=false) {
