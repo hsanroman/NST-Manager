@@ -385,24 +385,24 @@ def lastOnlineEvent(dt) {
 	} else { LogAction("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
 }
 
-def onlineStatusEvent(online) {
-	//log.trace "onlineStatusEvent($online)"
-	def isOn = device.currentState("onlineStatus")?.value
+def onlineStatusEvent(isOnline) {
+	Logger("onlineStatusEvent($isOnline)")
 	//if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
-	def val = online.toString() == "true" ? "online" : "offline"
-	state?.onlineStatus = val.toString().capitalize()
-	state?.isOnline = (val == "online")
-	if(val == "online") { lastUpdatedEvent(true) }
-	//log.debug "onlineStatus: ${state?.isOnline} | val: $online"
-	if(device?.getStatus().toString().toLowerCase() != val) {
-		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: val.toString(), displayed: false)
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
+	def prevOnlineStat = device.currentState("onlineStatus")?.value
+	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
+	state?.onlineStatus = onlineStat.toString().capitalize()
+	state?.isOnline = (onlineStat == "online")
+	if(onlineStat == "online") { lastUpdatedEvent(true) }
+	//log.debug "onlineStatus: ${state?.isOnline} | onlineStat: $online"
+	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
+		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat.toString(), displayed: false)
 		Logger("Device Health Status: ${device.getStatus()}")
 	}
-	if(isStateChange(device, "onlineStatus", val.toString().capitalize())) {
-		Logger("UPDATED | Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})")
-		sendEvent(name: "onlineStatus", value: val.toString().capitalize(), descriptionText: "Online Status is: ${val.toString().capitalize()}", displayed: true, isStateChange: true, state: val.toString().capitalize())
-	} else { LogAction("Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})") }
+	if(isStateChange(device, "onlineStatus", onlineStat.toString().capitalize())) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
+		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
 def isStreamingEvent(isStreaming, override=false) {
@@ -412,7 +412,7 @@ def isStreamingEvent(isStreaming, override=false) {
 	//log.debug "isStreamingEvent: ${isStreaming} | CamData: ${state?.camApiServerData?.items?.is_streaming[0]}"
 	if(override) { state?.camApiServerData = null }
 	else { if(state?.camApiServerData && state?.camApiServerData?.items?.is_streaming[0]) { isStreaming = state?.camApiServerData?.items?.is_streaming[0] } }
-	def val = (isStreaming.toString() == "true") ? "on" : (isOnline.toString() != "Online" ? "offline" : "off")
+	def val = (isStreaming.toString() == "true") ? "on" : (isOnline.toString() != "online" ? "offline" : "off")
 	state?.isStreaming = (val == "on") ? true : false
 	if(isStateChange(device, "isStreaming", val.toString())) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
@@ -663,7 +663,7 @@ def getStHealthStatus() {
 }
 
 def getNestHealthStatus() {
-	return device.currentState("onlineStatus")?.value.toString() == "ONLINE" ? "ONLINE" : "OFFLINE"
+	return device.currentState("onlineStatus")?.value.toString() == "online" ? "ONLINE" : "OFFLINE"
 }
 
 def checkHealth() {
@@ -1093,7 +1093,7 @@ def getCamHtml() {
 							  </thead>
 							  <tbody>
 								<tr>
-								  <td>${state?.onlineStatus.toString()}</td>
+								  <td>${state?.onlineStatus.toString().capitalize()}</td>
 								  <td>${state?.apiStatus}</td>
 								</tr>
 							  </tbody>
