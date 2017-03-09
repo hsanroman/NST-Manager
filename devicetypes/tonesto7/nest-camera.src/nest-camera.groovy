@@ -658,20 +658,14 @@ def cameraStreamNotify(streaming) {
 	parent?.cameraStreamNotify(this, streaming)
 }
 
-def getStHealthStatus() {
+def getHealthStatus() {
 	return device?.getStatus()
 }
 
-def getNestHealthStatus() {
-	return device.currentState("onlineStatus")?.value.toString() == "online" ? "ONLINE" : "OFFLINE"
-}
-
 def checkHealth() {
-	def isOnlineST = (getStHealthStatus() == "ONLINE") ? true : false
-	def isOnlineAPI = (getNestHealthStatus() == "ONLINE") ? true : false
-	if(isOnlineST && isOnlineAPI || state?.healthMsg != true) { return }
-	def val = (!isOnlineST || !isOnlineAPI)
-	parent?.deviceHealthNotify(this, val)
+	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
+	if(isOnline || state?.healthMsg != true) { return }
+	parent?.deviceHealthNotify(this, isOnline)
 }
 
 /************************************************************************************************
