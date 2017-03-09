@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.6.0" }
+def devVer() { return "4.6.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -175,6 +175,7 @@ void verifyHC() {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
+	sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\", \"scheme\":\"untracked\", \"hubHardwareId\": \"${hub?.hub?.hardwareID}\"}")
 }
 
 def ping() {
@@ -410,11 +411,11 @@ def deviceVerEvent(ver) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	//log.debug "lastCheckinEvent($checkin)"
+	Logger("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def lastChk = device.currentState("lastConnection")?.value
-	def isOn = device.currentState("onlineStatus")?.value
-	def onlineStat = isOn ? isOn.toString() : "Offline"
+	def prevOnlineStat = device.currentState("onlineStatus")?.value
+	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 
 	def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
@@ -433,12 +434,18 @@ def lastCheckinEvent(checkin, isOnline) {
 		//log.debug "lastConnSeconds: $lastConnSeconds"
 		if(lastConnSeconds >=0) { addCheckinTime(lastConnSeconds) }
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
-	if(isOnline != "true") { onlineStat = "Offline" }
+
 	state?.onlineStatus = onlineStat
-	if(isStateChange(device, "onlineStatus", onlineStat)) {
-		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${isOn})")
+	log.debug "onlineStatus: $onlineStat"
+	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
+		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat.toString(), displayed: false)
+		Logger("Device Health Status: ${device.getStatus()}")
+	}
+	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
-	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${isOn})") }
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
 def addCheckinTime(val) {
@@ -891,6 +898,19 @@ def getInfoHtml() {
 				  <section class="sectionBg">
 					<h3>Device Info</h3>
 					<table class="devInfo">
+						<col width="90%">
+						<thead>
+						  <th>Power-Type</th>
+						</thead>
+						<tbody>
+						  <tr>
+							<td>${state?.powerSource.toString().capitalize()}</td>
+						  </tr>
+						</tbody>
+					</table>
+				  </section>
+				  <section class="sectionBg">
+					<table class="devInfo">
 						<col width="50%">
 						<col width="50%">
 						<thead>
@@ -899,7 +919,7 @@ def getInfoHtml() {
 						</thead>
 						<tbody>
 						  <tr>
-							<td>${state?.onlineStatus.toString()}</td>
+							<td>${state?.onlineStatus.toString().capitalize()}</td>
 							<td>${state?.apiStatus}</td>
 						  </tr>
 						</tbody>

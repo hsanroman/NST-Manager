@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.6.0" }
+def devVer() { return "2.6.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -193,6 +193,7 @@ void verifyHC() {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
+	sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\", \"scheme\":\"untracked\", \"hubHardwareId\": \"${hub?.hub?.hardwareID}\"}")
 }
 
 def ping() {
@@ -393,6 +394,11 @@ def onlineStatusEvent(online) {
 	state?.isOnline = (val == "online")
 	if(val == "online") { lastUpdatedEvent(true) }
 	//log.debug "onlineStatus: ${state?.isOnline} | val: $online"
+	if(device?.getStatus().toString().toLowerCase() != val) {
+		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: val.toString(), displayed: false)
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
+		Logger("Device Health Status: ${device.getStatus()}")
+	}
 	if(isStateChange(device, "onlineStatus", val.toString().capitalize())) {
 		Logger("UPDATED | Online Status is: (${val.toString().capitalize()}) | Original State: (${isOn})")
 		sendEvent(name: "onlineStatus", value: val.toString().capitalize(), descriptionText: "Online Status is: ${val.toString().capitalize()}", displayed: true, isStateChange: true, state: val.toString().capitalize())

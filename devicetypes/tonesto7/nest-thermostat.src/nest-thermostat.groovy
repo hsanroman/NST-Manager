@@ -703,7 +703,7 @@ def lastCheckinEvent(checkin, isOnline) {
 	tf.setTimeZone(getTimeZone())
 	def lastChk = device.currentState("lastConnection")?.value
 
-	def prevOnlineStatus = device.currentState("onlineStatus")?.value
+	def prevOnlineStat = device.currentState("onlineStatus")?.value
 
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 
@@ -728,9 +728,9 @@ def lastCheckinEvent(checkin, isOnline) {
 		Logger("Device Health Status: ${device.getStatus()}")
 	}
 	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
-		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})")
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
-	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})") }
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
 def lastUpdatedEvent(sendEvt=false) {
