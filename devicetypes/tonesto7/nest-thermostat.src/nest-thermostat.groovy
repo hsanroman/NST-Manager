@@ -357,6 +357,7 @@ void verifyHC() {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
+	sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\", \"scheme\":\"untracked\", \"hubHardwareId\": \"${hub?.hub?.hardwareID}\"}")
 }
 
 def ping() {
@@ -697,33 +698,37 @@ def debugOnEvent(debug) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	//log.debug "lastCheckinEvent($checkin)"
+	Logger("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastChk = device.currentState("lastConnection")?.value
-	def isOn = device.currentState("onlineStatus")?.value
-	def onlineStat = isOn ? isOn.toString() : "Offline"
+
+	def prevOnlineStatus = device.currentState("onlineStatus")?.value
+
+	def onlineStat = isOnline ? "online" : "offline"   // Spelling matters
 
 	def hcTimeout = getHcTimeout()
 	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
 
+	Logger("getStatus(): ${device.getStatus()}  | getLastActivity(): ${device.getLastActivity()}")
+
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
 		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Previous Check-in: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
-
-		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "Online" : "Offline" }
-		//log.debug "lastConnSeconds: $lastConnSeconds"
+		if(hcTimeout && lastConnSeconds >= 0 && isOnline) { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
+		Logger("lastConnSeconds: $lastConnSeconds")
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
-	if(isOnline != "true") { onlineStat = "Offline" }
+
 	state?.onlineStatus = onlineStat
-	if(isStateChange(device, "onlineStatus", onlineStat)) {
-		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${isOn})")
+	if(isStateChange(device, "onlineStatus", onlineStat) || isStateChange(device, "DeviceWatch-DeviceStatus", onlineStat)) {
+		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
-	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${isOn})") }
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat, displayed: false)
+	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})") }
 }
 
 def lastUpdatedEvent(sendEvt=false) {
