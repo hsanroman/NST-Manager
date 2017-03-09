@@ -49,6 +49,8 @@ metadata {
 		attribute "publicShareEnabled", "string"
 		attribute "lastEventStart", "string"
 		attribute "lastEventEnd", "string"
+		attribute "lastEventType", "string"
+		attribute "lastEventZones", "string"
 		attribute "apiStatus", "string"
 		attribute "debugOn", "string"
 		attribute "devTypeVer", "string"
@@ -386,7 +388,7 @@ def lastOnlineEvent(dt) {
 }
 
 def onlineStatusEvent(isOnline) {
-	Logger("onlineStatusEvent($isOnline)")
+	//Logger("onlineStatusEvent($isOnline)")
 	//if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
@@ -399,7 +401,7 @@ def onlineStatusEvent(isOnline) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat.toString(), displayed: false)
 		Logger("Device Health Status: ${device.getStatus()}")
 	}
-	if(isStateChange(device, "onlineStatus", onlineStat.toString().capitalize())) {
+	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
@@ -462,7 +464,7 @@ def softwareVerEvent(ver) {
 }
 
 def lastEventDataEvent(data) {
-	//log.trace "lastEventDataEvent($data)"
+	// log.trace "lastEventDataEvent($data)"
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 		tf.setTimeZone(getTimeZone())
 	def curStartDt = device?.currentState("lastEventStart")?.value ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventStart")?.value.toString())) : null
@@ -473,22 +475,37 @@ def lastEventDataEvent(data) {
 	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
 	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
 	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
+	if(state?.isOnline) {
+		log.debug "lastEvent || Sound: ${hasSound} | Motion: $hasMotion | Person: $hasPerson"
+	}
 
+	def actZones = state?.activityZones
+	def evtZoneIds = data?.activity_zone_ids
+	def evtZoneNames = null
+
+	def evtType = !hasMotion && hasSound ? "Sound Event" : "Motion Event (Person: ${hasPerson})"
+	if(actZones && evtZoneIds) {
+		evtZoneNames = actZones.findAll { it.id.toString() in evtZoneIds }.collect { it?.name }
+	}
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 
 	state.lastEventDate = formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "MMMMM d, yyyy").toString()
 	state.lastEventTime = "${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "h:mm:ssa")} to ${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), "h:mm:ssa")}"
 	if(state?.lastEventData) { state.lastEventData == null }
 
-	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound)) {
+	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString())  || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
 		Logger("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
 		Logger("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
+		Logger("UPDATED | Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
+		sendEvent(name: 'lastEventType', value: evtType, descriptionText: "Last Event Type was ${evtType}", displayed: false)
+		sendEvent(name: 'lastEventZones', value: evtZoneNames.toString(), descriptionText: "Last Event Zones: ${evtZoneNames}", displayed: false)
 		state.lastCamEvtData = ["startDt":newStartDt, "endDt":newEndDt, "hasMotion":hasMotion, "hasSound":hasSound, "hasPerson":hasPerson, "actZones":(data?.activity_zone_ids ?: null)]
 	} else {
-		LogAction("Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
-		LogAction("Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
+		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
+		LogAction("Last Event End Time: (${newEndDt}) - Zones: ${evtZoneNames} | Original State: (${curEndDt})")
+		LogAction("Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
 	}
 }
 
@@ -1249,6 +1266,32 @@ def showCamHtml() {
 					  </tbody>
 					</table>
 					<img src="${animationUrl}" width="100%"/>
+					<section class="sectionBg">
+						<table class="devInfo">
+						  <col width="90%">
+						  <thead>
+							<th>Event Type</th>
+						  </thead>
+						  <tbody>
+							<tr>
+							  <td>${device?.currentValue("lastEventType").toString() ?: "Unknown"}</td>
+							</tr>
+						  </tbody>
+						</table>
+					</section>
+					<section class="sectionBg">
+						<table class="devInfo">
+						  <col width="90%">
+						  <thead>
+							<th>Event Zone(s)</th>
+						  </thead>
+						  <tbody>
+							<tr>
+							  <td>${device?.currentValue("lastEventZones").toString() ?: "Unknown"}</td>
+							</tr>
+						  </tbody>
+						</table>
+					</section>
 					<table class="devInfo">
 					  <col width="33%">
 					  <col width="33%">
@@ -1289,7 +1332,7 @@ def showCamHtml() {
 
 def hideCamHtml() {
 	def tClass = 'style="background-color: #bd2828;"'
-	def bClass = 'style="background-color: transparent; color: #bd2828;  text-shadow: 0px 0px 0px #bd2828;"'
+	def bClass = 'style="background-color: transparent; color: #bd2828;  text-shadow: 0px 0px 0px #bd2828; padding: 60px 30px 60px 30px;"'
 	def d = """<div class="swiper-slide"><section class="sectionBg">"""
 	if(!state?.isStreaming && state?.isOnline) {
 		d += """<h3 ${tClass}>Live video streaming is Off</h3><br><h3 ${bClass}>Please Turn it back on and refresh this page...</h3>"""
@@ -1302,7 +1345,7 @@ def hideCamHtml() {
 		d += """<h3 ${tClass}>Unable to Display Video Stream</h3><br><h3 ${bClass}>Please make sure that public video streaming is enabled at</h3><h3 ${bClass}>https://home.nest.com</h3>"""
 	}
 	else if(!state?.isOnline) {
-		d += """<h3 ${tClass}>This Camera is Offline</h3><br><h3 ${bClass}>Please verify it has a Wi-Fi connection and refresh this page...</h3>"""
+		d += """<h3 ${tClass}>This Camera is Offline</h3><br><h3 ${bClass}>Please verify the camera has a Wi-Fi connection and refresh this page...</h3>"""
 	}
 	else {
 		d += """<h3 ${tClass}>Unable to display the Live Video Stream</h3><br><br><br><h3 ${bClass}>An unknown issue has occurred...</h3><h3 ${bClass}>Please consult the Live Logs in the SmartThings IDE</h3>"""

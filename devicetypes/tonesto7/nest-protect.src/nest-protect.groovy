@@ -411,7 +411,7 @@ def deviceVerEvent(ver) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	Logger("lastCheckinEvent($checkin, $isOnline)")
+	//Logger("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def lastChk = device.currentState("lastConnection")?.value
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
@@ -436,7 +436,7 @@ def lastCheckinEvent(checkin, isOnline) {
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
 
 	state?.onlineStatus = onlineStat
-	log.debug "onlineStatus: $onlineStat"
+	//log.debug "onlineStatus: $onlineStat"
 	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
 		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat.toString(), displayed: false)
