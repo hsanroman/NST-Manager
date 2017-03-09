@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.6.0"}
+def devVer() { return "4.6.1"}
 
 // for the UI
 metadata {
@@ -273,9 +273,9 @@ def getTempColors() {
 	}
 }
 
-def getRange() { return compileForC() ? "9..32" : "50..90" }
 def lowRange() { return compileForC() ? 9 : 50 }
 def highRange() { return compileForC() ? 32 : 90 }
+def getRange() { return "${lowRange()}..${highRange()}" }
 
 mappings {
 	path("/graphHTML") { action: [GET: "getGraphHTML"] }
@@ -357,7 +357,8 @@ void verifyHC() {
 		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
 		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
 	}
-	sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\", \"scheme\":\"untracked\", \"hubHardwareId\": \"${hub?.hub?.hardwareID}\"}")
+	//sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\", \"scheme\":\"untracked\"}")
+	sendEvent(name: "DeviceWatch-Enroll", value: "{\"protocol\": \"CLOUD\"}")
 }
 
 def ping() {
@@ -434,7 +435,6 @@ void processEvent(data) {
 			if(newMode == "eco" && curMode != newMode) {
 				ecoDescEvent("Set Outside of this DTH")
 			} else { ecoDescEvent(null, true) }
-
 
 			hvacPreviousModeEvent(eventData?.data?.previous_hvac_mode.toString())
 			hasLeafEvent(eventData?.data?.has_leaf)
@@ -547,7 +547,7 @@ void processEvent(data) {
 					break
 			}
 			getSomeData(true)
-			lastUpdatedEvent() //I don't know that this is needed any more
+			lastUpdatedEvent()
 			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
@@ -698,7 +698,7 @@ def debugOnEvent(debug) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	Logger("lastCheckinEvent($checkin, $isOnline)")
+	log.trace("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
@@ -706,14 +706,12 @@ def lastCheckinEvent(checkin, isOnline) {
 
 	def prevOnlineStatus = device.currentState("onlineStatus")?.value
 
-	def onlineStat = isOnline ? "online" : "offline"   // Spelling matters
+	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 
 	def hcTimeout = getHcTimeout()
 	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
-
-	Logger("getStatus(): ${device.getStatus()}  | getLastActivity(): ${device.getLastActivity()}")
 
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
@@ -724,11 +722,15 @@ def lastCheckinEvent(checkin, isOnline) {
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
 
 	state?.onlineStatus = onlineStat
-	if(isStateChange(device, "onlineStatus", onlineStat) || isStateChange(device, "DeviceWatch-DeviceStatus", onlineStat)) {
+	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
+		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
+	}
+	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
-		sendEvent(name: "DeviceWatch-DeviceStatus", value: onlineStat, displayed: false)
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStatus})") }
+
+	Logger("Device Health | Status: ${device.getStatus()} | LastActivityDt: ${device?.getLastActivity()}")
 }
 
 def lastUpdatedEvent(sendEvt=false) {
