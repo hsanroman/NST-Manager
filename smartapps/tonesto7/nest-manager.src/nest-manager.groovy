@@ -1935,9 +1935,33 @@ def initialize() {
 	}
 	else {
 		if(checkMigrationRequired()) { return true }	// This will call updated later
-		initWatchdogApp()
+		reInitBuiltins()	 // These are to have these apps release subscriptions to devices (in case of delete)
 		runIn(14, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
-		runIn(34, "initWatchdogApp", [overwrite: true])	// need to have watchdog check if we created devices
+		runIn(34, "reInitBuiltins", [overwrite: true])	// need to have watchdog/nestmode check if we created devices
+	}
+}
+
+def reInitBuiltins() {
+	initWatchdogApp()
+	initNestModeApp()
+}
+
+def initNestModeApp() {
+	if(automationNestModeEnabled()) {
+		def nestModeApp = getChildApps()?.findAll { it?.getAutomationType() == "nMode" }
+		if(nestModeApp?.size() >= 1) {
+			def cnt = 1
+			nestModeApp?.each { chld ->
+				if(cnt == 1) {
+					//LogAction("Running Update Command on Nest Mode", "warn", true)
+					chld.update()
+				} else if(cnt > 1) {
+					LogAction("Deleting Extra nMode (${chld?.id})", "warn", true)
+					deleteChildApp(chld)
+				}
+				cnt = cnt+1
+			}
+		}
 	}
 }
 
@@ -1999,13 +2023,13 @@ def initWatchdogApp() {
 	if(watDogApp?.size() < 1) {
 		LogAction("Installing Watchdog App", "info", true)
 		addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
-	} else if (watDogApp?.size() >= 1) {
+	} else if(watDogApp?.size() >= 1) {
 		def cnt = 1
 		watDogApp?.each { chld ->
 			if(cnt == 1) {
 				//LogAction("Running Update Command on Watchdog", "warn", true)
 				chld.update()
-			} else if (cnt > 1) {
+			} else if(cnt > 1) {
 				LogAction("Deleting Extra Watchdog (${chld?.id})", "warn", true)
 				deleteChildApp(chld)
 			}
@@ -2947,8 +2971,8 @@ def updateChildData(force = false) {
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
-				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min") ?: 0.0
-				def defmax = fixTempSetting(atomicState?."${devId}_safety_temp_max") ?: 0.0
+				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min" ?: null)
+				def defmax = fixTempSetting(atomicState?."${devId}_safety_temp_max" ?: null)
 				def safetyTemps = [ "min":defmin, "max":defmax ]
 
 				def comfortDewpoint = fixTempSetting(settings?."${devId}_comfort_dewpoint_max" ?: null)
@@ -3103,8 +3127,8 @@ def updateChildData(force = false) {
 
 				if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[physdevId]) {
 					def data = atomicState?.deviceData?.thermostats[physdevId]
-					def defmin = fixTempSetting(atomicState?."${physdevId}_safety_temp_min") ?: 0.0
-					def defmax = fixTempSetting(atomicState?."${physdevId}_safety_temp_max") ?: 0.0
+					def defmin = fixTempSetting(atomicState?."${physdevId}_safety_temp_min" ?: null)
+					def defmax = fixTempSetting(atomicState?."${physdevId}_safety_temp_max" ?: null)
 					def safetyTemps = [ "min":defmin, "max":defmax ]
 					def comfortDewpoint = fixTempSetting(settings?."${physdevId}_comfort_dewpoint_max" ?: null)
 					if(comfortDewpoint == 0) {
@@ -7166,7 +7190,7 @@ def removeFirebaseData(pathVal) {
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 // parent only method
-def automationNestModeEnabled(val) {
+def automationNestModeEnabled(val=null) {
 	LogAction("automationNestModeEnabled: val: $val", "info", false)
 	if(val == null) {
 		return atomicState?.automationNestModeEnabled ?: false
