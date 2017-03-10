@@ -3009,7 +3009,6 @@ def updateChildData(force = false) {
 						} else {
 							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
-							return false
 						}
 						it.generateEvent(tData)
 					}
@@ -3046,7 +3045,6 @@ def updateChildData(force = false) {
 						} else {
 							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minDevVersions()?.protect?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
-							return false
 						}
 						it.generateEvent(pData)
 					}
@@ -3082,7 +3080,6 @@ def updateChildData(force = false) {
 						} else {
 							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
-							return false
 						}
 						it.generateEvent(camData)
 					}
@@ -3112,7 +3109,6 @@ def updateChildData(force = false) {
 						} else {
 							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minDevVersions()?.presence?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
-							return false
 						}
 						it.generateEvent(pData)
 					}
@@ -3145,7 +3141,6 @@ def updateChildData(force = false) {
 						} else {
 							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
-							return false
 						}
 						it.generateEvent(wData)
 					}
@@ -3244,7 +3239,6 @@ def updateChildData(force = false) {
 								atomicState."lastUpdated${devId}Dt" = getDtNow()
 							} else {
 								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
-								return false
 							}
 							it.generateEvent(tData)
 						}
