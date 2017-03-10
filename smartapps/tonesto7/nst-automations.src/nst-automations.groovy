@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.6.1" }
-def appVerDate() { "2-28-2017" }
+def appVersion() { "4.7.0" }
+def appVerDate() { "3-10-2017" }
 
 preferences {
 	//startPage
@@ -383,7 +383,7 @@ def mainAutoPage(params) {
 						}
 						nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
 						nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
-						nDesc += (nModeDelay && nModeDelayVal) ? "\n • Delay: ${getEnumValue(longTimeSecEnum(), nModeDelayVal)}" : ""
+						nDesc += (nModeDelay && nModeDelayVal) ? "\n • Change Delay: (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})" : ""
 						nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
 								"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
 						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""

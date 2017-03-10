@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.6.0" }
+def devVer() { return "4.7.0" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -277,7 +277,7 @@ void processEvent() {
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
 			checkHealth()
-			state?.devBannerMsgData = eventData?.devBannerData ?: null
+			state?.devBannerData = eventData?.devBannerData ?: null
 			lastUpdatedEvent()
 		}
 		//LogAction("Device State Data: ${getState()}")
@@ -944,34 +944,6 @@ def exceptionDataHandler(msg, methodName) {
 	}
 }
 
-def getImgBase64(url, type) {
-	try {
-		def params = [
-			uri: url,
-			contentType: 'image/$type'
-		]
-		httpGet(params) { resp ->
-			if(resp.data) {
-				def respData = resp?.data
-				ByteArrayOutputStream bos = new ByteArrayOutputStream()
-				int len
-				int size = 1024
-				byte[] buf = new byte[size]
-				while ((len = respData.read(buf, 0, size)) != -1)
-					bos.write(buf, 0, len)
-				buf = bos.toByteArray()
-				String s = buf?.encodeBase64()
-				//LogAction("resp: ${s}")
-				return s ? "data:image/${type};base64,${s.toString()}" : null
-			}
-		}
-	}
-	catch (ex) {
-		log.error "getImgBase64 Exception:", ex
-		exceptionDataHandler(ex.message, "getImgBase64")
-	}
-}
-
 def getFileBase64(url, preType, fileType) {
 	try {
 		def params = [
@@ -1001,43 +973,13 @@ def getFileBase64(url, preType, fileType) {
 	}
 }
 
-def getCSS(url = null){
-	try {
-		def params = [
-			uri: !url ? cssUrl() : url?.toString(),
-			contentType: 'text/css'
-		]
-		httpGet(params) { resp ->
-			return resp?.data.text
-		}
-	}
-	catch (ex) {
-		log.error "getCss Exception:", ex
-		exceptionDataHandler(ex.message, "getCSS")
-	}
-}
-
-def getJS(url){
-	def params = [
-		uri: url?.toString(),
-		contentType: "text/plain"
-	]
-	httpGet(params) { resp ->
-		return resp?.data.text
-	}
-}
-
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssData = cssData
 		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
@@ -1072,12 +1014,12 @@ def getChartJsData() {
 	return chartJsData
 }
 
-def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
+def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
 def chartJsUrl() { return "https://www.gstatic.com/charts/loader.js" }
 
 def getWeatherIcon() {
 	try {
-		return getImgBase64(state?.curWeather?.current_observation?.icon_url, gif)
+		return getFileBase64(state?.curWeather?.current_observation?.icon_url, "image", "gif")
 	}
 	catch (ex) {
 		log.error "getWeatherIcon Exception:", ex
@@ -1095,7 +1037,7 @@ def getWeatherImg(cond) {
 	try {
 		def newCond = getWeatCondFromUrl(cond)
 		def url = "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Weather/icons/black/${getWeatCondFromUrl(cond) ?: "unknown"}.svg"
-		return getImgBase64(url, "svg+xml")
+		return getFileBase64(url, "image", "svg+xml")
 	}
 	catch (ex) {
 		log.error "getWeatherImg Exception:", ex
@@ -1105,7 +1047,7 @@ def getWeatherImg(cond) {
 
 def getFavIcon() {
 	try {
-		return getImgBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "ico")
+		return getFileBase64("https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/App/weather_icon.ico", "image", "ico")
 	}
 	catch (ex) {
 		log.error "getFavIcon Exception:", ex
@@ -1518,7 +1460,20 @@ def getWeatherHTML() {
 		//def obsrvTime = "Last Updated:\n${convertRfc822toDt(state?.curWeather?.current_observation?.observation_time_rfc822)}"
 		def obsrvTime = "Last Updated:\n${state?.curWeather?.current_observation?.observation_time_rfc822}"
 
-		def devBrdCastData = state?.brdcastData
+		def devBrdCastData = state?.devBannerData ?: null
+		def devBrdCastHtml = ""
+		if(devBrdCastData) {
+			def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+			def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", devBrdCastData?.expireDt.toString())
+			if(curDt < expDt) {
+				devBrdCastHtml = """
+					<div class="orangeAlertBanner">
+						<div>Message from the Developer:</div>
+						<div style="font-size: 4.6vw;">${devBrdCastData?.message}</div>
+					</div>
+				"""
+			}
+		}
 
 		def mainHtml = """
 			<!DOCTYPE html>
@@ -1552,6 +1507,7 @@ def getWeatherHTML() {
 					</style>
 				</head>
 				<body>
+					${devBrdCastHtml}
 					${clientBl}
 					${updateAvail}
 					${getWeatherAlertHtml()}

@@ -18,7 +18,7 @@
             "msgId": "7lVTfVCjHA",
             "message": "You must obey me at all costs ;)",
             "type": "warn",
-            "expireDt": "Wed Feb 15 00:00:00 EST 2017"
+            "expireDt": "Wed Mar 15 00:00:00 EST 2017"
         }
     },
     "updater": {
@@ -29,31 +29,31 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.5.2"
+                "ver": "4.7.0"
             },
             "autoapp": {
-                "ver": "4.5.2"
+                "ver": "4.7.0"
             },
             "thermostat": {
-                "ver": "4.5.1"
+                "ver": "4.7.0"
             },
             "protect": {
-                "ver": "4.5.0"
+                "ver": "4.7.0"
             },
             "camera": {
-                "ver": "2.5.0"
+                "ver": "2.7.0"
             },
             "presence": {
-                "ver": "4.5.0"
+                "ver": "4.7.0"
             },
             "weather": {
-                "ver": "4.5.1"
+                "ver": "4.7.0"
             }
         }
     },
     "html": {
-        "cssVer": 1,
-        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css",
+        "cssVer": 2,
+        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css",
         "chartJsVer": 1,
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },

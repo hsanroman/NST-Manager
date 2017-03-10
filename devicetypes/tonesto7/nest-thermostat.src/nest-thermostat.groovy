@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "4.6.1"}
+def devVer() { return "4.7.0"}
 
 // for the UI
 metadata {
@@ -459,8 +459,8 @@ void processEvent(data) {
 			comfortDewpointEvent(eventData?.comfortDewpoint)
 			state.voiceReportPrefs = eventData?.vReportPrefs
 			autoSchedDataEvent(eventData?.autoSchedData)
-			state?.devBannerMsgData = eventData?.devBannerData ?: null
-			//log.debug "bannerMsgData: ${state?.devBannerMsgData}"
+			state?.devBannerData = eventData?.devBannerData ?: null
+
 			def hvacMode = state?.nestHvac_mode
 			def tempUnit = state?.tempUnit
 			switch (tempUnit) {
@@ -1986,36 +1986,7 @@ def exceptionDataHandler(msg, methodName) {
 |					  HTML TILE RENDER FUNCTIONS	  					  |
 ***************************************************************************/
 
-def getImgBase64(url,type) {
-	try {
-		def params = [
-			uri: url,
-			contentType: 'image/$type'
-		]
-		httpGet(params) { resp ->
-			if(resp.data) {
-				def respData = resp?.data
-				ByteArrayOutputStream bos = new ByteArrayOutputStream()
-				int len
-				int size = 3072
-				byte[] buf = new byte[size]
-				while ((len = respData.read(buf, 0, size)) != -1)
-					bos.write(buf, 0, len)
-				buf = bos.toByteArray()
-				//LogAction("buf: $buf")
-				String s = buf?.encodeBase64()
-				//LogAction("resp: ${s}")
-				return s ? "data:image/${type};base64,${s.toString()}" : null
-			}
-		}
-	}
-	catch (ex) {
-		log.error "getImageBytes Exception:", ex
-		exceptionDataHandler(ex.message, "getImgBase64")
-	}
-}
-
-def getFileBase64(url,preType,fileType) {
+def getFileBase64(url, preType, fileType) {
 	try {
 		def params = [
 			uri: url,
@@ -2044,43 +2015,13 @@ def getFileBase64(url,preType,fileType) {
 	}
 }
 
-def getCSS(url = null){
-	try {
-		def params = [
-			uri: !url ? cssUrl() : url?.toString(),
-			contentType: 'text/css'
-		]
-		httpGet(params)  { resp ->
-			return resp?.data.text
-		}
-	}
-	catch (ex) {
-		log.error "getCss Exception:", ex
-		exceptionDataHandler(ex.message, "getCSS")
-	}
-}
-
-def getJS(url){
-	def params = [
-		uri: url?.toString(),
-		contentType: "text/plain"
-	]
-	httpGet(params)  { resp ->
-		return resp?.data.text
-	}
-}
-
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssData = cssData
 		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
@@ -3032,11 +2973,24 @@ def getGraphHTML() {
 		def canHeat = state?.can_heat == true ? true : false
 		def canCool = state?.can_cool == true ? true : false
 		def hasFan = state?.has_fan == true ? true : false
-		def leafImg = state?.hasLeaf ? getImgBase64(getImg("nest_leaf_on.gif"), "gif") : getImgBase64(getImg("nest_leaf_off.gif"), "gif")
+		def leafImg = state?.hasLeaf ? getFileBase64(getImg("nest_leaf_on.gif"), "image", "gif") : getFileBase64(getImg("nest_leaf_off.gif"), "image","gif")
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 
-		def devBrdCastData = state?.brdcastData ?: null
+		def devBrdCastData = state?.devBannerData ?: null
+		def devBrdCastHtml = ""
+		if(devBrdCastData) {
+			def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+			def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", devBrdCastData?.expireDt.toString())
+			if(curDt < expDt) {
+				devBrdCastHtml = """
+					<div class="orangeAlertBanner">
+						<div>Message from the Developer:</div>
+						<div style="font-size: 4.6vw;">${devBrdCastData?.message}</div>
+					</div>
+				"""
+			}
+		}
 
 		def timeToTarget = device.currentState("timeToTarget").stringValue
 		def sunCorrectStr = state?.sunCorrectEnabled ? "Enabled (${state?.sunCorrectActive == true ? "Active" : "Inactive"})" : "Disabled"
@@ -3155,6 +3109,7 @@ def getGraphHTML() {
 				</style>
 			</head>
 			<body>
+				${devBrdCastHtml}
 				${clientBl}
 		  		${updateAvail}
 				<div class="swiper-container">

@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "4.6.1" }
+def devVer() { return "4.7.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -311,7 +311,7 @@ def processEvent(data) {
 			uiColorEvent(results?.ui_color_state.toString())
 			softwareVerEvent(results?.software_version.toString())
 			deviceVerEvent(eventData?.latestVer.toString())
-			state?.devBannerMsgData = eventData?.devBannerData ?: null
+			state?.devBannerData = eventData?.devBannerData ?: null
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			determinePwrSrc()
@@ -704,15 +704,15 @@ def getCarbonImg() {
 	def captionClass = ""
 	switch(carbonVal) {
 		case "warning":
-			img = getImgBase64(getImg("co2_warn_status.png"), "png")
+			img = getFileBase64(getImg("co2_warn_status.png"), "image", "png")
 			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			img = getImgBase64(getImg("co2_emergency_status.png"), "png")
+			img = getFileBase64(getImg("co2_emergency_status.png"), "image", "png")
 			captionClass = "alarmEmerCap"
 			break
 		default:
-			img = getImgBase64(getImg("co2_clear_status.png"), "png")
+			img = getFileBase64(getImg("co2_clear_status.png"), "image", "png")
 			captionClass = "alarmClearCap"
 			break
 	}
@@ -728,51 +728,23 @@ def getSmokeImg() {
 	def captionClass = ""
 	switch(smokeVal) {
 		case "warning":
-			img = getImgBase64(getImg("smoke_warn_status.png"), "png")
+			img = getFileBase64(getImg("smoke_warn_status.png"), "image", "png")
 			captionClass = "alarmWarnCap"
 			break
 		case "emergency":
-			img = getImgBase64(getImg("smoke_emergency_status.png"), "png")
+			img = getFileBase64(getImg("smoke_emergency_status.png"), "image", "png")
 			captionClass = "alarmEmerCap"
 			break
 		default:
-			img = getImgBase64(getImg("smoke_clear_status.png"), "png")
+			img = getFileBase64(getImg("smoke_clear_status.png"), "image", "png")
 			captionClass = "alarmClearCap"
 			break
 	}
 	return ["img":img, "caption": caption, "captionClass":captionClass]
 }
 
-def getImgBase64(url,type) {
-	try {
-		def params = [
-			uri: url,
-			contentType: 'image/$type'
-		]
-		httpGet(params) { resp ->
-			if(resp.data) {
-				def respData = resp?.data
-				ByteArrayOutputStream bos = new ByteArrayOutputStream()
-				int len
-				int size = 2048
-				byte[] buf = new byte[size]
-				while ((len = respData.read(buf, 0, size)) != -1)
-					   bos.write(buf, 0, len)
-				buf = bos.toByteArray()
-				//log.debug "buf: $buf"
-				String s = buf?.encodeBase64()
-				//log.debug "resp: ${s}"
-				return s ? "data:image/${type};base64,${s.toString()}" : null
-			}
-		}
-	}
-	catch (ex) {
-		log.error "getImgBase64 Exception: $ex", ex
-		exceptionDataHandler(ex.message, "getImgBase64")
-	}
-}
-
 def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
+
 def getImg(imgName) {
 	if(imgName) {
 		return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
@@ -781,7 +753,7 @@ def getImg(imgName) {
 	}
 }
 
-def getFileBase64(url,preType,fileType) {
+def getFileBase64(url, preType, fileType) {
 	try {
 		def params = [
 			uri: url,
@@ -810,48 +782,51 @@ def getFileBase64(url,preType,fileType) {
 	}
 }
 
-def getCSS(){
-	def params = [
-		uri: state?.cssUrl.toString(),
-		contentType: 'text/css'
-	]
-	httpGet(params)  { resp ->
-		return resp?.data.text
-	}
-}
-
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssData = cssData
 		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
 }
 
 def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
+
 def disclaimerMsg() {
 	if(!state?.disclaimerMsgShown) {
 		state.disclaimerMsgShown = true
 		return """<div class="orangeAlertBanner">Safety Disclaimer!\nUsing your Nest Protect with SmartThings will not allow for realtime alerts of Fire and Carbon Monoxide!!!</div>"""
 	} else { return "" }
 }
+
 def getInfoHtml() {
 	try {
-		def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getImgBase64(getImg("battery_low_h.png"), "png")}\">" :
-				"<img class='battImg' src=\"${getImgBase64(getImg("battery_ok_h.png"), "png")}\">"
+		def battImg = (state?.battVal == "low") ? "<img class='battImg' src=\"${getFileBase64(getImg("battery_low_h.png"), "image", "png")}\">" :
+				"<img class='battImg' src=\"${getFileBase64(getImg("battery_ok_h.png"), "image", "png")}\">"
 
 		def testVal = device.currentState("isTesting")?.value
 		def testModeHTML = (testVal.toString() == "true") ? "<h3>Test Mode</h3>" : ""
 		def updateAvail = !state.updateAvailable ? "" : """<div class="greenAlertBanner">Device Update Available!</div>"""
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
+
+		def devBrdCastData = state?.devBannerData ?: null
+		def devBrdCastHtml = ""
+		if(devBrdCastData) {
+			def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+			def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", devBrdCastData?.expireDt.toString())
+			if(curDt < expDt) {
+				devBrdCastHtml = """
+					<div class="orangeAlertBanner">
+						<div>Message from the Developer:</div>
+						<div style="font-size: 4.6vw;">${devBrdCastData?.message}</div>
+					</div>
+				"""
+			}
+		}
 
 		def smokeImg = getSmokeImg()
 		def carbonImg = getCarbonImg()
@@ -873,6 +848,7 @@ def getInfoHtml() {
 			</head>
 			<body>
 			  ${disclaimerMsg()}
+			  ${devBrdCastHtml}
 			  ${testModeHTML}
 			  ${clientBl}
 			  ${updateAvail}

@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.6.1" }
-def appVerDate() { "2-28-2017" }
+def appVersion() { "4.7.0" }
+def appVerDate() { "3-10-2017" }
 
 preferences {
 	//startPage
@@ -2179,7 +2179,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	poll(true)
+	//poll(true)
+	broadcastCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -2954,7 +2955,7 @@ def updateChildData(force = false) {
 		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
-		def devBannerMsg = atomicState?.devBannerData ?: null
+		def devBannerData = atomicState?.devBannerData ?: null
 
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
@@ -2967,7 +2968,6 @@ def updateChildData(force = false) {
 		showGraphs = showGraphs && !inReview() ? true : false
 
 		def devices = app.getChildDevices(true)
-		//def devices = getAllChildDevices()
 		devices?.each {
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
@@ -4513,12 +4513,13 @@ def broadcastCheck() {
 			sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), false, null, null, null, true)
 			atomicState?.lastBroadcastId = bCastData?.msgId
 		}
+
 		if(bCastData?.devBannerMsg != null && atomicState?.devBannerData?.msgId != bCastData?.devBannerMsg?.msgId) {
 			if(bCastData?.devBannerMsg?.msgId && bCastData?.devBannerMsg?.message && bCastData?.devBannerMsg?.type && bCastData?.devBannerMsg?.expireDt) {
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", bCastData?.devBannerMsg?.expireDt.toString())
 				//log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
-				if(curDt && expDt && (curDt > expDt)) {
+				if(curDt && expDt && (curDt < expDt)) {
 					atomicState?.devBannerData = bCastData?.devBannerMsg
 				} else { atomicState?.devBannerData = null }
 			}
@@ -5907,10 +5908,10 @@ def getCallbackUrl()		{ return "https://graph.api.smartthings.com/oauth/callback
 def getBuildRedirectUrl()	{ return "${serverUrl}/oauth/initialize?appId=${app.id}&access_token=${atomicState?.accessToken}&apiServerUrl=${shardUrl}" }
 def getNestApiUrl()			{ return "https://developer-api.nest.com" }
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}/${subPath}?access_token=${atomicState.accessToken}")}" }
-def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager" }
+def getHelpPageUrl()		{ return "http://thingsthataresmart.wiki/index.php?title=NST_Manager" }
 def getIssuePageUrl()		{ return "https://github.com/tonesto7/nest-manager/issues" }
 def slackMsgWebHookUrl()	{ return "https://hooks.slack.com/services/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" }
-def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=Nest_Manager#Nest_Automations" }
+def getAutoHelpPageUrl()	{ return "http://thingsthataresmart.wiki/index.php?title=NST_Manager#Nest_Automations" }
 def weatherApiKey()			{ return "b82aba1bb9a9d7f1" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
@@ -6093,11 +6094,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":450, "desc":"4.5.0"],
-		"protect":["val":450, "desc":"4.5.0"],
-		"presence":["val":450, "desc":"4.5.0"],
-		"weather":["val":450, "desc":"4.5.0"],
-		"camera":["val":250 , "desc":"2.5.0"],
+		"thermostat":["val":470, "desc":"4.7.0"],
+		"protect":["val":470, "desc":"4.7.0"],
+		"presence":["val":470, "desc":"4.7.0"],
+		"weather":["val":470, "desc":"4.7.0"],
+		"camera":["val":270 , "desc":"2.7.0"],
 	]
 }
 
