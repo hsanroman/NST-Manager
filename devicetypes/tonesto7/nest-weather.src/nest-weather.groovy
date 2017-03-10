@@ -138,8 +138,13 @@ def getWAlertFilters() {
 
 def initialize() {
 	Logger("initialized...")
-	verifyHC()
-	getWAlertFilters()
+	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
+		state.updatedLastRanAt = now()
+		verifyHC()
+		getWAlertFilters()
+	} else {
+		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
+	}
 }
 
 void installed() {
