@@ -481,10 +481,6 @@ def lastEventDataEvent(data) {
 	def hasPerson = data?.has_person ? data?.has_person?.toBoolean() : false
 	def hasMotion = data?.has_motion ? data?.has_motion?.toBoolean() : false
 	def hasSound = data?.has_sound ? data?.has_sound?.toBoolean() : false
-	if(state?.isOnline) {
-		log.debug "lastEvent || Sound: ${hasSound} | Motion: $hasMotion | Person: $hasPerson"
-	}
-
 	def actZones = state?.activityZones
 	def evtZoneIds = data?.activity_zone_ids
 	def evtZoneNames = null
@@ -496,7 +492,7 @@ def lastEventDataEvent(data) {
 		def zstr = ""
 		def i = 1
 		evtZoneNames?.sort().each {
-			zstr += i < evtZoneNames.size() ? "<br>${it}" : "${it}"
+			zstr += "${(i > 1 && i < evtZoneNames.size()) ? "<br>" : ""}${it}"
 			i = i+1
 		}
 		state?.lastEventZonesHtml = zstr
@@ -508,14 +504,18 @@ def lastEventDataEvent(data) {
 	if(state?.lastEventData) { state.lastEventData == null }
 
 	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString())  || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
-		Logger("UPDATED | Last Event Start Time: (${newStartDt}) | Original State: (${curStartDt})")
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
-		Logger("UPDATED | Last Event End Time: (${newEndDt}) | Original State: (${curEndDt})")
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
-		Logger("UPDATED | Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
 		sendEvent(name: 'lastEventType', value: evtType, descriptionText: "Last Event Type was ${evtType}", displayed: false)
 		sendEvent(name: 'lastEventZones', value: evtZoneNames.toString(), descriptionText: "Last Event Zones: ${evtZoneNames}", displayed: false)
 		state.lastCamEvtData = ["startDt":newStartDt, "endDt":newEndDt, "hasMotion":hasMotion, "hasSound":hasSound, "hasPerson":hasPerson, "actZones":(data?.activity_zone_ids ?: null)]
+		Logger("└────────────────────────────────")
+		Logger("│	Zones: ${evtZoneNames ?: "None"}")
+		Logger("│	End Time: (${newEndDt})")
+		Logger("│	Start Time: (${newStartDt})")
+		Logger("│	Type: ${evtType}")
+		Logger("┌──────────New Camera Event──────────")
+
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
 		LogAction("Last Event End Time: (${newEndDt}) - Zones: ${evtZoneNames} | Original State: (${curEndDt})")
