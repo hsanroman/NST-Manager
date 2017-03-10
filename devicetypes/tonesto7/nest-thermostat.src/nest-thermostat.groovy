@@ -316,8 +316,13 @@ void checkStateClear() {
 
 def initialize() {
 	Logger("initialized...")
-	checkVirtualStatus()
-	verifyHC()
+	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
+		state.updatedLastRanAt = now()
+		checkVirtualStatus()
+		verifyHC()
+	} else {
+		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
+	}
 }
 
 void installed() {
