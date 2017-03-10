@@ -16,6 +16,7 @@ def devVer() { return "4.6.1" }
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
 		//capability "Polling"
+		capability "Actuator"
 		capability "Sensor"
 		capability "Battery"
 		capability "Smoke Detector"
@@ -147,8 +148,13 @@ mappings {
 
 def initialize() {
 	Logger("initialized...")
-	verifyHC()
-	//poll()
+	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
+		state.updatedLastRanAt = now()
+		verifyHC()
+		//poll()
+	} else {
+		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
+	}
 }
 
 void installed() {
@@ -586,7 +592,7 @@ def testingStateEvent(test) {
 	} else { LogAction("Testing State: (${test}) | Original State: (${testVal})") }
 }
 
- def carbonSmokeStateEvent(coState, smokeState) {
+def carbonSmokeStateEvent(coState, smokeState) {
 	//values in ST are tested, clear, detected
 	//values from nest are ok, warning, emergency
 	def carbonVal = device.currentState("nestCarbonMonoxide")?.value
