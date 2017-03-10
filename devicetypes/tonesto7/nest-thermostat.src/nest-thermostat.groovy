@@ -3185,9 +3185,9 @@ def getGraphHTML() {
 								</thead>
 								<tbody>
 								  <tr>
-									<td>${state?.onlineStatus.toString()}</td>
+									<td${state?.onlineStatus != "online" ? """ class="redText" """ : ""}>${state?.onlineStatus.toString().capitalize()}</td>
 									<td><img src="${leafImg}" class="leafImg"></img></td>
-									<td>${state?.apiStatus}</td>
+								  	<td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
 								  </tr>
 								</tbody>
 							  </table>

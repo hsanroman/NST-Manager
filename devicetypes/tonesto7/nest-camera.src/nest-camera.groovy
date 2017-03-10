@@ -145,7 +145,7 @@ metadata {
 			state "true", 	label: 'Debug:\n${currentValue}'
 			state "false", 	label: 'Debug:\n${currentValue}'
 		}
-		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 9, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
+		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
 		standardTile("test", "device.testBtn", width:2, height:2, decoration: "flat") {
 			state "default", label: 'Test', action:"testBtn"
@@ -483,9 +483,17 @@ def lastEventDataEvent(data) {
 	def evtZoneIds = data?.activity_zone_ids
 	def evtZoneNames = null
 
-	def evtType = !hasMotion && hasSound ? "Sound Event" : "Motion Event (Person: ${hasPerson})"
+	def evtType = !hasMotion ? "Sound Event" : "Motion Event${hasPerson ? " (Person)${hasSound ? " (Sound)" : ""}" : ""}"
+	state?.lastEventTypeHtml = !hasMotion && hasSound ? "Sound Event" : "Motion Event${hasPerson ? "<br>(Person)${hasSound ? "<br>(Sound)" : ""}" : ""}"
 	if(actZones && evtZoneIds) {
 		evtZoneNames = actZones.findAll { it.id.toString() in evtZoneIds }.collect { it?.name }
+		def zstr = ""
+		def i = 1
+		evtZoneNames?.sort().each {
+			zstr += i < evtZoneNames.size() ? "<br>${it}" : "${it}"
+			i = i+1
+		}
+		state?.lastEventZonesHtml = zstr
 	}
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 
@@ -562,7 +570,7 @@ def debugOnEvent(debug) {
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
-	def newStat = issue ? "Issues" : "Ok"
+	def newStat = issue ? "Has Issue" : "Good"
 	state?.apiStatus = newStat
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
@@ -1089,7 +1097,6 @@ def getCamHtml() {
 				${clientBl}
 				${updateAvail}
 				<div class="swiper-container">
-					<!-- Additional required wrapper -->
 					<div class="swiper-wrapper">
 						${camHtml}
 						<div class="swiper-slide">
@@ -1104,13 +1111,12 @@ def getCamHtml() {
 							  </thead>
 							  <tbody>
 								<tr>
-								  <td>${state?.onlineStatus.toString().capitalize()}</td>
-								  <td>${state?.apiStatus}</td>
+								  <td${state?.onlineStatus != "Online" ? """ class="redText" """ : ""}>${state?.onlineStatus}</td>
+								  <td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
 								</tr>
 							  </tbody>
 							</table>
 						  </section>
-
 						  <section class="sectionBg">
 							<table class="devInfo">
 							  <col width="50%">
@@ -1258,6 +1264,8 @@ def showCamHtml() {
 				<section class="sectionBg">
 					<h3>Last Camera Event</h3>
 					<table class="devInfo">
+					  <col width="45%">
+					  <col width="55%">
 					  <tbody>
 						<tr>
 						  <td>${state?.lastEventDate ?: "Not Available"}</td>
@@ -1265,47 +1273,20 @@ def showCamHtml() {
 						</tr>
 					  </tbody>
 					</table>
-					<img src="${animationUrl}" width="100%"/>
-					<section class="sectionBg">
-						<table class="devInfo">
-						  <col width="90%">
-						  <thead>
-							<th>Event Type</th>
-						  </thead>
-						  <tbody>
-							<tr>
-							  <td>${device?.currentValue("lastEventType").toString() ?: "Unknown"}</td>
-							</tr>
-						  </tbody>
-						</table>
-					</section>
-					<section class="sectionBg">
-						<table class="devInfo">
-						  <col width="90%">
-						  <thead>
-							<th>Event Zone(s)</th>
-						  </thead>
-						  <tbody>
-							<tr>
-							  <td>${device?.currentValue("lastEventZones").toString() ?: "Unknown"}</td>
-							</tr>
-						  </tbody>
-						</table>
-					</section>
+				</section>
+				<img src="${animationUrl}" width="100%"/>
+				<section class="sectionBg">
 					<table class="devInfo">
-					  <col width="33%">
-					  <col width="33%">
-					  <col width="33%">
+					  <col width="45%">
+					  <col width="55%">
 					  <thead>
-						<th>Had Person?</th>
-						<th>Had Motion?</th>
-						<th>Had Sound?</th>
+						<th>Event Type</th>
+						<th>Event Zone(s)</th>
 					  </thead>
 					  <tbody>
 						<tr>
-						  <td>${state?.lastCamEvtData?.hasPerson.toString().capitalize() ?: "False"}</td>
-						  <td>${state?.lastCamEvtData?.hasMotion.toString().capitalize() ?: "False"}</td>
-						  <td>${state?.lastCamEvtData?.hasSound.toString().capitalize() ?: "False"}</td>
+						  <td style="vertical-align:top;">${state?.lastEventTypeHtml ?: "Unknown"}</td>
+						  <td style="vertical-align:top;">${state?.lastEventZonesHtml ?: "Unknown"}</td>
 						</tr>
 					  </tbody>
 					</table>

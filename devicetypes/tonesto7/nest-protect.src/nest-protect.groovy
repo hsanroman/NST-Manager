@@ -896,31 +896,21 @@ def getInfoHtml() {
 				  </section>
 				  <br>
 				  <section class="sectionBg">
-					<h3>Device Info</h3>
+				  	<h3>Device Info</h3>
 					<table class="devInfo">
-						<col width="90%">
-						<thead>
-						  <th>Power-Type</th>
-						</thead>
-						<tbody>
-						  <tr>
-							<td>${state?.powerSource.toString().capitalize()}</td>
-						  </tr>
-						</tbody>
-					</table>
-				  </section>
-				  <section class="sectionBg">
-					<table class="devInfo">
-						<col width="50%">
-						<col width="50%">
+						<col width="33%">
+						<col width="33%">
+						<col width="33%">
 						<thead>
 						  <th>Network Status</th>
+						  <th>Power Type</th>
 						  <th>API Status</th>
 						</thead>
 						<tbody>
 						  <tr>
-							<td>${state?.onlineStatus.toString().capitalize()}</td>
-							<td>${state?.apiStatus}</td>
+						  <td${state?.onlineStatus != "online" ? """ class="redText" """ : ""}>${state?.onlineStatus.toString().capitalize()}</td>
+						  <td>${state?.powerSource.toString().capitalize()}</td>
+						  <td${state?.apiStatus != "Good" ? """ class="orangeText" """ : ""}>${state?.apiStatus}</td>
 						  </tr>
 						</tbody>
 					</table>
