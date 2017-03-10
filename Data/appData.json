@@ -18,7 +18,7 @@
             "msgId": "7lVTfVCjHA",
             "message": "You must obey me at all costs ;)",
             "type": "warn",
-            "expireDt": "Wed Mar 15 00:00:00 EST 2017"
+            "expireDt": "Wed Feb 15 00:00:00 EST 2017"
         }
     },
     "updater": {
@@ -52,8 +52,8 @@
         }
     },
     "html": {
-        "cssVer": 2,
-        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css",
+        "cssVer": 1,
+        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.mi.css",
         "chartJsVer": 1,
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
