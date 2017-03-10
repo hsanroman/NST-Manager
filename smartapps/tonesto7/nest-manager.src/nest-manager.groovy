@@ -3002,10 +3002,16 @@ def updateChildData(force = false) {
 						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
 						//log.warn "oldTstatData: ${oldTstatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(tData)
+						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
-						appUpdateNotify()
-						return false
+						if(atomicState?."lastUpdated${devId}Dt" == null) {
+							atomicState."lastUpdated${devId}Dt" = getDtNow()
+						} else {
+							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+							appUpdateNotify()
+							return false
+						}
+						it.generateEvent(tData)
 					}
 				}
 				return true
@@ -3033,10 +3039,16 @@ def updateChildData(force = false) {
 						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
 						//log.warn "oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
+						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minDevVersions()?.protect?.desc}) Update the Device to latest", "error", true)
-						appUpdateNotify()
-						return false
+						if(atomicState?."lastUpdated${devId}Dt" == null) {
+							atomicState."lastUpdated${devId}Dt" = getDtNow()
+						} else {
+							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minDevVersions()?.protect?.desc}) Update the Device to latest", "error", true)
+							appUpdateNotify()
+							return false
+						}
+						it.generateEvent(pData)
 					}
 				}
 				return true
@@ -3048,6 +3060,8 @@ def updateChildData(force = false) {
 						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData ]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
+				atomicState."oldCamData${devId}" = cDataChecksum
+				cDataChecksum = atomicState."oldCamData${devId}"
 				if(force || nforce || (oldCamData != cDataChecksum)) {
 					def origlbl = it?.label?.toString()
 					def newlbl = getNestCamLabel(camData.data.name.toString())
@@ -3061,11 +3075,16 @@ def updateChildData(force = false) {
 					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera?.val)) {
 						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
 						it.generateEvent(camData)
-						atomicState."oldCamData${devId}" = cDataChecksum
+						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
-						appUpdateNotify()
-						return false
+						if(atomicState?."lastUpdated${devId}Dt" == null) {
+							atomicState."lastUpdated${devId}Dt" = getDtNow()
+						} else {
+							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
+							appUpdateNotify()
+							return false
+						}
+						it.generateEvent(camData)
 					}
 				}
 				return true
@@ -3086,16 +3105,26 @@ def updateChildData(force = false) {
 						LogTrace("UpdateChildData >> Presence id: ${devId}")
 						//log.warn "oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
+						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minDevVersions()?.presence?.desc}) Update the Device to latest", "error", true)
-						appUpdateNotify()
-						return false
+						if(atomicState?."lastUpdated${devId}Dt" == null) {
+							atomicState."lastUpdated${devId}Dt" = getDtNow()
+						} else {
+							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minDevVersions()?.presence?.desc}) Update the Device to latest", "error", true)
+							appUpdateNotify()
+							return false
+						}
+						it.generateEvent(pData)
 					}
 				}
 				return true
 			}
 			else if(atomicState?.weatherDevice && devId == getNestWeatherId()) {
-				def wData = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
+				def wData1 = ["weatCond":getWData(), "weatForecast":getWForecastData(), "weatAstronomy":getWAstronomyData(), "weatAlerts":getWAlertsData()]
+				def wData = ["data":wData1, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
+							"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
+							"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
+							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showWGraphs, "devBannerData":devBannerData ]
 				def oldWeatherData = atomicState?."oldWeatherData${devId}"
 				def wDataChecksum = generateMD5_A(wData.toString())
 				def showWGraphs = settings?.weatherShowGraph == false ? false : true
@@ -3108,14 +3137,17 @@ def updateChildData(force = false) {
 					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather?.val)) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
 						LogTrace("UpdateChildData >> Weather id: ${devId}")
-						it.generateEvent(["data":wData, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
-										"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
-										"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
-										"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showWGraphs, "devBannerData":devBannerData ])
+						it.generateEvent(wData)
+						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
-						appUpdateNotify()
-						return false
+						if(atomicState?."lastUpdated${devId}Dt" == null) {
+							atomicState."lastUpdated${devId}Dt" = getDtNow()
+						} else {
+							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
+							appUpdateNotify()
+							return false
+						}
+						it.generateEvent(wData)
 					}
 				}
 				return true
@@ -3206,9 +3238,15 @@ def updateChildData(force = false) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
 							//log.warn "oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 							it.generateEvent(tData)
+							if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
-							return false
+							if(atomicState?."lastUpdated${devId}Dt" == null) {
+								atomicState."lastUpdated${devId}Dt" = getDtNow()
+							} else {
+								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+								return false
+							}
+							it.generateEvent(tData)
 						}
 					}
 					return true
