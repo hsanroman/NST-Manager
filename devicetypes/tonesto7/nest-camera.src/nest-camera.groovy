@@ -268,7 +268,7 @@ def processEvent() {
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
 
-			state?.devBannerMsgData = eventData?.devBannerData ?: null
+			state?.devBannerData = eventData?.devBannerData ?: null
 			publicShareUrlEvent(results?.public_share_url)
 			onlineStatusEvent(results?.is_online?.toString())
 			isStreamingEvent(results?.is_streaming)
@@ -294,7 +294,6 @@ def processEvent() {
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
-			state?.devBannerMsgData = eventData?.devBannerData ?: null
 			vidHistoryTimeEvent()
 			checkHealth()
 			// lastUpdatedEvent()
@@ -904,28 +903,7 @@ def isTimeBetween(start, end, now, tz) {
 	return result
 }
 
-def getImgBase64(url,type) {
-	def params = [
-		uri: url,
-		contentType: 'image/$type'
-	]
-	httpGet(params) { resp ->
-		if(resp.data) {
-			def respData = resp?.data
-			ByteArrayOutputStream bos = new ByteArrayOutputStream()
-			int len
-			int size = 3072
-			byte[] buf = new byte[size]
-			while ((len = respData.read(buf, 0, size)) != -1)
-				bos.write(buf, 0, len)
-			buf = bos.toByteArray()
-			String s = buf?.encodeBase64()
-			return s ? "data:image/${type};base64,${s.toString()}" : null
-		}
-	}
-}
-
-def getFileBase64(url,preType,fileType) {
+def getFileBase64(url, preType, fileType) {
 	def params = [
 		uri: url,
 		contentType: '$preType/$fileType'
@@ -952,38 +930,13 @@ def getImg(imgName) {
 	return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
-def getCSS(url = null){
-	def params = [
-		uri: (!url ? cssUrl() : url?.toString()),
-		contentType: "text/css"
-	]
-	httpGet(params)  { resp ->
-		return resp?.data.text
-	}
-}
-
-def getJS(url){
-	def params = [
-		uri: url.toString(),
-		contentType: 'text/javascript'
-	]
-	httpGet(params)  { resp ->
-		//log.debug "JS Resp: ${resp?.data}"
-		return resp?.data.text
-	}
-}
-
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssData = cssData
 		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
@@ -1078,8 +1031,20 @@ def getCamHtml() {
 		def clientBl = state?.clientBl ? """<div class="brightRedAlertBanner">Your Manager client has been blacklisted!\nPlease contact the Nest Manager developer to get the issue resolved!!!</div>""" : ""
 		def pubVidUrl = state?.public_share_url
 		def camHtml = (pubVidUrl && state?.camUUID && state?.isStreaming && state?.isOnline) ? showCamHtml() : hideCamHtml()
-
-		//def devBrdCastData = state?.brdcastData ?: null
+		def devBrdCastData = state?.devBannerData ?: null
+		def devBrdCastHtml = ""
+		if(devBrdCastData) {
+			def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+			def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", devBrdCastData?.expireDt.toString())
+			if(curDt < expDt) {
+				devBrdCastHtml = """
+					<div class="orangeAlertBanner">
+						<div>Message from the Developer:</div>
+						<div style="font-size: 4.6vw;">${devBrdCastData?.message}</div>
+					</div>
+				"""
+			}
+		}
 
 		def mainHtml = """
 		<!DOCTYPE html>
@@ -1100,6 +1065,7 @@ def getCamHtml() {
 				</style>
 			</head>
 			<body>
+				${devBrdCastHtml}
 				${clientBl}
 				${updateAvail}
 				<div class="swiper-container">
@@ -1257,8 +1223,8 @@ def showCamHtml() {
 	def camImgUrl = "${apiServer}/get_image?uuid=${camUUID}&width=410"
 	def camPlaylistUrl = "https://${liveStreamURL}/nexus_aac/${camUUID}/playlist.m3u8"
 
-	def animationUrl = state?.animation_url ? getImgBase64(state?.animation_url, 'gif') : null
-	def pubSnapUrl = state?.snapshot_url ? getImgBase64(state?.snapshot_url,'jpeg') : null
+	def animationUrl = state?.animation_url ? getFileBase64(state?.animation_url, 'image', 'gif') : null
+	def pubSnapUrl = state?.snapshot_url ? getFileBase64(state?.snapshot_url, 'image', 'jpeg') : null
 
 	def vidBtn = (!state?.isStreaming || !liveStreamURL) ? "" : """<a href="#" onclick="toggle_visibility('liveStream');" class="button yellow">Live Video</a>"""
 	def imgBtn = (!state?.isStreaming || !pubSnapUrl) ? "" : """<a href="#" onclick="toggle_visibility('still');" class="button blue">Still Image</a>"""
