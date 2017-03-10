@@ -492,7 +492,7 @@ def lastEventDataEvent(data) {
 		def zstr = ""
 		def i = 1
 		evtZoneNames?.sort().each {
-			zstr += "${(i > 1 && i < evtZoneNames.size()) ? "<br>" : ""}${it}"
+			zstr += "${(i > 1 && i <= evtZoneNames.size()) ? "<br>" : ""}${it}"
 			i = i+1
 		}
 		state?.lastEventZonesHtml = zstr
