@@ -16,6 +16,7 @@ def devVer() { return "2.6.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
+		capability "Actuator"
 		capability "Sensor"
 		capability "Switch"
 		//capability "Motion Sensor"
@@ -168,8 +169,13 @@ def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL().toString()] }
 
 def initialize() {
 	Logger("initialized...")
-	verifyHC()
-	//poll()
+	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
+		state.updatedLastRanAt = now()
+		verifyHC()
+		//poll()
+	} else {
+		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
+	}
 }
 
 void installed() {
