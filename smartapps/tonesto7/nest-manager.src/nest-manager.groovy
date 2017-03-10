@@ -2179,8 +2179,7 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	//poll(true)
-	broadcastCheck()
+	poll(true)
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
