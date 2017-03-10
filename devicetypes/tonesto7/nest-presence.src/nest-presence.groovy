@@ -449,27 +449,6 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 	}
 }
 
-def getImgBase64(url,type) {
-	def params = [
-		uri: url,
-		contentType: 'image/$type'
-	]
-	httpGet(params) { resp ->
-		if(resp.data) {
-			def respData = resp?.data
-			ByteArrayOutputStream bos = new ByteArrayOutputStream()
-			int len
-			int size = 3072
-			byte[] buf = new byte[size]
-			while ((len = respData.read(buf, 0, size)) != -1)
-				bos.write(buf, 0, len)
-			buf = bos.toByteArray()
-			String s = buf?.encodeBase64()
-			return s ? "data:image/${type};base64,${s.toString()}" : null
-		}
-	}
-}
-
 def getFileBase64(url,preType,fileType) {
 	def params = [
 		uri: url,
@@ -496,20 +475,16 @@ def getFileBase64(url,preType,fileType) {
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
-	state?.cssData = null
 	if(htmlInfo?.cssUrl && htmlInfo?.cssVer) {
-		//LogAction("getCssData: CSS Data is Missing | Loading Data from Source...")
 		cssData = getFileBase64(htmlInfo.cssUrl, "text", "css")
-		state?.cssData = cssData
 		state?.cssVer = htmlInfo?.cssVer
 	} else {
-		//LogAction("getCssData: No Stored CSS Data Found for Device... Loading for Static URL...")
 		cssData = getFileBase64(cssUrl(), "text", "css")
 	}
 	return cssData
 }
 
-def cssUrl()	 { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.css" }
+def cssUrl() { return "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css" }
 
 def getHtml() {
 	try {

@@ -3063,7 +3063,7 @@ def updateChildData(force = false) {
 						it.generateEvent(camData)
 						atomicState."oldCamData${devId}" = cDataChecksum
 					} else {
-						LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
+						LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
 						appUpdateNotify()
 						return false
 					}

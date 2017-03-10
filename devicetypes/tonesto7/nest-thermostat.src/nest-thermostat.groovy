@@ -879,11 +879,11 @@ def whoMadeChanges(autoType, desc, dt) {
 	tf.setTimeZone(getTimeZone())
 	def newChgDt = tf.format(Date.parse("E MMM dd HH:mm:ss z yyyy", dt)) ?: "Not Set"
 	if(isStateChange(device, "whoMadeChanges", newChgType.toString()) || isStateChange(device, "whoMadeChangesDesc", newChgDesc.toString()) || isStateChange(device, "whoMadeChangesDescDt", newChgDt.toString())) {
-		Logger("UPDATED | Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})")
+		Logger("UPDATED | Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt})")
 		sendEvent(name: "whoMadeChanges", value: newChgType)
 		sendEvent(name: "whoMadeChangesDesc", value: newChgDesc)
 		sendEvent(name: "whoMadeChangesDescDt", value: newChgDt)
-	} else { LogAction("Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt}) | Original State: (${curType}: ${curDesc} at ${curDt})") }
+	} else { LogAction("Device Changes Made by (${newChgType}: ${newChgDesc}) at (${newChgDt})") }
 }
 
 def ecoDescEvent(val, updChk=false) {
@@ -3104,7 +3104,7 @@ def getGraphHTML() {
 
 				<script type="text/javascript" src="${getChartJsData()}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
 				<style>
 				</style>
 			</head>
