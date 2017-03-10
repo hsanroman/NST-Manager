@@ -17,6 +17,7 @@ def devVer() { return "4.6.0" }
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "DesertBlade") {
 
+		capability "Actuator"
 		capability "Presence Sensor"
 		capability "Sensor"
 		capability "Refresh"
@@ -84,7 +85,12 @@ void installed() {
 
 def initialize() {
 	LogAction("initialized...")
-	verifyHC()
+	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
+		state.updatedLastRanAt = now()
+		verifyHC()
+	} else {
+		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
+	}
 }
 
 void updated() {
