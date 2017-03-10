@@ -7350,50 +7350,6 @@ def leakWatSensorEvt(evt) { return }
 def conWatContactEvt(evt) { return }
 def extTmpGenericEvt(evt) { return }
 
-/*
-def automationsInst() {
-	atomicState.isNestModesConfigured =		isNestModesConfigured() ? true : false
-	atomicState.isWatchdogConfigured =		isWatchdogConfigured() ? true : false
-	atomicState.isSchMotConfigured =		isSchMotConfigured() ? true : false
-
-	atomicState.isLeakWatConfigured =		isLeakWatConfigured() ? true : false
-	atomicState.isConWatConfigured =		isConWatConfigured() ? true : false
-	atomicState.isExtTmpConfigured =		isExtTmpConfigured() ? true : false
-	atomicState.isRemSenConfigured =		isRemSenConfigured() ? true : false
-	atomicState.isTstatSchedConfigured =		isTstatSchedConfigured() ? true : false
-	atomicState.isFanCtrlConfigured =		isFanCtrlConfigured() ? true : false
-	atomicState.isFanCircConfigured =		isFanCircConfigured() ? true : false
-	atomicState?.isInstalled = true
-}
-
-def getAutomationsInstalled() {
-	def list = []
-	def aType = atomicState?.automationType
-	switch(aType) {
-		case "nMode":
-			list.push(aType)
-			break
-		case "schMot":
-			def tmp = [:]
-			tmp[aType] = []
-			if(isLeakWatConfigured())		{ tmp[aType].push("leakWat") }
-			if(isConWatConfigured())		{ tmp[aType].push("conWat") }
-			if(isExtTmpConfigured())		{ tmp[aType].push("extTmp") }
-			if(isRemSenConfigured())		{ tmp[aType].push("remSen") }
-			if(isTstatSchedConfigured())		{ tmp[aType].push("tSched") }  // This is number of schedules active
-			if(isFanCtrlConfigured())		{ tmp[aType].push("fanCtrl") }
-			if(isFanCircConfigured())		{ tmp[aType].push("fanCirc") }
-			if(tmp?.size()) { list.push(tmp) }
-			break
-		case "watchDog":
-			list.push(aType)
-			break
-	}
-	//LogAction("getAutomationsInstalled List: $list", "debug", false)
-	return list
-}
-*/
-
 def getAutomationType() {
 	return atomicState?.automationType ?: null
 }
@@ -7642,141 +7598,6 @@ def isSchMotConfigured() {
 
 def getLastschMotEvalSec() { return !atomicState?.lastschMotEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastschMotEval, null, "getLastschMotEvalSec").toInteger() }
 
-/*
-def schMotCheck() {
-	LogAction("schMotCheck", "trace", false)
-	try {
-		if(atomicState?.disableAutomation) { return }
-		def schWaitVal = settings?.schMotWaitVal?.toInteger() ?: 60
-		if(schWaitVal > 60) { schWaitVal = 60 }
-		if(getLastschMotEvalSec() < schWaitVal) {
-			def schChkVal = ((schWaitVal - getLastschMotEvalSec()) < 30) ? 30 : (schWaitVal - getLastschMotEvalSec())
-			scheduleAutomationEval(schChkVal)
-			LogAction("Remote Sensor: Too Soon to Evaluate Actions; Re-Evaluation in (${schChkVal} seconds)", "info", true)
-			return
-		}
-
-		def execTime = now()
-		atomicState?.lastEvalDt = getDtNow()
-		atomicState?.lastschMotEval = getDtNow()
-
-		// This order is important
-		// turn system on/off, then update schedule mode/temps, then remote sensors, then update fans
-
-		if(settings?.schMotWaterOff) {
-			if(isLeakWatConfigured()) { leakWatCheck() }
-		}
-		if(settings?.schMotContactOff) {
-			if(isConWatConfigured()) { conWatCheck() }
-		}
-		if(settings?.schMotExternalTempOff) {
-			if(isExtTmpConfigured()) {
-				if(settings?.extTmpUseWeather) { getExtConditions() }
-				extTmpTempCheck()
-			}
-		}
-//		if(settings?.schMotSetTstatTemp) {
-			if(isTstatSchedConfigured()) { setTstatTempCheck() }
-//		}
-		if(settings?.schMotRemoteSensor) {
-			if(isRemSenConfigured()) {
-				remSenCheck()
-			}
-		}
-		if(settings?.schMotOperateFan) {
-			if(isFanCtrlConfigured()) {
-				fanCtrlCheck()
-			}
-		}
-
-		storeExecutionHistory((now() - execTime), "schMotCheck")
-	} catch (ex) {
-		log.error "schMotCheck Exception:", ex
-		parent?.sendExceptionData(ex, "schMotCheck", true, getAutoType())
-	}
-}
-
-def storeLastEventData(evt) {
-	if(evt) {
-		def newVal = ["name":evt.name, "displayName":evt.displayName, "value":evt.value, "date":formatDt(evt.date), "unit":evt.unit]
-		atomicState?.lastEventData = newVal
-		//log.debug "LastEvent: ${atomicState?.lastEventData}"
-
-		def list = atomicState?.detailEventHistory ?: []
-		def listSize = 30
-		if(list?.size() < listSize) {
-			list.push(newVal)
-		}
-		else if(list?.size() > listSize) {
-			def nSz = (list?.size()-listSize) + 1
-			def nList = list?.drop(nSz)
-			nList?.push(newVal)
-			list = nList
-		}
-		else if(list?.size() == listSize) {
-			def nList = list?.drop(1)
-			nList?.push(newVal)
-			list = nList
-		}
-		if(list) { atomicState?.detailEventHistory = list }
-	}
-}
-
-def storeExecutionHistory(val, method = null) {
-	//log.debug "storeExecutionHistory($val, $method)"
-	try {
-		if(method) {
-			LogAction("${method} Execution Time: (${val} milliseconds)", "trace", false)
-		}
-		if(method in ["watchDogCheck", "checkNestMode", "schMotCheck"]) {
-			atomicState?.lastExecutionTime = val ?: null
-			def list = atomicState?.evalExecutionHistory ?: []
-			def listSize = 30
-			list = addToList(val, list, listSize)
-			if(list) { atomicState?.evalExecutionHistory = list }
-		}
-		if(!(method in ["watchDogCheck", "checkNestMode"])) {
-			def list = atomicState?.detailExecutionHistory ?: []
-			def listSize = 30
-			list = addToList([val, method], list, listSize)
-			if(list) { atomicState?.detailExecutionHistory = list }
-		}
-	} catch (ex) {
-		log.error "storeExecutionHistory Exception:", ex
-		parent?.sendExceptionData(ex, "storeExecutionHistory", true, getAutoType())
-	}
-}
-
-def addToList(val, list, listSize) {
-	if(list?.size() < listSize) {
-		list.push(val)
-	}
-	else if(list?.size() > listSize) {
-		def nSz = (list?.size()-listSize) + 1
-		def nList = list?.drop(nSz)
-		nList?.push(val)
-		list = nList
-	}
-	else if(list?.size() == listSize) {
-		def nList = list?.drop(1)
-		nList?.push(val)
-		list = nList
-	}
-	return list
-}
-
-def getAverageValue(items) {
-	def tmpAvg = []
-	def val = 0
-	if(!items) { return val }
-	else if(items?.size() > 1) {
-		tmpAvg = items
-		if(tmpAvg && tmpAvg?.size() > 1) { val = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(0) }
-	} else { val = item }
-	return val.toInteger()
-}
-*/
-
 def getInputToStringDesc(inpt, addSpace = null) {
 	def cnt = 0
 	def str = ""
@@ -7852,38 +7673,17 @@ private getDeviceSupportedCommands(dev) {
 	return dev?.supportedCommands.findAll { it as String }
 }
 
-/*
-def checkFanSpeedSupport(dev) {
-	def req = ["lowSpeed", "medSpeed", "highSpeed"]
-	def devCnt = 0
-	def devData = getDeviceSupportedCommands(dev)
-	devData.each { cmd ->
-		if(cmd.name in req) { devCnt = devCnt+1 }
-	}
-	def speed = dev?.currentValue("currentState") ?: null
-	//log.debug "checkFanSpeedSupport (speed: $speed | devCnt: $devCnt)"
-	return (speed && devCnt == 3) ? true : false
-}
-*/
-
 def getTstatCapabilities(tstat, autoType, dyn = false) {
-//	try {
-		def canCool = true
-		def canHeat = true
-		def hasFan = true
-		if(tstat?.currentCanCool) { canCool = tstat?.currentCanCool.toBoolean() }
-		if(tstat?.currentCanHeat) { canHeat = tstat?.currentCanHeat.toBoolean() }
-		if(tstat?.currentHasFan) { hasFan = tstat?.currentHasFan.toBoolean() }
+	def canCool = true
+	def canHeat = true
+	def hasFan = true
+	if(tstat?.currentCanCool) { canCool = tstat?.currentCanCool.toBoolean() }
+	if(tstat?.currentCanHeat) { canHeat = tstat?.currentCanHeat.toBoolean() }
+	if(tstat?.currentHasFan) { hasFan = tstat?.currentHasFan.toBoolean() }
 
-		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
-		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
-		atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
-/*
-	} catch (ex) {
-		log.error "getTstatCapabilities Exception:", ex
-		parent?.sendExceptionData(ex, "getTstatCapabilities", true, getAutoType())
-	}
-*/
+	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
+	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
+	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
 }
 
 def getSafetyTemps(tstat, usedefault=true) {
@@ -8020,51 +7820,6 @@ def getTstatPresence(tstat) {
 	if(tstat) { pres = tstat?.currentPresence }
 	return pres
 }
-
-/*
-def setTstatMode(tstat, mode) {
-	def result = false
-	try {
-		if(mode) {
-			if(mode == "auto") { tstat.auto(); result = true }
-			else if(mode == "heat") { tstat.heat(); result = true }
-			else if(mode == "cool") { tstat.cool(); result = true }
-			else if(mode == "off") { tstat.off(); result = true }
-			else if(mode == "eco") { tstat.eco(); result = true }
-			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
-			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
-		} else {
-			LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
-		}
-	}
-	catch (ex) {
-		log.error "setTstatMode() Exception:", ex
-		parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
-	}
-	return result
-}
-
-def setMultipleTstatMode(tstats, mode) {
-	def result = false
-	try {
-		if(tstats && mode) {
-			tstats?.each { ts ->
-				if(setTstatMode(ts, mode)) {
-					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
-					storeLastAction("Set ${ts} to (${mode})", getDtNow())
-					result = true
-				} else {
-					return false
-				}
-			}
-		}
-	} catch (ex) {
-		log.error "setMultipleTstatMode() Exception:", ex
-		parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
-	}
-	return result
-}
-*/
 
 /******************************************************************************
 *					Keep These Methods						  *
