@@ -4576,7 +4576,7 @@ def webResponse(resp, data) {
 			atomicState?.appData = newdata
 			clientBlacklisted()
 			updateHandler()
-			broadcastCheck()
+			//broadcastCheck()
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", true) }
