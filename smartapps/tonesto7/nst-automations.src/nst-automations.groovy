@@ -2097,7 +2097,7 @@ def getFanSwitchDesc(showOpt = true) {
 	}
 
 	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Enabled" : ""
-	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Rule: (${getEnumValue(remSenRuleEnum("fan"), settings?.schMotCirculateTstatFan)})" : ""
+	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Rule: (${getEnumValue(remSenRuleEnum("fan"), settings?.schMotFanRuleType)})" : ""
 
 	return (swDesc == "") ? null : "${swDesc}"
 }
