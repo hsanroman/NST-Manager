@@ -329,6 +329,11 @@ def processEvent(data) {
 	}
 }
 
+def getDtNow() {
+	def now = new Date()
+	return formatDt(now)
+}
+
 def formatDt(dt) {
 	def tf = new java.text.SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 	if(getTimeZone()) { tf.setTimeZone(getTimeZone()) }

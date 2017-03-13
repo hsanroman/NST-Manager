@@ -4630,17 +4630,16 @@ def broadcastCheck() {
 			sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), false, null, null, null, true)
 			atomicState?.lastBroadcastId = bCastData?.msgId
 		}
-
 		if(bCastData?.devBannerMsg != null && atomicState?.devBannerData?.msgId != bCastData?.devBannerMsg?.msgId) {
 			if(bCastData?.devBannerMsg?.msgId && bCastData?.devBannerMsg?.message && bCastData?.devBannerMsg?.type && bCastData?.devBannerMsg?.expireDt) {
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", bCastData?.devBannerMsg?.expireDt.toString())
-				//log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
+				log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
 				if(curDt && expDt && (curDt < expDt)) {
 					atomicState?.devBannerData = bCastData?.devBannerMsg
 				} else { atomicState?.devBannerData = null }
-			}
-		}
+			} else { atomicState?.devBannerData = null }
+		} else { atomicState?.devBannerData = null }
 	}
 }
 

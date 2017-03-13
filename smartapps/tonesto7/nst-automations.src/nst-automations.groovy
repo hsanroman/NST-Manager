@@ -705,9 +705,9 @@ def getAutoTypeLabel() {
 	def newLbl
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""
 
-	if(type == "nMode")	{ typeLabel = "${newName} (NestMode) (NST)" }
-	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog (NST)"}
-	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label}) (NST)" }
+	if(type == "nMode")	{ typeLabel = "${newName} (NestMode)" }
+	else if(type == "watchDog")	{ typeLabel = "Nest Location ${location.name} Watchdog"}
+	else if(type == "schMot")	{ typeLabel = "${newName} (${schMotTstat?.label})" }
 
 	if(appLbl != "Nest Manager" && appLbl != "${appLabel()}") {
 		if(appLbl.contains("\n(Disabled)")) {
