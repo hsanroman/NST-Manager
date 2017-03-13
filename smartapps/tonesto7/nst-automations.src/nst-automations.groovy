@@ -523,7 +523,7 @@ def createAutoBackupJson() {
 def backupConfigToFirebase() {
 	unschedule()
 	unsubscribe()
-	uninstAutomationApp()			// Cleanup any parent state this child owns
+	uninstAutomationApp()			// Cleanup any parent state this cFhild owns
 	def data = createAutoBackupJson()
 	return parent?.sendAutomationBackupData(data, app.id)
 }
@@ -700,7 +700,7 @@ def getAutoTypeLabel() {
 	//LogAction("getAutoTypeLabel:","trace", true)
 	def type = atomicState?.automationType
 	def appLbl = getCurAppLbl()
-	def newName = appName() == "${appLabel()}" ? "Nest Automations" : "${appName()}"
+	def newName = appName() == "${appLabel()}" ? "NST Automations" : "${appName()}"
 	def typeLabel = ""
 	def newLbl
 	def dis = (atomicState?.disableAutomation == true) ? "\n(Disabled)" : ""

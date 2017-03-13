@@ -103,9 +103,8 @@ mappings {
 		//Renders Json Data
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
-		path("/receiveEventData") {action: [POST: "receiveEventData"]}
-        //path("/receiveDeviceData") {action: [POST: "receiveDeviceData"]}
-        //path("/receiveStructData") {action: [POST: "receiveStructData"]}
+		path("/receiveEventData") 	{action: [POST: "receiveEventData"]}
+        path("/streamStatus")		{action: [POST: "receiveStreamStatus"]}
 	}
 }
 
@@ -246,6 +245,10 @@ def mainPage() {
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 						image: getAppImg("notification_icon2.png")
 			}
+			section("Rest Streaming (Experimental):") {
+				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
+			}
+			restStreamCheck()
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
@@ -333,9 +336,9 @@ def devicesPage() {
 						image: getAppImg("camera_icon.png"))
 			}
 			atomicState.cameras = settings?.cameras ? camState(settings?.cameras) : null
-			input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
+			input(name: "presDevice", title:"Add Presence Device?\n", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("presence_icon.png"))
 			atomicState.presDevice = settings?.presDevice ?: null
-			input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", default: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
+			input(name: "weatherDevice", title:"Add Weather Device?\n", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("weather_icon.png"))
 			atomicState.weatherDevice = settings?.weatherDevice ?: null
 		}
 		if(isInstalled) {
@@ -1571,89 +1574,6 @@ def devPageFooter(var, eTime) {
 	return res?.size() ? res : ""
 }
 
-def receiveEventData() {
-    log.debug "receiveEventData: ${request.JSON}"
-    if(request) {
-        atomicState?.restStreamingOn = true
-        //def data = parseJson(request.JSON)
-        //request?.JSON.data.each { item ->
-            //log.debug "Request Item: $item"
-            //def data = parseJson(request.JSON)
-            //log.debug "data: $data"
-
-            //item?.device?.value.each { devItem ->
-                //log.debug "Device Item: $devItem"
-            //}
-        //}
-    }
-}
-
-/*
-def receiveStructData() {
-    log.debug "receiveStructData: ${request.JSON}"
-    if(request) {
-        atomicState?.restStreamingOn = true
-        //def data = parseJson(request.JSON)
-        //request?.JSON.data.each { item ->
-            //log.debug "Request Item: $item"
-            //def data = parseJson(request.JSON)
-            //log.debug "data: $data"
-
-            //item?.device?.value.each { devItem ->
-                //log.debug "Device Item: $devItem"
-            //}
-        //}
-    }
-}
-*/
-
-/*
-def receiveDeviceData() {
-    log.debug "receiveDeviceData: ${request.JSON}"
-    if(request) {
-        atomicState?.restStreamingOn = true
-        //def data = parseJson(request.JSON)
-        //request?.JSON.data.each { item ->
-            //log.debug "Request Item: $item"
-            //def data = parseJson(request.JSON)
-            //log.debug "data: $data"
-
-            //item?.device?.value.each { devItem ->
-                //log.debug "Device Item: $devItem"
-            //}
-        //}
-    }
-}
-*/
-
-def startStreamTest(close = false) {
-    log.debug "startStreamTest"
-    def ip = "10.0.0.134"
-    def port = 3000
-    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
-    def connStatus = close ? false : true
-    try {
-        def hubAction = new physicalgraph.device.HubAction(
-            method: "POST",
-            headers: [
-                "HOST": "${ip}:${port}",
-                "token": "${atomicState?.authToken}",
-                "connStatus": "${connStatus}",
-                "callback": "${apiUrl}",
-                "stToken": "${atomicState?.accessToken}"
-            ],
-            path: "/stream",
-            body: ""
-        )
-        log.debug hubAction
-        sendHubCommand(hubAction)
-    }
-    catch (Exception e) {
-        log.debug "Exception $e on $hubAction"
-    }
-
-}
-
 /******************************************************************************
 |						PAGE TEXT DESCRIPTION METHODS						  |
 *******************************************************************************/
@@ -2077,6 +1997,120 @@ def initManagerApp() {
 		runIn(45, "sendInstallData", [overwrite: true]) //If analytics are enabled this will send non-user identifiable data to firebase server
 		runIn(55, "stateCleanup", [overwrite: true])
 	}
+	def appInstData = atomicState?.installData
+	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
+		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
+	}
+	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
+		log.debug "Sending restStreamHandler(Start) Event to local node service"
+		restStreamHandler()
+	}
+	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
+		log.debug "Sending restStreamHandler(Stop) Event to local node service"
+		restStreamHandler(true)
+		atomicState?.restStreamingOn = false
+	} else {
+		//log.debug "Sending RestStream (Start) Event to local node service"
+		atomicState?.restStreamingOn = false
+	}
+}
+
+def receiveEventData() {
+	def evtData = request.JSON
+	def needChildUpd = false
+	if(evtData.data) {
+		atomicState?.restStreamingOn = true
+		if(evtData?.data?.devices) {
+			//log.debug "deviceData: ${evtData?.data?.devices}"
+			if(atomicState?.deviceData != evtData?.data?.devices) {
+				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
+				atomicState?.deviceData = evtData?.data?.devices
+				needChildUpd = true
+			}
+		}
+		if(evtData?.data?.structures) {
+			//log.debug "structData: ${evtData?.data?.structures}"
+			if(atomicState?.structData != evtData?.data?.structures) {
+				LogAction("API Structure Data HAS Changed (Stream)", "debug", false)
+				atomicState?.structData = evtData?.data?.structures
+				needChildUpd = true
+			}
+		}
+	}
+	if(needChildUpd) { schedUpdateChild(true) }
+}
+
+def receiveStreamStatus() {
+	def resp = request.JSON
+	log.debug "resp: ${resp}"
+	atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+}
+
+def restStreamHandler(close = false) {
+    log.debug "restStreamHandler"
+    def ip = "10.0.0.70"
+    def port = 3000
+    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
+    def connStatus = close ? false : true
+    try {
+        def hubAction = new physicalgraph.device.HubAction(
+            method: "POST",
+            headers: [
+                "HOST": "${ip}:${port}",
+                "token": "${atomicState?.authToken}",
+                "connStatus": "${connStatus}",
+                "callback": "${apiUrl}",
+                "stToken": "${atomicState?.accessToken}"
+            ],
+            path: "/stream",
+            body: ""
+        )
+        //log.debug hubAction
+        sendHubCommand(hubAction)
+    }
+    catch (Exception e) {
+        log.error "restStreamHandler Exception $e on $hubAction"
+    }
+}
+
+def restStreamCheck() {
+    log.debug "restStreamCheck"
+    def ip = "10.0.0.70"
+    def port = 3000
+    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
+    def connStatus = close ? false : true
+    try {
+        def hubAction = new physicalgraph.device.HubAction(
+            method: "POST",
+            headers: [
+                "HOST": "${ip}:${port}",
+				"callback": "${apiUrl}",
+                "token": "${atomicState?.accessToken}"
+            ],
+            path: "/status",
+            body: ""
+        )
+        //log.debug hubAction
+        sendHubCommand(hubAction)
+    }
+    catch (Exception e) {
+        log.error "restStreamCheck Exception $e on $hubAction"
+    }
+}
+
+void hubCallbackHandler(physicalgraph.device.HubResponse hubResponse) {
+    log.debug "Entered calledBackHandler()..."
+    def resp = hubResponse
+	log.debug "resp: $resp"
+
+}
+
+private Integer convertHexToInt(hex) {
+    return Integer.parseInt(hex,16)
+}
+
+private String convertHexToIP(hex) {
+    return [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
 }
 
 def uninstManagerApp() {
@@ -2659,6 +2693,11 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
+		if(atomicState?.restStreamingOn) {
+			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+			return
+		}
+
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
 		//if(pollTime < 60 || pollStrTime < 60) {
@@ -3013,8 +3052,8 @@ def processResponse(resp, data) {
 	}
 }
 
-def schedUpdateChild() {
-	runIn(25, "updateChildData", [overwrite: true])
+def schedUpdateChild(force=false) {
+	runIn((!force ? 25: 3), "updateChildData", [overwrite: true])
 }
 
 def updateChildData(force = false) {
@@ -4635,7 +4674,7 @@ def broadcastCheck() {
 			if(bCastData?.devBannerMsg?.msgId && bCastData?.devBannerMsg?.message && bCastData?.devBannerMsg?.type && bCastData?.devBannerMsg?.expireDt) {
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def expDt = Date.parse("E MMM dd HH:mm:ss z yyyy", bCastData?.devBannerMsg?.expireDt.toString())
-				log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
+				//log.debug "curDt: $curDt | expDt: $expDt | isExpired: ${(curDt > expDt)}"
 				if(curDt && expDt && (curDt < expDt)) {
 					atomicState?.devBannerData = bCastData?.devBannerMsg
 				} else { atomicState?.devBannerData = null }
