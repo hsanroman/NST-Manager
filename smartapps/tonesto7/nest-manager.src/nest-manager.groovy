@@ -2731,6 +2731,7 @@ def finishPoll(str, dev) {
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
+	broadcastCheck()
 }
 
 def forcedPoll(type = null) {
