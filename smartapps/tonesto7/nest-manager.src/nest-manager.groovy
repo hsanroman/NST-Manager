@@ -248,7 +248,7 @@ def mainPage() {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
 				if(settings?.restStreaming) {
-					input(name: "restStreamIp", title:"Rest Service IP", type: "text", defaultValue: "10.0.0.70", required: true, submitOnChange: true)
+					input(name: "restStreamIp", title:"Rest Service IP", type: "text", required: true, submitOnChange: true)
 					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true)
 					def rData = atomicState?.restServiceData
 					if(rData) {
@@ -2014,6 +2014,7 @@ def initManagerApp() {
 	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
 	}
+	restStreamCheck()
 	startStopStream()
 }
 
@@ -2024,10 +2025,12 @@ def startStopStream() {
 	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Start) Event to local node service", "debug", true)
 		restStreamHandler()
+		restStreamCheck()
 	}
 	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
+		restStreamCheck()
 	} else {
 		LogAction("checking stream status", "debug", true)
 		restStreamCheck()
@@ -2035,8 +2038,13 @@ def startStopStream() {
 }
 
 def restStreamHandler(close = false) {
-	log.debug "restStreamHandler(close: ${close})"
-	def ip = settings?.restStreamIp ?: "10.0.0.70"
+	def ip = settings?.restStreamIp ?: null
+	if(!ip) {
+		LogAction("No IP", "warn", false)
+		atomicState.restStreamingOn = false
+		return
+	}
+	LogAction("restStreamHandler(close: ${close})", "debug", true)
 	def port = settings?.restStreamPort ?: 3000
 	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	def connStatus = close ? false : true
@@ -2057,14 +2065,20 @@ def restStreamHandler(close = false) {
 	}
 	catch (Exception e) {
 		log.error "restStreamHandler Exception $e on $hubAction"
+		atomicState.restStreamingOn = false
 	}
 }
 
 def restStreamCheck() {
 	//log.debug "restStreamCheck"
-	//atomicState?.restStreamingOn = false
-	def ip = settings?.restStreamIp ?: "10.0.0.70"
+	def ip = settings?.restStreamIp ?: null
+	if(!ip) {
+		LogAction("No IP", "warn", false)
+		atomicState.restStreamingOn = false
+		return
+	}
 	def port = settings?.restStreamPort ?: 3000
+	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", true)
 	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
@@ -2081,20 +2095,24 @@ def restStreamCheck() {
 	}
 	catch (Exception e) {
 		log.error "restStreamCheck Exception $e on $hubAction"
+		atomicState.restStreamingOn = false
 	}
 }
 
 def receiveStreamStatus() {
 	def resp = request.JSON
-	log.debug "restStreamStatus: resp: ${resp}"
+	LogAction("restStreamStatus: resp: ${resp}", "debug", true)
 	if(resp) {
-		if(settings?.restStreaming) {
-			atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+		atomicState?.lastHeardFromRestDt = getDtNow()
+		atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+		if(!settings?.restStreaming && atomicState?.restStreamingOn) {
+			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
+			restStreamHandler(true)
 		}
+		atomicState?.restServiceData = resp
 
 		render contentType: 'text/html', data: "status received...ok", status: 200
 	}
-	atomicState?.restServiceData = resp
 }
 
 def uninstManagerApp() {
@@ -2291,7 +2309,7 @@ private gcd(input = []) {
 
 def onAppTouch(event) {
 	poll(true)
-	// restStreamCheck()
+	//restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -2689,16 +2707,22 @@ def poll(force = false, type = null) {
 
 		def okMeta = ok2PollMetaData()
 		if(!force && settings?.restStreaming && atomicState?.restStreamingOn && !okMeta) {
-			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
-			if(!atomicState?.streamPolling) {
-				unschedule("poll")
-				atomicState.pollingOn = false
-				setPollingState()
+			if(getLastHeardFromRestSec() < (60*20)) {
+				LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+				if(!atomicState?.streamPolling) {
+					unschedule("poll")
+					atomicState.pollingOn = false
+					setPollingState()
+				}
+				if(atomicState?.needChildUpd) { finishPoll() }
+				restStreamCheck()
+				return
+			} else {
+				LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
+				restStreamHandler(true)   // close the stream if we have not heard from it in a while
 			}
-			if(atomicState?.needChildUpd) { finishPoll() }
-			restStreamCheck()
-			return
 		}
+		restStreamCheck()
 		startStopStream()
 
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
@@ -3072,31 +3096,34 @@ def receiveEventData() {
 	if(evtData.data && settings?.restStreaming) {
 		atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
-			LogAction("got deviceData", "debug", false)
 			atomicState?.lastDevDataUpd = getDtNow()
 			atomicState?.needDevPoll = false
-			LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
+			//LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
 			if(atomicState?.deviceData != evtData?.data?.devices) {
-				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
 				atomicState?.deviceData = evtData?.data?.devices
 				needChildUpd = true
 				gotSomething = true
+				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
+			} else {
+				LogAction("got deviceData", "debug", false)
 			}
 		}
 		if(evtData?.data?.structures) {
-			LogAction("got structData", "debug", false)
 			atomicState?.lastStrucDataUpd = getDtNow()
 			atomicState.needStrPoll = false
-			LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
+			//LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
 			if(atomicState?.structData != evtData?.data?.structures) {
-				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
 				atomicState?.structData = evtData?.data?.structures
 				needChildUpd = true
 				gotSomething = true
+				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
+			} else {
+				LogAction("got structData", "debug", false)
 			}
 		}
 	}
 	if(gotSomething) {
+		atomicState?.lastHeardFromRestDt = getDtNow()
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -3548,6 +3575,7 @@ def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 840 : GetTime
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd, null, "getLastStructPollSec").toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll, null, "getLastForcedPollSec").toInteger() }
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt, null, "getLastChildUpdSec").toInteger() }
+def getLastHeardFromRestSec() { return !atomicState?.lastHeardFromRestDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastHeardFromRestDt, null, "getLastHeardFromRestSec").toInteger() }
 
 /************************************************************************************************
 |										Nest API Commands										|
