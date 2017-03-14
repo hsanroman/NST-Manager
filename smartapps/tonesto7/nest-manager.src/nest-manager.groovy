@@ -2050,7 +2050,7 @@ def restStreamHandler(close = false) {
 }
 
 def restStreamCheck() {
-	log.debug "restStreamCheck"
+	//log.debug "restStreamCheck"
 	atomicState?.restStreamingOn = false
 	//def ip = "10.0.0.100"
 	def ip = "192.168.5.112"
@@ -2232,16 +2232,23 @@ private adj_temp(tempF) {
 def setPollingState() {
 	if(!atomicState?.thermostats && !atomicState?.protects && !atomicState?.weatherDevice && !atomicState?.cameras) {
 		LogAction("No Devices Selected; Polling is OFF", "info", true)
-		unschedule()
+		unschedule("poll")
 		atomicState.pollingOn = false
+		atomicState.streamPolling = false
 	} else {
 		if(!atomicState?.pollingOn) {
 			//LogAction("Polling is ACTIVE", "info", true)
 			atomicState.pollingOn = true
 			def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
-			pollTime = Math.max(pollTime, 60)
 			def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-			pollTime = Math.max(pollStrTime, 60)
+			atomicState.streamPolling = false
+			def theMax = 60
+			if(settings?.restStreaming && atomicState?.restStreamingOn) {
+				theMax = 300
+				atomicState.streamPolling = true
+			}
+			pollTime = Math.max(pollTime, theMax)
+			pollStrTime = Math.max(pollStrTime, theMax)
 			def weatherTimer = pollTime
 			if(atomicState?.weatherDevice) { weatherTimer = (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900) }
 			def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
@@ -2272,8 +2279,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	//poll(true)
-	restStreamCheck()
+	poll(true)
+	//restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -2295,11 +2302,13 @@ def refresh(child = null) {
 |								API/Device Polling Methods										|
 *************************************************************************************************/
 
-def pollFollow() { if(isPollAllowed()) { poll() } }
+def pollFollow() { poll() }
 
+/*
 def pollWatcher(evt) {
 	if(isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
 }
+*/
 
 def cleanRestAutomationTest() {
 	/*
@@ -2667,8 +2676,15 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
-		if(settings?.restStreaming && atomicState?.restStreamingOn) {
+		def okMeta = ok2PollMetaData()
+		if(!force && settings?.restStreaming && atomicState?.restStreamingOn && !okMeta) {
 			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+			if(!atomicState?.streamPolling) {
+				unschedule("poll")
+				atomicState.pollingOn = false
+				setPollingState()
+			}
+			if(atomicState?.needChildUpd) { finishPoll() }
 			restStreamCheck()
 			return
 		}
@@ -2686,11 +2702,13 @@ def poll(force = false, type = null) {
 			}
 		}
 
+		def okStruct = ok2PollStruct()
+		def okDevice = ok2PollDevice()
 		def meta = false
 		def dev = false
 		def str = false
 		if(force == true) { forcedPoll(type) }
-		if( !force && !ok2PollDevice() && !ok2PollStruct() ) {
+		if( !force && !okDevice && !okStruct() ) {
 			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
 		}
 		else if(!force) {
@@ -2701,7 +2719,7 @@ def poll(force = false, type = null) {
 				allowAsync = true
 				metstr = "async"
 			}
-			if(ok2PollStruct()) {
+			if(okStruct) {
 				//LogAction("Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago)"
 				if(allowAsync) {
@@ -2710,7 +2728,7 @@ def poll(force = false, type = null) {
 					str = getApiData("str")
 				}
 			}
-			if(ok2PollDevice()) {
+			if(okDevice) {
 				//LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += sstr != "" ? " | " : ""
 				sstr += "Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
@@ -2720,7 +2738,7 @@ def poll(force = false, type = null) {
 					dev = getApiData("dev")
 				}
 			}
-			if(ok2PollMetaData()) {
+			if(okMeta) {
 				//LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += sstr != "" ? " | " : ""
 				sstr += "Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago)"
@@ -2741,7 +2759,7 @@ def poll(force = false, type = null) {
 }
 
 def finishPoll(str=null, dev=null) {
-	LogAction("finishPoll($str, $dev) received", "info", true)
+	LogAction("finishPoll($str, $dev) received", "info", false)
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
@@ -2749,8 +2767,12 @@ def finishPoll(str=null, dev=null) {
 	broadcastCheck()
 }
 
-def schedUpdateChild(force=false) {
-	runIn((!force ? 25: 3), "finishPoll", [overwrite: true])
+def schedFinishPoll(force=false) {
+	def curNow = now()
+	if(!atomicState?.lastFinishedPoll || curNow >= atomicState?.lastFinishedPoll + 2100) {
+		runIn((!force ? 25 : 4), "finishPoll", [overwrite: true])
+		atomicState?.lastFinishedPoll = now()
+	}
 }
 
 def forcedPoll(type = null) {
@@ -3039,7 +3061,7 @@ def receiveEventData() {
 	if(evtData.data && settings?.restStreaming) {
 		atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
-			LogAction("got deviceData", "debug", true)
+			LogAction("got deviceData", "debug", false)
 			atomicState?.lastDevDataUpd = getDtNow()
 			atomicState?.needDevPoll = false
 			LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
@@ -3051,7 +3073,7 @@ def receiveEventData() {
 			}
 		}
 		if(evtData?.data?.structures) {
-			LogAction("got structData", "debug", true)
+			LogAction("got structData", "debug", false)
 			atomicState?.lastStrucDataUpd = getDtNow()
 			atomicState.needStrPoll = false
 			LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
@@ -3068,7 +3090,10 @@ def receiveEventData() {
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
 	}
-	if(needChildUpd) { schedUpdateChild(true) }
+	if(needChildUpd) {
+		atomicState?.needChildUpd = true
+		schedFinishPoll(true)
+	}
 }
 
 def updateChildData(force = false) {
