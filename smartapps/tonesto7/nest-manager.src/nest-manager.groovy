@@ -2308,8 +2308,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	//poll(true)
-	restStreamCheck()
+	poll(true)
+	//restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
