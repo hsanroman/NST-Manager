@@ -2769,9 +2769,9 @@ def finishPoll(str=null, dev=null) {
 
 def schedFinishPoll(force=false) {
 	def curNow = now()
-	if(!atomicState?.lastFinishedPoll || curNow >= atomicState?.lastFinishedPoll + 2100) {
+	if(!atomicState?.lastFinishedPoll || curNow >= atomicState?.lastFinishedPoll + 3400) {
 		runIn((!force ? 25 : 4), "finishPoll", [overwrite: true])
-		atomicState?.lastFinishedPoll = now()
+		atomicState?.lastFinishedPoll = curNow
 	}
 }
 
