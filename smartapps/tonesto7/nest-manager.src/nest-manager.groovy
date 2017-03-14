@@ -2708,7 +2708,7 @@ def poll(force = false, type = null) {
 		def dev = false
 		def str = false
 		if(force == true) { forcedPoll(type) }
-		if( !force && !okDevice && !okStruct() ) {
+		if( !force && !okDevice && !okStruct ) {
 			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
 		}
 		else if(!force) {
