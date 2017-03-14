@@ -104,7 +104,7 @@ mappings {
 		path("/renderInstallId")	{action: [GET: "renderInstallId"]}
 		path("/renderInstallData")	{action: [GET: "renderInstallData"]}
 		path("/receiveEventData") 	{action: [POST: "receiveEventData"]}
-        path("/streamStatus")		{action: [POST: "receiveStreamStatus"]}
+		path("/streamStatus")		{action: [POST: "receiveStreamStatus"]}
 	}
 }
 
@@ -2001,104 +2001,89 @@ def initManagerApp() {
 	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
 	}
+	startStopStream()
+}
+
+def startStopStream() {
+	if(!settings?.restStreaming && !atomicState?.restStreamingOn) {
+		return
+	}
 	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
-		log.debug "Sending restStreamHandler(Start) Event to local node service"
+		LogAction("Sending restStreamHandler(Start) Event to local node service", "debug", true)
 		restStreamHandler()
 	}
 	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
-		log.debug "Sending restStreamHandler(Stop) Event to local node service"
+		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
-		atomicState?.restStreamingOn = false
 	} else {
-		//log.debug "Sending RestStream (Start) Event to local node service"
-		atomicState?.restStreamingOn = false
-	}
-}
-
-def receiveEventData() {
-	def evtData = request.JSON
-	def needChildUpd = false
-	if(evtData.data) {
-		atomicState?.restStreamingOn = true
-		if(evtData?.data?.devices) {
-			//log.debug "deviceData: ${evtData?.data?.devices}"
-			if(atomicState?.deviceData != evtData?.data?.devices) {
-				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
-				atomicState?.deviceData = evtData?.data?.devices
-				needChildUpd = true
-			}
-		}
-		if(evtData?.data?.structures) {
-			//log.debug "structData: ${evtData?.data?.structures}"
-			if(atomicState?.structData != evtData?.data?.structures) {
-				LogAction("API Structure Data HAS Changed (Stream)", "debug", false)
-				atomicState?.structData = evtData?.data?.structures
-				needChildUpd = true
-			}
-		}
-	}
-	if(needChildUpd) { schedUpdateChild(true) }
-}
-
-def receiveStreamStatus() {
-	def resp = request.JSON
-	log.debug "resp: ${resp}"
-	if(resp) {
-		atomicState?.restStreamingOn = resp?.streaming == true ? true : false
-		render contentType: 'text/html', data: "status received...ok", status: 200
+		LogAction("checking stream status", "debug", true)
+		restStreamCheck()
 	}
 }
 
 def restStreamHandler(close = false) {
-    log.debug "restStreamHandler"
-    def ip = "10.0.0.100"
-    def port = 3000
-    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
-    def connStatus = close ? false : true
-    try {
-        def hubAction = new physicalgraph.device.HubAction(
-            method: "POST",
-            headers: [
-                "HOST": "${ip}:${port}",
-                "token": "${atomicState?.authToken}",
-                "connStatus": "${connStatus}",
-                "callback": "${apiUrl}",
-                "stToken": "${atomicState?.accessToken}"
-            ],
-            path: "/stream",
-            body: ""
-        )
-        //log.debug hubAction
-        sendHubCommand(hubAction)
-    }
-    catch (Exception e) {
-        log.error "restStreamHandler Exception $e on $hubAction"
-    }
+	log.debug "restStreamHandler(close: ${close})"
+	//def ip = "10.0.0.100"
+	def ip = "192.168.5.112"
+	def port = 3000
+	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
+	def connStatus = close ? false : true
+	try {
+		def hubAction = new physicalgraph.device.HubAction(
+			method: "POST",
+			headers: [
+				"HOST": "${ip}:${port}",
+				"token": "${atomicState?.authToken}",
+				"connStatus": "${connStatus}",
+				"callback": "${apiUrl}",
+				"stToken": "${atomicState?.accessToken}"
+			],
+			path: "/stream",
+			body: ""
+		)
+		//log.debug hubAction
+		sendHubCommand(hubAction)
+	}
+	catch (Exception e) {
+		log.error "restStreamHandler Exception $e on $hubAction"
+	}
 }
 
 def restStreamCheck() {
-    log.debug "restStreamCheck"
-    def ip = "10.0.0.100"
-    def port = 3000
-    def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
-    def connStatus = close ? false : true
-    try {
-        def hubAction = new physicalgraph.device.HubAction(
-            method: "POST",
-            headers: [
-                "HOST": "${ip}:${port}",
+	log.debug "restStreamCheck"
+	atomicState?.restStreamingOn = false
+	//def ip = "10.0.0.100"
+	def ip = "192.168.5.112"
+	def port = 3000
+	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
+	try {
+		def hubAction = new physicalgraph.device.HubAction(
+			method: "POST",
+			headers: [
+				"HOST": "${ip}:${port}",
 				"callback": "${apiUrl}",
-                "token": "${atomicState?.accessToken}"
-            ],
-            path: "/status",
-            body: ""
-        )
-        //log.debug hubAction
-        sendHubCommand(hubAction)
-    }
-    catch (Exception e) {
-        log.error "restStreamCheck Exception $e on $hubAction"
-    }
+				"token": "${atomicState?.accessToken}"
+			],
+			path: "/status",
+			body: ""
+		)
+		//log.debug hubAction
+		sendHubCommand(hubAction)
+	}
+	catch (Exception e) {
+		log.error "restStreamCheck Exception $e on $hubAction"
+	}
+}
+
+def receiveStreamStatus() {
+	def resp = request.JSON
+	log.debug "restStreamStatus: resp: ${resp}"
+	if(resp) {
+		if(settings?.restStreaming) {
+			atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+		}
+		render contentType: 'text/html', data: "status received...ok", status: 200
+	}
 }
 
 def uninstManagerApp() {
@@ -2288,7 +2273,7 @@ private gcd(input = []) {
 
 def onAppTouch(event) {
 	//poll(true)
-	restStreamHandler()
+	restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -2682,10 +2667,12 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
-		if(atomicState?.restStreamingOn) {
+		if(settings?.restStreaming && atomicState?.restStreamingOn) {
 			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+			restStreamCheck()
 			return
 		}
+		startStopStream()
 
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
@@ -2753,13 +2740,17 @@ def poll(force = false, type = null) {
 	}
 }
 
-def finishPoll(str, dev) {
-	LogAction("finishPoll($str, $dev) received", "info", false)
+def finishPoll(str=null, dev=null) {
+	LogAction("finishPoll($str, $dev) received", "info", true)
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
 	broadcastCheck()
+}
+
+def schedUpdateChild(force=false) {
+	runIn((!force ? 25: 3), "finishPoll", [overwrite: true])
 }
 
 def forcedPoll(type = null) {
@@ -3041,8 +3032,43 @@ def processResponse(resp, data) {
 	}
 }
 
-def schedUpdateChild(force=false) {
-	runIn((!force ? 25: 3), "updateChildData", [overwrite: true])
+def receiveEventData() {
+	def evtData = request.JSON
+	def needChildUpd = false
+	def gotSomething = false
+	if(evtData.data && settings?.restStreaming) {
+		atomicState?.restStreamingOn = true
+		if(evtData?.data?.devices) {
+			LogAction("got deviceData", "debug", true)
+			atomicState?.lastDevDataUpd = getDtNow()
+			atomicState?.needDevPoll = false
+			LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
+			if(atomicState?.deviceData != evtData?.data?.devices) {
+				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
+				atomicState?.deviceData = evtData?.data?.devices
+				needChildUpd = true
+				gotSomething = true
+			}
+		}
+		if(evtData?.data?.structures) {
+			LogAction("got structData", "debug", true)
+			atomicState?.lastStrucDataUpd = getDtNow()
+			atomicState.needStrPoll = false
+			LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
+			if(atomicState?.structData != evtData?.data?.structures) {
+				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
+				atomicState?.structData = evtData?.data?.structures
+				needChildUpd = true
+				gotSomething = true
+			}
+		}
+	}
+	if(gotSomething) {
+		apiIssueEvent(false)
+		atomicState?.apiRateLimited = false
+		atomicState?.apiCmdFailData = null
+	}
+	if(needChildUpd) { schedUpdateChild(true) }
 }
 
 def updateChildData(force = false) {
