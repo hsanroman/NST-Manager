@@ -247,6 +247,19 @@ def mainPage() {
 			}
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
+				if(settings?.restStreaming) {
+					input(name: "restStreamIp", title:"Rest Service IP", type: "text", defaultValue: "10.0.0.70", required: true, submitOnChange: true)
+					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true)
+					def rData = atomicState?.restServiceData
+					if(rData) {
+						def str = ""
+						str += "Version: ${rData?.version}"
+						str += "\nStartupDt: ${rData?.startupDt}"
+						str += "\nStreaming: ${rData?.streaming}"
+						str += "\nLast Event: ${rData?.lastEvtDt}"
+						paragraph title: "Stream Service", str
+					}
+				}
 			}
 			restStreamCheck()
 			section("Remove All Apps, Automations, and Devices:") {
@@ -2023,9 +2036,8 @@ def startStopStream() {
 
 def restStreamHandler(close = false) {
 	log.debug "restStreamHandler(close: ${close})"
-	//def ip = "10.0.0.100"
-	def ip = "192.168.5.112"
-	def port = 3000
+	def ip = settings?.restStreamIp ?: "10.0.0.70"
+	def port = settings?.restStreamPort ?: 3000
 	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	def connStatus = close ? false : true
 	try {
@@ -2041,7 +2053,6 @@ def restStreamHandler(close = false) {
 			path: "/stream",
 			body: ""
 		)
-		//log.debug hubAction
 		sendHubCommand(hubAction)
 	}
 	catch (Exception e) {
@@ -2051,10 +2062,9 @@ def restStreamHandler(close = false) {
 
 def restStreamCheck() {
 	//log.debug "restStreamCheck"
-	atomicState?.restStreamingOn = false
-	//def ip = "10.0.0.100"
-	def ip = "192.168.5.112"
-	def port = 3000
+	//atomicState?.restStreamingOn = false
+	def ip = settings?.restStreamIp ?: "10.0.0.70"
+	def port = settings?.restStreamPort ?: 3000
 	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
@@ -2067,7 +2077,6 @@ def restStreamCheck() {
 			path: "/status",
 			body: ""
 		)
-		//log.debug hubAction
 		sendHubCommand(hubAction)
 	}
 	catch (Exception e) {
@@ -2082,8 +2091,10 @@ def receiveStreamStatus() {
 		if(settings?.restStreaming) {
 			atomicState?.restStreamingOn = resp?.streaming == true ? true : false
 		}
+
 		render contentType: 'text/html', data: "status received...ok", status: 200
 	}
+	atomicState?.restServiceData = resp
 }
 
 def uninstManagerApp() {
@@ -2279,8 +2290,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	poll(true)
-	//restStreamCheck()
+	//poll(true)
+	restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
