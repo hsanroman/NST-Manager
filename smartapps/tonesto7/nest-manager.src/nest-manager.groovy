@@ -2045,10 +2045,10 @@ def restStreamHandler(close = false) {
 			method: "POST",
 			headers: [
 				"HOST": "${ip}:${port}",
-				"token": "${atomicState?.authToken}",
+				"nesttoken": "${atomicState?.authToken}",
 				"connStatus": "${connStatus}",
 				"callback": "${apiUrl}",
-				"stToken": "${atomicState?.accessToken}"
+				"sttoken": "${atomicState?.accessToken}"
 			],
 			path: "/stream",
 			body: ""
@@ -2072,7 +2072,7 @@ def restStreamCheck() {
 			headers: [
 				"HOST": "${ip}:${port}",
 				"callback": "${apiUrl}",
-				"token": "${atomicState?.accessToken}"
+				"sttoken": "${atomicState?.accessToken}"
 			],
 			path: "/status",
 			body: ""
@@ -2290,8 +2290,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	//poll(true)
-	restStreamCheck()
+	poll(true)
+	// restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -8158,7 +8158,7 @@ def appNamespace()	{ return "tonesto7" }
 def useNewAutoFile()	{ return true }
 def blockOldAuto()	{ return true }
 def newAutoName()	{ return "NST Automations" }
-def autoAppName()	{ return "NST Automations" }//(versionStr2Int(appVersion()).toInteger() >= 454 && useNewAutoFile() == true) ? "NST Automations" : "Nest Automations" }
+def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
