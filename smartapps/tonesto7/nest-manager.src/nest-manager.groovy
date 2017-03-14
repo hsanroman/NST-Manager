@@ -2108,6 +2108,8 @@ def receiveStreamStatus() {
 		if(!settings?.restStreaming && atomicState?.restStreamingOn) {
 			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 			restStreamHandler(true)
+		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {
+			runIn(15, "startStopStream", [overwrite: true])
 		}
 		atomicState?.restServiceData = resp
 
