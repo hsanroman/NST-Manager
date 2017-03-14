@@ -2043,12 +2043,15 @@ def receiveEventData() {
 def receiveStreamStatus() {
 	def resp = request.JSON
 	log.debug "resp: ${resp}"
-	atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+	if(resp) {
+		atomicState?.restStreamingOn = resp?.streaming == true ? true : false
+		render contentType: 'text/html', data: "status received...ok", status: 200
+	}
 }
 
 def restStreamHandler(close = false) {
     log.debug "restStreamHandler"
-    def ip = "10.0.0.70"
+    def ip = "10.0.0.100"
     def port = 3000
     def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
     def connStatus = close ? false : true
@@ -2075,7 +2078,7 @@ def restStreamHandler(close = false) {
 
 def restStreamCheck() {
     log.debug "restStreamCheck"
-    def ip = "10.0.0.70"
+    def ip = "10.0.0.100"
     def port = 3000
     def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
     def connStatus = close ? false : true
@@ -2096,21 +2099,6 @@ def restStreamCheck() {
     catch (Exception e) {
         log.error "restStreamCheck Exception $e on $hubAction"
     }
-}
-
-void hubCallbackHandler(physicalgraph.device.HubResponse hubResponse) {
-    log.debug "Entered calledBackHandler()..."
-    def resp = hubResponse
-	log.debug "resp: $resp"
-
-}
-
-private Integer convertHexToInt(hex) {
-    return Integer.parseInt(hex,16)
-}
-
-private String convertHexToIP(hex) {
-    return [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
 }
 
 def uninstManagerApp() {
@@ -2299,7 +2287,8 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
-	poll(true)
+	//poll(true)
+	restStreamHandler()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
