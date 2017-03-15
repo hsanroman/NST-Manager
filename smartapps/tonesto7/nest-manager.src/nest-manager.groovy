@@ -644,13 +644,12 @@ def pollPrefPage() {
 				def rData = atomicState?.restServiceData
 				if(rData) {
 					def str = ""
-					str += "Node Service Version: ${rData?.version}"
-					str += "\nServiceUptime: ${rData?.startupDt}"
-					str += "\nStreaming: ${rData?.streaming}"
-					str += "\nHostName: ${rData?.hostInfo?.hostname}"
-					str += "\nHostOS: ${rData?.hostInfo?.osType}"
-					str += "\nHostMem: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
-					paragraph title: "NodeJS Service", str
+
+					str += "Uptime: ${rData?.startupDt}"
+					str += "\n\nHost: (${rData?.hostInfo?.hostname})"
+					str += "\nOS: ${rData?.hostInfo?.osType}"
+					str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
+					paragraph title: "Node Service: v${rData?.version}\n(Streaming: ${rData?.streaming})", str
 				}
 			}
 		}
