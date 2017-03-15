@@ -1986,6 +1986,8 @@ def initNestModeApp() {
 
 def initManagerApp() {
 	setStateVar()
+	restStreamHandler(true)   // stop the rest stream
+	atomicState?.restStreamingOn = false
 	unschedule()
 	unsubscribe()
 	atomicState.pollingOn = false
@@ -2019,21 +2021,18 @@ def initManagerApp() {
 }
 
 def startStopStream() {
-	if(!settings?.restStreaming && !atomicState?.restStreamingOn) {
+	if( (!settings?.restStreaming && !atomicState?.restStreamingOn) || (settings?.restStreaming && atomicState?.restStreamingOn) ) {
 		return
 	}
 	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Start) Event to local node service", "debug", true)
 		restStreamHandler()
-		restStreamCheck()
+		runIn(5, "restStreamCheck", [overwrite: true])
 	}
 	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
-		restStreamCheck()
-	} else {
-		LogAction("checking stream status", "debug", true)
-		restStreamCheck()
+		runIn(5, "restStreamCheck", [overwrite: true])
 	}
 }
 
@@ -2121,6 +2120,7 @@ def uninstManagerApp() {
 	LogTrace("uninstManagerApp")
 	try {
 		if(addRemoveDevices(true)) {
+			restStreamHandler(true)   // stop the rest stream
 			//removes analytic data from the server
 			if(removeInstallData()) {
 				atomicState?.installationId = null
@@ -2711,7 +2711,7 @@ def poll(force = false, type = null) {
 		if(!force && settings?.restStreaming && atomicState?.restStreamingOn && !okMeta) {
 			if(getLastHeardFromRestSec() < (60*20)) {
 				LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
-				if(!atomicState?.streamPolling) {
+				if(!atomicState?.streamPolling) {	// set to stream polling
 					unschedule("poll")
 					atomicState.pollingOn = false
 					setPollingState()
@@ -2720,12 +2720,18 @@ def poll(force = false, type = null) {
 				restStreamCheck()
 				return
 			} else {
-				LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
+				LogAction("Have not heard from Rest Stream - Sending restStreamHandler(Stop) Event to local node service", "warn", true)
 				restStreamHandler(true)   // close the stream if we have not heard from it in a while
+				atomicState?.restStreamingOn = false
 			}
 		}
 		restStreamCheck()
 		startStopStream()
+		if(atomicState?.streamPolling && (!settings?.restStreaming || !atomicState?.restStreamingOn)) {	// return to normal polling
+			unschedule("poll")
+			atomicState.pollingOn = false
+			setPollingState()
+		}
 
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
