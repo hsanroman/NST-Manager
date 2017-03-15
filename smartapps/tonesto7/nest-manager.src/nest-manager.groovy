@@ -653,7 +653,8 @@ def pollPrefPage() {
 				}
 			}
 		}
-		restStreamCheck()
+		//restStreamCheck()
+		startStopStream()
 		incPollPrefLoadCnt()
 		devPageFooter("pollPrefLoadCnt", execTime)
 	}
@@ -2017,12 +2018,13 @@ def initManagerApp() {
 	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
 	}
-	restStreamCheck()
+	//restStreamCheck()
 	startStopStream()
 }
 
 def startStopStream() {
 	if( (!settings?.restStreaming && !atomicState?.restStreamingOn) || (settings?.restStreaming && atomicState?.restStreamingOn) ) {
+		runIn(5, "restStreamCheck", [overwrite: true])
 		return
 	}
 	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
@@ -2109,7 +2111,7 @@ def receiveStreamStatus() {
 			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 			restStreamHandler(true)
 		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {
-			runIn(15, "startStopStream", [overwrite: true])
+			runIn(5, "startStopStream", [overwrite: true])
 		}
 		atomicState?.restServiceData = resp
 
@@ -2726,7 +2728,7 @@ def poll(force = false, type = null) {
 				atomicState?.restStreamingOn = false
 			}
 		}
-		restStreamCheck()
+		//restStreamCheck()
 		startStopStream()
 		if(atomicState?.streamPolling && (!settings?.restStreaming || !atomicState?.restStreamingOn)) {	// return to normal polling
 			unschedule("poll")
@@ -3109,6 +3111,7 @@ def receiveEventData() {
 			atomicState?.needDevPoll = false
 			//LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
 			if(atomicState?.deviceData != evtData?.data?.devices) {
+				//whatChanged(atomicState?.deviceData, evtData?.data?.devices, "/devices")
 				atomicState?.deviceData = evtData?.data?.devices
 				needChildUpd = true
 				gotSomething = true
@@ -3122,6 +3125,7 @@ def receiveEventData() {
 			atomicState.needStrPoll = false
 			//LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
 			if(atomicState?.structData != evtData?.data?.structures) {
+				//whatChanged(atomicState?.structData, evtData?.data?.structures, "/structures")
 				atomicState?.structData = evtData?.data?.structures
 				needChildUpd = true
 				gotSomething = true
@@ -3141,6 +3145,60 @@ def receiveEventData() {
 		atomicState?.needChildUpd = true
 		schedFinishPoll(true)
 	}
+}
+
+def whatChanged(mapA, mapB, headstr) {
+	def t0 = mapA
+	def t1 = mapB
+	def left = t0
+	def right = t1
+
+	if(left == null || right == null) {
+		LogAction("Object: $headstr  NULL", "trace", true)
+		return false
+	}
+
+	if (getObjType(left) != getObjType(right)) {
+		LogAction("Object ${headstr} comparison failure: Mismatch object classes. ${getObjType(left)} ${getObjType(right)}", "trace", true)
+		return false
+	}
+
+	if (left instanceof List || left instanceof ArrayList) {
+		if (left.size() != right.size()) {
+			LogAction("Array ${headstr} comparison failure: Object size mismatch.", "trace", true)
+			LogAction("Orig has " + left.size() + " items. NEW has " + right.size() + " items.", "trace", true)
+			LogAction("Orig Object: ${left} New Object: ${right}", "trace", true)
+			return false
+		 }
+		 for(int i=0; i < left.size(); i++) {
+			 // May detect matching items here if sort of objects is problem
+			 whatChanged(left[i], right[i], "${headstr}/${i}")
+		}
+	} else if (left instanceof Map) {
+		String[] leftKeys = left.keySet()
+		String[] rightKeys = right.keySet()
+		if (leftKeys != rightKeys) {
+			LogAction("Map ${headstr} comparison failure: Orig keys do not match new keys.", "trace", true)
+			LogAction("Orig " + leftKeys.toString() + "NEW " + rightKeys.toString(), "trace", true)
+			return false
+		}
+		def ret = true
+		leftKeys.each {
+			if(!ret) { return }
+
+			if ( (left[it] instanceof List) || (left[it] instanceof ArrayList) || (left[it] instanceof Map)) {
+				// May detect matching items here if sort of objects is problem
+				whatChanged( left[it], right[it], "${headstr}/${it}" )
+			} else {
+				if (left[it].toString() != right[it].toString()) {
+				LogAction("String comparison ${headstr} failure: Orig " + it + " value does not match new value.", "trace", true)
+				LogAction("Orig " + left[it] + "NEW " + right[it], "trace", true)
+				ret = false
+				}
+			}
+		}
+	}
+	return
 }
 
 def updateChildData(force = false) {
