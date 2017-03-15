@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.7.0" }
-def appVerDate() { "3-10-2017" }
+def appVersion() { "4.8.0" }
+def appVerDate() { "3-15-2017" }
 
 preferences {
 	//startPage
@@ -245,23 +245,6 @@ def mainPage() {
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 						image: getAppImg("notification_icon2.png")
 			}
-			section("Rest Streaming (Experimental):") {
-				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
-				if(settings?.restStreaming) {
-					input(name: "restStreamIp", title:"Rest Service IP", type: "text", required: true, submitOnChange: true)
-					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true)
-					def rData = atomicState?.restServiceData
-					if(rData) {
-						def str = ""
-						str += "Version: ${rData?.version}"
-						str += "\nStartupDt: ${rData?.startupDt}"
-						str += "\nStreaming: ${rData?.streaming}"
-						str += "\nLast Event: ${rData?.lastEvtDt}"
-						paragraph title: "Stream Service", str
-					}
-				}
-			}
-			restStreamCheck()
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
@@ -653,6 +636,25 @@ def pollPrefPage() {
 		section("Wait Values:") {
 			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true)
 		}
+		section("Rest Streaming (Experimental):") {
+			input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
+			if(settings?.restStreaming) {
+				input(name: "restStreamIp", title:"Rest Service IP", type: "text", required: true, submitOnChange: true)
+				input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true)
+				def rData = atomicState?.restServiceData
+				if(rData) {
+					def str = ""
+					str += "Node Service Version: ${rData?.version}"
+					str += "\nServiceUptime: ${rData?.startupDt}"
+					str += "\nStreaming: ${rData?.streaming}"
+					str += "\nHostName: ${rData?.hostInfo?.hostname}"
+					str += "\nHostOS: ${rData?.hostInfo?.osType}"
+					str += "\nHostMem: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
+					paragraph title: "NodeJS Service", str
+				}
+			}
+		}
+		restStreamCheck()
 		incPollPrefLoadCnt()
 		devPageFooter("pollPrefLoadCnt", execTime)
 	}
