@@ -2023,7 +2023,10 @@ def initManagerApp() {
 }
 
 def startStopStream() {
-	if( (!settings?.restStreaming && !atomicState?.restStreamingOn) || (settings?.restStreaming && atomicState?.restStreamingOn) ) {
+	if(!settings?.restStreaming && !atomicState?.restStreamingOn) {
+		return
+	}
+	if(settings?.restStreaming && atomicState?.restStreamingOn) {
 		runIn(5, "restStreamCheck", [overwrite: true])
 		return
 	}
@@ -3105,6 +3108,13 @@ def receiveEventData() {
 	def needChildUpd = false
 	def gotSomething = false
 	if(evtData.data && settings?.restStreaming) {
+
+		//def t0 = atomicState?.aaOldStreamData
+		//whatChanged(t0, evtData, "/")
+		//atomicState.aaOldStreamData = evtData
+		//state.remove("aaOldStreamData")
+// settings?.structures   atomicState?.structures
+
 		atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
 			atomicState?.lastDevDataUpd = getDtNow()
