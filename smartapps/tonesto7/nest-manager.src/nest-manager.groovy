@@ -1669,9 +1669,10 @@ def getPollingConfDesc() {
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += "Polling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
-	pStr += "\n• Device: (${getInputEnumLabel(pollValue?:180, pollValEnum(true))})${pollValDesc}"
-	pStr += "\n• Structure: (${getInputEnumLabel(pollStrValue?:180, pollValEnum())})${pollStrValDesc}"
+	pStr += "Nest Stream: (${settings.restStreaming ? "On" : "Off"}) (${!atomicState?.restStreamingOn ? "Not Active" : "Active"})"
+	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
+	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
+	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})${pollWeatherValDesc}" : ""
 	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})${pollWaitValDesc}"
 	return (pStr != "" ? pStr : "")
@@ -3144,6 +3145,7 @@ def receiveEventData() {
 				LogAction("got structData", "debug", false)
 			}
 		}
+		render contentType: 'text/html', data: "status received...ok", status: 200
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromRestDt = getDtNow()
@@ -3189,7 +3191,7 @@ def whatChanged(mapA, mapB, headstr) {
 		String[] rightKeys = right.keySet()
 		if (leftKeys != rightKeys) {
 			LogAction("Map ${headstr} comparison failure: Orig keys do not match new keys.", "trace", true)
-			LogAction("Orig " + leftKeys.toString() + "NEW " + rightKeys.toString(), "trace", true)
+			LogAction("Orig " + leftKeys.toString() + " NEW " + rightKeys.toString(), "trace", true)
 			return false
 		}
 		def ret = true
@@ -3202,7 +3204,7 @@ def whatChanged(mapA, mapB, headstr) {
 			} else {
 				if (left[it].toString() != right[it].toString()) {
 				LogAction("String comparison ${headstr} failure: Orig " + it + " value does not match new value.", "trace", true)
-				LogAction("Orig " + left[it] + "NEW " + right[it], "trace", true)
+				LogAction("Orig " + left[it] + " NEW " + right[it], "trace", true)
 				ret = false
 				}
 			}
