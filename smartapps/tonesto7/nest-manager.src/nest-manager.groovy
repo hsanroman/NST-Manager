@@ -193,6 +193,10 @@ def mainPage() {
 	return dynamicPage(name: "mainPage", title: "", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
 		section("") {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
+			if(atomicState?.restStreamingOn) {
+				def rStrEn = atomicState?.appData?.eventStreaming?.enabled
+				paragraph "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
+			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
 						description:"Current: v${appVersion()} | New: ${atomicState?.appData?.updater?.versions?.app?.ver}\n\nTap to Open the IDE in Browser", state: "complete", image: getAppImg("update_icon.png")
@@ -622,6 +626,31 @@ def pollPrefPage() {
 		section("") {
 			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
 		}
+		if(atomicState?.appData?.eventStreaming?.enabled == true) {
+			section("Rest Streaming (Experimental):") {
+				if(restStreaming) {
+					def rData = atomicState?.restServiceData
+					if(rData) {
+						def str = ""
+						str += "Uptime: ${rData?.startupDt}"
+						str += "\n\nHost: (${rData?.hostInfo?.hostname})"
+						str += "\nOS: ${rData?.hostInfo?.osType}"
+						str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
+						paragraph title: "Node Service: v${rData?.version}\n(Streaming: ${rData?.streaming})", str, state: "complete"
+					}
+				} else {
+					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
+				}
+				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
+			}
+			section("Configure Streaming Service:", hideable: true, hidden: (restStreamIp && restStreamPort ? true : false)) {
+				if(settings?.restStreaming) {
+					input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
+					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
+				}
+			}
+			startStopStream()
+		}
 		section("Device Polling:") {
 			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true)
 		}
@@ -636,25 +665,7 @@ def pollPrefPage() {
 		section("Wait Values:") {
 			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true)
 		}
-		section("Rest Streaming (Experimental):") {
-			input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true)
-			if(settings?.restStreaming) {
-				input(name: "restStreamIp", title:"Rest Service IP", type: "text", required: true, submitOnChange: true)
-				input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true)
-				def rData = atomicState?.restServiceData
-				if(rData) {
-					def str = ""
 
-					str += "Uptime: ${rData?.startupDt}"
-					str += "\n\nHost: (${rData?.hostInfo?.hostname})"
-					str += "\nOS: ${rData?.hostInfo?.osType}"
-					str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
-					paragraph title: "Node Service: v${rData?.version}\n(Streaming: ${rData?.streaming})", str
-				}
-			}
-		}
-		//restStreamCheck()
-		startStopStream()
 		incPollPrefLoadCnt()
 		devPageFooter("pollPrefLoadCnt", execTime)
 	}
@@ -1664,12 +1675,13 @@ def getVoiceRprtPrefDesc() {
 }
 
 def getPollingConfDesc() {
+	def rStrEn = atomicState?.appData?.eventStreaming?.enabled
 	def pollValDesc = (!settings?.pollValue || settings?.pollValue == "180") ? "" : " (Custom)"
 	def pollStrValDesc = (!settings?.pollStrValue || settings?.pollStrValue == "180") ? "" : " (Custom)"
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += "Nest Stream: (${settings.restStreaming ? "On" : "Off"}) (${!atomicState?.restStreamingOn ? "Not Active" : "Active"})"
+	pStr += "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})"
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
 	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
 	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
@@ -2024,23 +2036,28 @@ def initManagerApp() {
 }
 
 def startStopStream() {
-	if(!settings?.restStreaming && !atomicState?.restStreamingOn) {
+	def strEn = atomicState?.appData?.eventStreaming?.enabled == true ? true : false
+	if(strEn && !settings?.restStreaming && !atomicState?.restStreamingOn) {
 		return
 	}
-	if(settings?.restStreaming && atomicState?.restStreamingOn) {
+	if(strEn && settings?.restStreaming && atomicState?.restStreamingOn) {
 		runIn(5, "restStreamCheck", [overwrite: true])
 		return
 	}
-	if(settings?.restStreaming && !atomicState?.restStreamingOn) {
+	if(strEn && settings?.restStreaming && !atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Start) Event to local node service", "debug", true)
 		restStreamHandler()
 		runIn(5, "restStreamCheck", [overwrite: true])
 	}
-	else if (!settings?.restStreaming && atomicState?.restStreamingOn) {
+	else if ((!settings?.restStreaming && !strEn) && atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
 		runIn(5, "restStreamCheck", [overwrite: true])
 	}
+}
+
+def getApiURL() {
+	return apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}") ?: null
 }
 
 def restStreamHandler(close = false) {
@@ -2052,7 +2069,6 @@ def restStreamHandler(close = false) {
 	}
 	LogAction("restStreamHandler(close: ${close})", "debug", true)
 	def port = settings?.restStreamPort ?: 3000
-	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	def connStatus = close ? false : true
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
@@ -2061,7 +2077,7 @@ def restStreamHandler(close = false) {
 				"HOST": "${ip}:${port}",
 				"nesttoken": "${atomicState?.authToken}",
 				"connStatus": "${connStatus}",
-				"callback": "${apiUrl}",
+				"callback": "${getApiURL()}",
 				"sttoken": "${atomicState?.accessToken}"
 			],
 			path: "/stream",
@@ -2085,13 +2101,12 @@ def restStreamCheck() {
 	}
 	def port = settings?.restStreamPort ?: 3000
 	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", true)
-	def apiUrl = apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}")
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
 			headers: [
 				"HOST": "${ip}:${port}",
-				"callback": "${apiUrl}",
+				"callback": "${getApiURL()}",
 				"sttoken": "${atomicState?.accessToken}"
 			],
 			path: "/status",
