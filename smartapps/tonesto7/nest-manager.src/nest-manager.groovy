@@ -2037,7 +2037,7 @@ def initManagerApp() {
 
 def startStopStream() {
 	def strEn = atomicState?.appData?.eventStreaming?.enabled == true ? true : false
-	if(strEn && !settings?.restStreaming && !atomicState?.restStreamingOn) {
+	if((!strEn || !settings?.restStreaming) && !atomicState?.restStreamingOn) {
 		return
 	}
 	if(strEn && settings?.restStreaming && atomicState?.restStreamingOn) {
@@ -2049,7 +2049,7 @@ def startStopStream() {
 		restStreamHandler()
 		runIn(5, "restStreamCheck", [overwrite: true])
 	}
-	else if ((!settings?.restStreaming && !strEn) && atomicState?.restStreamingOn) {
+	else if ((!settings?.restStreaming || !strEn) && atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
 		runIn(5, "restStreamCheck", [overwrite: true])
