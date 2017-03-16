@@ -1681,7 +1681,7 @@ def getPollingConfDesc() {
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})"
+	pStr += "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})"
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
 	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
 	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
