@@ -2031,7 +2031,6 @@ def initManagerApp() {
 	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
 	}
-	//restStreamCheck()
 	startStopStream()
 }
 
@@ -2333,7 +2332,6 @@ private gcd(input = []) {
 
 def onAppTouch(event) {
 	poll(true)
-	//restStreamCheck()
 	/*
 		NOTE:
 		This runin is used strictly for testing as it calls the cleanRestAutomationTest() method
@@ -2729,8 +2727,7 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
-		def okMeta = ok2PollMetaData()
-		if(!force && settings?.restStreaming && atomicState?.restStreamingOn && !okMeta) {
+		if(!force && settings?.restStreaming && atomicState?.restStreamingOn) {
 			if(getLastHeardFromRestSec() < (60*20)) {
 				LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
 				if(!atomicState?.streamPolling) {	// set to stream polling
@@ -2747,7 +2744,6 @@ def poll(force = false, type = null) {
 				atomicState?.restStreamingOn = false
 			}
 		}
-		//restStreamCheck()
 		startStopStream()
 		if(atomicState?.streamPolling && (!settings?.restStreaming || !atomicState?.restStreamingOn)) {	// return to normal polling
 			unschedule("poll")
@@ -2769,6 +2765,7 @@ def poll(force = false, type = null) {
 
 		def okStruct = ok2PollStruct()
 		def okDevice = ok2PollDevice()
+		def okMeta = ok2PollMetaData()
 		def meta = false
 		def dev = false
 		def str = false
@@ -3158,6 +3155,20 @@ def receiveEventData() {
 				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
 			} else {
 				LogAction("got structData", "debug", false)
+			}
+		}
+		if(evtData?.data?.metadata) {
+			atomicState?.lastMetaDataUpd = getDtNow()
+			atomicState.needMetaPoll = false
+			//LogTrace("API Metadata Resp.Data: ${evtData?.data?.metadata}")
+			if(atomicState?.metaData != evtData?.data?.metadata) {
+				//whatChanged(atomicState?.metaData, evtData?.data?.metadata, "/metadata")
+				atomicState?.metaData = evtData?.data?.metadata
+				needChildUpd = true
+				gotSomething = true
+				LogAction("API META Data HAS Changed (Stream)", "debug", true)
+			} else {
+				LogAction("got metaData", "debug", false)
 			}
 		}
 	}
