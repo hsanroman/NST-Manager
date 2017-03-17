@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.8.0" }
-def appVerDate() { "3-15-2017" }
+def appVerDate() { "3-16-2017" }
 
 preferences {
 	//startPage
@@ -2066,7 +2066,7 @@ def restStreamHandler(close = false) {
 		atomicState.restStreamingOn = false
 		return
 	}
-	LogAction("restStreamHandler(close: ${close})", "debug", true)
+	LogAction("restStreamHandler(close: ${close})", "debug", false)
 	def port = settings?.restStreamPort ?: 3000
 	def connStatus = close ? false : true
 	try {
@@ -2099,7 +2099,7 @@ def restStreamCheck() {
 		return
 	}
 	def port = settings?.restStreamPort ?: 3000
-	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", true)
+	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", false)
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
