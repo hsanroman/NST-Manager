@@ -1199,7 +1199,7 @@ def getAutoActionData() {
 }
 
 def automationGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName}] | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(isRemSenConfigured() && settings?.vthermostat) {
 		atomicState.needChildUpdate = true
 	}
@@ -3323,7 +3323,7 @@ def conWatCheck(cTimeOut = false) {
 }
 
 def conWatContactEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
@@ -3542,7 +3542,7 @@ def leakWatCheck() {
 }
 
 def leakWatSensorEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
@@ -3682,7 +3682,7 @@ def isNestModesConfigured() {
 }
 
 def nModeGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From ${evt?.displayName} - Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	storeLastEventData(evt)
 	if(nModeDelay) {
