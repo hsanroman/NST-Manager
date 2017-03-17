@@ -2832,10 +2832,16 @@ def finishPoll(str=null, dev=null) {
 	broadcastCheck()
 }
 
-def schedFinishPoll(force=false) {
+def finishPollHandler(data) {
+	def dev = data?.dev
+	finishPoll(false, dev)
+}
+
+def schedFinishPoll(devChg) {
 	def curNow = now()
 	if(!atomicState?.lastFinishedPoll || curNow >= atomicState?.lastFinishedPoll + 3400) {
-		runIn((!force ? 25 : 4), "finishPoll", [overwrite: true])
+		def devFlg = [dev:devChg]
+		runIn(4, "finishPollHandler", [overwrite: true, data: devFlg])
 		atomicState?.lastFinishedPoll = curNow
 	}
 }
@@ -3121,6 +3127,7 @@ def processResponse(resp, data) {
 
 def receiveEventData() {
 	def evtData = request.JSON
+	def devChgd = false
 	def needChildUpd = false
 	def gotSomething = false
 	if(evtData.data && settings?.restStreaming) {
@@ -3139,7 +3146,7 @@ def receiveEventData() {
 			if(atomicState?.deviceData != evtData?.data?.devices) {
 				//whatChanged(atomicState?.deviceData, evtData?.data?.devices, "/devices")
 				atomicState?.deviceData = evtData?.data?.devices
-				needChildUpd = true
+				devChgd = true
 				gotSomething = true
 				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
 			} else {
@@ -3183,7 +3190,9 @@ def receiveEventData() {
 	}
 	if(needChildUpd) {
 		atomicState?.needChildUpd = true
-		schedFinishPoll(true)
+	}
+	if(needChildUpd || devChgd) {
+		schedFinishPoll(devChgd)
 	}
 	render contentType: 'text/html', data: "status received...ok", status: 200
 }
