@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "4.8.0" }
-def appVerDate() { "3-16-2017" }
+def appVerDate() { "3-17-2017" }
 
 preferences {
 	//startPage
@@ -2905,17 +2905,16 @@ def getApiData(type = null) {
 				//def rCode = resp?.status ?: null
 				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
-					atomicState?.lastStrucDataUpd = getDtNow()
-					atomicState.needStrPoll = false
-					LogTrace("API Structure Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
-					if(!resp?.data?.equals(atomicState?.structData) || !atomicState?.structData) {
+					def t0 = resp?.data
+					LogTrace("API Structure Resp.Data: ${t0}")
+					def chg = didChange(atomicState?.structData, t0, "str")
+					if(chg) {
 						LogAction("API Structure Data HAS Changed", "debug", true)
-						atomicState?.structData = resp?.data
-						atomicState.needChildUpd = true
 						result = true
+						atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 						locationPresNotify(getLocationPresence())
 					}
 				} else {
@@ -2929,15 +2928,14 @@ def getApiData(type = null) {
 				//def rCode = resp?.status ?: null
 				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
-					atomicState?.lastDevDataUpd = getDtNow()
-					atomicState?.needDevPoll = false
-					LogTrace("API Device Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
-					if(!resp?.data.equals(atomicState?.deviceData) || !atomicState?.deviceData) {
+					def t0 = resp?.data
+					LogTrace("API Device Resp.Data: ${t0}")
+					def chg = didChange(atomicState?.deviceData, t0, "dev")
+					if(chg) {
 						LogAction("API Device Data HAS Changed", "debug", true)
-						atomicState?.deviceData = resp?.data
 						result = true
 					}
 				} else {
@@ -2951,17 +2949,14 @@ def getApiData(type = null) {
 				//def rCode = resp?.status ?: null
 				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
-					atomicState?.lastMetaDataUpd = getDtNow()
-					atomicState?.needMetaPoll = false
 					LogTrace("API Metadata Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
 					def nresp = resp?.data?.metadata
-					if(!nresp?.data.equals(atomicState?.metaData) || !atomicState?.metaData) {
+					def chg = didChange(atomicState?.metaData, nresp, "meta")
+					if(chg) {
 						LogAction("API Meta Data HAS Changed", "debug", true)
-						atomicState?.metaData = nresp
-						atomicState.needChildUpd = true
 						result = true
 					}
 				} else {
@@ -3050,13 +3045,11 @@ def processResponse(resp, data) {
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
 			if(type == "str") {
-				atomicState?.lastStrucDataUpd = getDtNow()
-				atomicState.needStrPoll = false
-				LogTrace("API Structure Resp.Data: ${resp?.json}")
-				if(!resp?.json?.equals(atomicState?.structData) || !atomicState?.structData) {
+				def t0 = resp?.json
+				LogTrace("API Structure Resp.Data: ${t0}")
+				def chg = didChange(atomicState?.structData, t0, "str")
+				if(chg) {
 					LogAction("API Structure Data HAS Changed", "debug", true)
-					atomicState?.structData = resp?.json
-					atomicState.needChildUpd = true
 					str = true
 					atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 					locationPresNotify(getLocationPresence())
@@ -3064,12 +3057,11 @@ def processResponse(resp, data) {
 				atomicState.qstrRequested = false
 			}
 			if(type == "dev") {
-				atomicState?.lastDevDataUpd = getDtNow()
-				atomicState?.needDevPoll = false
-				LogTrace("API Device Resp.Data: ${resp?.json}")
-				if(!resp?.json?.equals(atomicState?.deviceData) || !atomicState?.deviceData) {
+				def t0 = resp?.json
+				LogTrace("API Device Resp.Data: ${t0}")
+				def chg = didChange(atomicState?.deviceData, t0, "dev")
+				if(chg) {
 					LogAction("API Device Data HAS Changed", "debug", true)
-					atomicState?.deviceData = resp?.json
 					dev = true
 
 			//		atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
@@ -3080,14 +3072,11 @@ def processResponse(resp, data) {
 				atomicState.qdevRequested = false
 			}
 			if(type == "meta") {
-				atomicState?.lastMetaDataUpd = getDtNow()
-				atomicState?.needMetaPoll = false
-				LogTrace("API Meta Resp.Data: ${resp?.json}")
 				def nresp = resp?.json?.metadata
-				if(!nresp?.equals(atomicState?.metaData) || !atomicState?.metaData) {
+				LogTrace("API Meta Resp.Data: ${resp?.json}")
+				def chg = didChange(atomicState?.metaData, nresp, "meta")
+				if(chg) {
 					LogAction("API Meta Data HAS Changed", "debug", true)
-					atomicState?.metaData = nresp
-					atomicState.needChildUpd = true
 					meta = true
 				}
 				atomicState.qmetaRequested = false
@@ -3128,7 +3117,6 @@ def processResponse(resp, data) {
 def receiveEventData() {
 	def evtData = request.JSON
 	def devChgd = false
-	def needChildUpd = false
 	def gotSomething = false
 	if(evtData.data && settings?.restStreaming) {
 
@@ -3136,16 +3124,12 @@ def receiveEventData() {
 		//whatChanged(t0, evtData, "/")
 		//atomicState.aaOldStreamData = evtData
 		//state.remove("aaOldStreamData")
-// settings?.structures   atomicState?.structures
 
 		atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
-			atomicState?.lastDevDataUpd = getDtNow()
-			atomicState?.needDevPoll = false
 			//LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
-			if(atomicState?.deviceData != evtData?.data?.devices) {
-				//whatChanged(atomicState?.deviceData, evtData?.data?.devices, "/devices")
-				atomicState?.deviceData = evtData?.data?.devices
+			def chg = didChange(atomicState?.deviceData, evtData?.data?.devices, "dev")
+			if(chg) {
 				devChgd = true
 				gotSomething = true
 				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
@@ -3154,13 +3138,9 @@ def receiveEventData() {
 			}
 		}
 		if(evtData?.data?.structures) {
-			atomicState?.lastStrucDataUpd = getDtNow()
-			atomicState.needStrPoll = false
 			//LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
-			if(atomicState?.structData != evtData?.data?.structures) {
-				//whatChanged(atomicState?.structData, evtData?.data?.structures, "/structures")
-				atomicState?.structData = evtData?.data?.structures
-				needChildUpd = true
+			def chg = didChange(atomicState?.structData, evtData?.data?.structures, "str")
+			if(chg) {
 				gotSomething = true
 				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
 			} else {
@@ -3168,13 +3148,9 @@ def receiveEventData() {
 			}
 		}
 		if(evtData?.data?.metadata) {
-			atomicState?.lastMetaDataUpd = getDtNow()
-			atomicState.needMetaPoll = false
 			//LogTrace("API Metadata Resp.Data: ${evtData?.data?.metadata}")
-			if(atomicState?.metaData != evtData?.data?.metadata) {
-				//whatChanged(atomicState?.metaData, evtData?.data?.metadata, "/metadata")
-				atomicState?.metaData = evtData?.data?.metadata
-				needChildUpd = true
+			def chg = didChange(atomicState?.metaData, evtData?.data?.metadata, "meta")
+			if(chg) {
 				gotSomething = true
 				LogAction("API META Data HAS Changed (Stream)", "debug", true)
 			} else {
@@ -3188,13 +3164,97 @@ def receiveEventData() {
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
 	}
-	if(needChildUpd) {
-		atomicState?.needChildUpd = true
-	}
-	if(needChildUpd || devChgd) {
+	if(atomicState?.needChildUpd || devChgd) {
 		schedFinishPoll(devChgd)
 	}
 	render contentType: 'text/html', data: "status received...ok", status: 200
+}
+
+def didChange(old, newer, type) {
+	def result = false
+	if(newer != null) {
+		if(type == "str") {
+			atomicState?.lastStrucDataUpd = getDtNow()
+			atomicState.needStrPoll = false
+		}
+		if(type == "dev") {
+			atomicState?.lastDevDataUpd = getDtNow()
+			atomicState?.needDevPoll = false
+		}
+		if(type == "meta") {
+			atomicState?.lastMetaDataUpd = getDtNow()
+			atomicState.needMetaPoll = false
+		}
+		if(old != newer) {
+			if(type == "str") {
+				def t0 = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures] : null
+				def t1 = newer && atomicState?.structures ? newer[atomicState?.structures] : null
+				if(t1 && t0 != t1) {
+					result = true
+					atomicState?.needChildUpd = true
+					LogAction("structure old newer not the same ${atomicState?.structures}", "debug", false)
+					//whatChanged(t0, t1, "/structures")
+				}
+				atomicState?.structData = newer
+			}
+			else if(type == "dev") {
+				def areSame = true
+				def tstats = atomicState?.thermostats.collect { dni ->
+					def t1 = dni.key
+					if(areSame && t1 && old && old?.thermostats && newer?.thermostats &&
+						old?.thermostats[t1] && newer?.thermostats[t1] && old?.thermostats[t1] == newer?.thermostats[t1]) {
+						;
+					} else {
+						areSame = false
+						result = true
+						LogAction("thermostat old newer not the same ${t1}", "debug", false)
+						if(t1 && old && old?.thermostats && newer?.thermostats && old?.thermostats[t1] && newer?.thermostats[t1]) {
+							//whatChanged(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}")
+						}
+					}
+				}
+
+				def nProtects = atomicState?.protects.collect { dni ->
+					def t1 = dni.key
+					if(areSame && t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms &&
+						old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1] && old?.smoke_co_alarms[t1] == newer?.smoke_co_alarms[t1]) {
+						;
+					} else {
+						areSame = false
+						result = true
+						LogAction("protect old newer not the same ${t1}", "debug", false)
+						if(t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms && old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1]) {
+							//whatChanged(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}")
+						}
+					}
+				}
+
+				def nCameras = atomicState?.cameras.collect { dni ->
+					def t1 = dni.key
+					if(areSame && t1 && old && old?.cameras && newer?.cameras &&
+						old?.cameras[t1] && newer?.cameras[t1] && old?.cameras[t1] == newer?.cameras[t1]) {
+						;
+					} else {
+						areSame = false
+						result = true
+						LogAction("camera old newer not the same ${t1}", "debug", false)
+						if(t1 && old && old?.cameras && newer?.cameras && old?.cameras[t1] && newer?.cameras[t1]) {
+							//whatChanged(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}")
+						}
+					}
+				}
+				atomicState?.deviceData = newer
+
+			}
+			else if(type == "meta") {
+				result = true
+				atomicState?.needChildUpd = true
+				atomicState?.metaData = newer
+				//whatChanged(old, newer, "/metadata")
+			}
+		}
+	}
+	return result
 }
 
 def whatChanged(mapA, mapB, headstr) {
