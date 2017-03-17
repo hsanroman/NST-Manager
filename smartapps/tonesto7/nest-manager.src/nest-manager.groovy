@@ -3160,7 +3160,6 @@ def receiveEventData() {
 				LogAction("got structData", "debug", false)
 			}
 		}
-		render contentType: 'text/html', data: "status received...ok", status: 200
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromRestDt = getDtNow()
@@ -3172,6 +3171,7 @@ def receiveEventData() {
 		atomicState?.needChildUpd = true
 		schedFinishPoll(true)
 	}
+	render contentType: 'text/html', data: "status received...ok", status: 200
 }
 
 def whatChanged(mapA, mapB, headstr) {
