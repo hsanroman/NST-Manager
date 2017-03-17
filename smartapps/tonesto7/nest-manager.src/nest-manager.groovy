@@ -2121,14 +2121,17 @@ def restStreamCheck() {
 
 def receiveStreamStatus() {
 	def resp = request.JSON
-	LogAction("restStreamStatus: resp: ${resp}", "debug", true)
 	if(resp) {
 		atomicState?.lastHeardFromRestDt = getDtNow()
-		atomicState?.restStreamingOn = resp?.streaming == true ? true : false
-		if(!settings?.restStreaming && atomicState?.restStreamingOn) {
+		def t0 = resp?.streaming == true ? true : false
+		if(atomicState?.restStreamingOn != t0) {		// report when changes
+			LogAction("restStreamStatus: resp: ${resp}", "debug", true)
+		}
+		atomicState?.restStreamingOn = t0
+		if(!settings?.restStreaming && t0) {		// suppose to be off
 			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 			restStreamHandler(true)
-		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {
+		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {		// suppose to be on
 			runIn(5, "startStopStream", [overwrite: true])
 		}
 		atomicState?.restServiceData = resp
