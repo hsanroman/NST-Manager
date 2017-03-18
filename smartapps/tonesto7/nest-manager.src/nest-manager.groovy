@@ -2066,6 +2066,11 @@ def restStreamHandler(close = false) {
 		atomicState.restStreamingOn = false
 		return
 	}
+	if(!close && !atomicState?.authToken) {
+		LogAction("No authToken", "warn", false)
+		atomicState.restStreamingOn = false
+		return
+	}
 	LogAction("restStreamHandler(close: ${close})", "debug", false)
 	def port = settings?.restStreamPort ?: 3000
 	def connStatus = close ? false : true
@@ -2095,6 +2100,11 @@ def restStreamCheck() {
 	def ip = settings?.restStreamIp ?: null
 	if(!ip) {
 		LogAction("No IP", "warn", false)
+		atomicState.restStreamingOn = false
+		return
+	}
+	if(!atomicState?.authToken) {
+		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
@@ -5942,8 +5952,8 @@ def revokeNestToken() {
 		]
 		try {
 			httpDelete(params) { resp ->
+				atomicState.authToken = null
 				if(resp?.status == 204) {
-					atomicState.authToken = null
 					LogAction("Nest Token revoked", "warn", true)
 					return true
 				}
