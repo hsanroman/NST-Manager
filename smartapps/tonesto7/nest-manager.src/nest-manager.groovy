@@ -1254,7 +1254,7 @@ def devNamePage() {
 		if(!found) {
 			paragraph "No Devices Selected"
 		}
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 		incDevCustNameLoadCnt()
 		devPageFooter("devCustNameLoadCnt", execTime)
 	}
@@ -2120,9 +2120,8 @@ def restStreamCheck() {
 }
 
 def receiveStreamStatus() {
-	def resp = request.JSON
+	def resp = request?.JSON
 	if(resp) {
-		atomicState?.lastHeardFromRestDt = getDtNow()
 		def t0 = resp?.streaming == true ? true : false
 		if(atomicState?.restStreamingOn != t0) {		// report when changes
 			LogAction("restStreamStatus: resp: ${resp}", "debug", true)
@@ -2133,6 +2132,9 @@ def receiveStreamStatus() {
 			restStreamHandler(true)
 		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {		// suppose to be on
 			runIn(5, "startStopStream", [overwrite: true])
+		}
+		if(settings?.restStreaming && t0) {		// All good
+			atomicState?.lastHeardFromRestDt = getDtNow()
 		}
 		atomicState?.restServiceData = resp
 
@@ -2738,7 +2740,6 @@ def poll(force = false, type = null) {
 					atomicState.pollingOn = false
 					setPollingState()
 				}
-				if(atomicState?.needChildUpd) { finishPoll() }
 				restStreamCheck()
 				return
 			} else {
@@ -2826,7 +2827,7 @@ def poll(force = false, type = null) {
 def finishPoll(str=null, dev=null) {
 	LogAction("finishPoll($str, $dev) received", "info", false)
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
-	if(dev || str || atomicState?.needChildUpd ) { updateChildData() }
+	if(dev || str || atomicState?.forceChildUpd || atomicState?.needChildUpd) { updateChildData() }
 	updateWebStuff()
 	notificationCheck() //Checks if a notification needs to be sent for a specific event
 	broadcastCheck()
@@ -2968,7 +2969,7 @@ def getApiData(type = null) {
 	} catch (ex) {
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
 			if(ex?.response) {
 				apiRespHandler(ex?.response?.status, ex?.response?.data, "getApiData(ex catch)")
@@ -3091,18 +3092,20 @@ def processResponse(resp, data) {
 				apiRespHandler(rCode, errJson, "processResponse($type)")
 			}
 			apiIssueEvent(true)
-			atomicState.needChildUpd = true
+			atomicState.forceChildUpd = true
 			atomicState.qstrRequested = false
 			atomicState.qdevRequested = false
 			atomicState.qmetaRequested = false
 		}
-		if((atomicState?.qdevRequested == false && atomicState?.qstrRequested == false) && (dev || atomicState?.needChildUpd)) { finishPoll(true, true) }
+		if((atomicState?.qdevRequested == false && atomicState?.qstrRequested == false) && (dev || atomicState?.forceChildUpd || atomicState?.needChildUpd)) {
+			finishPoll(true, true)
+		}
 
 	} catch (ex) {
 		//log.error "processResponse (type: $type) Exception:", ex
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 		atomicState.qstrRequested = false
 		atomicState.qdevRequested = false
 		atomicState.qmetaRequested = false
@@ -3115,10 +3118,10 @@ def processResponse(resp, data) {
 }
 
 def receiveEventData() {
-	def evtData = request.JSON
+	def evtData = request?.JSON
 	def devChgd = false
 	def gotSomething = false
-	if(evtData.data && settings?.restStreaming) {
+	if(evtData?.data && settings?.restStreaming) {
 
 		//def t0 = atomicState?.aaOldStreamData
 		//whatChanged(t0, evtData, "/")
@@ -3164,7 +3167,7 @@ def receiveEventData() {
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
 	}
-	if(atomicState?.needChildUpd || devChgd) {
+	if(atomicState?.forceChildUpd || atomicState?.needChildUpd || devChgd) {
 		schedFinishPoll(devChgd)
 	}
 	render contentType: 'text/html', data: "status received...ok", status: 200
@@ -3191,22 +3194,21 @@ def didChange(old, newer, type) {
 				def t1 = newer && atomicState?.structures ? newer[atomicState?.structures] : null
 				if(t1 && t0 != t1) {
 					result = true
-					atomicState?.needChildUpd = true
+					atomicState?.forceChildUpd = true
 					LogAction("structure old newer not the same ${atomicState?.structures}", "debug", false)
 					//whatChanged(t0, t1, "/structures")
 				}
 				atomicState?.structData = newer
 			}
 			else if(type == "dev") {
-				def areSame = true
 				def tstats = atomicState?.thermostats.collect { dni ->
 					def t1 = dni.key
-					if(areSame && t1 && old && old?.thermostats && newer?.thermostats &&
+					if(t1 && old && old?.thermostats && newer?.thermostats &&
 						old?.thermostats[t1] && newer?.thermostats[t1] && old?.thermostats[t1] == newer?.thermostats[t1]) {
 						;
 					} else {
-						areSame = false
 						result = true
+						atomicState.needChildUpd = true
 						LogAction("thermostat old newer not the same ${t1}", "debug", false)
 						if(t1 && old && old?.thermostats && newer?.thermostats && old?.thermostats[t1] && newer?.thermostats[t1]) {
 							//whatChanged(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}")
@@ -3216,12 +3218,12 @@ def didChange(old, newer, type) {
 
 				def nProtects = atomicState?.protects.collect { dni ->
 					def t1 = dni.key
-					if(areSame && t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms &&
+					if(t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms &&
 						old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1] && old?.smoke_co_alarms[t1] == newer?.smoke_co_alarms[t1]) {
 						;
 					} else {
-						areSame = false
 						result = true
+						atomicState.needChildUpd = true
 						LogAction("protect old newer not the same ${t1}", "debug", false)
 						if(t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms && old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1]) {
 							//whatChanged(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}")
@@ -3231,12 +3233,12 @@ def didChange(old, newer, type) {
 
 				def nCameras = atomicState?.cameras.collect { dni ->
 					def t1 = dni.key
-					if(areSame && t1 && old && old?.cameras && newer?.cameras &&
+					if(t1 && old && old?.cameras && newer?.cameras &&
 						old?.cameras[t1] && newer?.cameras[t1] && old?.cameras[t1] == newer?.cameras[t1]) {
 						;
 					} else {
-						areSame = false
 						result = true
+						atomicState.needChildUpd = true
 						LogAction("camera old newer not the same ${t1}", "debug", false)
 						if(t1 && old && old?.cameras && newer?.cameras && old?.cameras[t1] && newer?.cameras[t1]) {
 							//whatChanged(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}")
@@ -3248,8 +3250,8 @@ def didChange(old, newer, type) {
 			}
 			else if(type == "meta") {
 				result = true
-				atomicState?.needChildUpd = true
-				atomicState?.metaData = newer
+				atomicState.needChildUpd = true
+				atomicState.metaData = newer
 				//whatChanged(old, newer, "/metadata")
 			}
 		}
@@ -3287,14 +3289,14 @@ def whatChanged(mapA, mapB, headstr) {
 	} else if (left instanceof Map) {
 		String[] leftKeys = left.keySet()
 		String[] rightKeys = right.keySet()
-		if (leftKeys != rightKeys) {
+		if (leftKeys.sort() != rightKeys.sort()) {
 			LogAction("Map ${headstr} comparison failure: Orig keys do not match new keys.", "trace", true)
 			LogAction("Orig " + leftKeys.toString() + " NEW " + rightKeys.toString(), "trace", true)
 			return false
 		}
 		def ret = true
 		leftKeys.each {
-			if(!ret) { return }
+			//if(!ret) { return }
 
 			if ( (left[it] instanceof List) || (left[it] instanceof ArrayList) || (left[it] instanceof Map)) {
 				// May detect matching items here if sort of objects is problem
@@ -3312,10 +3314,10 @@ def whatChanged(mapA, mapB, headstr) {
 }
 
 def updateChildData(force = false) {
-	LogAction("updateChildData()", "info", false)
+	LogAction("updateChildData($force) ${atomicState?.forceChildUpd} ${atomicState?.needChildUpd}", "info", false)
 	if(atomicState?.pollBlocked) { return }
-	def nforce = atomicState?.needChildUpd
-	atomicState.needChildUpd = true
+	def nforce = atomicState?.forceChildUpd
+	atomicState.forceChildUpd = true
 	try {
 		atomicState?.lastChildUpdDt = getDtNow()
 		def useMt = !useMilitaryTime ? false : true
@@ -3645,7 +3647,6 @@ def updateChildData(force = false) {
 				return true
 			}
 		}
-		atomicState.needChildUpd = false
 	}
 	catch (ex) {
 		log.error "updateChildData Exception:", ex
@@ -3654,6 +3655,7 @@ def updateChildData(force = false) {
 		return
 	}
 	//unschedule("postCmd")
+	atomicState.forceChildUpd = false
 	atomicState.needChildUpd = false
 }
 
@@ -4226,7 +4228,7 @@ void workQueue() {
 				if(cmd[1] == "poll") {
 					atomicState.needStrPoll = true
 					atomicState.needDevPoll = true
-					atomicState.needChildUpd = true
+					atomicState.forceChildUpd = true
 					cmdres = true
 				} else {
 					if(allowAsync) {
@@ -4247,7 +4249,7 @@ void workQueue() {
 		cmdProcState(false)
 		atomicState.needDevPoll = true
 		atomicState.needStrPoll = true
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 		atomicState?.pollBlocked = false
 		runIn(60, "workQueue", [overwrite: true])
 		runIn((60 + 4), "postCmd", [overwrite: true])
@@ -4261,7 +4263,7 @@ def finishWorkQ(cmd, result) {
 
 	cmdProcState(false)
 	if( !result ) {
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 		atomicState.pollBlocked = false
 		runIn((cmdDelay * 3), "postCmd", [overwrite: true])
 	}
@@ -4269,7 +4271,7 @@ def finishWorkQ(cmd, result) {
 	atomicState.needDevPoll = true
 	if(cmd && cmd[1] == apiVar().rootTypes.struct.toString()) {
 		atomicState.needStrPoll = true
-		atomicState.needChildUpd = true
+		atomicState.forceChildUpd = true
 	}
 
 	def qnum = getQueueToWork()
@@ -4766,7 +4768,7 @@ def getWeatherConditions(force = false) {
 			}
 			if(curWeather || curAstronomy || curForecast || curAlerts) {
 				atomicState.needChildUpd = true
-				if(!force) { runIn(21, "postCmd", [overwrite: true]) }
+				if(!force) { runIn(21, "finishPoll", [overwrite: true]) }
 				return true
 			}
 		}
