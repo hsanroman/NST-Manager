@@ -2732,6 +2732,8 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
+		if(force == true) { forcedPoll(type) }
+
 		if(!force && settings?.restStreaming && atomicState?.restStreamingOn) {
 			if(getLastHeardFromRestSec() < (60*20)) {
 				LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
@@ -2748,12 +2750,12 @@ def poll(force = false, type = null) {
 				atomicState?.restStreamingOn = false
 			}
 		}
-		startStopStream()
 		if(atomicState?.streamPolling && (!settings?.restStreaming || !atomicState?.restStreamingOn)) {	// return to normal polling
 			unschedule("poll")
 			atomicState.pollingOn = false
 			setPollingState()
 		}
+		startStopStream()
 
 		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
@@ -2773,8 +2775,7 @@ def poll(force = false, type = null) {
 		def meta = false
 		def dev = false
 		def str = false
-		if(force == true) { forcedPoll(type) }
-		if( !force && !okDevice && !okStruct ) {
+		if(!force && !okDevice && !okStruct ) {
 			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
 		}
 		else if(!force) {
@@ -3291,7 +3292,7 @@ def whatChanged(mapA, mapB, headstr) {
 		String[] rightKeys = right.keySet()
 		if (leftKeys.sort() != rightKeys.sort()) {
 			LogAction("Map ${headstr} comparison failure: Orig keys do not match new keys.", "trace", true)
-			LogAction("Orig " + leftKeys.toString() + " NEW " + rightKeys.toString(), "trace", true)
+			LogAction("ORIG " + leftKeys.toString() + " NEW " + rightKeys.toString(), "trace", true)
 			return false
 		}
 		def ret = true
@@ -3303,9 +3304,9 @@ def whatChanged(mapA, mapB, headstr) {
 				whatChanged( left[it], right[it], "${headstr}/${it}" )
 			} else {
 				if (left[it].toString() != right[it].toString()) {
-				LogAction("String comparison ${headstr} failure: Orig " + it + " value does not match new value.", "trace", true)
-				LogAction("\nORIG: " + left[it] + "\nNEW: " + right[it], "trace", true)
-				ret = false
+					LogAction("String comparison ${headstr} failure: Orig " + it + " value does not match new value.", "trace", true)
+					LogAction("\nORIG " + left[it] + "\nNEW " + right[it], "trace", true)
+					ret = false
 				}
 			}
 		}
@@ -6079,7 +6080,7 @@ def tokenStrScrubber(str) {
 	def regex1 = /(Bearer c.{1}\w+)/
 	def regex2 = /(auth=c.{1}\w+)/
 	def newStr = str.replaceAll(regex1, "Bearer 'token code redacted'")
-	newStr = str.replaceAll(regex2, "auth='token code redacted'")
+	newStr = newStr.replaceAll(regex2, "auth='token code redacted'")
 	//log.debug "newStr: $newStr"
 	return newStr
 }
