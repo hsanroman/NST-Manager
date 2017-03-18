@@ -193,9 +193,9 @@ def mainPage() {
 	return dynamicPage(name: "mainPage", title: "", nextPage: (!setupComplete ? "reviewSetupPage" : null), install: setupComplete, uninstall: false) {
 		section("") {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
-			if(atomicState?.restStreamingOn) {
+			if(settings?.restStreaming) {
 				def rStrEn = atomicState?.appData?.eventStreaming?.enabled
-				paragraph "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
+				href "pollPrefPage", title: "", description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
 			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
@@ -632,7 +632,7 @@ def pollPrefPage() {
 					def rData = atomicState?.restServiceData
 					if(rData) {
 						def str = ""
-						str += "Uptime: ${rData?.startupDt}"
+						str += "Uptime:\n${rData?.startupDt}"
 						str += "\n\nHost: (${rData?.hostInfo?.hostname})"
 						str += "\nOS: ${rData?.hostInfo?.osType}"
 						str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
@@ -3278,8 +3278,8 @@ def whatChanged(mapA, mapB, headstr) {
 	if (left instanceof List || left instanceof ArrayList) {
 		if (left.size() != right.size()) {
 			LogAction("Array ${headstr} comparison failure: Object size mismatch.", "trace", true)
-			LogAction("Orig has " + left.size() + " items. NEW has " + right.size() + " items.", "trace", true)
-			LogAction("Orig Object: ${left} New Object: ${right}", "trace", true)
+			LogAction("ORIG has " + left.size() + " items. NEW has " + right.size() + " items.", "trace", true)
+			LogAction("ORIG Object: ${left} NEW Object: ${right}", "trace", true)
 			return false
 		 }
 		 for(int i=0; i < left.size(); i++) {
@@ -3304,7 +3304,7 @@ def whatChanged(mapA, mapB, headstr) {
 			} else {
 				if (left[it].toString() != right[it].toString()) {
 				LogAction("String comparison ${headstr} failure: Orig " + it + " value does not match new value.", "trace", true)
-				LogAction("Orig " + left[it] + " NEW " + right[it], "trace", true)
+				LogAction("\nORIG: " + left[it] + "\nNEW: " + right[it], "trace", true)
 				ret = false
 				}
 			}
@@ -6077,7 +6077,9 @@ def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
 
 def tokenStrScrubber(str) {
 	def regex1 = /(Bearer c.{1}\w+)/
+	def regex2 = /(auth=c.{1}\w+)/
 	def newStr = str.replaceAll(regex1, "Bearer 'token code redacted'")
+	newStr = str.replaceAll(regex2, "auth='token code redacted'")
 	//log.debug "newStr: $newStr"
 	return newStr
 }
