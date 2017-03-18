@@ -2134,7 +2134,7 @@ def receiveStreamStatus() {
 			runIn(5, "startStopStream", [overwrite: true])
 		}
 		if(settings?.restStreaming && t0) {		// All good
-			atomicState?.lastHeardFromRestDt = getDtNow()
+			atomicState?.lastHeardFromNestDt = getDtNow()
 		}
 		atomicState?.restServiceData = resp
 
@@ -2732,32 +2732,43 @@ def poll(force = false, type = null) {
 		//unschedule("postCmd")
 		if(checkIfSwupdated()) { return }
 
-		if(force == true) { forcedPoll(type) }
+		if(force == true) { forcedPoll(type); finishPoll(); return  }
 
-		if(!force && settings?.restStreaming && atomicState?.restStreamingOn) {
-			if(getLastHeardFromRestSec() < (60*20)) {
-				LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
-				if(!atomicState?.streamPolling) {	// set to stream polling
-					unschedule("poll")
-					atomicState.pollingOn = false
-					setPollingState()
-				}
-				restStreamCheck()
-				return
-			} else {
+		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
+		if(settings?.restStreaming && atomicState?.restStreamingOn) {
+			pollTime = 60*5
+		}
+		def pollTimeout = pollTime + 85
+
+		if(getLastHeardFromNestSec() > pollTimeout) {
+			if(settings?.restStreaming && atomicState?.restStreamingOn) {
 				LogAction("Have not heard from Rest Stream - Sending restStreamHandler(Stop) Event to local node service", "warn", true)
 				restStreamHandler(true)   // close the stream if we have not heard from it in a while
 				atomicState?.restStreamingOn = false
 			}
 		}
+
 		if(atomicState?.streamPolling && (!settings?.restStreaming || !atomicState?.restStreamingOn)) {	// return to normal polling
 			unschedule("poll")
 			atomicState.pollingOn = false
-			setPollingState()
+			setPollingState()		// will call poll
+			return
+		}
+
+		if(settings?.restStreaming && atomicState?.restStreamingOn) {
+			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+			if(!atomicState?.streamPolling) {	// set to stream polling
+				unschedule("poll")
+				atomicState.pollingOn = false
+				setPollingState()		// will call poll
+				return
+			}
+			restStreamCheck()
+			finishPoll()
+			return
 		}
 		startStopStream()
 
-		def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
 		//def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
 		//if(pollTime < 60 || pollStrTime < 60) {
 		if(pollTime < 60 && inReview() && !atomicState?.apiRateLimited) {
@@ -2775,10 +2786,10 @@ def poll(force = false, type = null) {
 		def meta = false
 		def dev = false
 		def str = false
-		if(!force && !okDevice && !okStruct ) {
+		if(!okDevice && !okStruct  && !(getLastHeardFromNestSec() > pollTimeout*2)) {
 			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
 		}
-		else if(!force) {
+		else {
 			def allowAsync = false
 			def metstr = "sync"
 			def sstr = ""
@@ -2930,6 +2941,7 @@ def getApiData(type = null) {
 				//def rCode = resp?.status ?: null
 				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
+					atomicState?.lastHeardFromNestDt = getDtNow()
 					apiIssueEvent(false)
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
@@ -3043,6 +3055,7 @@ def processResponse(resp, data) {
 		}
 
 		if(resp?.status == 200) {
+			atomicState?.lastHeardFromNestDt = getDtNow()
 			apiIssueEvent(false)
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
@@ -3163,7 +3176,7 @@ def receiveEventData() {
 		}
 	}
 	if(gotSomething) {
-		atomicState?.lastHeardFromRestDt = getDtNow()
+		atomicState?.lastHeardFromNestDt = getDtNow()
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -3755,7 +3768,7 @@ def getLastDevicePollSec() { return !atomicState?.lastDevDataUpd ? 840 : GetTime
 def getLastStructPollSec() { return !atomicState?.lastStrucDataUpd ? 1000 : GetTimeDiffSeconds(atomicState?.lastStrucDataUpd, null, "getLastStructPollSec").toInteger() }
 def getLastForcedPollSec() { return !atomicState?.lastForcePoll ? 1000 : GetTimeDiffSeconds(atomicState?.lastForcePoll, null, "getLastForcedPollSec").toInteger() }
 def getLastChildUpdSec() { return !atomicState?.lastChildUpdDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastChildUpdDt, null, "getLastChildUpdSec").toInteger() }
-def getLastHeardFromRestSec() { return !atomicState?.lastHeardFromRestDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastHeardFromRestDt, null, "getLastHeardFromRestSec").toInteger() }
+def getLastHeardFromNestSec() { return !atomicState?.lastHeardFromNestDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastHeardFromNestDt, null, "getLastHeardFromNestSec").toInteger() }
 
 /************************************************************************************************
 |										Nest API Commands										|
@@ -6282,7 +6295,7 @@ def stateCleanup() {
 		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
 		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
 		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug", "updNotifyWaitVal", "appApiIssuesWaitVal",
-		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway"
+		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt"
  	]
 	data.each { item ->
 		state.remove(item?.toString())
