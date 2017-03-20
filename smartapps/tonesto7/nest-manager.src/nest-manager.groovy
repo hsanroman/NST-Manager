@@ -2133,7 +2133,8 @@ def receiveStreamStatus() {
 	def resp = request?.JSON
 	if(resp) {
 		def t0 = resp?.streaming == true ? true : false
-		if(atomicState?.restStreamingOn != t0) {		// report when changes
+		def t1 = atomicState?.restStreamingOn
+		if(t1 != t0) {		// report when changes
 			LogAction("restStreamStatus: resp: ${resp}", "debug", true)
 		}
 		atomicState?.restStreamingOn = t0
@@ -2141,7 +2142,7 @@ def receiveStreamStatus() {
 			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 			restStreamHandler(true)
 		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {		// suppose to be on
-			runIn(5, "startStopStream", [overwrite: true])
+			runIn(21, "startStopStream", [overwrite: true])
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			atomicState?.lastHeardFromNestDt = getDtNow()
@@ -3152,7 +3153,7 @@ def receiveEventData() {
 		//atomicState.aaOldStreamData = evtData
 		//state.remove("aaOldStreamData")
 
-		atomicState?.restStreamingOn = true
+		//atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
 			//LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
 			def chg = didChange(atomicState?.deviceData, evtData?.data?.devices, "dev")
