@@ -12,15 +12,15 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "2.7.0" }
+def devVer() { return "5.0.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
 		capability "Actuator"
 		capability "Sensor"
 		capability "Switch"
-		//capability "Motion Sensor"
-		//capability "Sound Sensor"
+		capability "Motion Sensor"
+		capability "Sound Sensor"
 		capability "Refresh"
 		capability "Notification"
 		capability "Image Capture"
@@ -83,20 +83,12 @@ metadata {
 			tileAttribute("device.stream", key: "STREAM_URL") {
 				attributeState("activeURL", defaultState: true)
 			}
-			/*tileAttribute("device.betaLogo", key: "BETA_LOGO") {
-				attributeState("betaLogo", label: "", value: "", defaultState: true)
-			}*/
-			/*tileAttribute("device.profile", key: "STREAM_QUALITY") {
-				attributeState("1", label: "720p", action: "setProfileHD", defaultState: true)
-				attributeState("2", label: "h360p", action: "setProfileSDH", defaultState: true)
-				attributeState("3", label: "l360p", action: "setProfileSDL", defaultState: true)
-			}*/
 		}
 		standardTile("isStreamingStatus", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
-			state("on", label: "Streaming", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#79b821")
+			state("on", label: "Streaming", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_green_icon.png", backgroundColor: "#00a0dc")
 			state("off", label: "Off", action: "chgStreaming", nextState: "updating", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_gray_icon.png", backgroundColor: "#ffffff")
 			state("updating", label:"", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png")
-			state("offline", label: "Offline", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
+			state("offline", label: "Offline", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#cccccc")
 			state("unavailable", label: "Unavailable", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/App/camera_red_icon.png", backgroundColor: "#F22000")
 		}
 		standardTile("isStreaming", "device.isStreaming", width: 2, height: 2, decoration: "flat") {
@@ -112,39 +104,16 @@ metadata {
 			state "taking", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cmd_working.png"
 			state "image", action: "Image Capture.take", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/camera_snapshot_icon.png", nextState:"taking"
 		}
-		standardTile("motion", "device.motion", width: 2, height: 2) {
-			state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#53a7c0"
+		standardTile("motion", "device.motion", width: 2, height: 2, decoration: "flat", wordWrap: true) {
+			state "active", label:'motion', icon:"st.motion.motion.active", backgroundColor:"#00a0dc"
 			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
 		}
-		standardTile("sound", "device.sound", width: 2, height: 2) {
-			state "detected", label:'Noise', icon:"st.sound.sound.detected", backgroundColor:"#53a7c0"
+		standardTile("sound", "device.sound", width: 2, height: 2, decoration: "flat", wordWrap: true) {
+			state "detected", label:'Noise', icon:"st.sound.sound.detected", backgroundColor:"#00a0dc"
 			state "not detected", label:'Quiet', icon:"st.sound.sound.notdetected", backgroundColor:"#ffffff"
-		}
-		valueTile("onlineStatus", "device.onlineStatus", width: 2, height: 1, wordWrap: true, decoration: "flat") {
-			state("default", label: 'Network Status:\n${currentValue}')
-		}
-		valueTile("softwareVer", "device.softwareVer", inactiveLabel: false, width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Firmware:\nv${currentValue}')
-		}
-		valueTile("lastConnection", "device.lastConnection", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Camera Last Checked-In:\n${currentValue}')
 		}
 		standardTile("refresh", "device.refresh", width:2, height:2, decoration: "flat") {
 			state "default", action:"refresh.refresh", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/refresh_icon.png"
-		}
-		valueTile("lastUpdatedDt", "device.lastUpdatedDt", width: 4, height: 1, decoration: "flat", wordWrap: true) {
-			state("default", label: 'Data Last Received:\n${currentValue}')
-		}
-		valueTile("devTypeVer", "device.devTypeVer",  width: 2, height: 1, decoration: "flat") {
-			state("default", label: 'Device Type:\nv${currentValue}')
-		}
-		valueTile("apiStatus", "device.apiStatus", width: 2, height: 1, decoration: "flat", wordWrap: true) {
-			state "Ok", label: "API Status:\nOK"
-			state "Issue", label: "API Status:\nISSUE ", backgroundColor: "#FFFF33"
-		}
-		valueTile("debugOn", "device.debugOn", width: 2, height: 1, decoration: "flat") {
-			state "true", 	label: 'Debug:\n${currentValue}'
-			state "false", 	label: 'Debug:\n${currentValue}'
 		}
 		htmlTile(name:"devCamHtml", action: "getCamHtml", width: 6, height: 10, whitelist: ["raw.githubusercontent.com", "cdn.rawgit.com"])
 
@@ -153,7 +122,7 @@ metadata {
 		}
 		main "isStreamingStatus"
 		//details(["devCamHtml", "isStreaming", "take", "refresh", "motion", "cameraDetails", "sound"])
-		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails" ])
+		details(["videoPlayer", "isStreaming", "take", "refresh", "devCamHtml", "cameraDetails", "motion", "sound" ])
 	}
 }
 
@@ -255,6 +224,7 @@ def processEvent() {
 		if(eventData) {
 			def results = eventData?.data
 			//log.debug "results: $results"
+			state.restStreaming = eventData?.restStreaming == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.streamMsg = eventData?.streamNotify == true ? true : false
@@ -288,8 +258,8 @@ def processEvent() {
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
 				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-				//zoneMotionEvent(results?.last_event)
-				//zoneSoundEvent(results?.last_event)
+				zoneMotionEvent(results?.last_event)
+				zoneSoundEvent(results?.last_event)
 				if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
@@ -533,7 +503,7 @@ def zoneMotionEvent(data) {
 		def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
 		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
 	}
-	def val = ((data?.has_motion == "true") && isBtwn) ? "active" : "inactive"
+	def val = (state?.restStreaming && data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
 	if(isStateChange(device, "motion", val.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
 		sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
@@ -551,7 +521,7 @@ def zoneSoundEvent(data) {
 		def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
 		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
 	}
-	def val = ((date?.has_sound == "true") && isBtwn) ? "detected" : "not detected"
+	def val = (state?.restStreaming && date?.has_sound == "true" && isBtwn) ? "detected" : "not detected"
 	if(isStateChange(device, "sound", val.toString())) {
 		Logger("UPDATED | Sound Sensor is: (${val}) | Original State: (${isSound})")
 		sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
