@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "4.8.0" }
-def appVerDate() { "3-17-2017" }
+def appVersion() { "5.0.0" }
+def appVerDate() { "3-27-2017" }
 
 preferences {
 	//startPage
@@ -997,6 +997,12 @@ def notifPrefPage() {
 				def autoDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "Automation Notifications", description: "${autoDesc}Tap to configure", params: [pType:"auto"], state: (autoDesc != "" ? "complete" : null),
 						image: getAppImg("automation_icon.png")
+				if(atomicState?.appData?.aaPrefs?.enAaMsgQueue == true) {
+					t1 = getAskAlexaDesc()
+					def aaDesc = t1 ? "${t1}\n\n" : ""
+					href "notifConfigPage", title: "AskAlexa Integration", description: "${aaDesc}Tap to configure", params: [pType:"askAlexa"], state: (aaDesc != "" ? "complete" : null),
+							image: askAlexaImgUrl()
+				}
 			}
 			section("Reminder Settings:") {
 				input name: "notifyMsgWaitVal", type: "enum", title: "Default Reminder Wait?", required: false, defaultValue: 3600,
@@ -1090,6 +1096,18 @@ def notifConfigPage(params) {
 					watchDog?.settingUpdate("watDogNotifMissedEco", "${settings?.watchDogNotifMissedEco}", "bool")
 				}
 				break
+
+			case "askAlexa":
+				section() {
+					paragraph "", title: "AskAlexa Prefences...", state: "complete"
+				}
+				section("AskAlexa Integration:") {
+					input "allowAskAlexaMQ", "bool", title: "AskAlexa Message Queue?", required: false, defaultValue: true, submitOnChange: true, image: askAlexaImgUrl()
+					if(getAskAlexaMultiQueueEn()) {
+						input "askAlexaMQList", "enum", title: "Available Message Queues?", options: atomicState?.askAlexaMQList
+					}
+				}
+				break
 		}
 		incAppNotifPrefLoadCnt()
 		devPageFooter("appNotifPrefLoadCnt", execTime)
@@ -1117,6 +1135,13 @@ def getDevNotifDesc() {
 def getAutoNotifDesc() {
 	def str = ""
 	str += settings?.watchDogNotifMissedEco ? "\n• WatchDog Eco Alerts: (${strCapitalize(settings?.watchDogNotifMissedEco)})" : ""
+	return str != "" ? str : null
+}
+
+def getAskAlexaDesc() {
+	def str = ""
+	str += settings?.allowAskAlexaMQ ? "\n• Ask Alexa Msg Queue: (${strCapitalize(settings?.allowAskAlexaMQ)})" : ""
+	str += getAskAlexaMultiQueueEn() && atomicState?.askAlexaMQList ? "\nMultiple Queues Available:\n• Queues: (${atomicState?.askAlexaMQList?.size()})" : ""
 	return str != "" ? str : null
 }
 
@@ -1176,18 +1201,15 @@ def devNamePage() {
 		def altName = (atomicState?.useAltNames) ? true : false
 		def custName = (atomicState?.custLabelUsed) ? true : false
 		section("Settings:") {
-//			if(atomicState?.isInstalled) {
-//				paragraph "Changes to device names are only allowed with new devices before they are installed.  Existing devices can only be edited in the devices settings page in the mobile app or in the IDE."
-//			} else {
-				if(!useCustDevNames) {
-					input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
-				}
-				if(!useAltNames) {
-					input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
-				}
-				atomicState.useAltNames = settings?.useAltNames ? true : false
-				atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
-//			}
+			if(!useCustDevNames) {
+				input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
+			}
+			if(!useAltNames) {
+				input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
+			}
+			atomicState.useAltNames = settings?.useAltNames ? true : false
+			atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
+
 			if(atomicState?.custLabelUsed) {
 				paragraph "Custom Labels Are Active", state: "complete"
 			}
@@ -2034,6 +2056,15 @@ def initManagerApp() {
 	startStopStream()
 }
 
+def askAlexaMQHandler(evt) {
+	if (!evt) { return }
+	switch (evt.value) {
+		case "refresh":
+			atomicState?.askAlexaMQList = (evt.jsonData && evt.jsonData?.queues) ? evt.jsonData.queues : []
+	        break
+	}
+}
+
 def startStopStream() {
 	def strEn = atomicState?.appData?.eventStreaming?.enabled == true ? true : false
 	if((!strEn || !settings?.restStreaming) && !atomicState?.restStreamingOn) {
@@ -2287,6 +2318,7 @@ def getInstAutoTypesDesc() {
 
 def subscriber() {
 	subscribe(app, onAppTouch)
+	subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues.
 }
 
 private adj_temp(tempF) {
@@ -3363,6 +3395,7 @@ def updateChildData(force = false) {
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
 		def devBannerData = atomicState?.devBannerData ?: null
+		def streamingActive = atomicState?.restStreamingOn == true ? true : false
 
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
@@ -3391,7 +3424,8 @@ def updateChildData(force = false) {
 				def tData = ["data":atomicState?.deviceData?.thermostats[devId], "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
-						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData]
+						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs,
+						"devBannerData":devBannerData, "restStreaming":streamingActive]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -3427,7 +3461,7 @@ def updateChildData(force = false) {
 				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true), "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcWireTimeout":hcProtWireTimeout, "hcBattTimeout":hcProtBattTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
-						"devBannerData":devBannerData ]
+						"devBannerData":devBannerData, "restStreaming":streamingActive ]
 				def oldProtData = atomicState?."oldProtData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldProtData${devId}" = pDataChecksum
@@ -3463,7 +3497,7 @@ def updateChildData(force = false) {
 				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
-						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData ]
+						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive ]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
 				atomicState."oldCamData${devId}" = cDataChecksum
@@ -5000,8 +5034,14 @@ def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toIn
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
 
-def getAskAlexaQueueEnabled() {
-	if(!parent) { return (atomicState?.appData?.aaPrefs?.enAaMsgQueue == true) ? true : false }
+def getAskAlexaMQEn() {
+	if(atomicState?.appData?.aaPrefs?.enAaMsgQueue == true) {
+		return settings?.allowAskAlexaMQ == null ? true : setting?.allowAskAlexaMQ
+	} else { return false }
+}
+
+def getAskAlexaMultiQueueEn() {
+	return atomicState?.appData?.aaPrefs?.enMultiQueue == true ? true : false
 }
 
 def initAppMetricStore() {
@@ -6535,11 +6575,11 @@ def isInMode(modeList) {
 
 def minDevVersions() {
 	return [
-		"thermostat":["val":470, "desc":"4.7.0"],
-		"protect":["val":470, "desc":"4.7.0"],
-		"presence":["val":470, "desc":"4.7.0"],
-		"weather":["val":470, "desc":"4.7.0"],
-		"camera":["val":270 , "desc":"2.7.0"],
+		"thermostat":["val":500, "desc":"5.0.0"],
+		"protect":["val":500, "desc":"5.0.0"],
+		"presence":["val":500, "desc":"5.0.0"],
+		"weather":["val":500, "desc":"5.0.0"],
+		"camera":["val":500 , "desc":"5.0.0"],
 	]
 }
 
@@ -8079,7 +8119,7 @@ def sendEventPushNotifications(message, type, pName) {
 def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
 	def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 	def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
-	def ok2Notify = parent.getOk2Notify()
+	def ok2Notify = getOk2Notify()
 
 	LogAction("sendEventVoiceNotifications($vMsg, $pName)   ok2Notify: $ok2Notify", "trace", false)
 	if(allowNotif && allowSpeech) {
@@ -8097,17 +8137,27 @@ def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
 	}
 }
 
-def addEventToAskAlexaQueue(vMsg, msgId) {
-	if(parent?.getAskAlexaQueueEnabled() == true) {
-		LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue: ($vMsg)|${msgId}", "info", true)
-		sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}")
+def addEventToAskAlexaQueue(vMsg, msgId, queue=null) {
+	if(getAskAlexaMQEn()) {
+		if(getAskAlexaMultiQueueEn()) {
+			LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue ($queue): ($vMsg)|${msgId}", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}", data: queue)
+		} else {
+			LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue: ($vMsg)|${msgId}", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}")
+		}
 	}
 }
 
-def removeAskAlexaQueueMsg(msgId) {
-	if(parent?.getAskAlexaQueueEnabled() == true) {
-		LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue", "info", true)
-		sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId)
+def removeAskAlexaQueueMsg(msgId, queue=null) {
+	if(getAskAlexaMQEn()) {
+		if(getAskAlexaMultiQueueEn()) {
+			LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue ($queue)", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId, data: queue)
+		} else {
+			LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId)
+		}
 	}
 }
 
