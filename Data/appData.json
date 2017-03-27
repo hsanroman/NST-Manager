@@ -29,25 +29,25 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             },
             "autoapp": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             },
             "thermostat": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             },
             "protect": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             },
             "camera": {
-                "ver": "2.7.0"
+                "ver": "5.0.0"
             },
             "presence": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             },
             "weather": {
-                "ver": "4.7.0"
+                "ver": "5.0.0"
             }
         }
     },
@@ -65,7 +65,8 @@
         "remoteDiagPath": "remoteDiagLogs"
     },
     "aaPrefs": {
-        "enAaMsgQueue": true
+        "enAaMsgQueue": true,
+        "enMultiQueue": true
     },
     "reportPrefs": {
         "disVoiceZoneRprt": false,
@@ -85,7 +86,7 @@
     },
     "eventStreaming": {
         "enabled": true,
-        "requiredVersion": "0.1.0"
+        "requiredVersion": "0.5.0"
     },
     "healthcheck": {
         "camTimeout": 120,
