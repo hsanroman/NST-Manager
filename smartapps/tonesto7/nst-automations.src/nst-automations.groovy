@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "4.8.0" }
-def appVerDate() { "3-10-2017" }
+def appVersion() { "5.0.0" }
+def appVerDate() { "3-27-2017" }
 
 preferences {
 	//startPage
@@ -6275,17 +6275,27 @@ def sendEventVoiceNotifications(vMsg, pName, msgId, rmAAMsg=false, rmMsgId) {
 	}
 }
 
-def addEventToAskAlexaQueue(vMsg, msgId) {
-	if(parent?.getAskAlexaQueueEnabled() == true) {
-		LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue: ($vMsg)|${msgId}", "info", true)
-		sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}")
+def addEventToAskAlexaQueue(vMsg, msgId, queue=null) {
+	if(parent?.getAskAlexaMQEn() == true) {
+		if(parent.getAskAlexaMultiQueueEn()) {
+			LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue ($queues): ($vMsg)|${msgId}", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}", data:queues)
+		} else {
+			LogAction("sendEventToAskAlexaQueue: Adding this Message to the Ask Alexa Queue: ($vMsg)|${msgId}", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueue", value: "${app?.label}", isStateChange: true, descriptionText: "${vMsg}", unit: "${msgId}")
+		}
 	}
 }
 
-def removeAskAlexaQueueMsg(msgId) {
-	if(parent?.getAskAlexaQueueEnabled() == true) {
-		LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue", "info", true)
-		sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId)
+def removeAskAlexaQueueMsg(msgId, queue=null) {
+	if(parent?.getAskAlexaMQEn() == true) {
+		if(parent.getAskAlexaMultiQueueEn()) {
+			LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue ($queues)", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId, data: queues)
+		} else {
+			LogAction("removeAskAlexaQueueMsg: Removing Message ID (${msgId}) from the Ask Alexa Queue", "info", true)
+			sendLocationEvent(name: "AskAlexaMsgQueueDelete", value: "${app?.label}", isStateChange: true, unit: msgId)
+		}
 	}
 }
 
