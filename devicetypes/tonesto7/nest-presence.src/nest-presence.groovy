@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "4.7.0" }
+def devVer() { return "5.0.0" }
 
 // for the UI
 metadata {
@@ -44,8 +44,8 @@ metadata {
 
 	tiles(scale: 2) {
 		standardTile("presence", "device.presence", width: 4, height: 4, canChangeBackground: true) {
-			state("present", 	labelIcon:"st.presence.tile.mobile-present", 	backgroundColor:"#53a7c0", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
-			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#ebeef2", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
+			state("present", 	labelIcon:"st.presence.tile.mobile-present", 	backgroundColor:"#00a0dc", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_pres_icon.png")
+			state("not present",labelIcon:"st.presence.tile.mobile-not-present",backgroundColor:"#cccccc", icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/nest_dev_away_icon.png")
 		}
 		standardTile("nestPresence", "device.nestPresence", width:2, height:2, decoration: "flat") {
 			state "home",	action: "setPresence",	icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/pres_home_icon.png"
