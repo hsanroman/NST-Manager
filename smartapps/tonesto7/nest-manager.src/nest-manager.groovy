@@ -423,7 +423,7 @@ def custWeatherPage() {
 			section("Set Custom Weather Location") {
 				input("custLocSearchStr", "text", title: "Enter a location to search\nZipcode/City are valid", description: "The results will be available in the input below...", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
 				if(settings?.custLocSearchStr != null || settings?.custLocSearchStr != "") {
-					objs = getWeatherQueryResults(settings?.custLocSearchStr.toString())
+					objs = getWeatherQueryResults(settings?.custLocSearchStr ? settings?.custLocSearchStr.toString() : null)
 					if(objs?.size() > 0) {
 						input(name: "custWeatherResultItems", title:"Search Results (Found: ${objs?.size()})", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:objs],
 								image: getAppImg("search_icon.png"))
@@ -3798,7 +3798,7 @@ def apiVar() {
 			targetF:"target_temperature_f", targetC:"target_temperature_c", targetLowF:"target_temperature_low_f", setLabel:"label",
 			targetLowC:"target_temperature_low_c", targetHighF:"target_temperature_high_f", targetHighC:"target_temperature_high_c",
 			fanActive:"fan_timer_active", fanTimer:"fan_timer_timeout", fanDuration:"fan_timer_duration", hvacMode:"hvac_mode",
-			away:"away", streaming:"is_streaming"
+			away:"away", streaming:"is_streaming", setTscale:"temperature_scale"
 		]
 	]
 	return api
@@ -3859,12 +3859,25 @@ def setStructureAway(child, value, virtual=false) {
 	}
 }
 
+def setTstatTempScale(child, tScale, virtual=false) {
+	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
+	def tempScale = tScale.toString()
+	def virt = virtual.toBoolean()
+
+//  INCOMPLETE: This is not used anywhere.  A command to set Temp Scale is not available in the dth for a callback
+
+	LogAction("setTstatTempScale: INCOMPLETE Thermostat${!devId ? "" : " ${devId}"} tempScale: (${tempScale})", "debug", true)
+	return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setTscale, tempScale, devId)
+}
+
 def setTstatLabel(child, label, virtual=false) {
 	def devId = !child?.device?.deviceNetworkId ? null : child?.device?.deviceNetworkId.toString()
 	def val = label
 	def virt = virtual.toBoolean()
-//  This is not used anywhere.  A command to set label is not available in the dth for a callback
-	LogAction("setTstatLabel: Thermostat${!devId ? "" : " ${devId}"} Label: (${val})", "debug", true)
+
+//  INCOMPLETE: This is not used anywhere.  A command to set label is not available in the dth for a callback
+
+	LogAction("setTstatLabel: INCOMPLETE Thermostat${!devId ? "" : " ${devId}"} Label: (${val})", "debug", true)
 	return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.setLabel, val, devId)
 }
 
@@ -4153,6 +4166,7 @@ void schedNextWorkQ(childId) {
 	// If too many commands are sent Nest throttling could shut all write commands down for 1 hour to the device or structure
 	// This allows up to 3 commands if none sent in the last hour, then only 1 per 60 seconds.  Nest could still
 	// throttle this if the battery state on device is low.
+	// https://nestdevelopers.io/t/user-receiving-exceeded-rate-limit-on-requests-please-try-again-later/354
 	//
 
 	def qnum = getQueueToWork()
