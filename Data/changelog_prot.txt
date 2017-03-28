@@ -1,9 +1,4 @@
 V5.0.0 (March 29th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
- • NEW: Added Presence sensors as a restriction for Thermostat schedules and schedule motion triggers.
- • FIXED: Manager will cleanup old invalid automation installs.
- • FIXED: Commented out non-critical code because we are at the absolute max code size for a single smart app.
- • FIXED: Bugs fixes, optimizations.
- • FIXED: Remote Sensor allows smaller settings of temperature threshold
- • FIXED: Weather DTH display / updating of multiple weather Alerts
- • FIXED: Thermostat DTH incorrectly displaying offline status when online
+ • NEW:	All-New HTML design with new icons to indicate the alarm status
+ • NEW:	Add in algorithm to detect the protects power source type based on it's check in habit's.

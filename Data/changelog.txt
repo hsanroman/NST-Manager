@@ -1,22 +1,30 @@
 V5.0.0 (March 29th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
- • NEW: Added Presence sensors as a restriction for Thermostat schedules and schedule motion triggers.
- • FIXED: Manager will cleanup old invalid automation installs.
- • FIXED: Commented out non-critical code because we are at the absolute max code size for a single smart app.
- • FIXED: Bugs fixes, optimizations.
- • FIXED: Remote Sensor allows smaller settings of temperature threshold
- • FIXED: Weather DTH display / updating of multiple weather Alerts
- • FIXED: Thermostat DTH incorrectly displaying offline status when online
+ • NEW: Name Changed to NST Manager
+ • NEW: Manager and Automations code has been split into two individual files.
+ • NEW: Find Weather Locations using integrated Wunderground's search API.
+ • NEW: Token's are now redacted from all IDE logs to prevent them from being shared.
+ • NEW: Fresh New Notification UI right off the first page of the Manager.
+    Along with a new notification system to handle the following events:
+    • Nest API Errors and Rate-Limiting
+    • Failed Commands (A maximum of 5 msgs/per 10 minutes)
+    • Nest Location Home/Away Changes
+    • Device Health Issues (Disconnects, etc.)
+    • Get Reminded when you leave debug logging and remote diagnostics on for more than 24 hours.
+    • Nest Cam streaming On/Off alerts
+ • NEW: Fresh New Notification UI right off the first page of the Manager.
+ • NEW: Control Watch-Dog Notifications from Manager
+ • UPDATED: Re-Structured the Managers Setting Area to simplify things.
+ • NEW: Tests on Nest Protects are auto-disabled after 15 minutes if they are left on.
+ • NEW: Adding Toggle to disable all automations right from the Automation section under the Manager.
+ • NEW: Turn off graphs and history in Thermostat and Weather devices from the Manager.
+ • NEW: Added support to send Automation Event history and Who set eco to the Thermostat device. (Part of the new Thermostat UI).
+ • NEW: Added Hub to the install of all new devices to help support ST's Device history.
 
  Automations App:
- • NEW: Added Presence sensors as a restriction for Thermostat schedules and schedule motion triggers.
- • FIXED: Manager will cleanup old invalid automation installs.
- • FIXED: Commented out non-critical code because we are at the absolute max code size for a single smart app.
- • FIXED: Bugs fixes, optimizations.
- • FIXED: Remote Sensor allows smaller settings of temperature threshold
- • FIXED: Weather DTH display / updating of multiple weather Alerts
- • FIXED: Thermostat DTH incorrectly displaying offline status when online
+ • NEW: Humidity Control Automation (*** Requires a third-party DTH)
+ • FIXED: Fixed Status text to auto-sort by device name
 
 V4.5.1 (January 26th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
