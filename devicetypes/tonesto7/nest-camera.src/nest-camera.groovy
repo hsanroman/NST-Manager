@@ -9,6 +9,7 @@
  */
 
 import java.text.SimpleDateFormat
+import groovy.time.TimeCategory
 
 preferences { }
 
@@ -258,8 +259,6 @@ def processEvent() {
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
 				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-				zoneMotionEvent(results?.last_event)
-				zoneSoundEvent(results?.last_event)
 				if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
@@ -472,6 +471,12 @@ def lastEventDataEvent(data) {
 	state.lastEventTime = "${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "h:mm:ssa")} to ${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), "h:mm:ssa")}"
 	if(state?.lastEventData) { state.lastEventData == null }
 
+	def motionEndDt
+	use( TimeCategory ) {
+    	motionEndDt = tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value)+2.minutes)
+		if(motionEndDt) { schedule(motionEndDt.toString(), zoneMotionHandler) }
+	}
+	log.debug "motionEndDt: $motionEndDt"
 	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString())  || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
@@ -492,18 +497,16 @@ def lastEventDataEvent(data) {
 	}
 }
 
-def zoneMotionEvent(data) {
-	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-		tf.setTimeZone(getTimeZone())
+def zoneMotionHandler() {
+	def data = state?.lastCamEvtData
 	def nowDt = tf.format(new Date())
-	def isMotion = device.currentState("motion")?.stringValue
-	def isBtwn = false
-	if(data?.start_time && data?.end_time) {
-		def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-		def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+	def curMotion = device.currentState("motion")?.stringValue
+	def isMotion
+	if(data?.endDt) {
+		def newEndDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", data?.endDt.toString()) ?: null
+		isMotion = (newEndDt > getDtNow()) ? false : true
 	}
-	def val = (state?.restStreaming && data?.has_motion == "true" && isBtwn) ? "active" : "inactive"
+	def val = (state?.restStreaming && data?.has_motion == "true" && isMotion) ? "active" : "inactive"
 	if(isStateChange(device, "motion", val.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
 		sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
