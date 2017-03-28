@@ -379,7 +379,7 @@ def onlineStatusEvent(isOnline) {
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = onlineStat.toString().capitalize()
 	state?.isOnline = (onlineStat == "online")
-	if(onlineStat == "online") { lastUpdatedEvent(true) }
+	//if(onlineStat == "online") { lastUpdatedEvent(true) }
 	//log.debug "onlineStatus: ${state?.isOnline} | onlineStat: $online"
 	if(device?.getStatus().toString().toLowerCase() != onlineStat) {
 		sendEvent(name: "DeviceWatch-DeviceStatusUpdate", value: onlineStat.toString(), displayed: false)
