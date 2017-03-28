@@ -40,7 +40,7 @@ metadata {
 		attribute "devVer", "string"
 		attribute "softwareVer", "string"
 		attribute "lastConnection", "string"
-		attribute "lastOnline", "string"
+		attribute "lastOnlineChange", "string"
 		attribute "lastUpdateDt", "string"
 		attribute "activityZoneName", "string"
 		attribute "isStreaming", "string"
@@ -219,6 +219,9 @@ def processEvent() {
 	}
 	def eventData = state?.eventData
 	state.eventData = null
+	state?.ok2Checkin = false
+	state?.ok2CheckinRes = []
+	def dtNow = getDtNow()
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
@@ -245,8 +248,7 @@ def processEvent() {
 			isStreamingEvent(results?.is_streaming)
 			publicShareEnabledEvent(results?.is_public_share_enabled?.toString())
 			videoHistEnabledEvent(results?.is_video_history_enabled?.toString())
-			if(!results?.last_is_online_change) { lastCheckinEvent(null) }
-			else { lastCheckinEvent(results?.last_is_online_change?.toString()) }
+			if(results?.last_is_online_change) { lastOnlineEvent(results?.last_is_online_change?.toString()) }
 			if(eventData?.htmlInfo) { state?.htmlInfo = eventData?.htmlInfo }
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			apiStatusEvent(eventData?.apiIssues)
@@ -259,13 +261,15 @@ def processEvent() {
 			if(results?.web_url) { state?.web_url = results?.web_url?.toString() }
 			if(results?.last_event) {
 				if(results?.last_event.start_time && results?.last_event.end_time) { lastEventDataEvent(results?.last_event) }
-				if(results?.last_event?.activity_zone_ids) { activityZoneEvent(results?.last_event?.activity_zone_ids) }
 				if(results?.last_event?.animated_image_url) { state?.animation_url = results?.last_event?.animated_image_url }
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
 			checkHealth()
-			// lastUpdatedEvent()
+			if(state?.ok2Checkin == true) {
+				lastCheckinEvent(dtNow)
+				log.debug "lastCheckin Reason's: ${state?.ok2CheckinRes}"
+			}
 		}
 		return null
 	}
@@ -284,6 +288,12 @@ def getDataByName(String name) {
 
 def getDeviceStateData() {
 	return getState()
+}
+
+def addCheckinReason(str) {
+	def res = state?.ok2CheckinRes ?: []
+	res.push(str?.toString())
+	state?.ok2CheckinRes = res
 }
 
 def getTimeZone() {
@@ -324,13 +334,14 @@ def deviceVerEvent(ver) {
 	def newData = isCodeUpdateAvailable(pubVer, dVer) ? "${dVer}(New: v${pubVer})" : "${dVer}" as String
 	state?.devTypeVer = newData
 	state?.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
-	// if(!curData?.equals(newData)) {
 	if(isStateChange(device, "devVer", dVer.toString())) {
 		sendEvent(name: 'devVer', value: dVer, displayed: false)
 	}
 	if(isStateChange(device, "devTypeVer", newData?.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
+		state?.ok2Checkin = true
+		addCheckinReason("devTypeVer")
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
 
@@ -338,10 +349,9 @@ def lastCheckinEvent(checkin) {
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
-	def lastConn = checkin ? tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin.toString())) : "Not Available"
+	def lastConn = checkin ? tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", checkin.toString())) : "Not Available"
 	def lastChk = device.currentState("lastConnection")?.value
 	state?.lastConnection = lastConn?.toString()
-	//if(!lastChk.equals(lastConn?.toString())) {
 	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
 		Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
@@ -349,21 +359,22 @@ def lastCheckinEvent(checkin) {
 }
 
 def lastOnlineEvent(dt) {
-	def lastOnlVal = device.currentState("lastOnline")?.value
+	def lastOnlVal = device.currentState("lastOnlineChange")?.value
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
 	def lastOnl = !dt ? "Nothing To Show..." : tf?.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt.toString()))
 	state?.lastOnl = lastOnl
-	if(isStateChange(device, "lastOnline", lastOnl?.toString())) {
-		Logger("UPDATED | Last Online was: (${lastOnl}) | Original State: (${lastOnlVal})")
-		sendEvent(name: 'lastOnline', value: lastOnl, displayed: false, isStateChange: true)
-	} else { LogAction("Last Manual Test was: (${lastOnl}) | Original State: (${lastOnlVal})") }
+	if(isStateChange(device, "lastOnlineChange", lastOnl?.toString())) {
+		Logger("UPDATED | Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})")
+		sendEvent(name: 'lastOnlineChange', value: lastOnl, displayed: false, isStateChange: true)
+		state?.ok2Checkin = true
+		addCheckinReason("lastOnlineChange")
+	} else { LogAction("Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})") }
 }
 
 def onlineStatusEvent(isOnline) {
 	//Logger("onlineStatusEvent($isOnline)")
-	//if(state?.camApiServerData && state?.camApiServerData?.items?.is_online[0]) { online = state?.camApiServerData?.items?.is_online[0] }
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = onlineStat.toString().capitalize()
@@ -378,6 +389,8 @@ def onlineStatusEvent(isOnline) {
 	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
+		state?.ok2Checkin = true
+		addCheckinReason("onlineStatusChange")
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
@@ -395,6 +408,8 @@ def isStreamingEvent(isStreaming, override=false) {
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
 		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
 		cameraStreamNotify(state?.isStreaming)
+		state?.ok2Checkin = true
+		addCheckinReason("isStreaming")
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -405,6 +420,8 @@ def audioInputEnabledEvent(on) {
 	if(isStateChange(device, "audioInputEnabled", val.toString())) {
 		Logger("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
+		state?.ok2Checkin = true
+		addCheckinReason("audioInputEnabled")
 	} else { LogAction("Audio Input Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -415,6 +432,8 @@ def videoHistEnabledEvent(on) {
 	if(isStateChange(device, "videoHistoryEnabled", val.toString())) {
 		Logger("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
+		state?.ok2Checkin = true
+		addCheckinReason("videoHistoryEnabled")
 	} else { LogAction("Video History Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -425,6 +444,8 @@ def publicShareEnabledEvent(on) {
 	if(isStateChange(device, "publicShareEnabled", val.toString())) {
 		Logger("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
+		state?.ok2Checkin = true
+		addCheckinReason("publicShareEnabled")
 	} else { LogAction("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
 }
 
@@ -434,6 +455,8 @@ def softwareVerEvent(ver) {
 	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
+		state?.ok2Checkin = true
+		addCheckinReason("softwareVer")
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
 
@@ -465,18 +488,13 @@ def lastEventDataEvent(data) {
 		}
 		state?.lastEventZonesHtml = zstr
 	}
+
 	//log.debug "curStartDt: $curStartDt | curEndDt: $curEndDt || newStartDt: $newStartDt | newEndDt: $newEndDt"
 
 	state.lastEventDate = formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "MMMMM d, yyyy").toString()
 	state.lastEventTime = "${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString()), "h:mm:ssa")} to ${formatDt2(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString()), "h:mm:ssa")}"
 	if(state?.lastEventData) { state.lastEventData == null }
 
-	def motionEndDt
-	use( TimeCategory ) {
-    	motionEndDt = tf?.format(Date.parse("E MMM dd HH:mm:ss z yyyy", device?.currentState("lastEventEnd")?.value)+2.minutes)
-		if(motionEndDt) { schedule(motionEndDt.toString(), zoneMotionHandler) }
-	}
-	log.debug "motionEndDt: $motionEndDt"
 	if(!state?.lastCamEvtData || (curStartDt != newStartDt || curEndDt != newEndDt) && (hasPerson || hasMotion || hasSound) || isStateChange(device, "lastEventType", evtType.toString())  || isStateChange(device, "lastEventZones", evtZoneNames.toString())) {
 		sendEvent(name: 'lastEventStart', value: newStartDt, descriptionText: "Last Event Start is ${newStartDt}", displayed: false)
 		sendEvent(name: 'lastEventEnd', value: newEndDt, descriptionText: "Last Event End is ${newEndDt}", displayed: false)
@@ -489,50 +507,82 @@ def lastEventDataEvent(data) {
 		Logger("│	Start Time: (${newStartDt})")
 		Logger("│	Type: ${evtType}")
 		Logger("┌──────────New Camera Event──────────")
-
+		state?.ok2Checkin = true
+		addCheckinReason("lastEventData")
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
 		LogAction("Last Event End Time: (${newEndDt}) - Zones: ${evtZoneNames} | Original State: (${curEndDt})")
 		LogAction("Last Event Type: (${evtType}) - Zones: ${evtZoneNames}")
 	}
+	motionSoundEvtHandler()
 }
 
-def zoneMotionHandler() {
+def motionSoundEvtHandler() {
 	def data = state?.lastCamEvtData
-	def nowDt = tf.format(new Date())
-	def curMotion = device.currentState("motion")?.stringValue
-	def isMotion
-	if(data?.endDt) {
-		def newEndDt = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", data?.endDt.toString()) ?: null
-		isMotion = (newEndDt > getDtNow()) ? false : true
+	if(data) {
+		motionEvtHandler(data)
+		soundEvtHandler(data)
 	}
-	def val = (state?.restStreaming && data?.has_motion == "true" && isMotion) ? "active" : "inactive"
-	if(isStateChange(device, "motion", val.toString())) {
-		Logger("UPDATED | Motion Sensor is: (${val}) | Original State: (${isMotion})")
-		sendEvent(name: "motion", value: val, descriptionText: "Motion Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
-	} else { LogAction("Motion Sensor is: (${val}) | Original State: (${isMotion})") }
 }
 
-def zoneSoundEvent(data) {
+def motionEvtHandler(data) {
 	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 		tf.setTimeZone(getTimeZone())
-	def nowDt = tf.format(new Date())
-	def isSound = device.currentState("sound")?.stringValue
-	def isBtwn = false
-	if(data?.start_time && data?.end_time) {
-		def newStartDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.start_time.toString())) ?: "Not Available"
-		def newEndDt = tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", data?.end_time.toString())) ?: "Not Available"
-		isBtwn = (newStartDt && newEndDt) ? false :  isTimeBetween(newStartDt, newEndDt, nowDt, getTimeZone())
+	def dtNow = new Date()
+	def curMotion = device.currentState("motion")?.stringValue
+	def motionStat = "inactive"
+	if(state?.restStreaming == true && data) {
+		if(data?.endDt && data?.hasMotion) {
+			def newEndDt = null
+			use( TimeCategory ) {
+				newEndDt = Date.parse("E MMM dd HH:mm:ss z yyyy", data?.endDt.toString())+1.minutes
+			}
+			if(newEndDt) {
+				//log.debug "motionEvt now: ${tf.format(dtNow)} | end: ${tf.format(newEndDt)}"
+				//log.debug "motionEvt newEndDt > dtNow: (${newEndDt > dtNow})"
+				if(newEndDt > dtNow) {
+					motionStat = "active"
+					runIn(66, "motionSoundEvtHandler", [overwrite: true])
+				}
+			}
+		}
 	}
-	def val = (state?.restStreaming && date?.has_sound == "true" && isBtwn) ? "detected" : "not detected"
-	if(isStateChange(device, "sound", val.toString())) {
-		Logger("UPDATED | Sound Sensor is: (${val}) | Original State: (${isSound})")
-		sendEvent(name: "sound", value: val, descriptionText: "Sound Sensor is: ${val}", displayed: true, isStateChange: true, state: val)
-	} else { LogAction("Sound Sensor is: (${val}) | Original State: (${isSound})") }
+	if(isStateChange(device, "motion", motionStat.toString())) {
+		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Original State: (${curMotion})")
+		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, isStateChange: true, state: motionStat)
+		state?.ok2Checkin = true
+		addCheckinReason("motion")
+	} else { LogAction("Motion Sensor is: (${motionStat}) | Original State: (${curMotion})") }
 }
 
-def activityZoneEvent(zones) {
-	//log.trace "activityZoneEvent($zones)..."
+def soundEvtHandler(data) {
+	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+		tf.setTimeZone(getTimeZone())
+	def dtNow = new Date()
+	def curSound = device.currentState("sound")?.stringValue
+	def sndStat = "not detected"
+	if(state?.restStreaming == true && data) {
+		if(data?.endDt && data?.hasSound) {
+			def newEndDt = null
+			use( TimeCategory ) {
+				newEndDt = Date.parse("E MMM dd HH:mm:ss z yyyy", data?.endDt.toString())+1.minutes
+			}
+			if(newEndDt) {
+				// log.debug "soundEvt now: ${tf.format(dtNow)} | end: ${tf.format(newEndDt)}"
+				// log.debug "soundEvt newEndDt > dtNow: (${newEndDt > dtNow})"
+				if(newEndDt > dtNow) {
+					sndStat = "detected"
+					runIn(66, "motionSoundEvtHandler", [overwrite: true])
+				}
+			}
+		}
+	}
+	if(isStateChange(device, "sound", sndStat.toString())) {
+		Logger("UPDATED | Sound Sensor State: (${sndStat}) | Original State: (${curSound})")
+		sendEvent(name: "sound", value: sndStat, descriptionText: "Sound Sensor is: ${sndStat}", displayed: true, isStateChange: true, state: sndStat)
+		state?.ok2Checkin = true
+		addCheckinReason("sound")
+	} else { LogAction("Sound Sensor State: (${sndStat}) | Original State: (${curSound})") }
 }
 
 def debugOnEvent(debug) {
@@ -543,6 +593,8 @@ def debugOnEvent(debug) {
 	if(isStateChange(device, "debugOn", dVal.toString())) {
 		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
+		state?.ok2Checkin = true
+		addCheckinReason("debugOn")
 	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
 
@@ -553,6 +605,8 @@ def apiStatusEvent(issue) {
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
+		state?.ok2Checkin = true
+		addCheckinReason("apiStatus")
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
 
@@ -567,6 +621,8 @@ def lastUpdatedEvent(sendEvt=false) {
 	if(sendEvt && state?.isOnline) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
+		state?.ok2Checkin = true
+		addCheckinReason("lastUpdatedDt")
 	}
 }
 
@@ -594,6 +650,8 @@ def vidHistoryTimeEvent() {
 		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
 		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
 		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
+		state?.ok2Checkin = true
+		addCheckinReason("videoHistoryTime")
 	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
 }
 
