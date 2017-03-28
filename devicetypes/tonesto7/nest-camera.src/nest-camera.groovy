@@ -152,6 +152,7 @@ void installed() {
 	Logger("installed...")
 	initialize()
 	state?.isInstalled = true
+	state?.shownChgLog = true
 }
 
 void updated() {
@@ -216,6 +217,7 @@ def processEvent() {
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
+		state?.shownChgLog = false
 	}
 	def eventData = state?.eventData
 	state.eventData = null
@@ -961,6 +963,32 @@ def getImg(imgName) {
 	return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""
 }
 
+def getWebData(params, desc, text=true) {
+	try {
+		Logger("getWebData: ${desc} data", "info")
+		httpGet(params) { resp ->
+			if(resp.data) {
+				if(text) {
+					return resp?.data?.text.toString()
+				} else { return resp?.data }
+			}
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			Logger("${desc} file not found", "warn")
+		} else {
+			log.error "getWebData(params: $params, desc: $desc, text: $text) Exception:", ex
+		}
+		//sendExceptionData(ex, "getWebData")
+		return "${label} info not found"
+	}
+}
+def gitRepo()		{ return "tonesto7/nest-manager"}
+def gitBranch()		{ return "master" }
+def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
+def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_cam.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
+
 def getCssData() {
 	def cssData = null
 	def htmlInfo = state?.htmlInfo
@@ -1053,6 +1081,33 @@ def getCamApiServer() {
 	def data = res.toString().replaceAll("\\[|\\]", "")
 	//log.debug "getCamApiServer: $data"
 	return data ?: null
+}
+
+def getChgLogHtml() {
+	def chgStr = ""
+	log.debug "shownChgLog: ${state?.shownChgLog}"
+	if(state?.shownChgLog == false || state?.shownChgLog == null) {
+		chgStr = """
+			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
+			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-default.min.css", "text", "css")}" />
+			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
+			<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+			<script>vex.defaultOptions.className = 'vex-theme-default'</script>
+			<style>
+				.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
+			</style>
+			<div class=\"chglogmodal\"></div>
+			<script>
+				\$('.chglogmodal').on(function(){
+					vex.dialog.alert({ unsafeMessage: `
+						<h4>Here's What's New with the Camera</h4>
+						<p>${devVerInfo()}</p>
+					`, className: 'vex-theme-top' })
+				});
+			</script>
+		"""
+	}
+	return chgStr
 }
 
 def getCamHtml() {

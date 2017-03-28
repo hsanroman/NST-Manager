@@ -21,6 +21,7 @@ Manager App:
  • NEW: Turn off graphs and history in Thermostat and Weather devices from the Manager.
  • NEW: Added support to send Automation Event history and Who set eco to the Thermostat device. (Part of the new Thermostat UI).
  • NEW: Added Hub to the install of all new devices to help support ST's Device history.
+ • NEW: Added Change logs the are shown when a new version is published .
 
  Automations App:
  • NEW: Humidity Control Automation (*** Requires a third-party DTH)

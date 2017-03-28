@@ -1558,40 +1558,6 @@ def getWeatherHTML() {
 						</div>
 					</div>
 					<script>
-						// var mySwiper = new Swiper ('.swiper-container', {
-						// 	direction: 'horizontal',
-						// 	initialSlide: 0,
-						// 	lazyLoading: true,
-						// 	loop: false,
-						// 	slidesPerView: '1',
-						// 	centeredSlides: true,
-						// 	spaceBetween: 100,
-						// 	autoHeight: false,
-						// 	keyboardControl: true,
-						// 	mousewheelControl: true,
-						// 	iOSEdgeSwipeDetection: true,
-						// 	iOSEdgeSwipeThreshold: 20,
-						// 	parallax: true,
-						// 	slideToClickedSlide: true,
-						//
-						// 	effect: 'coverflow',
-						// 	coverflow: {
-						// 	  rotate: 50,
-						// 	  stretch: 0,
-						// 	  depth: 100,
-						// 	  modifier: 1,
-						// 	  slideShadows : true
-						// 	},
-						// 	onTap: function(s, e) {
-						// 		s.slideNext(false);
-						// 		if (s.clickedIndex >= s.slides.length) {
-						// 			s.slideTo(0, 400, false)
-						// 		}
-						// 	},
-						// 	pagination: '.swiper-pagination',
-						// 	paginationHide: false,
-						// 	paginationClickable: true
-						// })
 						function reloadWeatherPage() {
 							var url = "https://" + window.location.host + "/api/devices/${device?.getId()}/getWeatherHTML"
 							window.location = url;
