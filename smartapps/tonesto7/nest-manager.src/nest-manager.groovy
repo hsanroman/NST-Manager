@@ -182,6 +182,7 @@ def authPage() {
 			}
 		}
 	}
+	else if(showChgLogOk()) { return changeLogPage() }
 	else if(showDonationOk()) { return donationPage() }
 	else { return mainPage() }
 }
@@ -626,7 +627,7 @@ def pollPrefPage() {
 		section("") {
 			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
 		}
-		if(atomicState?.appData?.eventStreaming?.enabled == true) {
+		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
 			section("Rest Streaming (Experimental):") {
 				if(restStreaming) {
 					def rData = atomicState?.restServiceData
@@ -714,17 +715,6 @@ def automationsPage() {
 				//input "enTstatAutoSchedInfoReq", "bool", title: "Allow Other Smart Apps to Retrieve Thermostat automation Schedule info?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png")
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
-			// section("Automation Backups:") {
-			// 	if(getDevOpt()) {
-			// 		href "manageBackRestorePage", title: "Manage Automation Backups...", description: "", image: getAppImg("backup_icon.png")
-			// 	}
-			// }
-			// def cApps = getChildApps()
-			// cApps?.each { ca ->
-			// 	if(ca?.id == "6f9f966c-cd3c-4472-8d4d-26d3a10a9f78") {
-			// 		backupAutomation(ca)
-			// 	}
-			// }
 		}
 		incAutoLoadCnt()
 		devPageFooter("autoLoadCnt", execTime)
@@ -1502,10 +1492,14 @@ def getLastRemDiagSentSec() { return !atomicState?.remDiagDataSentDt ? 1000 : Ge
 
 def changeLogPage () {
 	def execTime = now()
-	dynamicPage(name: "changeLogPage", title: "App Revision History:", install: false) {
+	dynamicPage(name: "changeLogPage", title: "", nextPage: "mainPage", install: false) {
 		section() {
+			paragraph title: "What's New in this Release...", "", state: "complete", image: getAppImg("whats_new_icon.png")
 			paragraph appVerInfo()
 		}
+		def iData = atomicState?.installData
+		iData["shownChgLog"] = true
+		atomicState?.installData = iData
 		incChgLogLoadCnt()
 		devPageFooter("chgLogLoadCnt", execTime)
 	}
@@ -1523,90 +1517,6 @@ def uninstallPage() {
 		remove("Remove ${appName()} and Devices!", "WARNING!!!", "Last Chance to Stop!\nThis action is not reversible\n\nThis App, All Devices, and Automations will be removed")
 	}
 }
-
-// def backupRemoveDataPage() {
-// 	return dynamicPage(name: "backupRemoveDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("") {
-// 			paragraph "Removing Backed Up App Data from Firebase..."
-// 			if(!parent) {
-// 				def cApps = getChildApps()
-// 				cApps?.each { ca ->
-// 					if(removeAutomationBackupData(ca?.id)) {
-// 						ca?.state?.lastBackupDt = null
-// 						paragraph "Successfully Deleted...\n${ca?.label.toString().capitalize()} Backup Data", required: true, state: null
-// 						atomicState?.lastBackupDt = null
-// 					}
-// 				}
-// 				paragraph "Done Removing Data from Firebase...", state: "complete"
-// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-// 		}
-// 	}
-// }
-//
-// def restoreStubPage(params) {
-// 	dynamicPage(name: "restoreStubPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("Restoring Automations:") {
-// 			if(params.backup) {
-// 				paragraph "Restoring Automations..."
-// 				if(automationRestore(params?.backup, params?.autoId)) {
-// 					paragraph "Successfully Restored...\nAutomation App"
-// 				}
-// 				paragraph "We are Done Restoring the Application...", state: "complete"
-// 			} else {
-// 				paragraph "Can't restore from backup because the page info was lost!\n\nPlease Go back and try again", required: true, state: null
-// 			}
-// 		}
-// 	}
-// }
-
-// def manageBackRestorePage() {
-// 	dynamicPage(name: "manageBackRestorePage", title: "", nextPage: "", install: false) {
-// 		def lastDt = atomicState?.lastBackupDt
-// 		section("") {
-// 			href "backupStubDataPage", title: "${lastDt ? "Update All Automation Backup Data" : "Backup All Automation Data"}", description: "${lastDt ? "Last Backup:\n${lastDt}" : ""}",
-// 					state: (lastDt ? "complete" : null), image: getAppImg("backup_icon.png")
-// 			if(lastDt) {
-// 				href "backupRemoveDataPage", title: "Remove All Backup Data", description: "", image: getAppImg("uninstall_icon.png")
-// 			}
-// 		}
-// 		def backupData = getAutomationBackupData()
-// 		if(backupData instanceof List || backupData instanceof Map) {
-// 			section("Available Automations") {
-// 				paragraph "Automations Backed Up: (${backupData ? backupData?.size() : 0})"
-// 				backupData?.each { bd ->
-// 					href "restoreStubPage", title: "Restore ${bd?.value?.appLabel}", description: "${bd?.value?.backupDt ? "Last Backup:\n${bd?.value?.backupDt}\n\n" : ""}Tap to Restore...",
-// 							params: ["backup":backupData, "autoId":bd?.key], image: getAppImg("reset_icon.png")
-// 				}
-// 			}
-// 			section("Restore All:") {
-// 				href "restoreStubPage", title: "Restore All Automations", description: "", params: ["backup":backupData, "autoId":null], image: getAppImg("reset_icon.png")
-// 			}
-// 		}
-// 	}
-// }
-//
-// def backupStubDataPage() {
-// 	return dynamicPage(name: "backupStubDataPage", title: "", nextPage: "manageBackRestorePage", install: false) {
-// 		section("") {
-// 			paragraph "Sending Backup Data to Firebase..."
-// 			if(!parent) {
-// 				def cApps = getChildApps()
-// 				cApps?.each { ca ->
-// 					if (ca?.settings?.restoreId) {
-// 						return
-// 					} else {
-// 						if(backupAutomation(ca)) {
-// 							paragraph "Successfully Backed Up ${ca?.label.toString().capitalize()} Data to Firebase..."
-// 						}
-// 						atomicState?.lastBackupDt = getDtNow()
-// 					}
-// 				}
-// 				paragraph "Done Backing Up Data to Firebase...", state: "complete"
-// 			} else { paragraph "Nothing Sent.  This is for the Parent to backup Automations Only!!!", required: true, state: null }
-// 		}
-// 	}
-// }
-
 
 def getDevOpt() {
 	appSettings?.devOpt.toString() == "true" ? true : false
@@ -1952,7 +1862,7 @@ def nestTokenResetPage() {
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
 	if(!parent) {
-		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false, "usingNewAutoFile":true]
+		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":true, "shownDonation":false, "shownFeedback":false, "shownChgLog":true, "usingNewAutoFile":true]
 		sendInstallSlackNotif()
 	}
 	initialize()
@@ -2318,7 +2228,9 @@ def getInstAutoTypesDesc() {
 
 def subscriber() {
 	subscribe(app, onAppTouch)
-	subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues.
+	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
+		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
+	}
 }
 
 private adj_temp(tempF) {
@@ -2462,7 +2374,8 @@ def cleanRestAutomationTest() {
 def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
-		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
+		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownDonation":false, "shownFeedback":false] }
+		atomicState?.installData.shownChgLog = false
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
@@ -6444,6 +6357,10 @@ def showDonationOk() {
 
 def showFeedbackOk() {
 	return (!atomicState?.installData?.shownFeedback && getDaysSinceInstall() >= 7) ? true : false
+}
+
+def showChgLogOk() {
+	return !atomicState?.installData?.shownChgLog ? true : false
 }
 
 def getDaysSinceInstall() {

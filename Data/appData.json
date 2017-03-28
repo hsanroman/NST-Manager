@@ -53,7 +53,7 @@
     },
     "html": {
         "cssVer": 1,
-        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.mi.css",
+        "cssUrl": "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Documents/css/ST-HTML.min.css",
         "chartJsVer": 1,
         "chartJsUrl": "https://www.gstatic.com/charts/loader.js"
     },
@@ -86,7 +86,7 @@
     },
     "eventStreaming": {
         "enabled": true,
-        "requiredVersion": "0.5.0"
+        "minVersion": "0.4.0"
     },
     "healthcheck": {
         "camTimeout": 120,
@@ -98,7 +98,7 @@
         "enabled": true
     },
     "devStatusPage": {
-        "enabled": true,
-        "path": "/Data/status_content.txt"
+        "enabled": false,
+        "path": ""
     }
 }
