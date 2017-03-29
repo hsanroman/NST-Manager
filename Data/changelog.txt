@@ -24,7 +24,7 @@ Manager App:
  • NEW: Added Change logs the are shown when a new version is published .
 
  Automations App:
- • NEW: Humidity Control Automation (*** Requires a third-party DTH)
+ • NEW: Humidity Control Automation;  Works with Switch controlled humidifiers (*** Requires a third-party DTH for HVAC humidifiers)
  • FIXED: Fixed Status text to auto-sort by device name
 
 V4.5.1 (January 26th, 2017):
