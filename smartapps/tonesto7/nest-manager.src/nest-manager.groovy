@@ -2170,6 +2170,14 @@ def getInstAutoTypesDesc() {
 			LogAction("Bad child app version ${ver}", "error", true)
 			appUpdateNotify()
 		}
+
+		if(ver) {
+			def updVer = atomicState?.autoSaVer ?: ver
+			if(versionStr2Int(ver) < versionStr2Int(updVer)) {
+				updVer = ver
+			}
+			atomicState.autoSaVer = updVer
+		}
 		if(dis) {
 			disItems.push(a?.label.toString())
 			dat["disabled"] = dat["disabled"] ? dat["disabled"]+1 : 1
@@ -2374,8 +2382,10 @@ def cleanRestAutomationTest() {
 def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
-		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownDonation":false, "shownFeedback":false] }
-		atomicState?.installData.shownChgLog = false
+		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownChgLog":false, "shownFeedback":false] }
+		def iData = atomicState?.installData
+		iData["shownChgLog"] = false
+		atomicState?.installData = iData
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
@@ -3353,7 +3363,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.tDevVer = t1 ?: ""
-					if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
+					if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
 						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
 						//log.warn "oldTstatData: ${oldTstatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(tData)
@@ -3362,7 +3372,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(tData)
@@ -3389,7 +3399,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.pDevVer = t1 ?: ""
-					if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minDevVersions()?.protect?.val)) {
+					if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minVersions()?.protect?.val)) {
 						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
 						//log.warn "oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
@@ -3398,7 +3408,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minDevVersions()?.protect?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minVersions()?.protect?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(pData)
@@ -3425,7 +3435,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.camDevVer = t1 ?: ""
-					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minDevVersions()?.camera?.val)) {
+					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minVersions()?.camera?.val)) {
 						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
 						it.generateEvent(camData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
@@ -3433,7 +3443,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minDevVersions()?.camera?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minVersions()?.camera?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(camData)
@@ -3453,7 +3463,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.presDevVer = t1 ?: ""
-					if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minDevVersions()?.presence?.val)) {
+					if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minVersions()?.presence?.val)) {
 						LogTrace("UpdateChildData >> Presence id: ${devId}")
 						//log.warn "oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
@@ -3462,7 +3472,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minDevVersions()?.presence?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minVersions()?.presence?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(pData)
@@ -3485,7 +3495,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.weatDevVer = t1 ?: ""
-					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minDevVersions()?.weather?.val)) {
+					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minVersions()?.weather?.val)) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
 						LogTrace("UpdateChildData >> Weather id: ${devId}")
 						it.generateEvent(wData)
@@ -3494,7 +3504,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minDevVersions()?.weather?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minVersions()?.weather?.desc}) Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(wData)
@@ -3584,7 +3594,7 @@ def updateChildData(force = false) {
 						//def t1 = it?.devVer()
 						def t1 = it?.currentState("devVer")?.value?.toString()
 						atomicState?.vtDevVer = t1 ?: ""
-						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minDevVersions()?.thermostat?.val)) {
+						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
 							//log.warn "oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 							it.generateEvent(tData)
@@ -3593,7 +3603,7 @@ def updateChildData(force = false) {
 							if(atomicState?."lastUpdated${devId}Dt" == null) {
 								atomicState."lastUpdated${devId}Dt" = getDtNow()
 							} else {
-								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minDevVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
 							}
 							it.generateEvent(tData)
 						}
@@ -6504,8 +6514,9 @@ def isInMode(modeList) {
 	return false
 }
 
-def minDevVersions() {
+def minVersions() {
 	return [
+		"automation":["val":500, "desc":"5.0.0"],
 		"thermostat":["val":500, "desc":"5.0.0"],
 		"protect":["val":500, "desc":"5.0.0"],
 		"presence":["val":500, "desc":"5.0.0"],
@@ -7275,14 +7286,21 @@ def createInstallDataJson() {
 		def pdVer = atomicState?.presDevVer ?: "Not Installed"
 		def wdVer = atomicState?.weatDevVer ?: "Not Installed"
 		def vtsVer = atomicState?.vtDevVer ?: "Not Installed"
-		def versions = ["apps":["manager":appVersion()?.toString()], "devices":["thermostat":tsVer, "vthermostat":vtsVer, "protect":ptVer, "camera":cdVer, "presence":pdVer, "weather":wdVer]]
+		def autoVer = atomicState?.autoSaVer ?: "Not Installed"
+		def restVer = (atomicState?.restServiceData && atomicState?.restServiceData?.streaming) ? atomicState?.restServiceData?.version : "Not Installed"
+
+		def autoDesc = getInstAutoTypesDesc()			// This is a hack to get installedAutomations data updated without waiting for user to hit done
+
+		def versions = [
+			"apps":["manager":appVersion()?.toString(), "automation":autoVer, "service":restVer],
+			"devices":["thermostat":tsVer, "vthermostat":vtsVer, "protect":ptVer, "camera":cdVer, "presence":pdVer, "weather":wdVer]
+		]
 
 		def tstatCnt = atomicState?.thermostats?.size() ?: 0
 		def protCnt = atomicState?.protects?.size() ?: 0
 		def camCnt = atomicState?.cameras?.size() ?: 0
 		def vstatCnt = atomicState?.vThermostats?.size() ?: 0
 
-		def autoDesc = getInstAutoTypesDesc()			// This is a hack to get installedAutomations data updated without waiting for user to hit done
 		def automations = !atomicState?.installedAutomations ? "No Automations Installed" : atomicState?.installedAutomations
 
 		def tz = getTimeZone()?.ID?.toString()
