@@ -1953,12 +1953,19 @@ def initManagerApp() {
 	if(settings?.thermostats || settings?.protects || settings?.cameras || settings?.presDevice || settings?.weatherDevice) {
 		atomicState?.isInstalled = true
 	} else { atomicState.isInstalled = false }
+	if(atomicState?.autoMigrationComplete == true) { // fix for bug that removed this setting - temporary
+		def iData = atomicState?.installData
+		iData["usingNewAutoFile"] = true
+		atomicState?.installData = iData
+	}
+	if(atomicState?.installData?.usingNewAutoFile) {
+		state.remove("lastAnalyticUpdDt")
+		//runIn(45, "sendInstallData", [overwrite: true]) //If analytics are enabled this will send non-user identifiable data to firebase server
+		//runIn(15, "stateCleanup", [overwrite: true])
+		stateCleanup()
+	}
 	subscriber()
 	setPollingState()
-	if(atomicState?.installData?.usingNewAutoFile) {
-		runIn(45, "sendInstallData", [overwrite: true]) //If analytics are enabled this will send non-user identifiable data to firebase server
-		runIn(55, "stateCleanup", [overwrite: true])
-	}
 	def appInstData = atomicState?.installData
 	if(atomicState?.isInstalled && appInstData?.usingNewAutoFile) {
 		if(app.label == "Nest Manager") { app.updateLabel("NST Manager") }
@@ -2382,7 +2389,8 @@ def cleanRestAutomationTest() {
 def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
-		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownChgLog":false, "shownFeedback":false]
+		def usingNew = atomicState?.installData?.usingNewAutoFile
+		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownChgLog":false, "shownFeedback":false, "usingNewAutoFile":usingNew ]
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
@@ -6280,7 +6288,8 @@ def stateCleanup() {
 		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
 		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
 		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug", "updNotifyWaitVal", "appApiIssuesWaitVal",
-		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt"
+		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer",
+		"vtDevVer", "autoSaVer"
  	]
 	data.each { item ->
 		state.remove(item?.toString())
