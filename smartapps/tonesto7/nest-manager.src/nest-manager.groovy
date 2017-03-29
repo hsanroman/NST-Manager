@@ -2382,10 +2382,7 @@ def cleanRestAutomationTest() {
 def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
-		if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownChgLog":false, "shownFeedback":false] }
-		def iData = atomicState?.installData
-		iData["shownChgLog"] = false
-		atomicState?.installData = iData
+		atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownChgLog":false, "shownFeedback":false]
 		def cApps = getChildApps()
 		if(cApps) {
 			cApps?.sort()?.each { chld ->
