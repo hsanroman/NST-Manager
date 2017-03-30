@@ -7,8 +7,9 @@
         <li>Event Types (Ex. Has Motion, Has Person, Has Sound).</li>
         <li>If Zones are configured they be will displayed for each event.</li>
     </ul>
-     <li><strong>NEW:</strong> Fix Camera Streaming being off causing the device health to show offline.</li>
-     <li><strong>NEW:</strong> Made tweaks to help minimize the connection issues with iOS/android camera streams.</li>
+    <li><strong>NEW:</strong> Activated Motion and Sound capabilities to support an exciting new feature coming soon</li>
+    <li><strong>NEW:</strong> Fix Camera Streaming being off causing the device health to show offline.</li>
+    <li><strong>NEW:</strong> Made tweaks to help minimize the connection issues with iOS/android camera streams.</li>
 </ul>
  <p style="font-size: 12px;"><strong>NOTICE:</strong> As much as I want to add support for Password protected camera streams.
         It's just not going to happen (At least at this time)</p>

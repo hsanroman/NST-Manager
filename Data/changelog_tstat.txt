@@ -2,7 +2,7 @@
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>NEW: </strong> All-New HTML Design with swiping slides and refresh button to reload html content (Refresh is iOS only).</li>
-    <li><strong>NEW: </strong>	Automation Schedule info will now be displayed in the device.</li>
+    <li><strong>NEW: </strong> Automation Schedule info will now be displayed in the device.</li>
     <li><strong>NEW: </strong> Added in WhoSetEco mode info (Ex. Which automation?, Was is it externally set?)</li>
     <li><strong>NEW: </strong> Add support for Automation activity info</li>
     <li><strong>FIXED: </strong> Cleaned out a lot of unneeded code.</li>
