@@ -7,4 +7,5 @@
     <li><strong>NEW: </strong> Add support for Automation activity info</li>
     <li><strong>FIXED: </strong> Cleaned out a lot of unneeded code.</li>
     <li><strong>FIXED: </strong> Fixed AskAlexa Voice reports.</li>
+    <li><strong>FIXED: </strong> Dozens of optimizations and tweaks to make things more efficient.</li>
 </ul>

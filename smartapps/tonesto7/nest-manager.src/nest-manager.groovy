@@ -371,6 +371,22 @@ def devPrefPage() {
 				href "devNamePage", title: "Device Names", description: devDesc, state:(atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : "", image: getAppImg("device_name_icon.png")
 			}
 		}
+		if(atomicState?.cameras) {
+			section("Camera Devices:") {
+				if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
+					input ("motionSndChgWaitVal", "enum", title: "Wait before Camera Motion and Sound is marked Inactive?", required: false, defaultValue: 60, metadata: [values:waitValAltEnum(true)], submitOnChange: true, image: getAppImg("motion_icon.png"))
+					atomicState.needChildUpd = true
+				} else {
+					paragraph "No Camera Device Options Yet..."
+				}
+			}
+		}
+		if(atomicState?.protects) {
+			section("Protect Devices:") {
+				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
+				atomicState.needChildUpd = true
+			}
+		}
 		if(atomicState?.thermostats) {
 			section("Thermostat Devices:") {
 				if(!inReview())	{
@@ -381,24 +397,12 @@ def devPrefPage() {
 				atomicState.needChildUpd = true
 			}
 		}
-		if(atomicState?.protects) {
-			section("Protect Devices:") {
-				input "showProtActEvts", "bool", title: "Show Non-Alarm Events in Activity Feed?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("list_icon.png")
-				atomicState.needChildUpd = true
-			}
-		}
 		if(atomicState?.weatherDevice) {
 			section("Weather Device:") {
 				def t1 = getWeatherConfDesc()
 				href "custWeatherPage", title: "Customize Weather Location?", description: (t1 ? "${t1}\n\nTap to modify" : ""), state: (t1 ? "complete":""), image: getAppImg("weather_icon_grey.png")
 				input ("weathAlertNotif", "bool", title: "Local Weather Alerts?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("weather_alert_icon.png"))
 				input ("weatherShowGraph", "bool", title: "Weather History Graph?", description: "", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("graph_icon2.png"))
-			}
-		}
-		if(atomicState?.protects) {
-			section("Camera Devices:") {
-				paragraph "No Camera Device Options Yet..."
-				//atomicState.needChildUpd = true
 			}
 		}
 		if(atomicState?.presDevice) {
@@ -3425,7 +3429,7 @@ def updateChildData(force = false) {
 				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
-						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive ]
+						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive, "motionSndChgWaitVal":motionSndChgWaitVal ]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
 				atomicState."oldCamData${devId}" = cDataChecksum
@@ -6543,6 +6547,17 @@ def notifValEnum(allowCust = false) {
 def pollValEnum(device=false) {
 	def vals = [:]
 	if(device && inReview()) { vals = [ 30:"30 Seconds" ] }
+	vals << [
+		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
+		600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
+		1800:"30 Minutes", 2700:"45 Minutes", 3600:"60 Minutes"
+	]
+	return vals
+}
+
+def waitValAltEnum(allow30=false) {
+	def vals = [:]
+	if(allow30) { vals << [ 30:"30 Seconds" ] }
 	vals << [
 		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes",
 		600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
