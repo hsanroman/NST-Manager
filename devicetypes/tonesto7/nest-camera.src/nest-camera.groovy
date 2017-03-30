@@ -1086,18 +1086,22 @@ def getCamApiServer() {
 def getChgLogHtml() {
 	def chgStr = ""
 	log.debug "shownChgLog: ${state?.shownChgLog}"
-	if(state?.shownChgLog == false || state?.shownChgLog == null) {
+	if(!state?.shownChgLog == true) {
 		chgStr = """
-			<div class=\"chglogmodal\"></div>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js"></script>
 			<script>
-				vex.defaultOptions.className = 'vex-theme-default';
 				\$(document).ready(function() {
 				    vex.dialog.alert({
-				    	unsafeMessage: '<h4>What\'s New with the Camera</h4><p>${devVerInfo()}</p>'
-				    })
+						unsafeMessage: `<h3 style="background-color: transparent;">What\'s New with the Camera</h3>
+						<div style="padding: 0 5px 0 5px; text-align: left;">
+							${devVerInfo()}
+						</div>`
+				    , className: 'vex-theme-top'})
 				});
 			</script>
 		"""
+		state?.shownChgLog = true
 	}
 	return chgStr
 }
@@ -1137,15 +1141,10 @@ def getCamHtml() {
 				<link rel="stylesheet" href="${getCssData()}"/>
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
-				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-default.min.css", "text", "css")}" />
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
 
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
-				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<style>
-					.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
 				</style>
 			</head>
 			<body>
