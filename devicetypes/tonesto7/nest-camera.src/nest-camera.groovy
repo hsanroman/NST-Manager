@@ -235,7 +235,7 @@ def processEvent() {
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.streamMsg = eventData?.streamNotify == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ?: 60
+			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal.toInteger() : 60
 			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 				state.hcTimeout = eventData?.hcTimeout
 				verifyHC()
@@ -545,7 +545,7 @@ def motionEvtHandler(data) {
 				//log.debug "motionEvt newEndDt > dtNow: (${newEndDt > dtNow})"
 				if(newEndDt > dtNow) {
 					motionStat = "active"
-					runIn(state?.motionSndChgWaitVal+6, "motionSoundEvtHandler", [overwrite: true])
+					runIn(state?.motionSndChgWaitVal.toInteger()+6, "motionSoundEvtHandler", [overwrite: true])
 				}
 			}
 		}
@@ -575,7 +575,7 @@ def soundEvtHandler(data) {
 				// log.debug "soundEvt newEndDt > dtNow: (${newEndDt > dtNow})"
 				if(newEndDt > dtNow) {
 					sndStat = "detected"
-					runIn(state?.motionSndChgWaitVal+6, "motionSoundEvtHandler", [overwrite: true])
+					runIn(state?.motionSndChgWaitVal.toInteger()+6, "motionSoundEvtHandler", [overwrite: true])
 				}
 			}
 		}
