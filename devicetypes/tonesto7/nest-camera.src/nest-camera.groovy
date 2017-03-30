@@ -1088,21 +1088,13 @@ def getChgLogHtml() {
 	log.debug "shownChgLog: ${state?.shownChgLog}"
 	if(state?.shownChgLog == false || state?.shownChgLog == null) {
 		chgStr = """
-			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
-			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-default.min.css", "text", "css")}" />
-			<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
-			<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js", "text", "javascript")}"></script>
-			<script>vex.defaultOptions.className = 'vex-theme-default'</script>
-			<style>
-				.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
-			</style>
 			<div class=\"chglogmodal\"></div>
 			<script>
-				\$('.chglogmodal').on(function(){
-					vex.dialog.alert({ unsafeMessage: `
-						<h4>Here's What's New with the Camera</h4>
-						<p>${devVerInfo()}</p>
-					`, className: 'vex-theme-top' })
+				vex.defaultOptions.className = 'vex-theme-default';
+				\$(document).ready(function() {
+				    vex.dialog.alert({
+				    	unsafeMessage: '<h4>What\'s New with the Camera</h4><p>${devVerInfo()}</p>'
+				    })
 				});
 			</script>
 		"""
@@ -1144,13 +1136,20 @@ def getCamHtml() {
 				<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 				<link rel="stylesheet" href="${getCssData()}"/>
 				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/css/swiper.min.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex.min.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-default.min.css", "text", "css")}" />
+				<link rel="stylesheet" href="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/css/vex-theme-top.min.css", "text", "css")}" />
 
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.4.1/js/swiper.min.js", "text", "javascript")}"></script>
 				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js", "text", "javascript")}"></script>
+				<script src="${getFileBase64("https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.1.0/js/vex.combined.min.js", "text", "javascript")}"></script>
+				<script>vex.defaultOptions.className = 'vex-theme-default'</script>
 				<style>
+					.vex.vex-theme-default .vex-content { width: 95%; padding: 3px;	}
 				</style>
 			</head>
 			<body>
+				${getChgLogHtml()}
 				${devBrdCastHtml}
 				${clientBl}
 				${updateAvail}
