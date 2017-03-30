@@ -66,7 +66,7 @@
     },
     "aaPrefs": {
         "enAaMsgQueue": true,
-        "enMultiQueue": true
+        "enMultiQueue": false
     },
     "reportPrefs": {
         "disVoiceZoneRprt": false,
@@ -85,7 +85,7 @@
         "count": 8
     },
     "eventStreaming": {
-        "enabled": true,
+        "enabled": false,
         "minVersion": "0.4.0"
     },
     "healthcheck": {
