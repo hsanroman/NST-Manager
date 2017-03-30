@@ -1,8 +1,9 @@
-V5.0.0 (March 29th, 2017):
+V5.0.0 (March 30th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
  • NEW: Name Changed to NST Manager
  • NEW: Manager and Automations codebase has been split into two individual files.
+    • There is a fully automated process to migrate your existing automation to this new file and remove the old ones.
  • NEW: Find Weather Locations using integrated Wunderground's search API.
  • NEW: Token's are now redacted from all IDE logs to prevent them from being shared.
  • NEW: Fresh New Notification UI right off the first page of the Manager.

@@ -750,8 +750,6 @@ def getSmokeImg() {
 	return ["img":img, "caption": caption, "captionClass":captionClass]
 }
 
-def getTestImg(imgName) { return imgName ? "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/Test/$imgName" : "" }
-
 def getImg(imgName) {
 	if(imgName) {
 		return imgName ? "https://cdn.rawgit.com/tonesto7/nest-manager/master/Images/Devices/$imgName" : ""

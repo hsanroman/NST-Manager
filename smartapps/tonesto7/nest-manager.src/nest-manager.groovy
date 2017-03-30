@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.0" }
-def appVerDate() { "3-27-2017" }
+def appVerDate() { "3-30-2017" }
 
 preferences {
 	//startPage
