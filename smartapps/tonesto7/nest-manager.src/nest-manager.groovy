@@ -4642,9 +4642,9 @@ def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk()
 
 def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, brdcast = null) {
 	//LogTrace("sendMsg")
+	def sentstr = "Push"
 	try {
 		def newMsg = "${msgType}: ${msg}" as String
-		def sentstr = "Push"
 		def sent = false
 		if(!getOk2Notify()) {
 			LogAction("sendMsg: Skipping due to Quiet Time ($newMsg}", "info", true)
