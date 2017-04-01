@@ -2164,6 +2164,7 @@ def getInstAutoTypesDesc() {
 	def disItems = []
 	def nItems = [:]
 	def schMotItems = []
+	atomicState?.autoSaVer = minVersions()?.automation?.val
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
 		def ver
@@ -2177,12 +2178,6 @@ def getInstAutoTypesDesc() {
 			ver = null
 			type = "old"
 		}
-		//if(ver != appVersion()) {
-		if(versionStr2Int(ver) < minVersions()?.automation?.val) {
-			LogAction("NEED SOFTWARE UPDATE: Automation ${a?.label} (v${ver}) REQUIRED: (v${minVersions()?.automation?.desc}) Update the NST automation to latest", "error", true)
-			appUpdateNotify()
-		}
-
 		if(ver) {
 			def updVer = atomicState?.autoSaVer ?: ver
 			if(versionStr2Int(ver) < versionStr2Int(updVer)) {
@@ -2190,6 +2185,12 @@ def getInstAutoTypesDesc() {
 			}
 			atomicState.autoSaVer = updVer
 		}
+
+		if(versionStr2Int(ver) < minVersions()?.automation?.val) {
+			LogAction("NEED SOFTWARE UPDATE: Automation ${a?.label} (v${ver}) REQUIRED: (v${minVersions()?.automation?.desc}) Update the NST automation to latest", "error", true)
+			appUpdateNotify()
+		}
+
 		if(dis) {
 			disItems.push(a?.label.toString())
 			dat["disabled"] = dat["disabled"] ? dat["disabled"]+1 : 1
@@ -5060,7 +5061,7 @@ def isAppUpdateAvail() {
 }
 
 def isAutoAppUpdateAvail() {
-	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.autoapp?.ver, appVersion(), "automation")) { return true }
+	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.autoapp?.ver, atomicState?.autoSaVer, "automation")) { return true }
 	return false
 }
 
