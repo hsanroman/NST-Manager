@@ -2177,8 +2177,9 @@ def getInstAutoTypesDesc() {
 			ver = null
 			type = "old"
 		}
-		if(ver != appVersion()) {
-			LogAction("Bad child app version ${ver}", "error", true)
+		//if(ver != appVersion()) {
+		if(versionStr2Int(ver) < minVersions()?.automation?.val) {
+			LogAction("NEED SOFTWARE UPDATE: Automation ${a?.label} (v${ver}) REQUIRED: (v${minVersions()?.automation?.desc}) Update the NST automation to latest", "error", true)
 			appUpdateNotify()
 		}
 
