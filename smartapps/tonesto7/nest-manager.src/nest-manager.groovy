@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.0" }
-def appVerDate() { "3-30-2017" }
+def appVersion() { "5.0.1" }
+def appVerDate() { "3-31-2017" }
 
 preferences {
 	//startPage
@@ -4643,7 +4643,7 @@ def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk()
 def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, brdcast = null) {
 	//LogTrace("sendMsg")
 	try {
-		def newMsg = "${msgType}: ${msg}"
+		def newMsg = "${msgType}: ${msg}" as String
 		def sentstr = "Push"
 		def sent = false
 		if(!getOk2Notify()) {
@@ -4653,6 +4653,7 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 				def who = people ? people : settings?.recipients
 				if(location.contactBookEnabled) {
 					if(who) {
+						sentstr = "Push Contacts to $who"
 						sendNotificationToContacts(newMsg, who, [event: showEvt])
 						sent = true
 					}
@@ -4662,17 +4663,18 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 						sendPush(newMsg)	// sends push and notification feed
 						sent = true
 					}
-					def phone = sms ? sms : settings?.phone
+					def phone = sms ? sms.toString() : settings?.phone ?: ""
 					if(phone) {
-						sendSms(phone, newMsg)	// send SMS and notification feed
-						sentstr = "SMS"
+						sentstr = "SMS to phone $phone"
+						def t0 = newMsg.take(140)
+						sendSms(phone as String, t0 as String)	// send SMS and notification feed
 						sent = true
 					}
 				}
 			} else {
+				sentstr = "Broadcast"
 				sendPush(newMsg)		// sends push and notification feed was  sendPushMessage(newMsg)  // push but no notification feed
 				sent = true
-				sentstr = "Broadcast"
 			}
 			if(sent) {
 				atomicState?.lastMsg = newMsg
@@ -4681,7 +4683,7 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 			}
 		}
 	} catch (ex) {
-		log.error "sendMsg Exception:", ex
+		log.error "sendMsg $sentstr Exception:", ex
 		sendExceptionData(ex, "sendMsg")
 	}
 }
