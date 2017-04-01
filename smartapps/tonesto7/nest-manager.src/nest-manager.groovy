@@ -4664,11 +4664,11 @@ def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, 
 						sendPush(newMsg)	// sends push and notification feed
 						sent = true
 					}
-					def phone = sms ? sms.toString() : settings?.phone ?: ""
-					if(phone) {
-						sentstr = "SMS to phone $phone"
+					def thephone = sms ? sms.toString() : settings?.phone ? settings?.phone?.toString() : ""
+					if(thephone) {
+						sentstr = "SMS to phone $thephone"
 						def t0 = newMsg.take(140)
-						sendSms(phone as String, t0 as String)	// send SMS and notification feed
+						sendSms(thephone as String, t0 as String)	// send SMS and notification feed
 						sent = true
 					}
 				}
