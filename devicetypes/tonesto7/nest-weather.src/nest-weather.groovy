@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.0" }
+def devVer() { return "5.0.1" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -712,7 +712,7 @@ def getWeatherAlerts(weatData) {
 							if(statechange && !(thisKey in state.lastWeatherAlertNotif)) {
 								def waf = state?.weatherAlertFilters?.findAll { alert?.message.contains(it) }
 								if(!waf) {
-									sendNofificationMsg("WEATHER ALERT: ${alert?.message}", "Warn")
+									sendNofificationMsg("Warn", "WEATHER ALERT: ${alert?.message}")
 								}
 							}
 							newWalertNotif << thisKey
@@ -860,9 +860,9 @@ private estimateLux(weatherIcon) {
 	return null
 }
 
-def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
+def sendNofificationMsg(msgType, msg, recips = null, sms = null, push = null) {
 	if(msg && msgType) {
-		parent?.sendMsg(msg, msgType, recips, sms, push)
+		parent?.sendMsg(msgType, msg, true, recips, sms, push)
 		//LogAction("Send Push Notification to $recips...", "info", true)
 	}
 }
