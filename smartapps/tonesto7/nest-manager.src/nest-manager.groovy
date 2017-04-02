@@ -2164,7 +2164,7 @@ def getInstAutoTypesDesc() {
 	def disItems = []
 	def nItems = [:]
 	def schMotItems = []
-	atomicState?.autoSaVer = minVersions()?.automation?.val
+	atomicState?.autoSaVer = minVersions()?.automation?.desc
 	childApps?.each { a ->
 		def type = a?.getAutomationType()
 		def ver
