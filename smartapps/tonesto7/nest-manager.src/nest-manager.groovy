@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.1" }
-def appVerDate() { "3-31-2017" }
+def appVersion() { "5.0.2" }
+def appVerDate() { "4-02-2017" }
 
 preferences {
 	//startPage
@@ -195,7 +195,7 @@ def mainPage() {
 		section("") {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
 			if(settings?.restStreaming) {
-				def rStrEn = atomicState?.appData?.eventStreaming?.enabled
+				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
 				href "pollPrefPage", title: "", description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
 			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
@@ -1611,7 +1611,7 @@ def getVoiceRprtPrefDesc() {
 }
 
 def getPollingConfDesc() {
-	def rStrEn = atomicState?.appData?.eventStreaming?.enabled
+	def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
 	def pollValDesc = (!settings?.pollValue || settings?.pollValue == "180") ? "" : " (Custom)"
 	def pollStrValDesc = (!settings?.pollStrValue || settings?.pollStrValue == "180") ? "" : " (Custom)"
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
@@ -1987,7 +1987,7 @@ def askAlexaMQHandler(evt) {
 }
 
 def startStopStream() {
-	def strEn = atomicState?.appData?.eventStreaming?.enabled == true ? true : false
+	def strEn = (atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) ? true : false
 	if((!strEn || !settings?.restStreaming) && !atomicState?.restStreamingOn) {
 		return
 	}
@@ -6534,7 +6534,7 @@ def minVersions() {
 		"thermostat":["val":500, "desc":"5.0.0"],
 		"protect":["val":500, "desc":"5.0.0"],
 		"presence":["val":500, "desc":"5.0.0"],
-		"weather":["val":500, "desc":"5.0.0"],
+		"weather":["val":501, "desc":"5.0.1"],
 		"camera":["val":500 , "desc":"5.0.0"],
 	]
 }
