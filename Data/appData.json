@@ -29,7 +29,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.0.0"
+                "ver": "5.0.2"
             },
             "autoapp": {
                 "ver": "5.0.0"
@@ -47,7 +47,7 @@
                 "ver": "5.0.0"
             },
             "weather": {
-                "ver": "5.0.0"
+                "ver": "5.0.1"
             }
         }
     },
