@@ -93,6 +93,7 @@ preferences {
 	page(name: "backupStubDataPage")
 	page(name: "backupRemoveDataPage")
 	page(name: "backupPage")
+	page(name: "deviceDiscovery", title: "UPnP Device Setup", content: "deviceDiscovery")
 }
 
 mappings {
@@ -648,8 +649,9 @@ def pollPrefPage() {
 				}
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
 			}
-			section("Configure Streaming Service:", hideable: true, hidden: (restStreamIp && restStreamPort ? true : false)) {
+			section("Configure Streaming Service:", hideable: true, hidden: false) {//(restStreamIp && restStreamPort ? true : false)) {
 				if(settings?.restStreaming) {
+					href "deviceDiscovery", title: "Find Local Service", description: "Todo."
 					input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
 					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
 				}
@@ -674,6 +676,112 @@ def pollPrefPage() {
 		incPollPrefLoadCnt()
 		devPageFooter("pollPrefLoadCnt", execTime)
 	}
+}
+
+
+def deviceDiscovery() {
+
+	def options = verifiedDevices()
+	log.debug "options: $options"
+	ssdpSubscribe()
+
+	ssdpDiscover()
+	verifyDevices()
+
+	return dynamicPage(name: "deviceDiscovery", title: "Discovery Started!", nextPage: "", refreshInterval: 5, install: false, uninstall: false) {
+		section("Please wait while we discover your UPnP Device. Discovery can take five minutes or more, so sit back and relax! Select your device below once discovered.") {
+			input "selectedDevices", "enum", required: false, title: "Select Devices (${options.size() ?: 0} found)", multiple: true, options: options
+		}
+	}
+}
+
+void ssdpDiscover() {
+	LogAction("Sending discovery broadcast to find local node rest service...", "info", true)
+	sendHubCommand(new physicalgraph.device.HubAction("lan discovery urn:schemas-upnp-org:service:NST-Streaming:1", physicalgraph.device.Protocol.LAN))
+}
+
+void ssdpSubscribe() {
+	subscribe(location, "ssdpTerm.urn:schemas-upnp-org:service:NST-Streaming:1", ssdpHandler)
+}
+
+Map verifiedDevices() {
+	def devices = getVerifiedDevices()
+	def map = [:]
+	devices.each {
+		//log.debug "value: ${it?.value}"
+		def value = it.value.hostname ?: "UPnP Device ${it.value.ssdpUSN.split(':')[1][-3..-1]}"
+		//def value = "${it.value.hostname}\n(${it?.value?.ip}:${it?.value?.port})"
+		def key = it.value.mac
+		map["${key}"] = value
+	}
+	map
+}
+
+def getDevices() {
+	if (!atomicState.restSrvcDevices) {
+		atomicState.restSrvcDevices = [:]
+	}
+	atomicState?.restSrvcDevices
+}
+
+void verifyDevices() {
+	def devices = getDevices().findAll { it?.value?.verified != true }
+	devices.each {
+		int port = convertHexToInt(it.value.deviceAddress)
+		String ip = convertHexToIP(it.value.networkAddress)
+		String host = "${ip}:${port}"
+		sendHubCommand(new physicalgraph.device.HubAction("""GET ${it.value.ssdpPath} HTTP/1.1\r\nHOST: $host\r\n\r\n""", physicalgraph.device.Protocol.LAN, host, [callback: srvcDescHandler]))
+	}
+}
+
+def getVerifiedDevices() {
+	getDevices().findAll{ it.value.verified == true }
+}
+
+def ssdpHandler(evt) {
+	def description = evt.description
+	def hub = evt?.hubId
+	def parsedEvent = parseLanMessage(description)
+	parsedEvent << ["hub":hub]
+	//log.debug "parsedEvent: $parsedEvent"
+	def devices = getDevices()
+	String ssdpUSN = parsedEvent.ssdpUSN.toString()
+	if (devices."${ssdpUSN}") {
+		// def d = devices."${ssdpUSN}"
+		// if (d.networkAddress != parsedEvent.networkAddress || d.deviceAddress != parsedEvent.deviceAddress) {
+		// 	d.networkAddress = parsedEvent.networkAddress
+		// 	d.deviceAddress = parsedEvent.deviceAddress
+		// 	def child = getChildDevice(parsedEvent.mac)
+		// 	if (child) {
+		// 		child.sync(parsedEvent.networkAddress, parsedEvent.deviceAddress)
+		// 	}
+		// }
+	} else {
+		devices << ["${ssdpUSN}": parsedEvent]
+	}
+	atomicState?.restSrvcDevices = devices
+}
+
+void srvcDescHandler(physicalgraph.device.HubResponse hubResponse) {
+	def body = hubResponse.xml
+	def results = atomicState?.availRestSrvcs ?: [:]
+	def devices = getDevices()
+	//log.debug "devices: $devices"
+	def device = devices.find { it?.key?.contains(body?.device?.uuid?.text()) }
+	if (device) {
+		device?.value << [ip:body?.device?.serviceIp, port:body?.device?.servicePort, hostname:body?.device?.hostName, verified: true]
+	}
+	//log.debug "device: $device"
+	results << device
+	atomicState?.availRestSrvcs << results
+}
+
+private Integer convertHexToInt(hex) {
+	Integer.parseInt(hex,16)
+}
+
+private String convertHexToIP(hex) {
+	[convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
 }
 
 def automationsPage() {
