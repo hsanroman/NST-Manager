@@ -6384,7 +6384,7 @@ def showFeedbackOk() {
 }
 
 def showChgLogOk() {
-	return !atomicState?.installData?.shownChgLog ? true : false
+	return (!atomicState?.installData?.shownChgLog && atomicState?.isInstalled) ? true : false
 }
 
 def getDaysSinceInstall() {

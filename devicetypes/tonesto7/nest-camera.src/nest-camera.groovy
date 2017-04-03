@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.0" }
+def devVer() { return "5.0.1" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -153,6 +153,7 @@ void installed() {
 	initialize()
 	state?.isInstalled = true
 	state?.shownChgLog = true
+	runIn(15, "refresh")
 }
 
 void updated() {
@@ -966,7 +967,7 @@ def getImg(imgName) {
 
 def getWebData(params, desc, text=true) {
 	try {
-		Logger("getWebData: ${desc} data", "info")
+		//Logger("getWebData: ${desc} data", "info")
 		httpGet(params) { resp ->
 			if(resp.data) {
 				if(text) {
@@ -1086,7 +1087,7 @@ def getCamApiServer() {
 
 def getChgLogHtml() {
 	def chgStr = ""
-	log.debug "shownChgLog: ${state?.shownChgLog}"
+	//log.debug "shownChgLog: ${state?.shownChgLog}"
 	if(!state?.shownChgLog == true) {
 		chgStr = """
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
@@ -1376,10 +1377,10 @@ def hideCamHtml() {
 		d += """<h3 ${tClass}>Live video streaming is Off</h3><br><h3 ${bClass}>Please Turn it back on and refresh this page...</h3>"""
 	}
 	else if(!state?.camUUID) {
-		d += """<h3 ${tClass}>Camera ID Not Found...</h3><br><h3 ${bClass}>If this is your first time opening this device then try refreshing the page.</h3><br>
+		d += """<h3 ${tClass}>Camera ID Not Found...</h3><br><h3 ${bClass}>If this is your first time opening this device then try refreshing the page.</h3>
 			<h3 ${bClass}>If this message is still shown after a few minutes then please verify public video streaming is enabled for this camera</h3>"""
 	}
-	else if(!state?.public_share_url) {SS
+	else if(!state?.public_share_url) {
 		d += """<h3 ${tClass}>Unable to Display Video Stream</h3><br><h3 ${bClass}>Please make sure that public video streaming is enabled at</h3><h3 ${bClass}>https://home.nest.com</h3>"""
 	}
 	else if(!state?.isOnline) {
