@@ -192,7 +192,7 @@ def parse(String description) {
 
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
-	def val = online.toString() != "false" ? "offline" : "online"
+	def val = online.toString() == "false" ? "offline" : "online"
 	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
 }
 

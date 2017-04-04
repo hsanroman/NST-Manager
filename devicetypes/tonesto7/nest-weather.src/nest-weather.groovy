@@ -171,8 +171,8 @@ void healthEnroll() {
 
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
-	def val = online.toString() != "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
+	def val = online.toString() == "false" ? "offline" : "online"
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
 }
 
 def parse(String description) {

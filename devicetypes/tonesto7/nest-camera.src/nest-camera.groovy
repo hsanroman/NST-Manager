@@ -188,8 +188,8 @@ def refresh() {
 
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
-	def val = online.toString() != "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
+	def val = online.toString() == "false" ? "offline" : "online"
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
 }
 
 def cltLiveStreamStart() {
@@ -863,6 +863,24 @@ def exceptionDataHandler(msg, methodName) {
 			def msgString = "${msg}"
 			parent?.sendChildExceptionData("camera", devVer(), msgString, methodName)
 		}
+	}
+}
+
+def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
+	//LogTrace("[GetTimeDiffSeconds] StartDate: $strtDate | StopDate: ${stpDate ?: "Not Sent"} | MethodName: ${methName ?: "Not Sent"})")
+	try {
+		if((strtDate && !stpDate) || (strtDate && stpDate)) {
+			def now = new Date()
+			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
+			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
+			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
+			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
+			def diff = (int) (long) (stop - start) / 1000
+			return diff
+		} else { return null }
+	} catch (ex) {
+		log.warn "getTimeDiffSeconds error: Unable to parse datetime..."
 	}
 }
 
