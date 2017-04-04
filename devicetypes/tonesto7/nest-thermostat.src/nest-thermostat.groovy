@@ -379,7 +379,7 @@ def refresh() {
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
 	def val = online.toString() == "true" ? "online" : "offline"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: "${val}", displayed: false)
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
 }
 
 // parent calls this method to queue data.
@@ -698,7 +698,6 @@ def debugOnEvent(debug) {
 
 def lastCheckinEvent(checkin, isOnline) {
 	//log.trace("lastCheckinEvent($checkin, $isOnline)")
-	isOnline = false
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
@@ -726,7 +725,7 @@ def lastCheckinEvent(checkin, isOnline) {
 	modifyDeviceStatus(isOnline)
 	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
-		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
+		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
 
