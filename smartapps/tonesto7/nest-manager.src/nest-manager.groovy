@@ -643,25 +643,25 @@ def pollPrefPage() {
 						input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
 					}
 					getRestSrvcDesc()
-				} else {
 					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
 				}
 			}
 			startStopStream()
 		}
-		section("Device Polling:") {
-			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true)
-		}
-		section("Location Polling:") {
-			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()], submitOnChange: true)
+		section("Polling:") {
+			if(settings?.selectedRestDevice) {
+				paragraph "These settings is only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
+			}
+			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true, image: getAppImg("thermostat_icon.png"))
+			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()], submitOnChange: true, image: getAppImg("nest_structure_icon.png"))
 		}
 		if(atomicState?.weatherDevice) {
-			section("Weather Polling:") {
-				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
+			section("Weather Updates:") {
+				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("weather_icon.png"))
 			}
 		}
 		section("Wait Values:") {
-			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true)
+			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png"))
 		}
 
 		incPollPrefLoadCnt()
@@ -685,13 +685,14 @@ def getRestSrvcDesc() {
 			dtstr += dt?.s ? "${dt?.s}sec" : ""
 		}
 		str += "${str == "" ? "" : "\n"}Host: (${rData?.hostInfo?.hostname})"
-		str += "${str == "" ? "" : "\n"}  ├ IP: (${rData?.hostInfo?.ip})"
-		str += "${str == "" ? "" : "\n"}  ├ Port: (${rData?.hostInfo?.port})"
-		str += "${str == "" ? "" : "\n"}  ├ Version: (${rData?.version})"
-		str += "${str == "" ? "" : "\n"}  ├ Streaming: (${rData?.streaming.toString().capitalize()})"
-		str += "${str == "" ? "" : "\n"}  ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
-		str += "${str == "" ? "" : "\n"}  ${dtstr != "" ? "├" : "└"} Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
-		str += dtstr != "" ? "${str == "" ? "" : "\n"}  └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
+		str += "${str == "" ? "" : "\n"} ├ IP: (${rData?.hostInfo?.ip})"
+		str += "${str == "" ? "" : "\n"} ├ Port: (${rData?.hostInfo?.port})"
+		str += "${str == "" ? "" : "\n"} ├ Version: (${rData?.version})"
+		str += "${str == "" ? "" : "\n"} ├ Active Streaming: (${rData?.streaming.toString().capitalize()})"
+		str += "${str == "" ? "" : "\n"} ├ Session Events: (${rData?.sessionEvts})"
+		str += "${str == "" ? "" : "\n"} ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
+		str += "${str == "" ? "" : "\n"} ${dtstr != "" ? "├" : "└"} Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
+		str += dtstr != "" ? "${str == "" ? "" : "\n"} └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
 		paragraph title: "Running Service Info:", str, state: "complete"
 	}
 	return str
