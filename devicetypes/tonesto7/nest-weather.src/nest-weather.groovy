@@ -23,7 +23,6 @@ metadata {
 		capability "Relative Humidity Measurement"
 		capability "Temperature Measurement"
 		capability "Ultraviolet Index"
-		capability "Health Check"
 
 		command "refresh"
 		command "log"
@@ -158,23 +157,22 @@ void updated() {
 	initialize()
 }
 
-def getHcTimeout() {
-	def to = state?.hcTimeout
-	return ((to instanceof Integer) ? to.toInteger() : 60)*60
-}
-
 void verifyHC() {
 	def val = device.currentValue("checkInterval")
-	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut) {
-		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+	if(val) {
+		sendEvent(name: "checkInterval", value: null, displayed: false)
 	}
+	sendEvent(name: "DeviceWatch-Enroll", value: null, displayed: false)
 }
 
-def ping() {
-	Logger("ping...")
-	keepAwakeEvent()
+void healthEnroll() {
+	sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+}
+
+def modifyDeviceStatus(online) {
+	if(online == null) { return }
+	def val = online.toString() == "true" ? "online" : "offline"
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: "${val}", displayed: false)
 }
 
 def parse(String description) {
@@ -256,10 +254,6 @@ void processEvent() {
 			state.tempUnit = getTemperatureScale()
 
 			//LogAction("processEvent Parsing data ${eventData}", "trace")
-			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-				state.hcTimeout = eventData?.hcTimeout
-				verifyHC()
-			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
@@ -277,7 +271,8 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			checkHealth()
+			
+			//checkHealth()
 			state?.devBannerData = eventData?.devBannerData ?: null
 			lastUpdatedEvent()
 		}
@@ -374,17 +369,6 @@ def lastUpdatedEvent(sendEvt=false) {
 	}
 }
 
-def keepAwakeEvent() {
-	def lastDt = state?.lastUpdatedDtFmt
-	if(lastDt) {
-		def ldtSec = getTimeDiffSeconds(lastDt)
-		log.debug "ldtSec: $ldtSec"
-		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
-}
-
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
 	def newStat = issue ? "issue" : "ok"
@@ -465,10 +449,25 @@ def getHealthStatus() {
 	return device?.getStatus()
 }
 
+def healthNotifyOk() {
+	def lastDt = state?.lastHealthNotifyDt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		if(ldtSec < 300) {
+			return false
+		}
+	}
+	return true
+}
+
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
 	if(isOnline || state?.healthMsg != true) { return }
-	parent?.deviceHealthNotify(this, isOnline)
+	if(healthNotifyOk()) {
+		def now = new Date()
+		parent?.deviceHealthNotify(this, isOnline)
+		state.lastHealthNotifyDt = formatDt(now)
+	}
 }
 
 /************************************************************************************************

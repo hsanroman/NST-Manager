@@ -38,7 +38,7 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.4" }
+def appVersion() { "5.0.3" }
 def appVerDate() { "4-4-2017" }
 
 preferences {
@@ -725,7 +725,7 @@ def restSrvcDiscovery(params=[:]) {
 
 	return dynamicPage(name:"restSrvcDiscovery", title:"", nextPage:"", refreshInterval:5) {
 		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
-			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(${objsFound} found)", multiple: false, options: options, image: getAppImg("two_way_icon.png")
+			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(Discovered: ${objsFound})", multiple: false, options: options, image: getAppImg("two_way_icon.png")
 		}
         section("Options") {
 			href "restSrvcDiscovery", title:"Clear Discovered Services...", description:"", params: ["reset": "true"], image: getAppImg("reset_icon.png")
@@ -1083,7 +1083,6 @@ def notifPrefPage() {
 				sendMsg("Info", "Push Notification Test Successful. Notifications Enabled for ${appName()}", false)
 				atomicState.pushTested = true
 			} else { atomicState.pushTested = true }
-
 
 			section("Location Notifications:") {
 				paragraph "Get notified when the Location changes from Home/Away", state: "complete"
@@ -2434,6 +2433,7 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
+	fixStuckMigration()
 	poll(true)
 	/*
 		NOTE:
@@ -2458,11 +2458,16 @@ def refresh(child = null) {
 
 def pollFollow() { poll() }
 
-/*
-def pollWatcher(evt) {
-	if(isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
+def fixStuckMigration() {
+	if(atomicState?.migrationInProgress == true) {
+		atomicState?.migrationInProgress = false
+		atomicState?.pollBlocked = false
+		atomicState?.autoMigrationComplete = true
+		def t0 = atomicState?.installData
+		t0["usingNewAutoFile"] = true
+		atomicState?.installData = t0
+	}
 }
-*/
 
 def cleanRestAutomationTest() {
 	/*
@@ -5631,6 +5636,16 @@ def getLocHubId() {
 	return hubs[0] != null ? hubs[0].toString() : null
 }
 
+def getLocHubIp() {
+	def hub = location?.hubs[0]
+	return hub != null ? hub?.localIp.toString() : null
+}
+
+def getLocHub() {
+	def hubs = location?.hubs*.id.findAll { it }
+	return hubs[0] != null ? hubs[0] : null
+}
+
 def addRemoveDevices(uninst = null) {
 	//LogTrace("addRemoveDevices")
 	def retVal = false
@@ -5648,7 +5663,7 @@ def addRemoveDevices(uninst = null) {
 					def d1 = getChildDevice(getNestTstatDni(dni))
 					if(!d1) {
 						def d1Label = getNestTstatLabel("${dni?.value}")
-						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, getLocHubId(), [label: "${d1Label}"])
+						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, null, [label: "${d1Label}"])
 						//d1.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5665,7 +5680,7 @@ def addRemoveDevices(uninst = null) {
 					def d2 = getChildDevice(getNestProtDni(dni).toString())
 					if(!d2) {
 						def d2Label = getNestProtLabel("${dni.value}")
-						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, getLocHubId(), [label: "${d2Label}"])
+						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
 						//d2.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d2?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5683,7 +5698,7 @@ def addRemoveDevices(uninst = null) {
 					def d3 = getChildDevice(dni)
 					if(!d3) {
 						def d3Label = getNestPresLabel()
-						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, getLocHubId(), [label: "${d3Label}"])
+						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${d3Label}"])
 						//d3.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
@@ -5703,7 +5718,7 @@ def addRemoveDevices(uninst = null) {
 					def d4 = getChildDevice(dni)
 					if(!d4) {
 						def d4Label = getNestWeatherLabel()
-						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, getLocHubId(), [label: "${d4Label}"])
+						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
 						//d4.take()
 						atomicState?.lastWeatherUpdDt = null
 						atomicState?.lastForecastUpdDt = null
@@ -5723,7 +5738,7 @@ def addRemoveDevices(uninst = null) {
 					def d5 = getChildDevice(getNestCamDni(dni).toString())
 					if(!d5) {
 						def d5Label = getNestCamLabel("${dni.value}")
-						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, getLocHubId(), [label: "${d5Label}"])
+						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, null, [label: "${d5Label}"])
 						//d5.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d5?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5741,7 +5756,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, getLocHubId(), [label: "${d6Label}", "data":["isVirtual":"true"]])
+						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
