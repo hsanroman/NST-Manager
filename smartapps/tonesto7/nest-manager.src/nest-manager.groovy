@@ -4649,7 +4649,7 @@ def notificationCheck() {
 }
 
 def cameraStreamNotify(child, Boolean streaming) {
-	if(!streaming || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
+	if(streaming == null || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
 	sendMsg("${child?.device?.displayName} Info", "Streaming is now '${streaming ? "ON" : "OFF"}'", false)
 }
 
