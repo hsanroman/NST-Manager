@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -171,8 +171,8 @@ void healthEnroll() {
 
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
-	def val = online.toString() == "true" ? "online" : "offline"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: "${val}", displayed: false)
+	def val = online.toString() != "false" ? "offline" : "online"
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
 }
 
 def parse(String description) {
@@ -271,7 +271,7 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
-			
+
 			//checkHealth()
 			state?.devBannerData = eventData?.devBannerData ?: null
 			lastUpdatedEvent()

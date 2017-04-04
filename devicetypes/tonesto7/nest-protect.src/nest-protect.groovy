@@ -192,8 +192,8 @@ def parse(String description) {
 
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
-	def val = online.toString() == "true" ? "online" : "offline"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: "${val}", displayed: false)
+	def val = online.toString() != "false" ? "offline" : "online"
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
 }
 
 def poll() {
