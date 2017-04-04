@@ -100,6 +100,7 @@ def uninstallPage() {
  ******************************************************************************/
 def installed() {
 	LogAction("Installed with settings: ${settings}", "debug", true)
+	atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString()]
 	initialize()
 	sendNotificationEvent("${appName()} installed")
 }
@@ -338,7 +339,7 @@ def selectAutoPage() {
 					href "mainAutoPage", title: "Nest Mode Automations", description: "", params: [autoType: "nMode"], image: getAppImg("mode_automation_icon.png")
 				}
 			}
-			section("Thermostat Automations: Setpoints, Remote Sensor, External Temp, Contact Sensor, Leak Sensor, Fan Control") {
+			section("Thermostat Automations: Setpoints, Remote Sensor, External Temp, Humidifier, Contact Sensor, Leak Sensor, Fan Control") {
 				href "mainAutoPage", title: "Thermostat Automations", description: "", params: [autoType: "schMot"], image: getAppImg("thermostat_automation_icon.png")
 			}
 		}
@@ -1154,7 +1155,7 @@ def runAutomationEval() {
 void sendAutoChgToDevice(dev, autoType, chgDesc) {
 	if(dev && autoType && chgDesc) {
 		try {
-			dev?.whoMadeChanges(autoType, chgDesc, getDtNow())
+			dev?.whoMadeChanges(autoType?.toString(), chgDesc?.toString(), getDtNow().toString())
 		} catch (ex) {
 			log.error "sendAutoChgToDevice Exception:", ex
 		}
@@ -3021,11 +3022,11 @@ def extTmpTempCheck(cTimeOut = false) {
 					LogAction("extTmpTempCheck: | Skipping: Exterior temperatures in range and '${extTmpTstat?.label}' mode is 'OFF or ECO'", "info", true)
 				}
 			} else {
-				if(modeEco) { LogAction("extTmpTempCheck: Skipping: in ECO mode", "info", true) }
-				else if(!schedOk) { LogAction("extTmpTempCheck: Skipping: Schedule Restrictions", "info", true) }
+				if(timeOut) { LogAction("extTmpTempCheck: Skipping: active timeout", "info", true) }
 				else if(!safetyOk) { LogAction("extTmpTempCheck: Skipping: Safety Temps Exceeded", "info", true) }
-				else if(timeOut) { LogAction("extTmpTempCheck: Skipping: active timeout", "info", true) }
+				else if(!schedOk) { LogAction("extTmpTempCheck: Skipping: Schedule Restrictions", "info", true) }
 				else if(!tempWithinThreshold) { LogAction("extTmpTempCheck: Exterior temperatures not in range", "info", true) }
+				else if(modeEco) { LogAction("extTmpTempCheck: Skipping: in ECO mode extTmpTstatOffRequested: (${atomicState?.extTmpTstatOffRequested})", "info", true) }
 			}
 			storeExecutionHistory((now() - execTime), "extTmpTempCheck")
 		}
@@ -3044,15 +3045,6 @@ def extTmpGenericEvt(evt) {
 def extTmpDpOrTempEvt(type) {
 	if(atomicState?.disableAutomation) { return }
 	else {
-		def extTmpTstat = settings?.schMotTstat
-		def extTmpTstatMir = settings?.schMotTstatMir
-
-		def curMode = extTmpTstat?.currentnestThermostatMode.toString()
-		def modeOff = (curMode in ["off", "eco"]) ? true : false
-		def offVal = getExtTmpOffDelayVal()
-		def onVal = getExtTmpOnDelayVal()
-		def timeVal
-
 		atomicState.NeedwUpd = true
 		getExtConditions()
 
@@ -3060,7 +3052,15 @@ def extTmpDpOrTempEvt(type) {
 		def tempWithinThreshold = extTmpTempOk()
 		atomicState?.extTmpLastWithinThreshold = tempWithinThreshold
 
-		if(lastTempWithinThreshold != null && tempWithinThreshold != lastTempWithinThreshold) {
+		if(lastTempWithinThreshold == null || tempWithinThreshold != lastTempWithinThreshold) {
+
+			def extTmpTstat = settings?.schMotTstat
+			def curMode = extTmpTstat?.currentnestThermostatMode.toString()
+			def modeOff = (curMode in ["off", "eco"]) ? true : false
+			def offVal = getExtTmpOffDelayVal()
+			def onVal = getExtTmpOnDelayVal()
+			def timeVal
+
 			if(!modeOff) {
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				timeVal = ["valNum":offVal, "valLabel":getEnumValue(longTimeSecEnum(), offVal)]
@@ -3068,8 +3068,7 @@ def extTmpDpOrTempEvt(type) {
 				atomicState.extTmpChgWhileOffDt = getDtNow()
 				timeVal = ["valNum":onVal, "valLabel":getEnumValue(longTimeSecEnum(), onVal)]
 			}
-			def val = timeVal?.valNum > 20 ? timeVal?.valNum : 20
-			val = timeVal?.valNum < 60 ? timeVal?.valNum : 60
+			def val = Math.min( Math.max(timeVal?.valNum,20), 60)
 			LogAction("${type} | External Temp Check scheduled for (${timeVal.valLabel}) HVAC mode: ${curMode}", "info", true)
 			scheduleAutomationEval(val)
 		} else {
@@ -3308,11 +3307,11 @@ def conWatCheck(cTimeOut = false) {
 					LogAction("conWatCheck: | Skipping ECO change: '${conWatTstat?.label}' mode is '${curMode}'", "info", true)
 				}
 			} else {
-				if(modeEco) { LogAction("conWatCheck: Skipping: in ECO mode", "info", true) }
+				if(timeOut) { LogAction("conWatCheck: Skipping: active timeout", "info", true) }
 				else if(!schedOk) { LogAction("conWatCheck: Skipping: Schedule Restrictions", "info", true) }
 				else if(!safetyOk) { LogAction("conWatCheck: Skipping: Safety Temps Exceeded", "warn", true) }
-				else if(timeOut) { LogAction("conWatCheck: Skipping: active timeout", "info", true) }
 				else if(contactsOk) { LogAction("conWatCheck: Contacts are closed", "info", true) }
+				else if(modeEco) { LogAction("conWatTempCheck: Skipping: in ECO mode conWatTstatOffRequested: (${atomicState?.conWatTstatOffRequested})", "info", true) }
 			}
 			storeExecutionHistory((now() - execTime), "conWatCheck")
 		}
@@ -3861,7 +3860,7 @@ def checkNestMode() {
 				if(nModeCamOffHome) { adjustCameras(false) }
 			}
 			else {
-				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}| ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away: ($away) | Home: ($home)", "info", true)
+				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away: ($away) | Home: ($home)", "info", true)
 			}
 			if(didsomething) {
 				scheduleAutomationEval(90)
