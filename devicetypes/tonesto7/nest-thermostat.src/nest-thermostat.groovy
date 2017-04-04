@@ -379,7 +379,7 @@ def refresh() {
 def modifyDeviceStatus(online) {
 	if(online == null) { return }
 	def val = online.toString() == "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false)
+	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
 }
 
 // parent calls this method to queue data.
