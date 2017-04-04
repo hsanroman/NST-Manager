@@ -31,13 +31,15 @@ definition(
 {
 	appSetting "clientId"
 	appSetting "clientSecret"
-	appSetting "devOpt"
+	if(developerVer()) {
+		appSetting "devOpt"
+	}
 }
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.3" }
-def appVerDate() { "4-03-2017" }
+def appVersion() { "5.0.4" }
+def appVerDate() { "4-4-2017" }
 
 preferences {
 	//startPage
@@ -192,7 +194,8 @@ def mainPage() {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
 			if(settings?.restStreaming) {
 				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
-				href "pollPrefPage", title: "", description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
+				href "pollPrefPage", title: "", state: ((atomicState?.restStreamingOn && rStrEn) ? "complete" : null), image: getAppImg("two_way_icon.png"),
+						description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})"
 			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
@@ -633,21 +636,13 @@ def pollPrefPage() {
 			}
 			section("Configure Streaming Service:") {
 				if(settings?.restStreaming) {
-					href "restSrvcDiscovery", title: "NST Service Discovery", state: (settings?.selectedRestDevice ? "complete" : null),
+					href "restSrvcDiscovery", title: "Auto-Discover Local Service", state: (settings?.selectedRestDevice ? "complete" : null),
 							description: settings?.selectedRestDevice ? "Selected Service:\n${settings?.selectedRestDevice}" : "Discover NST Service on your local network"
 					if(!settings?.selectedRestDevice) {
 						input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
 						input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
 					}
-					def rData = atomicState?.restServiceData
-					if(rData) {
-						def str = ""
-						str += "Uptime:\n${rData?.startupDt}"
-						str += "\n\nHost: (${rData?.hostInfo?.hostname})"
-						str += "\nOS: ${rData?.hostInfo?.osType}"
-						str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
-						paragraph title: "Node Service: v${rData?.version}\n(Streaming: ${rData?.streaming})", str, state: "complete"
-					}
+					getRestSrvcDesc()
 				} else {
 					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
 				}
@@ -674,93 +669,105 @@ def pollPrefPage() {
 	}
 }
 
+def getRestSrvcDesc() {
+	def rData = atomicState?.restServiceData
+	def str = null
+	if(rData) {
+		str = ""
+		def dtstr = ""
+		if(rData?.startupDt) {
+			def dt = rData?.startupDt
+			dtstr += dt?.y ? "${dt?.y}yr., " : ""
+			dtstr += dt?.mn ? "${dt?.mn}mon, " : ""
+			dtstr += dt?.d ? "${dt?.d}days, " : ""
+			dtstr += dt?.h ? "${dt?.h}hrs " : ""
+			dtstr += dt?.m ? "${dt?.m}min " : ""
+			dtstr += dt?.s ? "${dt?.s}sec" : ""
+		}
+		str += "${str == "" ? "" : "\n"}Host: (${rData?.hostInfo?.hostname})"
+		str += "${str == "" ? "" : "\n"}  ├ IP: (${rData?.hostInfo?.ip})"
+		str += "${str == "" ? "" : "\n"}  ├ Port: (${rData?.hostInfo?.port})"
+		str += "${str == "" ? "" : "\n"}  ├ Version: (${rData?.version})"
+		str += "${str == "" ? "" : "\n"}  ├ Streaming: (${rData?.streaming.toString().capitalize()})"
+		str += "${str == "" ? "" : "\n"}  ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
+		str += "${str == "" ? "" : "\n"}  ${dtstr != "" ? "├" : "└"} Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
+		str += dtstr != "" ? "${str == "" ? "" : "\n"}  └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
+		paragraph title: "Running Service Info:", str, state: "complete"
+	}
+	return str
+}
 
+def getRestSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1" }
 def restSrvcDiscovery(params=[:]) {
-	def devices = devicesDiscovered()
-
-	int discRfshCntt = !atomicState.discRfshCntt ? 0 : atomicState.discRfshCntt as int
-	atomicState?.discRfshCntt = discRfshCntt + 1
-
+	def devices = discoveredSrvcs()
 	def options = devices ?: []
-	def numFound = options.size() ?: 0
+	def objsFound = options.size() ?: 0
 
-	if ((numFound == 0 && atomicState?.discRfshCntt > 25) || params.reset == "true") {
-    	log.trace "Cleaning old device memory"
-    	state.devices = [:]
-        atomicState.discRfshCntt = 0
+	def discRfshCnt = (int) atomicState.discRfshCnt ?: 0
+	atomicState?.discRfshCnt = discRfshCnt+1
+
+	if ((objsFound == 0 && atomicState?.discRfshCnt > 25) || params?.reset == "true") {
+    	log.trace "Cleaning Out Discovered Services..."
+    	state?.localNstSrvcs = [:]
+        atomicState.discRfshCnt = 0
         app.updateSetting("selectedRestDevice", "")
     }
 
-	restSrvcSsdpSubscribe()
+	restSrvcSubscribe()
 
-	if((discRfshCntt % 5) == 0) {
-		ssdpDiscover()
+	if((discRfshCnt % 5) == 0) {
+		sendNstSrvcDiscovery()
 	}
-
-	//setup.xml request every 3 seconds except on discoveries
-	if(((discRfshCntt % 3) == 0) && ((discRfshCntt % 5) != 0)) {
+	if(((discRfshCnt % 3) == 0) && ((discRfshCnt % 5) != 0)) {
 		verifyDevices()
 	}
 
 	return dynamicPage(name:"restSrvcDiscovery", title:"", nextPage:"", refreshInterval:5) {
-		section("Please wait while we discover your local NST Service devices. Discovery can take five minutes or more, so sit back and relax! Select your device below once discovered.") {
-			input "selectedRestDevice", "enum", required:false, title:"Available NST Services (${numFound} found)", multiple:false, options:options
+		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
+			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(${objsFound} found)", multiple: false, options: options, image: getAppImg("two_way_icon.png")
 		}
         section("Options") {
-			href "restSrvcDiscovery", title:"Reset list of discovered devices", description:"", params: ["reset": "true"]
+			href "restSrvcDiscovery", title:"Clear Discovered Services...", description:"", params: ["reset": "true"], image: getAppImg("reset_icon.png")
 		}
 	}
 }
 
-void ssdpDiscover() {
-	LogAction("Sending discovery broadcast to find local node rest service...", "info", true)
-	sendHubCommand(new physicalgraph.device.HubAction("lan discovery ${getSrvcUrn()}", physicalgraph.device.Protocol.LAN))
+void sendNstSrvcDiscovery() {
+	LogAction("Sending SSDP discovery broadcast to find local NST Service...", "info", true)
+	sendHubCommand(new physicalgraph.device.HubAction("lan discovery ${getRestSrvcUrn()}", physicalgraph.device.Protocol.LAN))
 }
 
-Map devicesDiscovered() {
-	def vdevices = getVerifiedDevices()
-	def map = [:]
-	vdevices.each {
-		def value = "${it?.value?.name}"
-		def key = "${it?.value?.host}"
-		map["${key}"] = value
-	}
-	map
+Map discoveredSrvcs() {
+	def objs = getVerifiedSrvcs()
+	def res = [:]
+	objs?.each { res[it?.value?.host] = it?.value?.name	}
+	return res
 }
 
-def getVerifiedDevices() {
-	getDevices().findAll{ it?.value?.verified == true }
-}
+def getVerifiedSrvcs() { getSrvcs().findAll { it?.value?.verified == true } }
+void restSrvcSubscribe() { subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler) }
 
-def getSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1"}
-
-void restSrvcSsdpSubscribe() {
-	subscribe(location, "ssdpTerm.${getSrvcUrn()}", ssdpHandler)
-}
-
-def getDevices() {
-	if (!state?.devices) {
-		state.devices = [:]
-	}
-	state?.devices
+def getSrvcs() {
+	if (!state?.localNstSrvcs) { state.localNstSrvcs = [:] }
+	state?.localNstSrvcs
 }
 
 void verifyDevices() {
-	def devices = getDevices().findAll { it?.value?.verified != true }
+	def devices = getSrvcs().findAll { it?.value?.verified != true }
 	devices.each {
 		int port = convertHexToInt(it?.value?.deviceAddress)
 		String ip = convertHexToIP(it?.value?.networkAddress)
 		String host = "${ip}:${port}"
-		sendHubCommand(new physicalgraph.device.HubAction("""GET ${it?.value?.ssdpPath} HTTP/1.1\r\nHOST: $host\r\n\r\n""", physicalgraph.device.Protocol.LAN, host, [callback: srvcDescHandler]))
+		sendHubCommand(new physicalgraph.device.HubAction("""GET ${it?.value?.ssdpPath} HTTP/1.1\r\nHOST: $host\r\n\r\n""", physicalgraph.device.Protocol.LAN, host, [callback: srvcDescRespHandler]))
 	}
 }
 
-def ssdpHandler(evt) {
+def srvcBrdCastHandler(evt) {
 	def description = evt.description
 	def hub = evt?.hubId
 	def parsedEvent = parseLanMessage(description)
 	parsedEvent << ["hub":hub]
-	def devices = getDevices()
+	def devices = getSrvcs()
 	String ssdpUSN = parsedEvent?.ssdpUSN.toString()
 	if (devices?."${ssdpUSN}") {
 		//This area can be used to update service status in ST
@@ -769,25 +776,14 @@ def ssdpHandler(evt) {
 	}
 }
 
-void srvcDescHandler(physicalgraph.device.HubResponse hubResponse) {
+void srvcDescRespHandler(physicalgraph.device.HubResponse hubResponse) {
 	def body = hubResponse.xml
-	def devices = getDevices()
-	log.debug "UDN: ${body?.device?.UDN?.uuid}"
-	def device = devices.find { it?.key?.contains(body?.device?.UDN.value?.toString()) }
-	if (device) {
-		device.value << ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
-		log.debug "device: $device"
-	} else {
-		log.warn "device returned no description..."
+	def srvcs = getSrvcs()
+	def srvc = srvcs?.find { it?.key?.contains(body?.device?.UDN.value?.toString()) }
+	if (srvc) {
+		log.debug "srvc: $srvc"
+		srvc.value << ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
 	}
-}
-
-private Integer convertHexToInt(hex) {
-	Integer.parseInt(hex,16)
-}
-
-private String convertHexToIP(hex) {
-	[convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".")
 }
 
 def automationsPage() {
@@ -2125,22 +2121,34 @@ def getApiURL() {
 	return apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}") ?: null
 }
 
-def restStreamHandler(close = false) {
+def getRestHost() {
+	def res = null
+	def autoHost = settings?.selectedRestDevice ?: null
 	def ip = settings?.restStreamIp ?: null
-	if(!ip) {
-		LogAction("No IP", "warn", false)
-		atomicState.restStreamingOn = false
-		return
+	def port = settings?.restStreamPort ?: 3000
+	if(autoHost) {
+		res = autoHost
+	} else {
+		if(ip) {
+			res = "${ip}:${port}"
+		} else {
+			LogAction("No IP Address Configured for Rest Service", "warn", false)
+			atomicState.restStreamingOn = false
+		}
 	}
+	return res
+}
+
+def restStreamHandler(close = false) {
+	def host = getRestHost()
+	if(!host) { return }
 	if(!close && !atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
 	LogAction("restStreamHandler(close: ${close})", "debug", false)
-	def port = settings?.restStreamPort ?: 3000
 	def connStatus = close ? false : true
-	def host = settings?.selectedRestDevice ?: "${ip}:${port}"
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
@@ -2164,24 +2172,19 @@ def restStreamHandler(close = false) {
 
 def restStreamCheck() {
 	//log.debug "restStreamCheck"
-	def ip = settings?.restStreamIp ?: null
-	if(!ip) {
-		LogAction("No IP", "warn", false)
-		atomicState.restStreamingOn = false
-		return
-	}
+	def host = getRestHost()
+	if(!host) { return }
 	if(!atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
-	def port = settings?.restStreamPort ?: 3000
 	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", false)
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
 			headers: [
-				"HOST": "${ip}:${port}",
+				"HOST": host,
 				"callback": "${getApiURL()}",
 				"sttoken": "${atomicState?.accessToken}"
 			],
@@ -2368,7 +2371,7 @@ def subscriber() {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
 	if(settings?.restStreaming) {
-		restSrvcSsdpSubscribe()
+		restSrvcSubscribe()
 	}
 }
 
@@ -6466,6 +6469,8 @@ def weatherApiKey()			{ return "b82aba1bb9a9d7f1" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
+private Integer convertHexToInt(hex) { Integer.parseInt(hex,16) }
+private String convertHexToIP(hex) { [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".") }
 
 def latestTstatVer()		{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
 def latestProtVer()		{ return atomicState?.appData?.updater?.versions?.protect ?: "unknown" }
@@ -8538,6 +8543,7 @@ def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
+def developerVer()	{ return true }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
