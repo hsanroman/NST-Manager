@@ -393,12 +393,12 @@ def keepAwakeEvent() {
 }
 
 void repairHealthStatus(data) {
-	///  This is needs to be delayed
-	if(data?.onl) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
 	} else {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(4, repairHealthStatus, [data: [onl: true]])
+		runIn(4, repairHealthStatus, [data: [flag: true]])
 	}
 }
 
@@ -412,7 +412,7 @@ def poll() {
 }
 
 def refresh() {
-	repairHealthStatus()
+	repairHealthStatus(null)
 	pauseEvent("false")
 	parent.refresh(this)
 }
@@ -1210,8 +1210,10 @@ def getTempWaitVal() {
 
 def wantMetric() { return (state?.tempUnit == "C") }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
 }
 
 def healthNotifyOk() {
