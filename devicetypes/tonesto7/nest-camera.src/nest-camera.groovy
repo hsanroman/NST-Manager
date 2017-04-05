@@ -204,7 +204,7 @@ def keepAwakeEvent() {
 
 void repairHealthStatus(data) {
 	///  This is needs to be delayed
-	if(data.onl) {
+	if(data?.onl) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
 	} else {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
