@@ -31,9 +31,7 @@ definition(
 {
 	appSetting "clientId"
 	appSetting "clientSecret"
-	if(developerVer()) {
-		appSetting "devOpt"
-	}
+	appSetting "devOpt"
 }
 
 include 'asynchttp_v1'
@@ -649,7 +647,7 @@ def pollPrefPage() {
 			startStopStream()
 		}
 		section("Polling:") {
-			if(settings?.restStreaming && (settings?.selectedRestDevice || settings?.restStreamIp) ) {
+			if(settings?.restStreaming && getRestHost()) {
 				paragraph "These settings is only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
 			}
 			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true, image: getAppImg("thermostat_icon.png"))
@@ -685,14 +683,21 @@ def getRestSrvcDesc() {
 			dtstr += dt?.s ? "${dt?.s}sec" : ""
 		}
 		str += "${str == "" ? "" : "\n"}Host: (${rData?.hostInfo?.hostname})"
-		str += "${str == "" ? "" : "\n"} ├ IP: (${rData?.hostInfo?.ip})"
-		str += "${str == "" ? "" : "\n"} ├ Port: (${rData?.hostInfo?.port})"
-		str += "${str == "" ? "" : "\n"} ├ Version: (${rData?.version})"
-		str += "${str == "" ? "" : "\n"} ├ Active Streaming: (${rData?.streaming.toString().capitalize()})"
-		str += "${str == "" ? "" : "\n"} ├ Session Events: (${rData?.sessionEvts})"
-		str += "${str == "" ? "" : "\n"} ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
-		str += "${str == "" ? "" : "\n"} ${dtstr != "" ? "├" : "└"} Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
-		str += dtstr != "" ? "${str == "" ? "" : "\n"} └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
+		if(rData?.hostInfo?.osPlatform) {
+			def pd = parseJson(rData?.hostInfo?.osPlatform.toString())
+			str += "\n ├ OS: ${pd?.dist} ${pd?.release}"
+			str += "\n │├ Codename: ${pd?.codename}"
+			str += "\n │└ Kernel: ${pd?.os.toString().capitalize()} ${rData?.hostInfo?.osRelease}"
+		} else {
+			str += "\n ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
+		}
+		str += "\n ├ Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
+		str += "\n ├ IP: (${rData?.hostInfo?.ip})"
+		str += "\n ├ Port: (${rData?.hostInfo?.port})"
+		str += "\n ├ Node Service: (v${rData?.version})"
+		str += "\n ├ Active Streaming: (${rData?.streaming.toString().capitalize()})"
+		str += "\n ${dtstr != "" ? "├" : "└"} Session Events: (${rData?.sessionEvts})"
+		str += dtstr != "" ? "\n └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
 		paragraph title: "Running Service Info:", str, state: "complete"
 	}
 	return str
@@ -748,7 +753,7 @@ Map discoveredSrvcs() {
 
 def getVerifiedSrvcs() { getSrvcs().findAll { it?.value?.verified == true } }
 
-void restSrvcSubscribe() { 
+void restSrvcSubscribe() {
 	atomicState.ssdpOn = true
 	subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler)
 }
@@ -2222,11 +2227,11 @@ def receiveStreamStatus() {
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			atomicState?.lastHeardFromNestDt = getDtNow()
-			if(atomicState.ssdpOn == true) {
-				unsubscribe()
-				atomicState.ssdpOn = false
-				subscriber()
-			}
+			// if(atomicState.ssdpOn == true) {
+			// 	unsubscribe()
+			// 	atomicState.ssdpOn = false
+			// 	subscriber()
+			// }
 		}
 		atomicState?.restServiceData = resp
 
@@ -2381,7 +2386,7 @@ def subscriber() {
 	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
-	if(settings?.restStreaming && !(settings?.selectedRestDevice || settings?.restStreamIp) ) {
+	if(settings?.restStreaming && getRestHost()) {
 		restSrvcSubscribe()
 	}
 }
@@ -3309,11 +3314,11 @@ def receiveEventData() {
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromNestDt = getDtNow()
-		if(atomicState.ssdpOn == true) {
-			unsubscribe()
-			atomicState.ssdpOn = false
-			subscriber()
-		}
+		// if(atomicState.ssdpOn == true) {
+		// 	unsubscribe() //These were causing exceptions
+		// 	atomicState.ssdpOn = false
+		// 	subscriber()
+		// }
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -8594,7 +8599,7 @@ def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
-def developerVer()	{ return false }
+def developerVer()	{ return true }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
