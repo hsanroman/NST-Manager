@@ -1727,7 +1727,7 @@ def getPollingConfDesc() {
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})"
+	pStr += rStrEn ? "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})" : ""
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
 	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
 	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
@@ -5814,8 +5814,10 @@ def addRemoveDevices(uninst = null) {
 			sendPush(msg)
 			LogAction("addRemoveDevices Exception | $msg", "warn", true)
 		}
-		else { log.error "addRemoveDevices Exception:", ex }
-		sendExceptionData(ex, "addRemoveDevices")
+		else {
+			log.error "addRemoveDevices Exception:", ex
+			sendExceptionData(ex, "addRemoveDevices")
+		}
 		retVal = false
 	}
 	return retVal
@@ -8559,7 +8561,7 @@ def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
-def developerVer()	{ return true }
+def developerVer()	{ return false }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
