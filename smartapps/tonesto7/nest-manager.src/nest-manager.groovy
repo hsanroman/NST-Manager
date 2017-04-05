@@ -649,7 +649,7 @@ def pollPrefPage() {
 			startStopStream()
 		}
 		section("Polling:") {
-			if(settings?.selectedRestDevice) {
+			if(settings?.restStreaming && (settings?.selectedRestDevice || settings?.restStreamIp) ) {
 				paragraph "These settings is only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
 			}
 			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true, image: getAppImg("thermostat_icon.png"))
@@ -699,6 +699,7 @@ def getRestSrvcDesc() {
 }
 
 def getRestSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1" }
+
 def restSrvcDiscovery(params=[:]) {
 	def devices = discoveredSrvcs()
 	def options = devices ?: []
@@ -708,11 +709,11 @@ def restSrvcDiscovery(params=[:]) {
 	atomicState?.discRfshCnt = discRfshCnt+1
 
 	if ((objsFound == 0 && atomicState?.discRfshCnt > 25) || params?.reset == "true") {
-    	log.trace "Cleaning Out Discovered Services..."
-    	state?.localNstSrvcs = [:]
-        atomicState.discRfshCnt = 0
-        app.updateSetting("selectedRestDevice", "")
-    }
+		log.trace "Cleaning Out Discovered Services..."
+		state?.localNstSrvcs = [:]
+		atomicState.discRfshCnt = 0
+		app.updateSetting("selectedRestDevice", "")
+	}
 
 	restSrvcSubscribe()
 
@@ -727,7 +728,7 @@ def restSrvcDiscovery(params=[:]) {
 		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
 			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(Discovered: ${objsFound})", multiple: false, options: options, image: getAppImg("two_way_icon.png")
 		}
-        section("Options") {
+		section("Options") {
 			href "restSrvcDiscovery", title:"Clear Discovered Services...", description:"", params: ["reset": "true"], image: getAppImg("reset_icon.png")
 		}
 	}
@@ -746,7 +747,11 @@ Map discoveredSrvcs() {
 }
 
 def getVerifiedSrvcs() { getSrvcs().findAll { it?.value?.verified == true } }
-void restSrvcSubscribe() { subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler) }
+
+void restSrvcSubscribe() { 
+	atomicState.ssdpOn = true
+	subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler)
+}
 
 def getSrvcs() {
 	if (!state?.localNstSrvcs) { state.localNstSrvcs = [:] }
@@ -1640,8 +1645,8 @@ def devPageFooter(var, eTime) {
 	def res = []
 	if(getDevOpt()) {
 		res += 	section() {
-					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
-				}
+			paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
+		}
 	}
 	return res?.size() ? res : ""
 }
@@ -2049,6 +2054,7 @@ def initManagerApp() {
 	setStateVar()
 	restStreamHandler(true)   // stop the rest stream
 	atomicState?.restStreamingOn = false
+	atomicState.ssdpOn = false
 	unschedule()
 	unsubscribe()
 	atomicState.pollingOn = false
@@ -2092,7 +2098,7 @@ def askAlexaMQHandler(evt) {
 	switch (evt.value) {
 		case "refresh":
 			atomicState?.askAlexaMQList = (evt.jsonData && evt.jsonData?.queues) ? evt.jsonData.queues : []
-	        break
+			break
 	}
 }
 
@@ -2216,6 +2222,11 @@ def receiveStreamStatus() {
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			atomicState?.lastHeardFromNestDt = getDtNow()
+			if(atomicState.ssdpOn == true) {
+				unsubscribe()
+				atomicState.ssdpOn = false
+				subscriber()
+			}
 		}
 		atomicState?.restServiceData = resp
 
@@ -2370,7 +2381,7 @@ def subscriber() {
 	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
-	if(settings?.restStreaming) {
+	if(settings?.restStreaming && !(settings?.selectedRestDevice || settings?.restStreamIp) ) {
 		restSrvcSubscribe()
 	}
 }
@@ -2662,6 +2673,7 @@ void doAutoMigrationProcess() {
 	if(atomicState?.migrationInProgress == true) { LogAction("Migration already in progress", "error", true) }
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
+	atomicState?.migrationState1 = "Step 1 Start"
 
 	// This is to control the parent/child state to reset using fixState()
 	atomicState?.resetAllData = false
@@ -2671,6 +2683,7 @@ void doAutoMigrationProcess() {
 	if(cApps) {
 		cApps?.each { ca ->
 			def t0 = ca?.settings?.restoredFromBackup
+			atomicState?.migrationState1 = "Step 1 Backup - ${ca.label}"
 			if(t0 == null && backupAutomation(ca)) {
 				LogAction("backed up ${ca?.label}", "debug", true)
 			} else {
@@ -2678,9 +2691,11 @@ void doAutoMigrationProcess() {
 				else { LogAction("backup failed of automation ${ca.label}", "warn", true) }
 			}
 		}
+		atomicState?.migrationState1 = "Step 1 Finish - Restore Scheduled"
 		runIn(15, "processAutoRestore", [overwrite:true])
 		LogAction("Scheduled restore process for (15 seconds)...", "info", true)
 	} else {
+		atomicState?.migrationState1 = "Step 1 Finish - Nothing to Restore"
 		LogAction("There are no automations to restore.", "warn", true)
 		finishMigrationProcess(false)
 	}
@@ -2706,10 +2721,13 @@ def backupAutomation(child) {
 */
 void processAutoRestore() {
 	LogAction("processAutoRestore...", "trace", true)
+	atomicState?.migrationState3 = "Step 3 Start"
 	def backupData = getAutomationBackupData()
 	if(backupData instanceof List || backupData instanceof Map) {
+		atomicState?.migrationState3 = "Step 3 Automation Restore"
 		automationRestore(backupData)
 	}
+	atomicState?.migrationState3 = "Step 3 Finish"
 }
 
 /*
@@ -2732,11 +2750,13 @@ def automationRestore(data, id=null) {
 				setData["restoreCompleted"] = ["type":"bool", "value":false]
 				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
 
+				atomicState?.migrationState4 = "Step 4 Automation Restore - Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)...."
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
 				postChildRestore(bApp?.key)
 			}
+			atomicState?.migrationState4 = "Step 4 Automation Restore - Finishing"
 			runIn(25, "finishMigrationProcess", [overwrite:true])
 			LogAction("Scheduling finishMigrationProcess for (25 seconds)...", "debug", true)
 			return true
@@ -2755,6 +2775,7 @@ def automationRestore(data, id=null) {
 	PARENT METHOD
 */
 def callRestoreState(child, restId) {
+	atomicState?.migrationState5 = "Step 5 callRestoreState - Start ${child.label}   RestoreID: ${restId}"
 	LogAction("callRestoreState ${child.label}   RestoreID: ${restId}", "trace", true)
 	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
 	if(restId) {
@@ -2762,11 +2783,13 @@ def callRestoreState(child, restId) {
 		//log.debug "callRestoreState data: $data"
 		def newData = data.find { it?.key?.toString() == restId?.toString() }
 		if(newData?.value?.stateData) {
+			atomicState?.migrationState5 = "Step 5 callRestoreState - restoring child ${child.label} state  RestoreID: ${restId}"
 			newData?.value?.stateData?.each { sKey ->
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
 			return true
 		} else {
+			atomicState?.migrationState5 = "Step 5 callRestoreState - no backup data child ${child.label} RestoreID: ${restId}"
 			LogAction("Backup Data not found: ${child.label}   RestoreID: ${restId}", "error", true)
 		}
 	}
@@ -2781,12 +2804,15 @@ def callRestoreState(child, restId) {
 	PARENT METHOD
 */
 def postChildRestore(childId) {
+	atomicState?.migrationState3A = "Step 3A Start postChildRestore(childId: $childId)"
 	LogAction("postChildRestore(childId: $childId)", "trace", true)
 	def cApp = getChildApps()
 	cApp?.each { ca ->
+		atomicState?.migrationState3A = "Step 3A postChildRestore Checking Automation (${ca?.label})..."
 		LogAction("postChildRestore Checking Automation (${ca?.label})...", "info", true)
 		if(ca?.getId() == childId) {
 			if(keepBackups() == false) {
+				atomicState?.migrationState3A = "Step 3A postChildRestore Removing Old Automation (${ca?.label})..."
 				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
 				deleteChildApp(ca)
 			} else {
@@ -2796,6 +2822,7 @@ def postChildRestore(childId) {
 				ca?.update()
 			}
 		} else {
+			atomicState?.migrationState3A = "Step 3A postChildRestore No Match for Automation (${ca?.label})..."
 			LogAction("postChildRestore No Match for Automation (${ca?.label})...", "info", true)
 		}
 	}
@@ -2809,6 +2836,7 @@ def postChildRestore(childId) {
 	PARENT METHOD
 */
 void finishMigrationProcess(result=true) {
+	atomicState?.migrationState6 = "Step 6 start - finishMigrationProcess result: $result"
 	LogAction("finishMigrationProcess result: $result", "trace", true)
 	if(result) {
 		LogAction("Auto Migration Process is complete...", "info", true)
@@ -3281,6 +3309,11 @@ def receiveEventData() {
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromNestDt = getDtNow()
+		if(atomicState.ssdpOn == true) {
+			unsubscribe()
+			atomicState.ssdpOn = false
+			subscriber()
+		}
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -6298,6 +6331,7 @@ def fixState() {
 			}
 			unschedule()
 			unsubscribe()
+			atomicState.ssdpOn = false
 			atomicState.pollingOn = false
 			atomicState?.pollBlocked = true
 			result = true
