@@ -1,4 +1,4 @@
- # NST Manager (Unofficial) - [Formerly known as Nest Manager]
+ # NST Manager - [Formerly known as Nest Manager]
 
  ### NST Manager App
  This is the SmartThings user created SmartApp and Device handlers for Nest.
