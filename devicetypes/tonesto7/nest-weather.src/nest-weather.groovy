@@ -23,6 +23,7 @@ metadata {
 		capability "Relative Humidity Measurement"
 		capability "Temperature Measurement"
 		capability "Ultraviolet Index"
+		capability "Health Check"
 
 		command "refresh"
 		command "log"
@@ -157,22 +158,56 @@ void updated() {
 	initialize()
 }
 
-void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	if(val) {
-		sendEvent(name: "checkInterval", value: null, displayed: false)
+def getHcTimeout() {
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 60)*60
+}
+
+void verifyHC(tracked=false) {
+	if(tracked) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
 	}
-	sendEvent(name: "DeviceWatch-Enroll", value: null, displayed: false)
 }
 
-void healthEnroll() {
-	sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("Sent DeviceStatus Event: '$val'")
+	}
 }
 
-def modifyDeviceStatus(online) {
-	if(online == null) { return }
-	def val = online.toString() == "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+def ping() {
+	Logger("ping...")
+	keepAwakeEvent()
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		//log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
+}
+
+void repairHealthStatus(data) {
+	///  This is needs to be delayed
+	if(data.onl) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+	} else {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(4, repairHealthStatus, [data: [onl: true]])
+	}
 }
 
 def parse(String description) {
@@ -232,12 +267,14 @@ def generateEvent(Map eventData) {
 }
 
 void processEvent() {
+
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
 	}
 	def eventData = state?.eventData
+	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	state.eventData = null
 	checkStateClear()
 	try {
@@ -252,8 +289,10 @@ void processEvent() {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
-
-			//LogAction("processEvent Parsing data ${eventData}", "trace")
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
 			state.nestTimeZone = eventData?.tz ?: null
@@ -272,7 +311,7 @@ void processEvent() {
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
 
-			//checkHealth()
+			checkHealth()
 			state?.devBannerData = eventData?.devBannerData ?: null
 			lastUpdatedEvent()
 		}
@@ -453,7 +492,7 @@ def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 300) {
+		if(ldtSec < 600) {
 			return false
 		}
 	}
@@ -505,7 +544,6 @@ def getWeatherConditions(Map weatData) {
 				dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
 				getSomeData(true)
-
 				sendEvent(name: "weather", value: cur?.current_observation?.weather)
 				sendEvent(name: "weatherIcon", value: state?.curWeatherIcon, displayed:false)
 				def wspeed = 0.0
