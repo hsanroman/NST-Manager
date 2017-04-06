@@ -113,6 +113,7 @@ void verifyHC(tracked=false) {
 	} else {
 		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
 	}
+	repairHealthStatus(null)
 }
 
 def modifyDeviceStatus(status) {

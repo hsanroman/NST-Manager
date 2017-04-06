@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -184,6 +184,7 @@ void verifyHC(tracked=false) {
 	} else {
 		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
 	}
+	repairHealthStatus(null)
 }
 
 def modifyDeviceStatus(status) {

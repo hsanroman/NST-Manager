@@ -648,7 +648,7 @@ def pollPrefPage() {
 		}
 		section("Polling:") {
 			if(settings?.restStreaming && getRestHost()) {
-				paragraph "These settings is only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
+				paragraph "These settings are only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
 			}
 			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true, image: getAppImg("thermostat_icon.png"))
 			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()], submitOnChange: true, image: getAppImg("nest_structure_icon.png"))
