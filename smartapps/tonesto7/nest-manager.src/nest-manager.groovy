@@ -3661,7 +3661,7 @@ def updateChildData(force = false) {
 				def wData = ["data":wData1, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
 							"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
 							"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
-							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showWGraphs, "devBannerData":devBannerData ]
+							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData ]
 				def oldWeatherData = atomicState?."oldWeatherData${devId}"
 				def wDataChecksum = generateMD5_A(wData.toString())
 				def showWGraphs = settings?.weatherShowGraph == false ? false : true
