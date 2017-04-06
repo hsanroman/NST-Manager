@@ -3286,7 +3286,7 @@ def receiveEventData() {
 			if(chg) {
 				devChgd = true
 				gotSomething = true
-				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
+				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
 			} else {
 				LogAction("got deviceData", "debug", false)
 			}
