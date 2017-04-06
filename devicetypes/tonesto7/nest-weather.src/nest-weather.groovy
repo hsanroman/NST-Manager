@@ -138,6 +138,7 @@ def getWAlertFilters() {
 
 def initialize() {
 	Logger("initialized...")
+	state?.healthInRepair = false
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
@@ -158,13 +159,15 @@ void updated() {
 	initialize()
 }
 
+def useTrackedHealth() { return state?.useTrackedHealth ?: false }
+
 def getHcTimeout() {
 	def to = state?.hcTimeout
 	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
-void verifyHC(tracked=false) {
-	if(tracked) {
+void verifyHC() {
+	if(useTrackedHealth()) {
 		def timeOut = getHcTimeout()
 		if(!val || val.toInteger() != timeOut) {
 			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
@@ -186,8 +189,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	Logger("ping...")
-	keepAwakeEvent()
+	if(useTrackedHealth()) {
+		Logger("ping...")
+		keepAwakeEvent()
+	}
 }
 
 def keepAwakeEvent() {
@@ -205,9 +210,11 @@ void repairHealthStatus(data) {
 	log.trace "repairHealthStatus($data)"
 	if(data?.flag) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+		state?.healthInRepair = false
 	} else {
+		state.healthInRepair = true
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(4, repairHealthStatus, [data: [flag: true]])
+		runIn(7, repairHealthStatus, [data: [flag: true]])
 	}
 }
 
@@ -255,7 +262,6 @@ def poll() {
 }
 
 def refresh() {
-	repairHealthStatus(null)
 	poll()
 }
 
@@ -291,9 +297,11 @@ void processEvent() {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
-			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-				state.hcTimeout = eventData?.hcTimeout
-				verifyHC()
+			if(useTrackedHealth()) {
+				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+					state.hcTimeout = eventData?.hcTimeout
+					verifyHC()
+				}
 			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -404,6 +412,7 @@ def lastUpdatedEvent(sendEvt=false) {
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
+	modifyDeviceStatus("online")
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
@@ -505,7 +514,7 @@ def healthNotifyOk() {
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true) { return }
+	if(isOnline || state?.healthMsg != true || state?.healthInRepair == true) { return }
 	if(healthNotifyOk()) {
 		def now = new Date()
 		parent?.deviceHealthNotify(this, isOnline)

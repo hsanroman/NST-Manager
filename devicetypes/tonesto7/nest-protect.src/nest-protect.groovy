@@ -148,6 +148,7 @@ mappings {
 
 def initialize() {
 	Logger("initialized...")
+	state?.healthInRepair = false
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
@@ -168,14 +169,16 @@ void updated() {
 	initialize()
 }
 
+def useTrackedHealth() { return state?.useTrackedHealth ?: false }
+
 def getHcTimeout() {
 	def toBatt = state?.hcBattTimeout
 	def toWire = state?.hcWireTimeout
 	return ((device.currentValue("powerSource") == "wired") ? (toWire instanceof Integer ? toWire : 35) : (toBatt instanceof Integer ? toBatt : 1500))*60
 }
 
-void verifyHC(tracked=false) {
-	if(tracked) {
+void verifyHC() {
+	if(useTrackedHealth()) {
 		def timeOut = getHcTimeout()
 		if(!val || val.toInteger() != timeOut) {
 			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
@@ -197,8 +200,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	Logger("ping...")
-	keepAwakeEvent()
+	if(useTrackedHealth()) {
+		Logger("ping...")
+		keepAwakeEvent()
+	}
 }
 
 def keepAwakeEvent() {
@@ -216,9 +221,11 @@ void repairHealthStatus(data) {
 	log.trace "repairHealthStatus($data)"
 	if(data?.flag) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+		state?.healthInRepair = false
 	} else {
+		state.healthInRepair = true
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(4, repairHealthStatus, [data: [flag: true]])
+		runIn(7, repairHealthStatus, [data: [flag: true]])
 	}
 }
 
@@ -232,7 +239,6 @@ def poll() {
 }
 
 def refresh() {
-	repairHealthStatus(null)
 	poll()
 }
 
@@ -324,10 +330,12 @@ def processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
-				state.hcBattTimeout = eventData?.hcBattTimeout
-				state.hcWireTimeout = eventData?.hcWireTimeout
-				verifyHC()
+			if(useTrackedHealth()) {
+				if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
+					state.hcBattTimeout = eventData?.hcBattTimeout
+					state.hcWireTimeout = eventData?.hcWireTimeout
+					verifyHC()
+				}
 			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
@@ -667,7 +675,7 @@ def healthNotifyOk() {
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true) { return }
+	if(isOnline || state?.healthMsg != true || state?.healthInRepair == true) { return }
 	if(healthNotifyOk()) {
 		def now = new Date()
 		parent?.deviceHealthNotify(this, isOnline)

@@ -191,8 +191,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	Logger("ping...")
-	keepAwakeEvent()
+	if(useTrackedHealth()) {
+		Logger("ping...")
+		keepAwakeEvent()
+	}
 }
 
 def keepAwakeEvent() {
@@ -214,7 +216,7 @@ void repairHealthStatus(data) {
 	} else {
 		state.healthInRepair = true
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
-		runIn(4, repairHealthStatus, [data: [flag: true]])
+		runIn(7, repairHealthStatus, [data: [flag: true]])
 	}
 }
 
@@ -228,7 +230,6 @@ def poll() {
 }
 
 def refresh() {
-	//Logger("refreshing parent...")
 	poll()
 }
 
