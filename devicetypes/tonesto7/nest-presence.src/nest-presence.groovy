@@ -124,13 +124,13 @@ def modifyDeviceStatus(status) {
 	def val = status.toString() == "offline" ? "offline" : "online"
 	if(val != getHealthStatus(true)) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
-		Logger("Sent DeviceStatus Event: '$val'")
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
 def ping() {
+	Logger("ping...")
 	if(useTrackedHealth()) {
-		Logger("ping...")
 		keepAwakeEvent()
 	}
 }
@@ -140,10 +140,11 @@ def keepAwakeEvent() {
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
 		//log.debug "ldtSec: $ldtSec"
-		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
+		if(ldtSec < 3600) {
+			LogAction("keepAwakeEvent: ldtSec: $ldtSec", "debug", true)
+			poll()
+		}
+	}
 }
 
 void repairHealthStatus(data) {
@@ -212,6 +213,18 @@ def processEvent(data) {
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			lastUpdatedEvent(true)
+
+			if(eventData?.lastStrucDataUpd) {
+				def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", eventData?.lastStrucDataUpd?.toString()))
+				//log.debug "newDt: $newDt"
+				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
+				if((lastDt + 10*60*1000) < curDt) {
+					modifyDeviceStatus("offline")
+				} else {
+					modifyDeviceStatus("online")
+				}
+			}
 			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
@@ -293,13 +306,13 @@ def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
-	state?.lastUpdatedDtFmt = formatDt(now)
+	state?.lastUpdatedDtFmt = getDtNow()
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: getDtNow()?.toString(), displayed: false, isStateChange: true)
 	}
 }
 
@@ -359,7 +372,7 @@ def checkHealth() {
 	if(healthNotifyOk()) {
 		def now = new Date()
 		parent?.deviceHealthNotify(this, isOnline)
-		state.lastHealthNotifyDt = formatDt(now)
+		state.lastHealthNotifyDt = getDtNow()
 	}
 }
 
@@ -484,7 +497,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		if(strtDate) {
 			//if(strtDate?.contains("dtNow")) { return 10000 }
 			def now = new Date()
-			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def stopVal = stpDate ? stpDate.toString() : getDtNow()
 			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
 			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
