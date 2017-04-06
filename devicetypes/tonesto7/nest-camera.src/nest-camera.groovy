@@ -186,7 +186,7 @@ def modifyDeviceStatus(status) {
 	def val = status.toString() == "offline" ? "offline" : "online"
 	if(val != getHealthStatus(true)) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
-		Logger("Sent DeviceStatus Event: '$val'")
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
@@ -203,9 +203,9 @@ def keepAwakeEvent() {
 		def ldtSec = getTimeDiffSeconds(lastDt)
 		//log.debug "ldtSec: $ldtSec"
 		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
+			poll()
+		}
+	}
 }
 
 void repairHealthStatus(data) {
