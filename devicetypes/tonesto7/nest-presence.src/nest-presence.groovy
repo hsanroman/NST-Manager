@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 // for the UI
 metadata {
@@ -448,8 +448,8 @@ void Logger(msg, logType = "debug") {
 }
 
 // Local Application Logging
-void LogAction(msg, logType = "debug") {
-	if(state?.debug) {
+void LogAction(msg, logType = "debug", frc=false) {
+	if(state?.debug || frc) {
 		Logger(msg, logType)
 	}
 }
