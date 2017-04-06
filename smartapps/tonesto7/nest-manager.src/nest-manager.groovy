@@ -1102,7 +1102,7 @@ def notifPrefPage() {
 				def t1 = getAppNotifDesc()
 				def appDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "App Notifications", description: "${appDesc}Tap to configure", params: [pType:"app"], state: (appDesc != "" ? "complete" : null),
-				 		image: getAppImg("nst_manager_icon.png")
+						image: getAppImg("nst_manager_icon.png")
 				t1 = getDevNotifDesc()
 				def devDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "Device Notifications", description: "${devDesc}Tap to configure", params: [pType:"dev"], state: (devDesc != "" ? "complete" : null),
@@ -1304,7 +1304,7 @@ def toggleAllAutomations(disable=false) {
 	def dis = disable == null ? false : disable
 	def cApps = getChildApps()
 	cApps.each { ca ->
-	 	ca?.setAutomationStatus(dis, true)
+		ca?.setAutomationStatus(dis, true)
 	}
 }
 
@@ -1452,7 +1452,7 @@ def debugPrefPage() {
 			else { LogAction("Reset Application Data Disabled", "info", true) }
 		}
 		if(settings?.appDebug || settings?.childDebug) {
-			 if(atomicState?.debugEnableDt == null) { atomicState?.debugEnableDt = getDtNow() }
+			if(atomicState?.debugEnableDt == null) { atomicState?.debugEnableDt = getDtNow() }
 		} else { atomicState?.debugEnableDt = null }
 		atomicState.needChildUpd = true
 		incLogPrefLoadCnt()
@@ -2025,7 +2025,7 @@ def initialize() {
 	}
 	else {
 		if(checkMigrationRequired()) { return true }	// This will call updated later
-		reInitBuiltins()	 // These are to have these apps release subscriptions to devices (in case of delete)
+		reInitBuiltins()	// These are to have these apps release subscriptions to devices (in case of delete)
 		runIn(14, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
 		runIn(34, "reInitBuiltins", [overwrite: true])	// need to have watchdog/nestmode check if we created devices
 	}
@@ -2227,11 +2227,11 @@ def receiveStreamStatus() {
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			atomicState?.lastHeardFromNestDt = getDtNow()
-			// if(atomicState.ssdpOn == true) {
-			// 	unsubscribe()
-			// 	atomicState.ssdpOn = false
-			// 	subscriber()
-			// }
+			if(atomicState?.ssdpOn == true) {
+				unsubscribe()
+				atomicState.ssdpOn = false
+				subscriber()
+			}
 		}
 		atomicState?.restServiceData = resp
 
@@ -2386,7 +2386,7 @@ def subscriber() {
 	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
-	if(settings?.restStreaming && getRestHost()) {
+	if(settings?.restStreaming && !getRestHost()) {
 		restSrvcSubscribe()
 	}
 }
@@ -2508,7 +2508,7 @@ def cleanRestAutomationTest() {
 			cApps.each { ca ->
 				def restId = ca?.getSettingVal("restoreId")
 				if(restId != null) {
-		 			ca?.settingUpdate("restoreId", null)
+					ca?.settingUpdate("restoreId", null)
 				}
 			}
 		}
@@ -2521,11 +2521,11 @@ def cleanRestAutomationTest() {
 		}
 		else {
 			LogAction("CleanRestAutomationTest: enabling ${ca?.label} ${restId}", "warn", true)
-	 		ca?.settingUpdate("disableAutomationreq", "false", "bool")
-	 		ca?.stateUpdate("disableAutomation", false)
-	 		ca?.stateUpdate("disableAutomationDt", null)
-	 		ca?.update()
-	 	}
+			ca?.settingUpdate("disableAutomationreq", "false", "bool")
+			ca?.stateUpdate("disableAutomation", false)
+			ca?.stateUpdate("disableAutomationDt", null)
+			ca?.update()
+		}
 	}
 	atomicState?.migrationInProgress = false
 	atomicState?.pollBlocked = false
@@ -3314,11 +3314,11 @@ def receiveEventData() {
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromNestDt = getDtNow()
-		// if(atomicState.ssdpOn == true) {
-		// 	unsubscribe() //These were causing exceptions
-		// 	atomicState.ssdpOn = false
-		// 	subscriber()
-		// }
+		if(atomicState?.ssdpOn == true) {
+			unsubscribe() //These were causing exceptions
+			atomicState.ssdpOn = false
+			subscriber()
+		}
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -3437,10 +3437,10 @@ def whatChanged(mapA, mapB, headstr) {
 			LogAction("ORIG has " + left.size() + " items. NEW has " + right.size() + " items.", "trace", true)
 			LogAction("ORIG Object: ${left} NEW Object: ${right}", "trace", true)
 			return false
-		 }
-		 for(int i=0; i < left.size(); i++) {
-			 // May detect matching items here if sort of objects is problem
-			 whatChanged(left[i], right[i], "${headstr}/${i}")
+		}
+		for(int i=0; i < left.size(); i++) {
+			// May detect matching items here if sort of objects is problem
+			whatChanged(left[i], right[i], "${headstr}/${i}")
 		}
 	} else if (left instanceof Map) {
 		String[] leftKeys = left.keySet()
