@@ -195,7 +195,7 @@ def modifyDeviceStatus(status) {
 	def val = status.toString() == "offline" ? "offline" : "online"
 	if(val != getHealthStatus(true)) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
-		Logger("Sent DeviceStatus Event: '$val'")
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
@@ -212,9 +212,9 @@ def keepAwakeEvent() {
 		def ldtSec = getTimeDiffSeconds(lastDt)
 		//log.debug "ldtSec: $ldtSec"
 		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
+			poll()
+		}
+	}
 }
 
 void repairHealthStatus(data) {
@@ -581,7 +581,7 @@ def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
