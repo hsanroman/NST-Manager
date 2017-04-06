@@ -252,7 +252,6 @@ def generateEvent(Map eventData) {
 }
 
 def processEvent() {
-	verifyHC()
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
