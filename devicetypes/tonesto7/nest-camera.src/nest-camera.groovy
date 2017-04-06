@@ -139,6 +139,7 @@ def getOutHomeURL() { return [OutHomeURL: getCamPlaylistURL().toString()] }
 
 def initialize() {
 	Logger("initialized...")
+	state?.healthInRepair = false
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
