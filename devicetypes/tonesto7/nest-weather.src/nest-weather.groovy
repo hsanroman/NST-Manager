@@ -323,7 +323,7 @@ void processEvent() {
 
 			checkHealth()
 			state?.devBannerData = eventData?.devBannerData ?: null
-			lastUpdatedEvent()
+			lastUpdatedEvent(true)
 		}
 		//LogAction("Device State Data: ${getState()}")
 		//return null
@@ -412,8 +412,8 @@ def lastUpdatedEvent(sendEvt=false) {
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
-	modifyDeviceStatus("online")
 	if(sendEvt) {
+		modifyDeviceStatus("online")
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
