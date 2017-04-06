@@ -376,13 +376,13 @@ def modifyDeviceStatus(status) {
 	def val = status.toString() == "offline" ? "offline" : "online"
 	if(val != getHealthStatus(true)) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
-		Logger("Sent DeviceStatus Event: '$val'")
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
 def ping() {
+	Logger("ping...")
 	if(useTrackedHealth()) {
-		Logger("ping...")
 		keepAwakeEvent()
 	}
 }
@@ -393,9 +393,9 @@ def keepAwakeEvent() {
 		def ldtSec = getTimeDiffSeconds(lastDt)
 		//log.debug "ldtSec: $ldtSec"
 		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
+			poll()
+		}
+	}
 }
 
 void repairHealthStatus(data) {
@@ -784,10 +784,10 @@ def lastUpdatedEvent(sendEvt=false) {
 		tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
-	state?.lastUpdatedDtFmt = formatDt(now)
+	state?.lastUpdatedDtFmt = getDtNow()
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: getDtNow()?.toString(), displayed: false, isStateChange: true)
 	}
 }
 
@@ -1242,7 +1242,7 @@ def checkHealth() {
 	if(healthNotifyOk()) {
 		def now = new Date()
 		parent?.deviceHealthNotify(this, isOnline)
-		state.lastHealthNotifyDt = formatDt(now)
+		state.lastHealthNotifyDt = getDtNow()
 	}
 }
 
