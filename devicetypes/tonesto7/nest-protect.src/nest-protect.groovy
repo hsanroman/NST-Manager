@@ -151,7 +151,6 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
-		healthEnroll()
 		//poll()
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
@@ -175,25 +174,55 @@ def getHcTimeout() {
 	return ((device.currentValue("powerSource") == "wired") ? (toWire instanceof Integer ? toWire : 35) : (toBatt instanceof Integer ? toBatt : 1500))*60
 }
 
-void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	if(val) {
-		sendEvent(name: "checkInterval", value: null, displayed: false)
+void verifyHC(tracked=false) {
+	if(tracked) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
 	}
 }
 
-void healthEnroll() {
-	sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("Sent DeviceStatus Event: '$val'")
+	}
+}
+
+def ping() {
+	Logger("ping...")
+	keepAwakeEvent()
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		//log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
+}
+
+void repairHealthStatus(data) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+	} else {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(4, repairHealthStatus, [data: [flag: true]])
+	}
 }
 
 def parse(String description) {
 	LogAction("Parsing '${description}'")
-}
-
-def modifyDeviceStatus(online) {
-	if(online == null) { return }
-	def val = online.toString() == "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
 }
 
 def poll() {
@@ -202,6 +231,7 @@ def poll() {
 }
 
 def refresh() {
+	repairHealthStatus(null)
 	poll()
 }
 
@@ -284,11 +314,6 @@ def processEvent(data) {
 	def eventData = data?.evt
 	state.remove("eventData")
 
-
-	// if(!device?.hub) {
-	// 	device?.hub = parent?.getLocHub()
-	// }
-	// log.debug "hub: ${device?.hub?.getID()}"
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
@@ -298,7 +323,11 @@ def processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-
+			if((eventData.hcBattTimeout && (state?.hcBattTimeout != eventData?.hcBattTimeout || !state?.hcBattTimeout)) || (eventData.hcWireTimeout && (state?.hcWireTimeout != eventData?.hcWireTimeout || !state?.hcWireTimeout))) {
+				state.hcBattTimeout = eventData?.hcBattTimeout
+				state.hcWireTimeout = eventData?.hcWireTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -432,7 +461,7 @@ def lastCheckinEvent(checkin, isOnline) {
 	def tf = new SimpleDateFormat(formatVal)
 		tf.setTimeZone(getTimeZone())
 
-	//def hcTimeout = getHcTimeout()
+	def hcTimeout = getHcTimeout()
 	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
@@ -442,13 +471,13 @@ def lastCheckinEvent(checkin, isOnline) {
 		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 
-		//if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
+		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
 		//log.debug "lastConnSeconds: $lastConnSeconds"
 		if(lastConnSeconds >=0) { addCheckinTime(lastConnSeconds) }
 	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
 
 	state?.onlineStatus = onlineStat
-	modifyDeviceStatus(isOnline)
+	modifyDeviceStatus(onlineStat)
 	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat, descriptionText: "Online Status is: ${onlineStat}", displayed: state?.showProtActEvts, isStateChange: true, state: onlineStat)
@@ -618,15 +647,17 @@ def carbonSmokeStateEvent(coState, smokeState) {
 	}
 }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
 }
 
 def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 300) {
+		if(ldtSec < 600) {
 			return false
 		}
 	}

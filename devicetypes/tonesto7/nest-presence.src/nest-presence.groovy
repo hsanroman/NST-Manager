@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.0" }
+def devVer() { return "5.0.1" }
 
 // for the UI
 metadata {
@@ -103,18 +103,51 @@ def getHcTimeout() {
 	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
-void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut) {
-		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+void verifyHC(tracked=false) {
+	if(tracked) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+	}
+}
+
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("Sent DeviceStatus Event: '$val'")
 	}
 }
 
 def ping() {
 	Logger("ping...")
 	keepAwakeEvent()
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		//log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
+}
+
+void repairHealthStatus(data) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+	} else {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(4, repairHealthStatus, [data: [flag: true]])
+	}
 }
 
 def parse(String description) {
@@ -129,6 +162,7 @@ def poll() {
 }
 
 def refresh() {
+	repairHealthStatus(null)
 	poll()
 }
 
@@ -260,17 +294,6 @@ def lastUpdatedEvent(sendEvt=false) {
 	}
 }
 
-def keepAwakeEvent() {
-	def lastDt = state?.lastUpdatedDtFmt
-	if(lastDt) {
-		def ldtSec = getTimeDiffSeconds(lastDt)
-		log.debug "ldtSec: $ldtSec"
-		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
-}
-
 def presenceEvent(presence) {
 	def val = device.currentState("presence")?.value
 	def pres = (presence == "home") ? "present" : "not present"
@@ -304,14 +327,31 @@ def getPresence() {
 	return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
+}
+
+def healthNotifyOk() {
+	def lastDt = state?.lastHealthNotifyDt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		if(ldtSec < 600) {
+			return false
+		}
+	}
+	return true
 }
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
 	if(isOnline || state?.healthMsg != true) { return }
-	parent?.deviceHealthNotify(this, isOnline)
+	if(healthNotifyOk()) {
+		def now = new Date()
+		parent?.deviceHealthNotify(this, isOnline)
+		state.lastHealthNotifyDt = formatDt(now)
+	}
 }
 
 /************************************************************************************************

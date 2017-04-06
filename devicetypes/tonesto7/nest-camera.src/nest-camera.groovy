@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -142,7 +142,6 @@ def initialize() {
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
-		healthEnroll()
 	} else {
 		log.trace "initialize(): Ran within last 2 seconds - SKIPPING"
 	}
@@ -161,15 +160,56 @@ void updated() {
 	initialize()
 }
 
-void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	if(val) {
-		sendEvent(name: "checkInterval", value: null, displayed: false)
+def getHcTimeout() {
+	def to = state?.hcTimeout
+	return ((to instanceof Integer) ? to.toInteger() : 60)*60
+}
+
+void verifyHC(tracked=false) {
+	if(tracked) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
 	}
 }
 
-void healthEnroll() {
-	sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("Sent DeviceStatus Event: '$val'")
+	}
+}
+
+def ping() {
+	Logger("ping...")
+	keepAwakeEvent()
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		//log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 1900) {
+			lastUpdatedEvent(true)
+		} else { refresh() }
+	} else { refresh() }
+}
+
+void repairHealthStatus(data) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+	} else {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(4, repairHealthStatus, [data: [flag: true]])
+	}
 }
 
 def parse(String description) {
@@ -183,13 +223,8 @@ def poll() {
 
 def refresh() {
 	//Logger("refreshing parent...")
-	poll()
-}
-
-def modifyDeviceStatus(online) {
-	if(online == null) { return }
-	def val = online.toString() == "false" ? "offline" : "online"
-	sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+	repairHealthStatus(null)
+	//poll()
 }
 
 def cltLiveStreamStart() {
@@ -212,6 +247,7 @@ def generateEvent(Map eventData) {
 }
 
 def processEvent() {
+	verifyHC()
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
@@ -234,6 +270,10 @@ def processEvent() {
 			state.streamMsg = eventData?.streamNotify == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal.toInteger() : 60
+			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+				state.hcTimeout = eventData?.hcTimeout
+				verifyHC()
+			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -267,7 +307,7 @@ def processEvent() {
 				lastCheckinEvent(dtNow)
 				//log.debug "lastCheckin Reason's: ${state?.ok2CheckinRes}"
 			}
-			Logger("Device Health Status: ${device.getStatus()}")
+			// Logger("Device Health Status: ${device.getStatus()}")
 		}
 		return null
 	}
@@ -377,7 +417,7 @@ def onlineStatusEvent(isOnline) {
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 	state?.onlineStatus = onlineStat.toString().capitalize()
 	state?.isOnline = (onlineStat == "online")
-	modifyDeviceStatus(isOnline)
+	modifyDeviceStatus(onlineStat)
 	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
@@ -700,15 +740,17 @@ def cameraStreamNotify(streaming) {
 	parent?.cameraStreamNotify(this, streaming)
 }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
 }
 
 def healthNotifyOk() {
 	def lastDt = state?.lastHealthNotifyDt
 	if(lastDt) {
 		def ldtSec = getTimeDiffSeconds(lastDt)
-		if(ldtSec < 300) {
+		if(ldtSec < 600) {
 			return false
 		}
 	}
