@@ -215,7 +215,7 @@ def processEvent(data) {
 			lastUpdatedEvent(true)
 
 			if(eventData?.lastStrucDataUpd) {
-				def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", eventData?.lastStrucDataUpd?.toString()))
+				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrucDataUpd?.toString()))
 				//log.debug "newDt: $newDt"
 				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
 				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
