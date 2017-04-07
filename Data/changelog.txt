@@ -1,3 +1,10 @@
+V5.0.3 (April 6th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Checking of Automation App Versions.
+ • ADDED: Much Improved Logging of Automation Migrations from V4.5.2 -> V5.0.1
+ • FIXED: As usual there are many bug fixes and tweaks.
+
 V5.0.2 (April 2nd, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -5,7 +12,7 @@ Manager App:
  • ADDED: Version check to automation app.
  • FIXED: Automation migration fixes.
  • FIXED: Other tiny bug fixes.
- 
+
 V5.0.0 (March 30th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
