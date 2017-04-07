@@ -2143,7 +2143,7 @@ def getRestHost() {
 		if(ip) {
 			res = "${ip}:${port}"
 		} else {
-			LogAction("No IP Address Configured for Rest Service", "warn", false)
+			// LogAction("No IP Address Configured for Rest Service", "warn", false)
 			atomicState.restStreamingOn = false
 		}
 	}
