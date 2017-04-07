@@ -6709,12 +6709,12 @@ def isInMode(modeList) {
 
 def minVersions() {
 	return [
-		"automation":["val":500, "desc":"5.0.0"],
-		"thermostat":["val":500, "desc":"5.0.0"],
-		"protect":["val":500, "desc":"5.0.0"],
-		"presence":["val":500, "desc":"5.0.0"],
-		"weather":["val":501, "desc":"5.0.1"],
-		"camera":["val":500 , "desc":"5.0.0"],
+		"automation":["val":501, "desc":"5.0.1"],
+		"thermostat":["val":501, "desc":"5.0.1"],
+		"protect":["val":501, "desc":"5.0.1"],
+		"presence":["val":501, "desc":"5.0.1"],
+		"weather":["val":502, "desc":"5.0.2"],
+		"camera":["val":502 , "desc":"5.0.2"],
 	]
 }
 
