@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.0" }
+def devVer() { return "5.0.1" }
 
 // for the UI
 metadata {
@@ -85,6 +85,7 @@ void installed() {
 
 def initialize() {
 	LogAction("initialized...")
+	state?.healthInRepair = false
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
@@ -98,23 +99,64 @@ void updated() {
 	initialize()
 }
 
+def useTrackedHealth() { return state?.useTrackedHealth ?: false }
+
 def getHcTimeout() {
 	def to = state?.hcTimeout
 	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
 void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut) {
-		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+	if(useTrackedHealth()) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+	}
+	repairHealthStatus(null)
+}
+
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
 def ping() {
 	Logger("ping...")
-	keepAwakeEvent()
+	if(useTrackedHealth()) {
+		keepAwakeEvent()
+	}
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		//log.debug "ldtSec: $ldtSec"
+		if(ldtSec < 3600) {
+			LogAction("keepAwakeEvent: ldtSec: $ldtSec", "debug", true)
+			poll()
+		}
+	}
+}
+
+void repairHealthStatus(data) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+		state?.healthInRepair = false
+	} else {
+		state.healthInRepair = true
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(7, repairHealthStatus, [data: [flag: true]])
+	}
 }
 
 def parse(String description) {
@@ -155,9 +197,11 @@ def processEvent(data) {
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
-			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-				state.hcTimeout = eventData?.hcTimeout
-				verifyHC()
+			if(useTrackedHealth()) {
+				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+					state.hcTimeout = eventData?.hcTimeout
+					verifyHC()
+				}
 			}
 			state.nestTimeZone = eventData?.tz ?: null
 			state.clientBl = eventData?.clientBl == true ? true : false
@@ -169,6 +213,18 @@ def processEvent(data) {
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(eventData?.allowDbException) { state?.allowDbException = eventData?.allowDbException = false ? false : true }
 			lastUpdatedEvent(true)
+
+			if(eventData?.lastStrucDataUpd) {
+				def newDt = formatDt(Date.parse("E MMM dd HH:mm:ss z yyyy", eventData?.lastStrucDataUpd?.toString()))
+				//log.debug "newDt: $newDt"
+				def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+				def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
+				if((lastDt + 10*60*1000) < curDt) {
+					modifyDeviceStatus("offline")
+				} else {
+					modifyDeviceStatus("online")
+				}
+			}
 			checkHealth()
 		}
 		//This will return all of the devices state data to the logs.
@@ -250,25 +306,14 @@ def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
-	state?.lastUpdatedDtFmt = formatDt(now)
+	state?.lastUpdatedDtFmt = getDtNow()
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
-		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
+		sendEvent(name: 'lastUpdatedDt', value: getDtNow()?.toString(), displayed: false, isStateChange: true)
 	}
-}
-
-def keepAwakeEvent() {
-	def lastDt = state?.lastUpdatedDtFmt
-	if(lastDt) {
-		def ldtSec = getTimeDiffSeconds(lastDt)
-		log.debug "ldtSec: $ldtSec"
-		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
 }
 
 def presenceEvent(presence) {
@@ -304,14 +349,31 @@ def getPresence() {
 	return !device.currentState("presence") ? "present" : device.currentState("presence").value.toString()
 }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
+}
+
+def healthNotifyOk() {
+	def lastDt = state?.lastHealthNotifyDt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		if(ldtSec < 600) {
+			return false
+		}
+	}
+	return true
 }
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true) { return }
-	parent?.deviceHealthNotify(this, isOnline)
+	if(isOnline || state?.healthMsg != true || state?.healthInRepair == true) { return }
+	if(healthNotifyOk()) {
+		def now = new Date()
+		parent?.deviceHealthNotify(this, isOnline)
+		state.lastHealthNotifyDt = getDtNow()
+	}
 }
 
 /************************************************************************************************
@@ -386,8 +448,8 @@ void Logger(msg, logType = "debug") {
 }
 
 // Local Application Logging
-void LogAction(msg, logType = "debug") {
-	if(state?.debug) {
+void LogAction(msg, logType = "debug", frc=false) {
+	if(state?.debug || frc) {
 		Logger(msg, logType)
 	}
 }
@@ -435,7 +497,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		if(strtDate) {
 			//if(strtDate?.contains("dtNow")) { return 10000 }
 			def now = new Date()
-			def stopVal = stpDate ? stpDate.toString() : formatDt(now)
+			def stopVal = stpDate ? stpDate.toString() : getDtNow()
 			def startDt = Date.parse("E MMM dd HH:mm:ss z yyyy", strtDate)
 			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()

@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -138,6 +138,7 @@ def getWAlertFilters() {
 
 def initialize() {
 	Logger("initialized...")
+	state?.healthInRepair = false
 	if (!state.updatedLastRanAt || now() >= state.updatedLastRanAt + 2000) {
 		state.updatedLastRanAt = now()
 		verifyHC()
@@ -158,23 +159,63 @@ void updated() {
 	initialize()
 }
 
+def useTrackedHealth() { return state?.useTrackedHealth ?: false }
+
 def getHcTimeout() {
 	def to = state?.hcTimeout
 	return ((to instanceof Integer) ? to.toInteger() : 60)*60
 }
 
 void verifyHC() {
-	def val = device.currentValue("checkInterval")
-	def timeOut = getHcTimeout()
-	if(!val || val.toInteger() != timeOut) {
-		Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
-		sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+	if(useTrackedHealth()) {
+		def timeOut = getHcTimeout()
+		if(!val || val.toInteger() != timeOut) {
+			Logger("verifyHC: Updating Device Health Check Interval to $timeOut")
+			sendEvent(name: "checkInterval", value: timeOut, data: [protocol: "cloud"], displayed: false)
+		}
+	} else {
+		sendEvent(name: "DeviceWatch-Enroll", value: groovy.json.JsonOutput.toJson(["protocol":"cloud", "scheme":"untracked"]), displayed: false)
+	}
+	repairHealthStatus(null)
+}
+
+def modifyDeviceStatus(status) {
+	if(status == null) { return }
+	def val = status.toString() == "offline" ? "offline" : "online"
+	if(val != getHealthStatus(true)) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: val.toString(), displayed: false, isStateChange: true)
+		Logger("UPDATED: DeviceStatus Event: '$val'")
 	}
 }
 
 def ping() {
-	Logger("ping...")
-	keepAwakeEvent()
+	LogAction("Ping", "info", true)
+	if(useTrackedHealth()) {
+		keepAwakeEvent()
+	}
+}
+
+def keepAwakeEvent() {
+	def lastDt = state?.lastUpdatedDtFmt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		if(ldtSec < 3600) {
+			LogAction("keepAwakeEvent: ldtSec: $ldtSec", "debug", true)
+			poll()
+		}
+	}
+}
+
+void repairHealthStatus(data) {
+	log.trace "repairHealthStatus($data)"
+	if(data?.flag) {
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online", displayed: false, isStateChange: true)
+		state?.healthInRepair = false
+	} else {
+		state.healthInRepair = true
+		sendEvent(name: "DeviceWatch-DeviceStatus", value: "offline", displayed: false, isStateChange: true)
+		runIn(7, repairHealthStatus, [data: [flag: true]])
+	}
 }
 
 def parse(String description) {
@@ -234,12 +275,14 @@ def generateEvent(Map eventData) {
 }
 
 void processEvent() {
+
 	if(state?.swVersion != devVer()) {
 		initialize()
 		state.swVersion = devVer()
 		state?.shownChgLog = false
 	}
 	def eventData = state?.eventData
+	//LogAction("processEvent Parsing data ${eventData}", "trace")
 	state.eventData = null
 	checkStateClear()
 	try {
@@ -254,11 +297,11 @@ void processEvent() {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			state.tempUnit = getTemperatureScale()
-
-			//LogAction("processEvent Parsing data ${eventData}", "trace")
-			if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
-				state.hcTimeout = eventData?.hcTimeout
-				verifyHC()
+			if(useTrackedHealth()) {
+				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
+					state.hcTimeout = eventData?.hcTimeout
+					verifyHC()
+				}
 			}
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -277,9 +320,10 @@ void processEvent() {
 			getWeatherConditions(eventData?.data?.weatCond?.current_observation ? eventData?.data?.weatCond : null)
 			getWeatherForecast(eventData?.data?.weatForecast?.forecast ? eventData?.data?.weatForecast : null)
 			getWeatherAlerts(eventData?.data?.weatAlerts ? eventData?.data?.weatAlerts : null)
+
 			checkHealth()
 			state?.devBannerData = eventData?.devBannerData ?: null
-			lastUpdatedEvent()
+			lastUpdatedEvent(true)
 		}
 		//LogAction("Device State Data: ${getState()}")
 		//return null
@@ -363,26 +407,15 @@ def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	def lastUpd = device.currentState("lastUpdatedDt")?.value
 	state?.lastUpdatedDt = lastDt?.toString()
-	state?.lastUpdatedDtFmt = formatDt(now)
+	state?.lastUpdatedDtFmt = getDtNow()
 	if(sendEvt) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: lastDt?.toString(), displayed: false, isStateChange: true)
 	}
-}
-
-def keepAwakeEvent() {
-	def lastDt = state?.lastUpdatedDtFmt
-	if(lastDt) {
-		def ldtSec = getTimeDiffSeconds(lastDt)
-		log.debug "ldtSec: $ldtSec"
-		if(ldtSec < 1900) {
-			lastUpdatedEvent(true)
-		} else { refresh() }
-	} else { refresh() }
 }
 
 def apiStatusEvent(issue) {
@@ -461,14 +494,32 @@ def getHumidity() {
 
 def wantMetric() { return (state?.tempUnit == "C") }
 
-def getHealthStatus() {
-	return device?.getStatus()
+def getHealthStatus(lower=false) {
+	def res = device?.getStatus()
+	if(lower) { return res.toString().toLowerCase() }
+	return res.toString()
+}
+
+def healthNotifyOk() {
+	def lastDt = state?.lastHealthNotifyDt
+	if(lastDt) {
+		def ldtSec = getTimeDiffSeconds(lastDt)
+		LogAction("healtNotifyOk: ldtSec: $ldtSec", "debug", true)
+		if(ldtSec < 600) {
+			return false
+		}
+	}
+	return true
 }
 
 def checkHealth() {
 	def isOnline = (getHealthStatus() == "ONLINE") ? true : false
-	if(isOnline || state?.healthMsg != true) { return }
-	parent?.deviceHealthNotify(this, isOnline)
+	if(isOnline || state?.healthMsg != true || state?.healthInRepair == true) { return }
+	if(healthNotifyOk()) {
+		def now = new Date()
+		parent?.deviceHealthNotify(this, isOnline)
+		state.lastHealthNotifyDt = getDtNow()
+	}
 }
 
 /************************************************************************************************
@@ -506,7 +557,6 @@ def getWeatherConditions(Map weatData) {
 				dewpointEvent((wantMetric() ? state?.curWeatherDewPoint_c : state?.curWeatherDewPoint_f))
 
 				getSomeData(true)
-
 				sendEvent(name: "weather", value: cur?.current_observation?.weather)
 				sendEvent(name: "weatherIcon", value: state?.curWeatherIcon, displayed:false)
 				def wspeed = 0.0
@@ -543,15 +593,21 @@ def getWeatherConditions(Map weatData) {
 
 				sendEvent(name: "uvindex", value: cur?.current_observation?.UV)
 				sendEvent(name: "ultravioletIndex", value: cur?.current_observation?.UV)
+
 				def obsrDt = cur?.current_observation?.observation_time_rfc822
 				if(obsrDt) {
 					def newDt = formatDt(Date.parse("EEE, dd MMM yyyy HH:mm:ss Z", obsrDt?.toString()))
-					if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
-						sendEvent(name: "weatherObservedDt", value: newDt)
-						lastUpdatedEvent(true)
-					}
 					//log.debug "newDt: $newDt"
+					def curDt = Date.parse("E MMM dd HH:mm:ss z yyyy", getDtNow())
+					def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", newDt?.toString())
+					if((lastDt + 60*60*1000) < curDt) {
+						modifyDeviceStatus("offline")
+					} else if(isStateChange(device, "weatherObservedDt", newDt.toString())) {
+						sendEvent(name: "weatherObservedDt", value: newDt)
+						modifyDeviceStatus("online")
+					}
 				}
+
 				LogAction("${state?.curWeatherLoc} Weather | humidity: ${state?.curWeatherHum} | temp_f: ${state?.curWeatherTemp_f} | temp_c: ${state?.curWeatherTemp_c} | Current Conditions: ${state?.curWeatherCond}")
 			}
 		}
@@ -626,7 +682,7 @@ def clearAlerts() {
 		cntr += 1
 		aname = "alert${cntr}"
 	}
-	state.lastWeatherAlertNotif = null
+	state.lastWeatherAlertNotif = []
 	state.walertCount = 0
 
 	// below are old variables from prior releases
@@ -654,9 +710,8 @@ def getWeatherAlerts(weatData) {
 				def noneString = ""
 
 				if (oldKeys == null) { oldKeys = [] }
-				if(state?.lastWeatherAlertNotif == null) { state?.lastWeatherAlertNotif = [] }
 
-				if(state?.walert != null) { oldKeys = []; state.walert = null }	// this is code for this upgrade
+				if(state?.walert != null) { oldKeys = []; state.remove("walert") }	// this is code for this upgrade
 
 				if(newkeys == [] && !(oldKeys == [])) {
 					clearAlerts()
@@ -687,8 +742,8 @@ def getWeatherAlerts(weatData) {
 						if(cntr > 1) {
 							aname = "alert${cntr}"
 						}
-						def statechange = oldKeys.contains(alert.type + alert.date_epoch) ? false : true
-						sendEvent(name: "${aname}", value: pad(alert.description), descriptionText: msg, isStateChange: statechange, displayed: statechange)
+						def statechange = oldKeys.contains(thisKey) ? false : true
+						sendEvent(name: "${aname}", value: pad(alert.description), descriptionText: msg, displayed: true)
 
 						if(statechange) { newAlerts = true }
 
@@ -709,7 +764,7 @@ def getWeatherAlerts(weatData) {
 						state."walertMessage${cntr}" = walertMessage.take(700)
 
 						if(state?.weatherAlertNotify) {
-							if(statechange && !(thisKey in state.lastWeatherAlertNotif)) {
+							if(statechange && !(thisKey in state?.lastWeatherAlertNotif)) {
 								def waf = state?.weatherAlertFilters?.findAll { alert?.message.contains(it) }
 								if(!waf) {
 									sendNofificationMsg("Warn", "WEATHER ALERT: ${alert?.message}")
@@ -921,8 +976,8 @@ void Logger(msg, logType = "debug") {
 }
 
 // Local Application Logging
-void LogAction(msg, logType = "debug") {
-	if(state?.debug) {
+void LogAction(msg, logType = "debug", frc=false) {
+	if(state?.debug || frc) {
 		Logger(msg, logType)
 	}
 }

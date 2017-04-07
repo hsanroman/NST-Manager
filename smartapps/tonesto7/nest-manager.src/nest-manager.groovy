@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.2" }
-def appVerDate() { "4-02-2017" }
+def appVersion() { "5.0.3" }
+def appVerDate() { "4-6-2017" }
 
 preferences {
 	//startPage
@@ -84,15 +84,11 @@ preferences {
 	page(name: "automationSchedulePage")
 	page(name: "feedbackPage")
 	page(name: "sendFeedbackPage")
-	page(name: "manageBackRestorePage")
-	page(name: "restoreStubPage")
 
 	page(name: "setNotificationPage")
 	page(name: "notifConfigPage")
 	page(name: "setNotificationTimePage")
-	page(name: "backupStubDataPage")
-	page(name: "backupRemoveDataPage")
-	page(name: "backupPage")
+	page(name: "restSrvcDiscovery", content: "restSrvcDiscovery")
 }
 
 mappings {
@@ -196,7 +192,8 @@ def mainPage() {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
 			if(settings?.restStreaming) {
 				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
-				href "pollPrefPage", title: "", description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})", image: getAppImg("two_way_icon.png")
+				href "pollPrefPage", title: "", state: ((atomicState?.restStreamingOn && rStrEn) ? "complete" : null), image: getAppImg("two_way_icon.png"),
+						description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})"
 			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
@@ -633,46 +630,170 @@ def pollPrefPage() {
 		}
 		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
 			section("Rest Streaming (Experimental):") {
-				if(restStreaming) {
-					def rData = atomicState?.restServiceData
-					if(rData) {
-						def str = ""
-						str += "Uptime:\n${rData?.startupDt}"
-						str += "\n\nHost: (${rData?.hostInfo?.hostname})"
-						str += "\nOS: ${rData?.hostInfo?.osType}"
-						str += "\nMemory: ${rData?.hostInfo?.memTotal} (Free: ${rData?.hostInfo?.memFree})"
-						paragraph title: "Node Service: v${rData?.version}\n(Streaming: ${rData?.streaming})", str, state: "complete"
-					}
-				} else {
-					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
-				}
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
 			}
-			section("Configure Streaming Service:", hideable: true, hidden: (restStreamIp && restStreamPort ? true : false)) {
+			section("Configure Streaming Service:") {
 				if(settings?.restStreaming) {
-					input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
-					input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
+					href "restSrvcDiscovery", title: "Auto-Discover Local Service", state: (settings?.selectedRestDevice ? "complete" : null),
+							description: settings?.selectedRestDevice ? "Selected Service:\n${settings?.selectedRestDevice}" : "Discover NST Service on your local network"
+					if(!settings?.selectedRestDevice) {
+						input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
+						input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
+					}
+					getRestSrvcDesc()
+					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
 				}
 			}
 			startStopStream()
 		}
-		section("Device Polling:") {
-			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true)
-		}
-		section("Location Polling:") {
-			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()], submitOnChange: true)
+		section("Polling:") {
+			if(settings?.restStreaming && getRestHost()) {
+				paragraph "These settings are only used when rest streaming is inactive or disabled", required: true, state: null, image: getAppImg("info_icon2.png")
+			}
+			input ("pollValue", "enum", title: "Device Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum(true)], submitOnChange: true, image: getAppImg("thermostat_icon.png"))
+			input ("pollStrValue", "enum", title: "Location Poll Rate", required: false, defaultValue: 180, metadata: [values:pollValEnum()], submitOnChange: true, image: getAppImg("nest_structure_icon.png"))
 		}
 		if(atomicState?.weatherDevice) {
-			section("Weather Polling:") {
-				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true)
+			section("Weather Updates:") {
+				input ("pollWeatherValue", "enum", title: "Weather Refresh Rate", required: false, defaultValue: 900, metadata: [values:notifValEnum()], submitOnChange: true, image: getAppImg("weather_icon.png"))
 			}
 		}
 		section("Wait Values:") {
-			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true)
+			input ("pollWaitVal", "enum", title: "Forced Poll Refresh Limit", required: false, defaultValue: 10, metadata: [values:waitValEnum()], submitOnChange: true, image: getAppImg("delay_time_icon.png"))
 		}
 
 		incPollPrefLoadCnt()
 		devPageFooter("pollPrefLoadCnt", execTime)
+	}
+}
+
+def getRestSrvcDesc() {
+	def rData = atomicState?.restServiceData
+	def str = null
+	if(rData) {
+		str = ""
+		def dtstr = ""
+		if(rData?.startupDt) {
+			def dt = rData?.startupDt
+			dtstr += dt?.y ? "${dt?.y}yr., " : ""
+			dtstr += dt?.mn ? "${dt?.mn}mon, " : ""
+			dtstr += dt?.d ? "${dt?.d}days, " : ""
+			dtstr += dt?.h ? "${dt?.h}hrs " : ""
+			dtstr += dt?.m ? "${dt?.m}min " : ""
+			dtstr += dt?.s ? "${dt?.s}sec" : ""
+		}
+		str += "${str == "" ? "" : "\n"}Host: (${rData?.hostInfo?.hostname})"
+		if(rData?.hostInfo?.osPlatform) {
+			def pd = parseJson(rData?.hostInfo?.osPlatform.toString())
+			str += "\n ├ OS: ${pd?.dist} ${pd?.release}"
+			str += "\n │├ Codename: ${pd?.codename}"
+			str += "\n │└ Kernel: ${pd?.os.toString().capitalize()} ${rData?.hostInfo?.osRelease}"
+		} else {
+			str += "\n ├ OS: ${rData?.hostInfo?.osType} ${rData?.hostInfo?.osRelease ? "(${rData?.hostInfo?.osRelease})": ""}"
+		}
+		str += "\n ├ Memory: ${rData?.hostInfo?.memTotal} (${rData?.hostInfo?.memFree} free)"
+		str += "\n ├ IP: (${rData?.hostInfo?.ip})"
+		str += "\n ├ Port: (${rData?.hostInfo?.port})"
+		str += "\n ├ Node Service: (v${rData?.version})"
+		str += "\n ├ Active Streaming: (${rData?.streaming.toString().capitalize()})"
+		str += "\n ${dtstr != "" ? "├" : "└"} Session Events: (${rData?.sessionEvts})"
+		str += dtstr != "" ? "\n └ Uptime: ${dtstr.length() > 20 ? "\n     └ ${dtstr}" : "${dtstr}"}" : ""
+		paragraph title: "Running Service Info:", str, state: "complete"
+	}
+	return str
+}
+
+def getRestSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1" }
+
+def restSrvcDiscovery(params=[:]) {
+	def devices = discoveredSrvcs()
+	def options = devices ?: []
+	def objsFound = options.size() ?: 0
+
+	def discRfshCnt = (int) atomicState.discRfshCnt ?: 0
+	atomicState?.discRfshCnt = discRfshCnt+1
+
+	if ((objsFound == 0 && atomicState?.discRfshCnt > 25) || params?.reset == "true") {
+		log.trace "Cleaning Out Discovered Services..."
+		state?.localNstSrvcs = [:]
+		atomicState.discRfshCnt = 0
+		app.updateSetting("selectedRestDevice", "")
+	}
+
+	restSrvcSubscribe()
+
+	if((discRfshCnt % 5) == 0) {
+		sendNstSrvcDiscovery()
+	}
+	if(((discRfshCnt % 3) == 0) && ((discRfshCnt % 5) != 0)) {
+		verifyDevices()
+	}
+
+	return dynamicPage(name:"restSrvcDiscovery", title:"", nextPage:"", refreshInterval:5) {
+		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
+			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(Discovered: ${objsFound})", multiple: false, options: options, image: getAppImg("two_way_icon.png")
+		}
+		section("Options") {
+			href "restSrvcDiscovery", title:"Clear Discovered Services...", description:"", params: ["reset": "true"], image: getAppImg("reset_icon.png")
+		}
+	}
+}
+
+void sendNstSrvcDiscovery() {
+	LogAction("Sending SSDP discovery broadcast to find local NST Service...", "info", true)
+	sendHubCommand(new physicalgraph.device.HubAction("lan discovery ${getRestSrvcUrn()}", physicalgraph.device.Protocol.LAN))
+}
+
+Map discoveredSrvcs() {
+	def objs = getVerifiedSrvcs()
+	def res = [:]
+	objs?.each { res[it?.value?.host] = it?.value?.name	}
+	return res
+}
+
+def getVerifiedSrvcs() { getSrvcs().findAll { it?.value?.verified == true } }
+
+void restSrvcSubscribe() {
+	atomicState.ssdpOn = true
+	subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler)
+}
+
+def getSrvcs() {
+	if (!state?.localNstSrvcs) { state.localNstSrvcs = [:] }
+	state?.localNstSrvcs
+}
+
+void verifyDevices() {
+	def devices = getSrvcs().findAll { it?.value?.verified != true }
+	devices.each {
+		int port = convertHexToInt(it?.value?.deviceAddress)
+		String ip = convertHexToIP(it?.value?.networkAddress)
+		String host = "${ip}:${port}"
+		sendHubCommand(new physicalgraph.device.HubAction("""GET ${it?.value?.ssdpPath} HTTP/1.1\r\nHOST: $host\r\n\r\n""", physicalgraph.device.Protocol.LAN, host, [callback: srvcDescRespHandler]))
+	}
+}
+
+def srvcBrdCastHandler(evt) {
+	def description = evt.description
+	def hub = evt?.hubId
+	def parsedEvent = parseLanMessage(description)
+	parsedEvent << ["hub":hub]
+	def devices = getSrvcs()
+	String ssdpUSN = parsedEvent?.ssdpUSN.toString()
+	if (devices?."${ssdpUSN}") {
+		//This area can be used to update service status in ST
+	} else {
+		devices << ["${ssdpUSN}": parsedEvent]
+	}
+}
+
+void srvcDescRespHandler(physicalgraph.device.HubResponse hubResponse) {
+	def body = hubResponse.xml
+	def srvcs = getSrvcs()
+	def srvc = srvcs?.find { it?.key?.contains(body?.device?.UDN.value?.toString()) }
+	if (srvc) {
+		log.debug "srvc: $srvc"
+		srvc.value << ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
 	}
 }
 
@@ -973,7 +1094,6 @@ def notifPrefPage() {
 				atomicState.pushTested = true
 			} else { atomicState.pushTested = true }
 
-
 			section("Location Notifications:") {
 				paragraph "Get notified when the Location changes from Home/Away", state: "complete"
 				input name: "locPresChangeMsg", type: "bool", title: "Notify on Home/Away changes?", defaultValue: true, submitOnChange: true, image: getAppImg("presence_icon.png")
@@ -982,7 +1102,7 @@ def notifPrefPage() {
 				def t1 = getAppNotifDesc()
 				def appDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "App Notifications", description: "${appDesc}Tap to configure", params: [pType:"app"], state: (appDesc != "" ? "complete" : null),
-				 		image: getAppImg("nst_manager_icon.png")
+						image: getAppImg("nst_manager_icon.png")
 				t1 = getDevNotifDesc()
 				def devDesc = t1 ? "${t1}\n\n" : ""
 				href "notifConfigPage", title: "Device Notifications", description: "${devDesc}Tap to configure", params: [pType:"dev"], state: (devDesc != "" ? "complete" : null),
@@ -1184,7 +1304,7 @@ def toggleAllAutomations(disable=false) {
 	def dis = disable == null ? false : disable
 	def cApps = getChildApps()
 	cApps.each { ca ->
-	 	ca?.setAutomationStatus(dis, true)
+		ca?.setAutomationStatus(dis, true)
 	}
 }
 
@@ -1332,7 +1452,7 @@ def debugPrefPage() {
 			else { LogAction("Reset Application Data Disabled", "info", true) }
 		}
 		if(settings?.appDebug || settings?.childDebug) {
-			 if(atomicState?.debugEnableDt == null) { atomicState?.debugEnableDt = getDtNow() }
+			if(atomicState?.debugEnableDt == null) { atomicState?.debugEnableDt = getDtNow() }
 		} else { atomicState?.debugEnableDt = null }
 		atomicState.needChildUpd = true
 		incLogPrefLoadCnt()
@@ -1530,8 +1650,8 @@ def devPageFooter(var, eTime) {
 	def res = []
 	if(getDevOpt()) {
 		res += 	section() {
-					paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
-				}
+			paragraph "       Page Loads: (${atomicState?.usageMetricsStore["${var}"] ?: 0}) | LoadTime: (${eTime ? (now()-eTime) : 0}ms)"
+		}
 	}
 	return res?.size() ? res : ""
 }
@@ -1617,7 +1737,7 @@ def getPollingConfDesc() {
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})"
+	pStr += rStrEn ? "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})" : ""
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
 	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
 	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
@@ -1905,7 +2025,7 @@ def initialize() {
 	}
 	else {
 		if(checkMigrationRequired()) { return true }	// This will call updated later
-		reInitBuiltins()	 // These are to have these apps release subscriptions to devices (in case of delete)
+		reInitBuiltins()	// These are to have these apps release subscriptions to devices (in case of delete)
 		runIn(14, "initManagerApp", [overwrite: true])	// need to give time for watchdog updates before we try to delete devices.
 		runIn(34, "reInitBuiltins", [overwrite: true])	// need to have watchdog/nestmode check if we created devices
 	}
@@ -1939,6 +2059,7 @@ def initManagerApp() {
 	setStateVar()
 	restStreamHandler(true)   // stop the rest stream
 	atomicState?.restStreamingOn = false
+	atomicState.ssdpOn = false
 	unschedule()
 	unsubscribe()
 	atomicState.pollingOn = false
@@ -1982,7 +2103,7 @@ def askAlexaMQHandler(evt) {
 	switch (evt.value) {
 		case "refresh":
 			atomicState?.askAlexaMQList = (evt.jsonData && evt.jsonData?.queues) ? evt.jsonData.queues : []
-	        break
+			break
 	}
 }
 
@@ -2011,26 +2132,39 @@ def getApiURL() {
 	return apiServerUrl("/api/token/${atomicState?.accessToken}/smartapps/installations/${app.id}") ?: null
 }
 
-def restStreamHandler(close = false) {
+def getRestHost() {
+	def res = null
+	def autoHost = settings?.selectedRestDevice ?: null
 	def ip = settings?.restStreamIp ?: null
-	if(!ip) {
-		LogAction("No IP", "warn", false)
-		atomicState.restStreamingOn = false
-		return
+	def port = settings?.restStreamPort ?: 3000
+	if(autoHost) {
+		res = autoHost
+	} else {
+		if(ip) {
+			res = "${ip}:${port}"
+		} else {
+			LogAction("No IP Address Configured for Rest Service", "warn", false)
+			atomicState.restStreamingOn = false
+		}
 	}
+	return res
+}
+
+def restStreamHandler(close = false) {
+	def host = getRestHost()
+	if(!host) { return }
 	if(!close && !atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
 	LogAction("restStreamHandler(close: ${close})", "debug", false)
-	def port = settings?.restStreamPort ?: 3000
 	def connStatus = close ? false : true
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
 			headers: [
-				"HOST": "${ip}:${port}",
+				"HOST": host,
 				"nesttoken": "${atomicState?.authToken}",
 				"connStatus": "${connStatus}",
 				"callback": "${getApiURL()}",
@@ -2049,24 +2183,19 @@ def restStreamHandler(close = false) {
 
 def restStreamCheck() {
 	//log.debug "restStreamCheck"
-	def ip = settings?.restStreamIp ?: null
-	if(!ip) {
-		LogAction("No IP", "warn", false)
-		atomicState.restStreamingOn = false
-		return
-	}
+	def host = getRestHost()
+	if(!host) { return }
 	if(!atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
-	def port = settings?.restStreamPort ?: 3000
 	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", false)
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
 			headers: [
-				"HOST": "${ip}:${port}",
+				"HOST": host,
 				"callback": "${getApiURL()}",
 				"sttoken": "${atomicState?.accessToken}"
 			],
@@ -2098,6 +2227,11 @@ def receiveStreamStatus() {
 		}
 		if(settings?.restStreaming && t0) {		// All good
 			atomicState?.lastHeardFromNestDt = getDtNow()
+			if(atomicState?.ssdpOn == true) {
+				unsubscribe()
+				atomicState.ssdpOn = false
+				subscriber()
+			}
 		}
 		atomicState?.restServiceData = resp
 
@@ -2252,6 +2386,9 @@ def subscriber() {
 	if(atomicState.appData?.aaPrefs?.enMultiQueue && settings?.allowAskAlexaMQ) {
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler) //Refreshes list of available AA queues
 	}
+	if(settings?.restStreaming && !getRestHost()) {
+		restSrvcSubscribe()
+	}
 }
 
 private adj_temp(tempF) {
@@ -2312,6 +2449,7 @@ private gcd(input = []) {
 }
 
 def onAppTouch(event) {
+	fixStuckMigration()
 	poll(true)
 	/*
 		NOTE:
@@ -2336,11 +2474,16 @@ def refresh(child = null) {
 
 def pollFollow() { poll() }
 
-/*
-def pollWatcher(evt) {
-	if(isPollAllowed() && (ok2PollDevice() || ok2PollStruct())) { poll() }
+def fixStuckMigration() {
+	if(atomicState?.migrationInProgress == true) {
+		atomicState?.migrationInProgress = false
+		atomicState?.pollBlocked = false
+		atomicState?.autoMigrationComplete = true
+		def t0 = atomicState?.installData
+		t0["usingNewAutoFile"] = true
+		atomicState?.installData = t0
+	}
 }
-*/
 
 def cleanRestAutomationTest() {
 	/*
@@ -2365,7 +2508,7 @@ def cleanRestAutomationTest() {
 			cApps.each { ca ->
 				def restId = ca?.getSettingVal("restoreId")
 				if(restId != null) {
-		 			ca?.settingUpdate("restoreId", null)
+					ca?.settingUpdate("restoreId", null)
 				}
 			}
 		}
@@ -2378,11 +2521,11 @@ def cleanRestAutomationTest() {
 		}
 		else {
 			LogAction("CleanRestAutomationTest: enabling ${ca?.label} ${restId}", "warn", true)
-	 		ca?.settingUpdate("disableAutomationreq", "false", "bool")
-	 		ca?.stateUpdate("disableAutomation", false)
-	 		ca?.stateUpdate("disableAutomationDt", null)
-	 		ca?.update()
-	 	}
+			ca?.settingUpdate("disableAutomationreq", "false", "bool")
+			ca?.stateUpdate("disableAutomation", false)
+			ca?.stateUpdate("disableAutomationDt", null)
+			ca?.update()
+		}
 	}
 	atomicState?.migrationInProgress = false
 	atomicState?.pollBlocked = false
@@ -2535,6 +2678,7 @@ void doAutoMigrationProcess() {
 	if(atomicState?.migrationInProgress == true) { LogAction("Migration already in progress", "error", true) }
 	atomicState?.pollBlocked = true
 	atomicState?.migrationInProgress = true
+	atomicState?.migrationState1 = "Step 1 Start"
 
 	// This is to control the parent/child state to reset using fixState()
 	atomicState?.resetAllData = false
@@ -2544,6 +2688,7 @@ void doAutoMigrationProcess() {
 	if(cApps) {
 		cApps?.each { ca ->
 			def t0 = ca?.settings?.restoredFromBackup
+			atomicState?.migrationState1 = "Step 1 Backup - ${ca.label}"
 			if(t0 == null && backupAutomation(ca)) {
 				LogAction("backed up ${ca?.label}", "debug", true)
 			} else {
@@ -2551,9 +2696,11 @@ void doAutoMigrationProcess() {
 				else { LogAction("backup failed of automation ${ca.label}", "warn", true) }
 			}
 		}
+		atomicState?.migrationState1 = "Step 1 Finish - Restore Scheduled"
 		runIn(15, "processAutoRestore", [overwrite:true])
 		LogAction("Scheduled restore process for (15 seconds)...", "info", true)
 	} else {
+		atomicState?.migrationState1 = "Step 1 Finish - Nothing to Restore"
 		LogAction("There are no automations to restore.", "warn", true)
 		finishMigrationProcess(false)
 	}
@@ -2579,10 +2726,13 @@ def backupAutomation(child) {
 */
 void processAutoRestore() {
 	LogAction("processAutoRestore...", "trace", true)
+	atomicState?.migrationState3 = "Step 3 Start"
 	def backupData = getAutomationBackupData()
 	if(backupData instanceof List || backupData instanceof Map) {
+		atomicState?.migrationState3 = "Step 3 Automation Restore"
 		automationRestore(backupData)
 	}
+	atomicState?.migrationState3 = "Step 3 Finish"
 }
 
 /*
@@ -2605,11 +2755,13 @@ def automationRestore(data, id=null) {
 				setData["restoreCompleted"] = ["type":"bool", "value":false]
 				setData["automationTypeFlag"] = ["type":"text", "value":setData?.automationTypeFlag]
 
+				atomicState?.migrationState4 = "Step 4 Automation Restore - Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)...."
 				LogAction("Restoring [${setData?.automationTypeFlag?.value}] Automation Named: ($appLbl)....", "info", true)
 				// log.debug "setData: $setData"
 				addChildApp(appNamespace(), autoAppName(), "${appLbl} (NST)", [settings:setData])
 				postChildRestore(bApp?.key)
 			}
+			atomicState?.migrationState4 = "Step 4 Automation Restore - Finishing"
 			runIn(25, "finishMigrationProcess", [overwrite:true])
 			LogAction("Scheduling finishMigrationProcess for (25 seconds)...", "debug", true)
 			return true
@@ -2628,6 +2780,7 @@ def automationRestore(data, id=null) {
 	PARENT METHOD
 */
 def callRestoreState(child, restId) {
+	atomicState?.migrationState5 = "Step 5 callRestoreState - Start ${child.label}   RestoreID: ${restId}"
 	LogAction("callRestoreState ${child.label}   RestoreID: ${restId}", "trace", true)
 	//log.debug "child: [Name: ${child.label} || ID: ${child?.getId()} | RestoreID: $restId"
 	if(restId) {
@@ -2635,11 +2788,13 @@ def callRestoreState(child, restId) {
 		//log.debug "callRestoreState data: $data"
 		def newData = data.find { it?.key?.toString() == restId?.toString() }
 		if(newData?.value?.stateData) {
+			atomicState?.migrationState5 = "Step 5 callRestoreState - restoring child ${child.label} state  RestoreID: ${restId}"
 			newData?.value?.stateData?.each { sKey ->
 				child?.stateUpdate(sKey?.key, sKey?.value)
 			}
 			return true
 		} else {
+			atomicState?.migrationState5 = "Step 5 callRestoreState - no backup data child ${child.label} RestoreID: ${restId}"
 			LogAction("Backup Data not found: ${child.label}   RestoreID: ${restId}", "error", true)
 		}
 	}
@@ -2654,12 +2809,15 @@ def callRestoreState(child, restId) {
 	PARENT METHOD
 */
 def postChildRestore(childId) {
+	atomicState?.migrationState3A = "Step 3A Start postChildRestore(childId: $childId)"
 	LogAction("postChildRestore(childId: $childId)", "trace", true)
 	def cApp = getChildApps()
 	cApp?.each { ca ->
+		atomicState?.migrationState3A = "Step 3A postChildRestore Checking Automation (${ca?.label})..."
 		LogAction("postChildRestore Checking Automation (${ca?.label})...", "info", true)
 		if(ca?.getId() == childId) {
 			if(keepBackups() == false) {
+				atomicState?.migrationState3A = "Step 3A postChildRestore Removing Old Automation (${ca?.label})..."
 				LogAction("postChildRestore Removing Old Automation (${ca?.label})...", "warn", true)
 				deleteChildApp(ca)
 			} else {
@@ -2669,6 +2827,7 @@ def postChildRestore(childId) {
 				ca?.update()
 			}
 		} else {
+			atomicState?.migrationState3A = "Step 3A postChildRestore No Match for Automation (${ca?.label})..."
 			LogAction("postChildRestore No Match for Automation (${ca?.label})...", "info", true)
 		}
 	}
@@ -2682,6 +2841,7 @@ def postChildRestore(childId) {
 	PARENT METHOD
 */
 void finishMigrationProcess(result=true) {
+	atomicState?.migrationState6 = "Step 6 start - finishMigrationProcess result: $result"
 	LogAction("finishMigrationProcess result: $result", "trace", true)
 	if(result) {
 		LogAction("Auto Migration Process is complete...", "info", true)
@@ -3126,7 +3286,7 @@ def receiveEventData() {
 			if(chg) {
 				devChgd = true
 				gotSomething = true
-				LogAction("API Device Data HAS Changed (Stream)", "debug", true)
+				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
 			} else {
 				LogAction("got deviceData", "debug", false)
 			}
@@ -3154,6 +3314,11 @@ def receiveEventData() {
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromNestDt = getDtNow()
+		if(atomicState?.ssdpOn == true) {
+			unsubscribe() //These were causing exceptions
+			atomicState.ssdpOn = false
+			subscriber()
+		}
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
@@ -3272,10 +3437,10 @@ def whatChanged(mapA, mapB, headstr) {
 			LogAction("ORIG has " + left.size() + " items. NEW has " + right.size() + " items.", "trace", true)
 			LogAction("ORIG Object: ${left} NEW Object: ${right}", "trace", true)
 			return false
-		 }
-		 for(int i=0; i < left.size(); i++) {
-			 // May detect matching items here if sort of objects is problem
-			 whatChanged(left[i], right[i], "${headstr}/${i}")
+		}
+		for(int i=0; i < left.size(); i++) {
+			// May detect matching items here if sort of objects is problem
+			whatChanged(left[i], right[i], "${headstr}/${i}")
 		}
 	} else if (left instanceof Map) {
 		String[] leftKeys = left.keySet()
@@ -3374,7 +3539,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.tDevVer = t1 ?: ""
-					if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
+					if(atomicState?.tDevVer != "" && (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
 						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
 						//log.warn "oldTstatData: ${oldTstatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(tData)
@@ -3410,7 +3575,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.pDevVer = t1 ?: ""
-					if(!atomicState?.pDevVer || (versionStr2Int(atomicState?.pDevVer) >= minVersions()?.protect?.val)) {
+					if(atomicState?.pDevVer != "" && (versionStr2Int(atomicState?.pDevVer) >= minVersions()?.protect?.val)) {
 						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
 						//log.warn "oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
@@ -3446,7 +3611,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.camDevVer = t1 ?: ""
-					if(!atomicState?.camDevVer || (versionStr2Int(atomicState?.camDevVer) >= minVersions()?.camera?.val)) {
+					if(atomicState?.camDevVer != "" && (versionStr2Int(atomicState?.camDevVer) >= minVersions()?.camera?.val)) {
 						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
 						it.generateEvent(camData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
@@ -3465,7 +3630,7 @@ def updateChildData(force = false) {
 			else if(atomicState?.presDevice && devId == getNestPresId()) {
 				def pData = ["debug":dbg, "logPrefix":logNamePrefix, "tz":nestTz, "mt":useMt, "pres":locPresence, "apiIssues":api, "allowDbException":allowDbException,
 							"latestVer":latestPresVer()?.ver?.toString(), "clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType,
-							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg ]
+							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "lastStrucDataUpd": atomicState?.lastStrucDataUpd ]
 				def oldPresData = atomicState?."oldPresData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldPresData${devId}" = pDataChecksum
@@ -3474,7 +3639,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.presDevVer = t1 ?: ""
-					if(!atomicState?.presDevVer || (versionStr2Int(atomicState?.presDevVer) >= minVersions()?.presence?.val)) {
+					if(atomicState?.presDevVer != "" && (versionStr2Int(atomicState?.presDevVer) >= minVersions()?.presence?.val)) {
 						LogTrace("UpdateChildData >> Presence id: ${devId}")
 						//log.warn "oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
 						it.generateEvent(pData)
@@ -3496,7 +3661,7 @@ def updateChildData(force = false) {
 				def wData = ["data":wData1, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
 							"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
 							"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
-							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showWGraphs, "devBannerData":devBannerData ]
+							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData ]
 				def oldWeatherData = atomicState?."oldWeatherData${devId}"
 				def wDataChecksum = generateMD5_A(wData.toString())
 				def showWGraphs = settings?.weatherShowGraph == false ? false : true
@@ -3506,7 +3671,7 @@ def updateChildData(force = false) {
 					//def t1 = it?.devVer()
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.weatDevVer = t1 ?: ""
-					if(!atomicState?.weatDevVer || (versionStr2Int(atomicState?.weatDevVer) >= minVersions()?.weather?.val)) {
+					if(atomicState?.weatDevVer != "" && (versionStr2Int(atomicState?.weatDevVer) >= minVersions()?.weather?.val)) {
 						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
 						LogTrace("UpdateChildData >> Weather id: ${devId}")
 						it.generateEvent(wData)
@@ -3605,7 +3770,7 @@ def updateChildData(force = false) {
 						//def t1 = it?.devVer()
 						def t1 = it?.currentState("devVer")?.value?.toString()
 						atomicState?.vtDevVer = t1 ?: ""
-						if(!atomicState?.tDevVer || (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
+						if(atomicState?.vtDevVer != "" && (versionStr2Int(atomicState?.vtDevVer) >= minVersions()?.thermostat?.val)) {
 							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
 							//log.warn "oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
 							it.generateEvent(tData)
@@ -4527,7 +4692,7 @@ def notificationCheck() {
 }
 
 def cameraStreamNotify(child, Boolean streaming) {
-	if(!streaming || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
+	if(streaming == null || atomicState?.notificationPrefs?.dev?.camera?.streamMsg != true) { return }
 	sendMsg("${child?.device?.displayName} Info", "Streaming is now '${streaming ? "ON" : "OFF"}'", false)
 }
 
@@ -5509,6 +5674,16 @@ def getLocHubId() {
 	return hubs[0] != null ? hubs[0].toString() : null
 }
 
+def getLocHubIp() {
+	def hub = location?.hubs[0]
+	return hub != null ? hub?.localIp.toString() : null
+}
+
+def getLocHub() {
+	def hubs = location?.hubs*.id.findAll { it }
+	return hubs[0] != null ? hubs[0] : null
+}
+
 def addRemoveDevices(uninst = null) {
 	//LogTrace("addRemoveDevices")
 	def retVal = false
@@ -5526,7 +5701,7 @@ def addRemoveDevices(uninst = null) {
 					def d1 = getChildDevice(getNestTstatDni(dni))
 					if(!d1) {
 						def d1Label = getNestTstatLabel("${dni?.value}")
-						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, getLocHubId(), [label: "${d1Label}"])
+						d1 = addChildDevice(app.namespace, getThermostatChildName(), dni?.key, null, [label: "${d1Label}"])
 						//d1.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d1?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5543,7 +5718,7 @@ def addRemoveDevices(uninst = null) {
 					def d2 = getChildDevice(getNestProtDni(dni).toString())
 					if(!d2) {
 						def d2Label = getNestProtLabel("${dni.value}")
-						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, getLocHubId(), [label: "${d2Label}"])
+						d2 = addChildDevice(app.namespace, getProtectChildName(), dni.key, null, [label: "${d2Label}"])
 						//d2.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d2?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5561,7 +5736,7 @@ def addRemoveDevices(uninst = null) {
 					def d3 = getChildDevice(dni)
 					if(!d3) {
 						def d3Label = getNestPresLabel()
-						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, getLocHubId(), [label: "${d3Label}"])
+						d3 = addChildDevice(app.namespace, getPresenceChildName(), dni, null, [label: "${d3Label}"])
 						//d3.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d3.displayName} with (Id: ${dni})", "debug", true)
@@ -5581,7 +5756,7 @@ def addRemoveDevices(uninst = null) {
 					def d4 = getChildDevice(dni)
 					if(!d4) {
 						def d4Label = getNestWeatherLabel()
-						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, getLocHubId(), [label: "${d4Label}"])
+						d4 = addChildDevice(app.namespace, getWeatherChildName(), dni, null, [label: "${d4Label}"])
 						//d4.take()
 						atomicState?.lastWeatherUpdDt = null
 						atomicState?.lastForecastUpdDt = null
@@ -5601,7 +5776,7 @@ def addRemoveDevices(uninst = null) {
 					def d5 = getChildDevice(getNestCamDni(dni).toString())
 					if(!d5) {
 						def d5Label = getNestCamLabel("${dni.value}")
-						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, getLocHubId(), [label: "${d5Label}"])
+						d5 = addChildDevice(app.namespace, getCameraChildName(), dni.key, null, [label: "${d5Label}"])
 						//d5.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d5?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5619,7 +5794,7 @@ def addRemoveDevices(uninst = null) {
 					if(!d6) {
 						def d6Label = getNestvStatLabel("${dni.value}")
 						LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
-						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, getLocHubId(), [label: "${d6Label}", "data":["isVirtual":"true"]])
+						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
 						devsCrt = devsCrt + 1
 						LogAction("Created: ${d6?.displayName} with (Id: ${dni?.key})", "debug", true)
@@ -5677,8 +5852,10 @@ def addRemoveDevices(uninst = null) {
 			sendPush(msg)
 			LogAction("addRemoveDevices Exception | $msg", "warn", true)
 		}
-		else { log.error "addRemoveDevices Exception:", ex }
-		sendExceptionData(ex, "addRemoveDevices")
+		else {
+			log.error "addRemoveDevices Exception:", ex
+			sendExceptionData(ex, "addRemoveDevices")
+		}
 		retVal = false
 	}
 	return retVal
@@ -6159,6 +6336,7 @@ def fixState() {
 			}
 			unschedule()
 			unsubscribe()
+			atomicState.ssdpOn = false
 			atomicState.pollingOn = false
 			atomicState?.pollBlocked = true
 			result = true
@@ -6296,8 +6474,7 @@ def stateCleanup() {
 		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
 		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
 		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug", "updNotifyWaitVal", "appApiIssuesWaitVal",
-		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer",
-		"vtDevVer", "autoSaVer"
+		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "autoSaVer"
  	]
 	data.each { item ->
 		state.remove(item?.toString())
@@ -6348,6 +6525,8 @@ def weatherApiKey()			{ return "b82aba1bb9a9d7f1" }
 def getFirebaseAppUrl() 	{ return "https://st-nest-manager.firebaseio.com" }
 def getAppImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/App/$imgName" : "" }
 def getDevImg(imgName, on = null)	{ return (!disAppIcons || on) ? "https://raw.githubusercontent.com/tonesto7/nest-manager/${gitBranch()}/Images/Devices/$imgName" : "" }
+private Integer convertHexToInt(hex) { Integer.parseInt(hex,16) }
+private String convertHexToIP(hex) { [convertHexToInt(hex[0..1]),convertHexToInt(hex[2..3]),convertHexToInt(hex[4..5]),convertHexToInt(hex[6..7])].join(".") }
 
 def latestTstatVer()		{ return atomicState?.appData?.updater?.versions?.thermostat ?: "unknown" }
 def latestProtVer()		{ return atomicState?.appData?.updater?.versions?.protect ?: "unknown" }
@@ -6384,7 +6563,7 @@ def showFeedbackOk() {
 }
 
 def showChgLogOk() {
-	return !atomicState?.installData?.shownChgLog ? true : false
+	return (!atomicState?.installData?.shownChgLog && atomicState?.isInstalled) ? true : false
 }
 
 def getDaysSinceInstall() {
@@ -6530,12 +6709,12 @@ def isInMode(modeList) {
 
 def minVersions() {
 	return [
-		"automation":["val":500, "desc":"5.0.0"],
-		"thermostat":["val":500, "desc":"5.0.0"],
-		"protect":["val":500, "desc":"5.0.0"],
-		"presence":["val":500, "desc":"5.0.0"],
-		"weather":["val":501, "desc":"5.0.1"],
-		"camera":["val":500 , "desc":"5.0.0"],
+		"automation":["val":501, "desc":"5.0.1"],
+		"thermostat":["val":501, "desc":"5.0.1"],
+		"protect":["val":501, "desc":"5.0.1"],
+		"presence":["val":501, "desc":"5.0.1"],
+		"weather":["val":502, "desc":"5.0.2"],
+		"camera":["val":502 , "desc":"5.0.2"],
 	]
 }
 
@@ -8420,6 +8599,7 @@ def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
+def developerVer()	{ return false }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
