@@ -29,25 +29,25 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.0.2"
+                "ver": "5.0.3"
             },
             "autoapp": {
-                "ver": "5.0.0"
+                "ver": "5.0.1"
             },
             "thermostat": {
-                "ver": "5.0.0"
+                "ver": "5.0.1"
             },
             "protect": {
-                "ver": "5.0.0"
+                "ver": "5.0.1"
             },
             "camera": {
-                "ver": "5.0.1"
+                "ver": "5.0.2"
             },
             "presence": {
-                "ver": "5.0.0"
+                "ver": "5.0.1"
             },
             "weather": {
-                "ver": "5.0.1"
+                "ver": "5.0.2"
             }
         }
     },

@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.2" }
+def devVer() { return "5.0.1" }
 
 // for the UI
 metadata {

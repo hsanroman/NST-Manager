@@ -3036,7 +3036,7 @@ def getAutoChgType(type) {
 
 def getChgLogHtml() {
 	def chgStr = ""
-	log.debug "shownChgLog: ${state?.shownChgLog}"
+	//log.debug "shownChgLog: ${state?.shownChgLog}"
 	if(!state?.shownChgLog == true) {
 		chgStr = """
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
