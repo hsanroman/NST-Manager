@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.3" }
-def appVerDate() { "4-4-2017" }
+def appVerDate() { "4-6-2017" }
 
 preferences {
 	//startPage
@@ -8599,7 +8599,7 @@ def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
-def developerVer()	{ return true }
+def developerVer()	{ return false }
 def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
