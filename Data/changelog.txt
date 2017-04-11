@@ -1,3 +1,8 @@
+V5.0.4 (April 11th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • ADDED: Automations v5.0.2 will display a message and prevent any configuration when installed from the Marketplace.
+
 V5.0.3 (April 6th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:

@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.3" }
-def appVerDate() { "4-6-2017" }
+def appVersion() { "5.0.4" }
+def appVerDate() { "4-11-2017" }
 
 preferences {
 	//startPage
@@ -121,6 +121,7 @@ def authPage() {
 	//LogTrace("authPage()")
 	generateInstallId()
 	if(!atomicState?.accessToken) { getAccessToken() }
+	atomicState.ok2InstallAutoFlag = false
 	if(!atomicState?.usageMetricsStore) { initAppMetricStore() }
 	if(atomicState?.notificationPrefs == null) { atomicState?.notificationPrefs = buildNotifPrefMap() }
 	def preReqOk = (atomicState?.preReqTested == true) ? true : preReqCheck()
@@ -251,6 +252,7 @@ def mainPage() {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
 			}
 		}
+		atomicState.ok2InstallAutoFlag = false
 		incMainLoadCnt()
 		devPageFooter("mainLoadCnt", execTime)
 	}
@@ -841,6 +843,7 @@ def automationsPage() {
 				href "automationKickStartPage", title: "Re-Initialize All Automations", description: "Tap to Update All Automations", image: getAppImg("reset_icon.png")
 			}
 		}
+		atomicState.ok2InstallAutoFlag = true
 		incAutoLoadCnt()
 		devPageFooter("autoLoadCnt", execTime)
 	}
