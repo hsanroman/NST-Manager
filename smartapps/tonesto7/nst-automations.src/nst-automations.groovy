@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.0.1" }
-def appVerDate() { "4-3-2017" }
+def appVersion() { "5.0.2" }
+def appVerDate() { "4-11-2017" }
 
 preferences {
 	//startPage
@@ -38,7 +38,8 @@ preferences {
 	page(name: "uninstallPage")
 
 	//Automation Pages
-	page(name: "selectAutoPage" )
+	page(name: "notAllowedPage")
+	page(name: "selectAutoPage")
 	page(name: "mainAutoPage")
 	//page(name: "remSenTstatFanSwitchPage")
 	page(name: "remSenShowTempsPage")
@@ -50,15 +51,10 @@ preferences {
 	page(name: "schMotSchedulePage")
 	page(name: "scheduleConfigPage")
 	page(name: "tstatConfigAutoPage")
-	page(name: "manageBackRestorePage")
-	page(name: "restoreStubPage")
 
 	//shared pages
 	page(name: "setNotificationPage")
 	page(name: "setNotificationTimePage")
-	page(name: "backupStubDataPage")
-	page(name: "backupRemoveDataPage")
-	page(name: "backupPage")
 }
 
 /******************************************************************************
@@ -67,8 +63,21 @@ preferences {
 //This Page is used to load either parent or child app interface code
 def startPage() {
 	if(parent) {
-		atomicState?.isParent = false
-		selectAutoPage()
+		if(!atomicState?.isInstalled && parent?.state?.ok2InstallAutoFlag != true) {
+			notAllowedPage()
+		} else {
+			atomicState?.isParent = false
+			selectAutoPage()
+		}
+	}
+}
+
+def notAllowedPage () {
+	dynamicPage(name: "notAllowedPage", title: "This install Method is Not Allowed", install: false, uninstall: true) {
+		section() {
+			paragraph "HOUSTON WE HAVE A PROBLEM!\n\nNST Automations can't be directly installed from the Marketplace.\n\nPlease use the NST Manager SmartApp to configure them.", required: true,
+			state: null, image: getAppImg("disable_icon2.png")
+		}
 	}
 }
 
@@ -653,6 +662,7 @@ def initAutoApp() {
 		scheduler()
 	}
 	app.updateLabel(getAutoTypeLabel())
+	LogAction("Automation Label: ${getAutoTypeLabel()}", "info", true)
 	atomicState?.lastAutomationSchedDt = null
 	if(!autoDisabled) {
 		heartbeatAutomation()
