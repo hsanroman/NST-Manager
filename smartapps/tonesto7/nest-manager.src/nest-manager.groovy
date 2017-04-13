@@ -5846,7 +5846,7 @@ def addRemoveDevices(uninst = null) {
 		//currentDevMap(true)
 	} catch (ex) {
 		if(ex instanceof physicalgraph.exception.ConflictException) {
-			def msg = "Error: Can't Delete App; Devices are still in use by other SmartApps or Routines.  Please correct."
+			def msg = "Error: Can't Remove Device.  One or more of them are still in use by other SmartApps or Routines.  Please remove them and try again!"
 			sendPush(msg)
 			LogAction("addRemoveDevices Exception | $msg", "warn", true)
 		}
