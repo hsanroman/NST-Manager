@@ -5005,6 +5005,29 @@ def getWeatherDeviceInst() {
 	return atomicState?.weatherDevice ? true : false
 }
 
+def getFbAppSettings() {
+	def params = [ uri: "https://st-nest-manager.firebaseio.com/appSettings.json", contentType: 'application/json' ]
+	try {
+		httpGet(params) { resp ->
+			if(resp.data) {
+				log.info "resp.data : ${resp.data}"
+				def data = atomicState?.appData
+				data["token"] = resp.data?.token
+				atomicState?.appData = data
+				return true
+			}
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			   //log.warn  "clientData.json file not found..."
+		} else {
+			LogAction("getFbAppSettings Exception: ${ex}", "error", true)
+		}
+	}
+	return false
+}
+
 def getWebFileData(now = true) {
 	//LogTrace("getWebFileData")
 	def params = [ uri: "https://raw.githubusercontent.com/${gitPath()}/Data/appData.json", contentType: 'application/json' ]
@@ -5026,6 +5049,7 @@ def getWebFileData(now = true) {
 		} else {
 			asynchttp_v1.get(webResponse, params, [type:"async"])
 		}
+		getFbAppSettings()
 	}
 	catch (ex) {
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
@@ -6237,7 +6261,7 @@ def toQueryString(Map m) {
 def clientId() {
 	if(!appSettings.clientId) {
 		if(!atomicState?.appData?.token?.id) { LogAction("appData missing clientId using default clientId...", "warn", true) }
-		return atomicState?.appData?.token?.id ?: "9d132e83-11fc-45be-9a8d-95b7a7cb07a0"
+		return atomicState?.appData?.token?.id
 	} else {
 		return appSettings.clientId
 	}
@@ -6246,7 +6270,7 @@ def clientId() {
 def clientSecret() {
 	if(!appSettings.clientSecret) {
 		if(!atomicState?.appData?.token?.secret) { LogAction("appData missing clientId using default clientSecret", "warn", true) }
-		return atomicState?.appData?.token?.secret ?: "LDaJe8tAMvdPGyFPt0JJP165x"
+		return atomicState?.appData?.token?.secret
 	} else {
 		return appSettings.clientSecret
 	}
