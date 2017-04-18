@@ -5049,7 +5049,6 @@ def getWebFileData(now = true) {
 		} else {
 			asynchttp_v1.get(webResponse, params, [type:"async"])
 		}
-		getFbAppSettings()
 	}
 	catch (ex) {
 		if(ex instanceof groovyx.net.http.HttpResponseException) {
@@ -5078,6 +5077,7 @@ def webResponse(resp, data) {
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", true) }
+		getFbAppSettings()
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
 	} else {
