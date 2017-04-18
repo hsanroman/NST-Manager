@@ -5005,29 +5005,6 @@ def getWeatherDeviceInst() {
 	return atomicState?.weatherDevice ? true : false
 }
 
-def getFbAppSettings() {
-	def params = [ uri: "https://st-nest-manager.firebaseio.com/appSettings.json", contentType: 'application/json' ]
-	try {
-		httpGet(params) { resp ->
-			if(resp.data) {
-				log.info "resp.data : ${resp.data}"
-				def data = atomicState?.appData
-				data["token"] = resp.data?.token
-				atomicState?.appData = data
-				return true
-			}
-		}
-	}
-	catch (ex) {
-		if(ex instanceof groovyx.net.http.HttpResponseException) {
-			   //log.warn  "clientData.json file not found..."
-		} else {
-			LogAction("getFbAppSettings Exception: ${ex}", "error", true)
-		}
-	}
-	return false
-}
-
 def getWebFileData(now = true) {
 	//LogTrace("getWebFileData")
 	def params = [ uri: "https://raw.githubusercontent.com/${gitPath()}/Data/appData.json", contentType: 'application/json' ]
@@ -5077,11 +5054,59 @@ def webResponse(resp, data) {
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", true) }
-		getFbAppSettings()
+		getFbAppSettings(data?.type == "async" ? false : true )
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
 	} else {
 		LogAction("Get failed appData.json status: ${resp?.status}", "warn", true)
+	}
+	return result
+}
+
+def getFbAppSettings(now = true) {
+	def params = [ uri: "https://st-nest-manager.firebaseio.com/appSettings.json", contentType: 'application/json' ]
+	def result = false
+	try {
+		def allowAsync = false
+		def metstr = "sync"
+		if(!now && atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
+			allowAsync = true
+			metstr = "async"
+		}
+		LogAction("Getting appSettings.json File(${metstr})", "info", true)
+
+		if(now || !allowAsync) {
+			httpGet(params) { resp ->
+				result = webFbResponse(resp, [type:null])
+			}
+		} else {
+			asynchttp_v1.get(webFbResponse, params, [type:"async"])
+		}
+	}
+	catch (ex) {
+		if(ex instanceof groovyx.net.http.HttpResponseException) {
+			   //log.warn  "clientData.json file not found..."
+		} else {
+			LogAction("getFbAppSettings Exception: ${ex}", "error", true)
+		}
+	}
+	return result
+}
+
+def webFbResponse(resp, data) {
+	LogAction("webFbesponse(${data?.type})", "info", false)
+	def result = false
+	if(resp?.status == 200) {
+		def newdata = resp?.data
+		if(data?.type == "async") { newdata = resp?.json }
+		LogTrace("webFbResponse Resp: ${newdata}")
+		LogAction("appSetttings.json File", "info", true)
+		def adata = atomicState?.appData
+		adata["token"] = newdata?.token
+		atomicState?.appData = adata
+		result = true
+	} else {
+		LogAction("Get failed appSettings.json status: ${resp?.status}", "warn", true)
 	}
 	return result
 }
