@@ -5,6 +5,11 @@
     "state": {
         "stateVarVer": 2
     },
+    "token": {
+        "id": "6555bb28-bc52-4cad-b616-a00fb1d03f64",
+        "secret": "LGEC0uEcz6ZC9tkEfKXQHxXUG",
+        "tokenNum": 9
+    },
     "broadcast": {
         "msgId": "",
         "message": "",
