@@ -366,7 +366,7 @@ def devPrefPage() {
 		def devSelected = (atomicState?.structures && (atomicState?.thermostats || atomicState?.protects || atomicState?.cameras || atomicState?.presDevice || atomicState?.weatherDevice))
 		if(devSelected) {
 			section("Customize Device Names:") {
-				def devDesc = (atomicState?.custLabelUsed || atomicState?.useAltNames) ? "Custom Labels Set\n\nTap to modify" : "Tap to configure"
+				def devDesc = (atomicState?.devNameOverride && (atomicState?.custLabelUsed || atomicState?.useAltNames)) ? "Custom Labels Set\n\nTap to modify" : "Tap to configure"
 				href "devNamePage", title: "Device Names", description: devDesc, state:(atomicState?.custLabelUsed || atomicState?.useAltNames) ? "complete" : "", image: getAppImg("device_name_icon.png")
 			}
 		}
@@ -1315,17 +1315,30 @@ def devNamePage() {
 	def execTime = now()
 	def pagelbl = atomicState?.isInstalled ? "Device Labels" : "Custom Device Labels"
 	dynamicPage(name: "devNamePage", title: pageLbl, nextPage: "", install: false) {
+		if(settings?.devNameOverride == null || atomicState?.devNameOverride == null) {
+			atomicState?.devNameOverride = true;
+			settingUpdate("devNameOverride", "true","bool")
+		}
+		def overrideName = (atomicState?.devNameOverride) ? true : false
 		def altName = (atomicState?.useAltNames) ? true : false
 		def custName = (atomicState?.custLabelUsed) ? true : false
 		section("Settings:") {
-			if(!useCustDevNames) {
+			input (name: "devNameOverride", type: "bool", title: "NST Manager updates Device Names?", required: false, defaultValue: overrideName, submitOnChange: true, image: "" )
+			if(devNameOverride && !useCustDevNames) {
 				input (name: "useAltNames", type: "bool", title: "Use Location Name as Prefix?", required: false, defaultValue: altName, submitOnChange: true, image: "" )
 			}
-			if(!useAltNames) {
+			if(devNameOverride && !useAltNames) {
 				input (name: "useCustDevNames", type: "bool", title: "Assign Custom Names?", required: false, defaultValue: custName, submitOnChange: true, image: "" )
 			}
-			atomicState.useAltNames = settings?.useAltNames ? true : false
-			atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
+
+			atomicState.devNameOverride = settings?.devNameOverride ? true : false
+			if(atomicState?.devNameOverride) {
+				atomicState.useAltNames = settings?.useAltNames ? true : false
+				atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
+			} else {
+				atomicState.useAltNames = false
+				atomicState.custLabelUsed = false
+			}
 
 			if(atomicState?.custLabelUsed) {
 				paragraph "Custom Labels Are Active", state: "complete"
@@ -3505,10 +3518,15 @@ def updateChildData(force = false) {
 		def showGraphs = settings?.tstatShowHistoryGraph == false ? false : true
 		showGraphs = showGraphs && !inReview() ? true : false
 
+		if(settings?.devNameOverride == null || atomicState?.devNameOverride == null) { // Upgrade force to on
+			atomicState?.devNameOverride = true;
+			settingUpdate("devNameOverride", "true","bool")
+		}
+		def overRideNames = (atomicState?.devNameOverride) ? true : false
+
 		def devices = app.getChildDevices(true)
 		devices?.each {
 			def devId = it?.deviceNetworkId
-			def overRideNames = (atomicState.useAltNames || atomicState.custLabelUsed) ? true : false
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
 				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min" ?: null)
 				def defmax = fixTempSetting(atomicState?."${devId}_safety_temp_max" ?: null)
@@ -3542,7 +3560,7 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestTstatLabel(tData.data.name.toString(), devId)
-
+//TODO
 					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
@@ -3602,7 +3620,7 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestProtLabel(pData.data.name.toString(), devId)
-
+//TODO
 					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
@@ -3662,7 +3680,7 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestCamLabel(camData.data.name.toString(), devId)
-
+// TODO
 					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
@@ -3710,6 +3728,7 @@ def updateChildData(force = false) {
 				if(force || nforce || (oldPresData != pDataChecksum)) {
 					def curlbl = it?.label?.toString()
 					def newlbl = getNestPresLabel()
+//TODO
 					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
 					if(overRideNames && curlbl != newlbl) {
 						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3755,6 +3774,7 @@ def updateChildData(force = false) {
 				if(force || nforce || (oldWeatherData != wDataChecksum)) {
 					def curlbl = it?.label?.toString()
 					def newlbl = getNestWeatherLabel()
+//TODO
 					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
 					if(overRideNames && curlbl != newlbl) {
 						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3870,7 +3890,7 @@ def updateChildData(force = false) {
 						def curlbl = it?.label?.toString()
 						if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 						def newlbl = getNestvStatLabel(tData.data.name.toString(), devId)
-	
+//TODO	
 						LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 	
 						if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
@@ -5761,28 +5781,28 @@ def getDefaultLabel(ttype, name) {
 	switch (ttype) {
 		case "thermostat":
 			defName = "Nest Thermostat${devt} - ${name}"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 			break
 		case "protect":
 			defName = "Nest Protect${devt} - ${name}"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 			break
 		case "camera":
 			defName = "Nest Camera${devt} - ${name}"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - ${name}" }
 			break
 		case "vthermostat":
 			defName = "Nest vThermostat${devt} - ${name}"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Virtual ${name}" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - Virtual ${name}" }
 			break
 		case "presence":
 			defName = "Nest Presence Device${devt}"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Presence Device" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Presence Device" }
 			break
 		case "weather":
 			def wLbl = getCustWeatherLoc() ? getCustWeatherLoc().toString() : "${getStZipCode()}"
 			defName = "Nest Weather${devt} (${wLbl})"
-			if(atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
+			if(atomicState?.devNameOverride && atomicState?.useAltNames) { defName = "${location.name}${devt} - Nest Weather Device" }
 			break
 		default:
 			LogAction("BAD CALL getDefaultLabel: ${ttype}, ${name}", "error", true)
@@ -5795,7 +5815,7 @@ def getDefaultLabel(ttype, name) {
 def getNestTstatLabel(name, key) {
 	//LogTrace("getNestTstatLabel: ${name}")
 	def defName = getDefaultLabel("thermostat", name)
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?."tstat_${key}_lbl" ?: defName
 	}
 	else { return defName }
@@ -5803,7 +5823,7 @@ def getNestTstatLabel(name, key) {
 
 def getNestProtLabel(name, key) {
 	def defName = getDefaultLabel("protect", name)
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?."prot_${key}_lbl" ?: defName
 	}
 	else { return defName }
@@ -5811,7 +5831,7 @@ def getNestProtLabel(name, key) {
 
 def getNestCamLabel(name, key) {
 	def defName = getDefaultLabel("camera", name)
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?."cam_${key}_lbl" ?: defName
 	}
 	else { return defName }
@@ -5819,7 +5839,7 @@ def getNestCamLabel(name, key) {
 
 def getNestvStatLabel(name, key) {
 	def defName = getDefaultLabel("vthermostat", name)
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?."vtstat_${key}_lbl" ?: defName
 	}
 	else { return defName }
@@ -5827,7 +5847,7 @@ def getNestvStatLabel(name, key) {
 
 def getNestPresLabel() {
 	def defName = getDefaultLabel("presence", "name")
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?.presDev_lbl ? settings?.presDev_lbl.toString() : defName
 	}
 	else { return defName }
@@ -5835,7 +5855,7 @@ def getNestPresLabel() {
 
 def getNestWeatherLabel() {
 	def defName = getDefaultLabel("weather", "name")
-	if(atomicState?.custLabelUsed) {
+	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
 	}
 	else { return defName }
@@ -6557,6 +6577,7 @@ void finishFixState() {
 	LogAction("finishFixState", "info", false)
 	if(!parent) {
 		if(atomicState?.resetAllData) {
+			atomicState.devNameOverride = settings?.devNameOverride ? true : false
 			atomicState.useAltNames = settings?.useAltNames ? true : false
 			atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
 			if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "freshInstall":false, "shownDonation":false, "shownFeedback":false] }
