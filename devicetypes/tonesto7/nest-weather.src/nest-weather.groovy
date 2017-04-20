@@ -459,11 +459,13 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 	def temp = device.currentState("temperature")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
-	if(isStateChange(device, "temperature", rTempVal.toString()) || isStateChange(device, "feelsLike", rFeelsVal.toString())) {
+	if(isStateChange(device, "temperature", rTempVal.toString())) {
 		Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true)
-		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
+		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}", displayed: true)
 	} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+	if(isStateChange(device, "feelsLike", rFeelsVal.toString())) {
+		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
+	}
 }
 
 def getTemp() {
