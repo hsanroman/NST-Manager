@@ -3832,7 +3832,7 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 	def curlbl = devLbl?.toString()
 	if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 	def newlbl = "getNest${abrevStr.capitalize()}Label"(apiName, devId)
-	LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
+	LogAction("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} ||devId: ${devId}", "trace", false)
 	if(ovrRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 		if(curlbl != newlbl) {
 			LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3854,7 +3854,7 @@ void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	def curlbl = devLbl?.toString()
 	def newlbl = "getNest${devMethAbrev.capitalize()}Label"()
 	//TODO
-	LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
+	LogAction("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}", "trace", false)
 	if(ovrRideNames && curlbl != newlbl) {
 		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
 		it?.label = newlbl?.toString()
