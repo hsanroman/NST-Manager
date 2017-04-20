@@ -309,6 +309,7 @@ def processEvent() {
 			}
 			deviceVerEvent(eventData?.latestVer.toString())
 			vidHistoryTimeEvent()
+			lastUpdatedEvent()
 			checkHealth()
 			if(state?.ok2Checkin == true) {
 				lastCheckinEvent(dtNow)
@@ -653,7 +654,7 @@ def lastUpdatedEvent(sendEvt=false) {
 	def now = new Date()
 	def formatVal = state.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
-		tf.setTimeZone(getTimeZone())
+	tf.setTimeZone(getTimeZone())
 	def lastDt = "${tf?.format(now)}"
 	state?.lastUpdatedDt = lastDt?.toString()
 	state?.lastUpdatedDtFmt = formatDt(now)
