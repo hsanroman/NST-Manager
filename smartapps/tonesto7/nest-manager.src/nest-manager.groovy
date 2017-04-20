@@ -6356,20 +6356,22 @@ def toQueryString(Map m) {
 }
 
 def clientId() {
-	if(!appSettings.clientId) {
-		if(!atomicState?.appData?.token?.id) { LogAction("appData missing clientId using default clientId...", "warn", true) }
-		return atomicState?.appData?.token?.id
-	} else {
+	if(appSettings.clientId) {
 		return appSettings.clientId
+	} else {
+		if(atomicState?.appData?.token?.id) {
+			return atomicState?.appData?.token?.id
+		} else { LogAction("clientId is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true) }
 	}
 }
 
 def clientSecret() {
-	if(!appSettings.clientSecret) {
-		if(!atomicState?.appData?.token?.secret) { LogAction("appData missing clientId using default clientSecret", "warn", true) }
-		return atomicState?.appData?.token?.secret
-	} else {
+	if(appSettings.clientSecret) {
 		return appSettings.clientSecret
+	} else {
+		if(atomicState?.appData?.token?.secret) {
+			return atomicState?.appData?.token?.secret
+		} else { LogAction("clientSecret is missing and is required to generate your Nest Auth token.  Please verify you are running the latest software version", "error", true) }
 	}
 }
 
