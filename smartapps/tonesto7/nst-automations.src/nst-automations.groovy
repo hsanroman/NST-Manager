@@ -4375,7 +4375,7 @@ def setTstatTempCheck() {
 		def samemode = lastMode == curMode ? true : false
 
 		def mySched = getCurrentSchedule()
-		log.debug "Tstat Temp Check | Current Schedule: ${mySched ?: "None Active"}"
+		LogAction("setTstatTempCheck | Current Schedule: ${mySched ?: "None Active"}", "debug", true)
 		def noSched = (mySched == null) ? true : false
 
 		def previousSched = atomicState?.lastSched
@@ -6238,10 +6238,10 @@ def autoScheduleOk(autoType) {
 def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 	LogAction("sendNofificationMsg($msg, $msgType, $recips, $sms, $push)", "trace", false)
 	if(recips || sms || push) {
-		parent?.sendMsg(msgType, msg, recips, sms, push)
+		parent?.sendMsg(msgType, msg, true, recips, sms, push)
 		//LogAction("Send Push Notification to $recips", "info", true)
 	} else {
-		parent?.sendMsg(msgType, msg)
+		parent?.sendMsg(msgType, msg, true)
 	}
 }
 
