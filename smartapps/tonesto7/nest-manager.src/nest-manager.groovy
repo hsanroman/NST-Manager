@@ -2009,7 +2009,7 @@ def installed() {
 }
 
 def updated() {
-	LogAction("${app.label} Updated..."/*with settings: ${settings}*/, "debug", true)
+	LogAction("${app.label} Updated...with settings: ${settings}", "debug", true)
 	if(atomicState?.migrationInProgress == true) { LogAction("Skipping updated() as migration inprogress", "warn", true); return }
 	initialize()
 	sendNotificationEvent("${appName()} has updated settings")
