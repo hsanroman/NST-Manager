@@ -3560,9 +3560,8 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestTstatLabel(tData.data.name.toString(), devId)
-//TODO
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
+					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 						if(curlbl != newlbl) {
 							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3620,9 +3619,8 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestProtLabel(pData.data.name.toString(), devId)
-//TODO
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
+					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 						if(curlbl != newlbl) {
 							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3680,9 +3678,8 @@ def updateChildData(force = false) {
 					def curlbl = it?.label?.toString()
 					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 					def newlbl = getNestCamLabel(camData.data.name.toString(), devId)
-// TODO
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
 
+					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
 					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 						if(curlbl != newlbl) {
 							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3728,8 +3725,8 @@ def updateChildData(force = false) {
 				if(force || nforce || (oldPresData != pDataChecksum)) {
 					def curlbl = it?.label?.toString()
 					def newlbl = getNestPresLabel()
-//TODO
-					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
+
+					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", false)
 					if(overRideNames && curlbl != newlbl) {
 						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
 						it?.label = newlbl?.toString()
@@ -3774,8 +3771,8 @@ def updateChildData(force = false) {
 				if(force || nforce || (oldWeatherData != wDataChecksum)) {
 					def curlbl = it?.label?.toString()
 					def newlbl = getNestWeatherLabel()
-//TODO
-					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
+
+					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", false)
 					if(overRideNames && curlbl != newlbl) {
 						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
 						it?.label = newlbl?.toString()
@@ -3890,9 +3887,8 @@ def updateChildData(force = false) {
 						def curlbl = it?.label?.toString()
 						if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 						def newlbl = getNestvStatLabel(tData.data.name.toString(), devId)
-//TODO	
-						LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", true)
-	
+
+						LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
 						if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 							if(curlbl != newlbl) {
 								LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
