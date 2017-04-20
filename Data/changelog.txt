@@ -1,3 +1,12 @@
+V5.0.5 (April 20th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Made a change to token distribution (based on Nest's suggestion).
+ • FIXED: Constant overwriting of custom device names.
+
+Automation App:
+ • ADDED: Fixed issue with notifications that was causing exceptions.
+
 V5.0.4 (April 11th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:

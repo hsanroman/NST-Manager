@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.4" }
-def appVerDate() { "4-11-2017" }
+def appVersion() { "5.0.5" }
+def appVerDate() { "4-20-2017" }
 
 preferences {
 	//startPage
@@ -1360,7 +1360,7 @@ def devNamePage() {
 				atomicState?.vThermostats?.each { t ->
 					found = true
 					def d = getChildDevice(getNestvStatDni(t))
-					deviceNameFunc(d, getNestvStatLabel(t.value, t.key), "vtstat_${t?.key}_lbl", "thermostat")
+					deviceNameFunc(d, getNestVtstatLabel(t.value, t.key), "vtstat_${t?.key}_lbl", "thermostat")
 				}
 			}
 		}
@@ -3520,7 +3520,7 @@ def updateChildData(force = false) {
 
 		if(settings?.devNameOverride == null || atomicState?.devNameOverride == null) { // Upgrade force to on
 			atomicState?.devNameOverride = true;
-			settingUpdate("devNameOverride", "true","bool")
+			settingUpdate("devNameOverride", "true", "bool")
 		}
 		def overRideNames = (atomicState?.devNameOverride) ? true : false
 
@@ -3548,36 +3548,7 @@ def updateChildData(force = false) {
 				atomicState."oldTstatData${devId}" = tDataChecksum
 				tDataChecksum = atomicState."oldTstatData${devId}"
 				if(force || nforce || (oldTstatData != tDataChecksum)) {
-					def nameIsDefault = false
-					def deflbl
-					def deflblval
-					atomicState?.thermostats?.each { t ->
-						if(t.key == devId) {
-							deflblval = t.value
-							deflbl = getDefaultLabel("thermostat", t.value)
-						}
-					}
-					def curlbl = it?.label?.toString()
-					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
-					def newlbl = getNestTstatLabel(tData.data.name.toString(), devId)
-
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
-					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
-						if(curlbl != newlbl) {
-							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-							it?.label = newlbl?.toString()
-							curlbl = newlbl?.toString()
-						}
-						def t0 = atomicState?.thermostats
-						t0[devId] = tData.data.name.toString()
-						atomicState.thermostats = t0
-					}
-					if(atomicState?.custLabelUsed && settings?."tstat_${devId}_lbl" != curlbl) {
-						settingUpdate("tstat_${devId}_lbl", curlbl?.toString())
-					}
-					if(!atomicState?.custLabelUsed && settings?."tstat_${devId}_lbl") { settingUpdate("tstat_${devId}_lbl", "") }
-					if(settings?."tstat_${deflblval}_lbl") { settingUpdate("tstat_${deflblval}_lbl", "") } // clean up old stuff
-
+					physDevLblHandler("thermostat", devId, it?.label, "thermostats", tData?.data?.name.toString(), "tstat", overRideNames)
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.tDevVer = t1 ?: ""
 					if(atomicState?.tDevVer != "" && (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
@@ -3607,36 +3578,7 @@ def updateChildData(force = false) {
 				atomicState."oldProtData${devId}" = pDataChecksum
 				pDataChecksum = atomicState."oldProtData${devId}"
 				if(force || nforce || (oldProtData != pDataChecksum)) {
-					def nameIsDefault = false
-					def deflbl
-					def deflblval
-					atomicState?.protects?.each { t ->
-						if(t.key == devId) {
-							deflblval = t.value
-							deflbl = getDefaultLabel("protect", t.value)
-						}
-					}
-					def curlbl = it?.label?.toString()
-					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
-					def newlbl = getNestProtLabel(pData.data.name.toString(), devId)
-
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
-					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
-						if(curlbl != newlbl) {
-							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-							it?.label = newlbl?.toString()
-							curlbl = newlbl?.toString()
-						}
-						def t0 = atomicState?.protects
-						t0[devId] = pData.data.name.toString()
-						atomicState.protects = t0
-					}
-					if(atomicState?.custLabelUsed && settings?."prot_${devId}_lbl" != curlbl) {
-						settingUpdate("prot_${devId}_lbl", curlbl?.toString())
-					}
-					if(!atomicState?.custLabelUsed && settings?."prot_${devId}_lbl") { settingUpdate("prot_${devId}_lbl", "") }
-					if(settings?."prot_${deflblval}_lbl") { settingUpdate("prot_${deflblval}_lbl", "") } // clean up old stuff
-
+					physDevLblHandler("protect", devId, it?.label, "protects", pData?.data?.name.toString(), "prot", overRideNames)
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.pDevVer = t1 ?: ""
 					if(atomicState?.pDevVer != "" && (versionStr2Int(atomicState?.pDevVer) >= minVersions()?.protect?.val)) {
@@ -3666,36 +3608,7 @@ def updateChildData(force = false) {
 				atomicState."oldCamData${devId}" = cDataChecksum
 				cDataChecksum = atomicState."oldCamData${devId}"
 				if(force || nforce || (oldCamData != cDataChecksum)) {
-					def nameIsDefault = false
-					def deflbl
-					def deflblval
-					atomicState?.cameras?.each { t ->
-						if(t.key == devId) {
-							deflblval = t.value
-							deflbl = getDefaultLabel("camera", t.value)
-						}
-					}
-					def curlbl = it?.label?.toString()
-					if(deflbl && deflbl == curlbl) { nameIsDefault = true }
-					def newlbl = getNestCamLabel(camData.data.name.toString(), devId)
-
-					LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
-					if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
-						if(curlbl != newlbl) {
-							LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-							it?.label = newlbl?.toString()
-							curlbl = newlbl?.toString()
-						}
-						def t0 = atomicState?.cameras
-						t0[devId] = camData.data.name.toString()
-						atomicState.cameras = t0
-					}
-					if(atomicState?.custLabelUsed && settings?."cam_${devId}_lbl" != curlbl) {
-						settingUpdate("cam_${devId}_lbl", curlbl?.toString())
-					}
-					if(!atomicState?.custLabelUsed && settings?."cam_${devId}_lbl") { settingUpdate("cam_${devId}_lbl", "") }
-					if(settings?."cam_${deflblval}_lbl") { settingUpdate("cam_${deflblval}_lbl", "") } // clean up old stuff
-
+					physDevLblHandler("camera", devId, it?.label, "cameras", camData?.data?.name.toString(), "cam", overRideNames)
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.camDevVer = t1 ?: ""
 					if(atomicState?.camDevVer != "" && (versionStr2Int(atomicState?.camDevVer) >= minVersions()?.camera?.val)) {
@@ -3723,21 +3636,7 @@ def updateChildData(force = false) {
 				atomicState."oldPresData${devId}" = pDataChecksum
 				pDataChecksum = atomicState."oldPresData${devId}"
 				if(force || nforce || (oldPresData != pDataChecksum)) {
-					def curlbl = it?.label?.toString()
-					def newlbl = getNestPresLabel()
-
-					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", false)
-					if(overRideNames && curlbl != newlbl) {
-						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-						it?.label = newlbl?.toString()
-						curlbl = newlbl?.toString()
-					}
-		return settings?.weathDev_lbl ? settings?.weathDev_lbl.toString() : defName
-					if(atomicState?.custLabelUsed && settings?."presDev_lbl" != curlbl) {
-						settingUpdate("presDev_lbl", curlbl?.toString())
-					}
-					if(!atomicState?.custLabelUsed && settings?."presDev_lbl") { settingUpdate("presDev_lbl", "") }
-
+					virtDevLblHandler(devId, it?.label, "pres", "pres", overRideNames)
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.presDevVer = t1 ?: ""
 					if(atomicState?.presDevVer != "" && (versionStr2Int(atomicState?.presDevVer) >= minVersions()?.presence?.val)) {
@@ -3769,20 +3668,7 @@ def updateChildData(force = false) {
 				atomicState."oldWeatherData${devId}" = wDataChecksum
 				wDataChecksum = atomicState."oldWeatherData${devId}"
 				if(force || nforce || (oldWeatherData != wDataChecksum)) {
-					def curlbl = it?.label?.toString()
-					def newlbl = getNestWeatherLabel()
-
-					LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", false)
-					if(overRideNames && curlbl != newlbl) {
-						LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-						it?.label = newlbl?.toString()
-						curlbl = newlbl?.toString()
-					}
-					if(atomicState?.custLabelUsed && settings?."weathDev_lbl" != curlbl) {
-						settingUpdate("weathDev_lbl", curlbl?.toString())
-					}
-					if(!atomicState?.custLabelUsed && settings?."weathDev_lbl") { settingUpdate("weathDev_lbl", "") }
-
+					virtDevLblHandler(devId, it?.label, "weather", "weath", overRideNames)
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.weatDevVer = t1 ?: ""
 					if(atomicState?.weatDevVer != "" && (versionStr2Int(atomicState?.weatDevVer) >= minVersions()?.weather?.val)) {
@@ -3875,36 +3761,7 @@ def updateChildData(force = false) {
 					atomicState."oldvStatData${devId}" = tDataChecksum
 					tDataChecksum = atomicState."oldvStatData${devId}"
 					if(force || nforce || (oldTstatData != tDataChecksum)) {
-						def nameIsDefault = false
-						def deflbl
-						def deflblval
-						atomicState?.vThermostats?.each { t ->
-							if(t.key == devId) {
-								deflblval = t.value
-								deflbl = getDefaultLabel("vthermostat", t.value)
-							}
-						}
-						def curlbl = it?.label?.toString()
-						if(deflbl && deflbl == curlbl) { nameIsDefault = true }
-						def newlbl = getNestvStatLabel(tData.data.name.toString(), devId)
-
-						LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
-						if(overRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
-							if(curlbl != newlbl) {
-								LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-								it?.label = newlbl?.toString()
-								curlbl = newlbl?.toString()
-							}
-							def t0 = atomicState?.vThermostats
-							t0[devId] = tData.data.name.toString()
-							atomicState.vThermostats = t0
-						}
-						if(atomicState?.custLabelUsed && settings?."vtstat_${devId}_lbl" != curlbl) {
-							settingUpdate("vtstat_${devId}_lbl", curlbl?.toString())
-						}
-						if(!atomicState?.custLabelUsed && settings?."vtstat_${devId}_lbl") { settingUpdate("vtstat_${devId}_lbl", "") }
-						if(settings?."vtstat_${deflblval}_lbl") { settingUpdate("vtstat_${deflblval}_lbl", "") } // clean up old stuff
-	
+						physDevLblHandler("vtstat", devId, it?.label, "vThermostats", tData?.data?.name.toString(), "vtstat", overRideNames)
 						def t1 = it?.currentState("devVer")?.value?.toString()
 						atomicState?.vtDevVer = t1 ?: ""
 						if(atomicState?.vtDevVer != "" && (versionStr2Int(atomicState?.vtDevVer) >= minVersions()?.thermostat?.val)) {
@@ -3955,6 +3812,58 @@ def updateChildData(force = false) {
 
 def setNeedChildUpdate() {
 	atomicState.needChildUpd = true
+}
+
+def setDeviceLabel(devId, labelStr) {
+	def dev = getChildDevice(devId)
+	if(labelStr) { dev.label = labelStr.toString() }
+}
+
+void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, ovrRideNames) {
+	def nameIsDefault = false
+	def deflbl
+	def deflblval
+	atomicState?."${devStateName}"?.each { t ->
+		if(t.key == devId) {
+			deflblval = t.value
+			deflbl = getDefaultLabel("${devType}", t.value)
+		}
+	}
+	def curlbl = devLbl?.toString()
+	if(deflbl && deflbl == curlbl) { nameIsDefault = true }
+	def newlbl = "getNest${abrevStr.capitalize()}Label"(apiName, devId)
+	LogAction("deflbl: ${deflbl}  curlbl: ${curlbl}  newlbl: ${newlbl} | deflblval: ${deflblval} devId: ${devId}", "trace", false)
+	if(ovrRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
+		if(curlbl != newlbl) {
+			LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
+			setDeviceLabel(devId, newlbl?.toString())
+			curlbl = newlbl?.toString()
+		}
+		def t0 = atomicState?."${devStateName}"
+		t0[devId] = apiName.toString()
+		atomicState?."${devStateName}" = t0
+	}
+	if(atomicState?.custLabelUsed && settings?."${abrevStr}_${devId}_lbl" != curlbl) {
+		settingUpdate("${abrevStr}_${devId}_lbl", curlbl?.toString())
+	}
+	if(!atomicState?.custLabelUsed && settings?."${abrevStr}_${devId}_lbl") { settingUpdate("${abrevStr}_${devId}_lbl", "") }
+	if(settings?."${abrevStr}_${deflblval}_lbl") { settingUpdate("${abrevStr}_${deflblval}_lbl", "") } // clean up old stuff
+}
+
+void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
+	def curlbl = devLbl?.toString()
+	def newlbl = "getNest${devMethAbrev.capitalize()}Label"()
+	//TODO
+	LogAction("curlbl: ${curlbl}  newlbl: ${newlbl} | devId: ${devId}", "trace", true)
+	if(ovrRideNames && curlbl != newlbl) {
+		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
+		it?.label = newlbl?.toString()
+		curlbl = newlbl?.toString()
+	}
+	if(atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl" != curlbl) {
+		settingUpdate("${abrevStr}Dev_lbl", curlbl?.toString())
+	}
+	if(!atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl") { settingUpdate("${abrevStr}Dev_lbl", "") }
 }
 
 def getLocationPresence() {
@@ -5833,7 +5742,7 @@ def getNestCamLabel(name, key) {
 	else { return defName }
 }
 
-def getNestvStatLabel(name, key) {
+def getNestVtstatLabel(name, key) {
 	def defName = getDefaultLabel("vthermostat", name)
 	if(atomicState?.devNameOverride && atomicState?.custLabelUsed) {
 		return settings?."vtstat_${key}_lbl" ?: defName
@@ -6007,7 +5916,7 @@ def addRemoveDevices(uninst = null) {
 					LogAction("atomicState.vThermostats: ${atomicState.vThermostats}  dni: ${dni}  dni.key: ${dni.key.toString()}  dni.value: ${dni.value.toString()}", "debug", true)
 					def d6 = getChildDevice(getNestvStatDni(dni).toString())
 					if(!d6) {
-						def d6Label = getNestvStatLabel("${dni.value}", "${dni.key}")
+						def d6Label = getNestVtstatLabel("${dni.value}", "${dni.key}")
 						LogAction("CREATED: ${d6Label} with (Id: ${dni.key})", "debug", true)
 						d6 = addChildDevice(app.namespace, getThermostatChildName(), dni.key, null, [label: "${d6Label}", "data":["isVirtual":"true"]])
 						//d6.take()
@@ -7730,6 +7639,7 @@ def createInstallDataJson() {
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def devUseMetCnt = getDeviceMetricCnts()
 		def appUseMetCnt = atomicState?.usageMetricsStore
+		log.debug "appUseMetCnt: $appUseMetCnt"
 		def data = []
 		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
