@@ -1,7 +1,7 @@
 <p style="font-size: 15px;"><strong>V5.0.3 (April 21th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
-    <li><strong>UPDATED:</strong> Added pressure and precipitation displays</li>
+    <li><strong>UPDATED:</strong> Added pressure and precipitation displays to Weather interface.</li>
 </ul>
 <br>
 <p style="font-size: 15px;"><strong>V5.0.2 (April 6th, 2017):</strong><p>
