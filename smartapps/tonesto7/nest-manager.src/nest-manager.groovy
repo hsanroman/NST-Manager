@@ -3079,6 +3079,7 @@ def getApiData(type = null) {
 						atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 						locationPresNotify(getLocationPresence())
 					}
+					incApiStrReqCnt()
 				} else {
 					LogAction("getApiStructureData - Received: Resp (${resp?.status})", "error", true)
 					apiRespHandler(resp?.status, resp?.data, "getApiData(str)")
@@ -3101,6 +3102,7 @@ def getApiData(type = null) {
 						LogAction("API Device Data HAS Changed", "debug", true)
 						result = true
 					}
+					incApiDevReqCnt()
 				} else {
 					LogAction("getApiDeviceData - Received Resp (${resp?.status})", "error", true)
 					apiRespHandler(resp?.status, resp?.data, "getApiData(dev)")
@@ -3122,6 +3124,7 @@ def getApiData(type = null) {
 						LogAction("API Meta Data HAS Changed", "debug", true)
 						result = true
 					}
+					incApiMetaReqCnt()
 				} else {
 					LogAction("getApiMetaData - Received Resp (${resp?.status})", "error", true)
 					apiRespHandler(resp?.status, resp?.data, "getApiData(meta)")
@@ -3165,17 +3168,17 @@ def queueGetApiData(type = null, newUrl = null) {
 		]
 		if(type == "str") {
 			atomicState.qstrRequested = true
-			asynchttp_v1.get(processResponse, params, [ type: "str"])
+			asynchttp_v1.get(procNestResponse, params, [ type: "str"])
 			result = true
 		}
 		else if(type == "dev") {
 			atomicState.qdevRequested = true
-			asynchttp_v1.get(processResponse, params, [ type: "dev"])
+			asynchttp_v1.get(procNestResponse, params, [ type: "dev"])
 			result = true
 		}
 		else if(type == "meta") {
 			atomicState.qmetaRequested = true
-			asynchttp_v1.get(processResponse, params, [ type: "meta"])
+			asynchttp_v1.get(procNestResponse, params, [ type: "meta"])
 			result = true
 		}
 	} catch(ex) {
@@ -3185,8 +3188,8 @@ def queueGetApiData(type = null, newUrl = null) {
 	return result
 }
 
-def processResponse(resp, data) {
-	LogAction("processResponse(${data?.type})", "info", false)
+def procNestResponse(resp, data) {
+	LogAction("procNestResponse(${data?.type})", "info", false)
 	def str = false
 	def dev = false
 	def meta = false
@@ -3219,6 +3222,7 @@ def processResponse(resp, data) {
 					locationPresNotify(getLocationPresence())
 				}
 				atomicState.qstrRequested = false
+				incApiStrReqCnt()
 			}
 			if(type == "dev") {
 				def t0 = resp?.json
@@ -3234,6 +3238,7 @@ def processResponse(resp, data) {
 
 				}
 				atomicState.qdevRequested = false
+				incApiDevReqCnt()
 			}
 			if(type == "meta") {
 				def nresp = resp?.json?.metadata
@@ -3244,15 +3249,16 @@ def processResponse(resp, data) {
 					meta = true
 				}
 				atomicState.qmetaRequested = false
+				incApiMetaReqCnt()
 			}
 		} else {
 			def tstr = (type == "str") ? "Structure" : ((type == "dev") ? "Device" : "Metadata")
-			//LogAction("processResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
+			//LogAction("procNestResponse - Received $tstr poll: Resp (${resp?.status})", "error", true)
 			if(resp?.hasError()) {
 				def rCode = resp?.getStatus() ?: null
 				def errJson = resp?.getErrorJson() ?: null
 				//log.debug "rCode: $rCode | errJson: $errJson"
-				apiRespHandler(rCode, errJson, "processResponse($type)")
+				apiRespHandler(rCode, errJson, "procNestResponse($type)")
 			}
 			apiIssueEvent(true)
 			atomicState.forceChildUpd = true
@@ -3265,7 +3271,7 @@ def processResponse(resp, data) {
 		}
 
 	} catch (ex) {
-		//log.error "processResponse (type: $type) Exception:", ex
+		//log.error "procNestResponse (type: $type) Exception:", ex
 		apiIssueEvent(true)
 		atomicState?.apiRateLimited = false
 		atomicState.forceChildUpd = true
@@ -3276,7 +3282,7 @@ def processResponse(resp, data) {
 		if(type == "str") { atomicState.needStrPoll = true }
 		else if(type == "dev") { atomicState?.needDevPoll = true }
 		else if(type == "meta") { atomicState?.needMetaPoll = true }
-		sendExceptionData(ex, "processResponse_${type}")
+		sendExceptionData(ex, "procNestResponse_${type}")
 	}
 }
 
@@ -3334,6 +3340,7 @@ def receiveEventData() {
 		apiIssueEvent(false)
 		atomicState?.apiRateLimited = false
 		atomicState?.apiCmdFailData = null
+		incRestStrEvtCnt()
 	}
 	if(atomicState?.forceChildUpd || atomicState?.needChildUpd || devChgd) {
 		schedFinishPoll(devChgd)
@@ -4546,7 +4553,7 @@ def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false
 			qnum: qnum,
 			cmd: cmd ]
 
-		asynchttp_v1.put(nestResponse, params, asyncargs)
+		asynchttp_v1.put(nestCmdResponse, params, asyncargs)
 
 	} catch(ex) {
 		log.error "queueProcNestApiCmd (command: $cmd) Exception:", ex
@@ -4554,8 +4561,8 @@ def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false
 	}
 }
 
-def nestResponse(resp, data) {
-	LogAction("nestResponse(${data?.cmd})", "info", false)
+def nestCmdResponse(resp, data) {
+	LogAction("nestCmdResponse(${data?.cmd})", "info", false)
 	def typeId = data?.typeId
 	def type = data?.type
 	def obj = data?.obj
@@ -4574,9 +4581,9 @@ def nestResponse(resp, data) {
 			return
 		}
 		if(resp?.status == 200) {
-			LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
+			LogAction("nestCmdResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
 			apiIssueEvent(false)
-			increaseCmdCnt()
+			incCmdCnt()
 			atomicState?.lastCmdSentStatus = "ok"
 			atomicState?.apiRateLimited = false
 			atomicState?.apiCmdFailData = null
@@ -4585,14 +4592,14 @@ def nestResponse(resp, data) {
 			apiIssueEvent(true)
 			atomicState?.lastCmdSentStatus = "failed"
 			if(resp?.hasError()) {
-				apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestResponse")
+				apiRespHandler((resp?.getStatus() ?: null), (resp?.getErrorJson() ?: null), "nestCmdResponse")
 			}
 		}
 		finishWorkQ(command, result)
 
 	} catch (ex) {
-		log.error "nestResponse (command: $command) Exception:", ex
-		sendExceptionData(ex, "nestResponse")
+		log.error "nestCmdResponse (command: $command) Exception:", ex
+		sendExceptionData(ex, "nestCmdResponse")
 		apiIssueEvent(true)
 		atomicState?.lastCmdSentStatus = "failed"
 		cmdProcState(false)
@@ -4636,9 +4643,9 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 				}
 			}
 			else if(resp?.status == 200) {
-				LogAction("nestResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
+				LogAction("nestCmdResponse Processed queue: ${qnum} ($type | ($obj:$objVal)) SUCCESSFULLY!", "info", true)
 				apiIssueEvent(false)
-				increaseCmdCnt()
+				incCmdCnt()
 				atomicState?.lastCmdSentStatus = "ok"
 				atomicState?.apiRateLimited = false
 				atomicState?.apiCmdFailData = null
@@ -4703,13 +4710,40 @@ def apiRespHandler(code, errJson, methodName) {
 	}
 }
 
-def increaseCmdCnt() {
+def incApiStrReqCnt() {
+	long reqCnt = atomicState?.apiStrReqCnt ?: 0
+	reqCnt = reqCnt?.toLong()+1
+	LogAction("ApiStrReqCnt: $reqCnt", "info", false)
+	atomicState?.apiStrReqCnt = reqCnt?.toLong()
+}
+
+def incApiDevReqCnt() {
+	long reqCnt = atomicState?.apiDevReqCnt ?: 0
+	reqCnt = reqCnt?.toLong()+1
+	LogAction("ApiDevReqCnt: $reqCnt", "info", false)
+	atomicState?.apiDevReqCnt = reqCnt?.toLong()
+}
+
+def incApiMetaReqCnt() {
+	long reqCnt = atomicState?.apiMetaReqCnt ?: 0
+	reqCnt = reqCnt?.toLong()+1
+	LogAction("ApiMetaReqCnt: $reqCnt", "info", false)
+	atomicState?.apiMetaReqCnt = reqCnt?.toLong()
+}
+
+def incCmdCnt() {
 	long cmdCnt = atomicState?.apiCommandCnt ?: 0
 	cmdCnt = cmdCnt?.toLong()+1
 	LogAction("Api CmdCnt: $cmdCnt", "info", false)
 	atomicState?.apiCommandCnt = cmdCnt?.toLong()
 }
 
+def incRestStrEvtCnt() {
+	long evtCnt = atomicState?.apiRestStrEvtCnt ?: 0
+	evtCnt = evtCnt?.toLong()+1
+	LogAction("ApiRestStrEvtCnt: $evtCnt", "info", false)
+	atomicState?.apiRestStrEvtCnt = evtCnt?.toLong()
+}
 
 /************************************************************************************************
 |								Push Notification Functions										|
@@ -7635,22 +7669,28 @@ def createInstallDataJson() {
 
 		def tz = getTimeZone()?.ID?.toString()
 		def apiCmdCnt = !atomicState?.apiCommandCnt ? 0 : atomicState?.apiCommandCnt
+		def apiStrReqCnt = !atomicState?.apiStrReqCnt ? 0 : atomicState?.apiStrReqCnt
+		def apiDevReqCnt = !atomicState?.apiDevReqCnt ? 0 : atomicState?.apiDevReqCnt
+		def apiMetaReqCnt = !atomicState?.apiMetaReqCnt ? 0 : atomicState?.apiMetaReqCnt
+		def apiRestStrEvtCnt = !atomicState?.apiRestStrEvtCnt ? 0 : atomicState?.apiRestStrEvtCnt
 		def cltType = !settings?.mobileClientType ? "Not Configured" : settings?.mobileClientType?.toString()
 		def appErrCnt = !atomicState?.appExceptionCnt ? 0 : atomicState?.appExceptionCnt
 		def devErrCnt = !atomicState?.childExceptionCnt ? 0 : atomicState?.childExceptionCnt
 		def devUseMetCnt = getDeviceMetricCnts()
 		def appUseMetCnt = atomicState?.usageMetricsStore
-		log.debug "appUseMetCnt: $appUseMetCnt"
 		def data = []
 		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt, "installDt": atomicState?.installData?.dt,
-				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString(), "optOut":false
+				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"installDt": atomicState?.installData?.dt, "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "apiStrReqCnt":apiStrReqCnt, "apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt,
+				"apiRestStrEvtCnt":apiRestStrEvtCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt, "stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString(),
+				"optOut":false
 			]
 		} else {
 			data = [
 				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
-				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString(), "optOut":true
+				"apiStrReqCnt":apiStrReqCnt, "apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt, "installDt": atomicState?.installData?.dt, "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt,
+				"apiRestStrEvtCnt":apiRestStrEvtCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString(), "optOut":true
 			]
 		}
 		def resultJson = new groovy.json.JsonOutput().toJson(data)
