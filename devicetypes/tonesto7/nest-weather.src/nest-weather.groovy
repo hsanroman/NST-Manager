@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.2" }
+def devVer() { return "5.0.3" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -59,6 +59,7 @@ metadata {
 		attribute "alert4", "string"
 		attribute "alertKeys", "string"
 		attribute "weatherObservedDt", "string"
+		attribute "precip_today", "string"
 	}
 
 	simulator { }
@@ -459,11 +460,13 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 	def temp = device.currentState("temperature")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
-	if(isStateChange(device, "temperature", rTempVal.toString()) || isStateChange(device, "feelsLike", rFeelsVal.toString())) {
+	if(isStateChange(device, "temperature", rTempVal.toString())) {
 		Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
-		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}" , displayed: true)
-		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
+		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}", displayed: true)
 	} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
+	if(isStateChange(device, "feelsLike", rFeelsVal.toString())) {
+		sendEvent(name:'feelsLike', value: rFeelsVal, unit: state?.tempUnit, descriptionText: "Feels Like Temperature is ${rFeelsVal}" , displayed: false)
+	}
 }
 
 def getTemp() {
@@ -561,20 +564,25 @@ def getWeatherConditions(Map weatData) {
 				sendEvent(name: "weatherIcon", value: state?.curWeatherIcon, displayed:false)
 				def wspeed = 0.0
 				def wgust = 0.0
-				if (wantMetric()) {
+				def precip = 0.0
+				if(wantMetric()) {
 					wspeed = Math.round(cur?.current_observation?.wind_kph as float)
 					wgust = Math.round(cur?.current_observation?.wind_gust_kph as float)
+					precip = Math.round(cur?.current_observation?.precip_today_metric as float)
 					sendEvent(name: "visibility", value: cur?.current_observation?.visibility_km, unit: "km")
 					sendEvent(name: "wind", value: wspeed as String, unit: "KPH")
 					sendEvent(name: "windgust", value: wgust as String, unit: "KPH")
+					sendEvent(name: "precip_today", value: precip as String, unit: "mm")
 					wspeed += " KPH"
 					wgust += " KPH"
 				} else {
 					wspeed = Math.round(cur?.current_observation?.wind_mph as float)
 					wgust = Math.round(cur?.current_observation?.wind_gust_mph as float)
+					precip = Math.round(cur?.current_observation?.precip_today_in as float)
 					sendEvent(name: "visibility", value: cur?.current_observation?.visibility_mi, unit: "miles")
 					sendEvent(name: "wind", value: wspeed as String, unit: "MPH")
 					sendEvent(name: "windgust", value: wgust as String, unit: "MPH")
+					sendEvent(name: "precip_today", value: precip as String, unit: "in")
 					wspeed += " MPH"
 					wgust += " MPH"
 				}
@@ -1145,8 +1153,24 @@ def getFeelslike() {
 	}
 }
 
+def getPrecip() {
+	if(wantMetric()) {
+		return "${state.curWeather?.current_observation?.precip_today_metric} mm"
+	} else {
+		return "${state.curWeather?.current_observation?.precip_today_in} in"
+	}
+}
+
+def getPressure() {
+	if(wantMetric()) {
+		return "${state.curWeather?.current_observation?.pressure_mb} mb ${state.curWeather?.current_observation?.pressure_trend}"
+	} else {
+		return "${state.curWeather?.current_observation?.pressure_in} in ${state.curWeather?.current_observation?.pressure_trend}"
+	}
+}
+
 def getVisibility() {
-	if ( wantMetric() ) {
+	if(wantMetric()) {
 		return "${state.curWeather?.current_observation?.visibility_km} km"
 	} else {
 		return "${state.curWeather?.current_observation?.visibility_mi} Miles"
@@ -1614,9 +1638,11 @@ def getWeatherHTML() {
 						<div class="row">
 							<div class="six columns">
 								<b>Feels Like:</b> ${getFeelslike()} <br>
-								<b>Precip: </b> ${device.currentState("percentPrecip")?.value}% <br>
+								<b>Precip %: </b> ${device.currentState("percentPrecip")?.value}% <br>
+								<b>Precip: </b> ${getPrecip()} <br>
 								<b>Humidity:</b> ${state?.curWeather?.current_observation?.relative_humidity}<br>
 								<b>Dew Point: </b>${getDewpoint()}<br>
+								<b>Pressure: </b> ${getPressure()} <br>
 								<b>UV Index: </b>${state.curWeather?.current_observation?.UV}<br>
 								<b>Visibility:</b> ${getVisibility()} <br>
 								<b>Lux:</b> ${getLux()}<br>
