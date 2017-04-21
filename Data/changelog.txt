@@ -5,8 +5,8 @@ Manager App:
  • FIXED: Constant overwriting of custom device names.
 
 Automation App:
- • FIXED issue with notifications that was causing exceptions.
- • FIXED issue with duplicate notifications when NestMode automation is enabled
+ • FIXED: Issues with notifications that was causing exceptions.
+ • FIXED: Issues with duplicate notifications when Nest Mode automation is enabled.
 
 V5.0.4 (April 11th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
