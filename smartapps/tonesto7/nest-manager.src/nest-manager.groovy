@@ -4035,10 +4035,23 @@ def setStructureAway(child, value, virtual=false) {
 	} else {
 		LogAction("setStructureAway - Setting Nest Location:${!devId ? "" : " ${devId}"} (${val ? "Away" : "Home"})", "debug", true)
 		if(val) {
-			return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "away", devId)
+			def ret = sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "away", devId)
+			// Below is to ensure automations read updated value even if queued
+			if(ret && atomicState?.structData && atomicState?.structures && atomicState?.structData[atomicState?.structures]?.away) {
+				def t0 = atomicState?.structData
+				t0[atomicState?.structures].away = "away"
+				atomicState?.structData = t0
+			}
+			return ret
 		}
 		else {
-			return sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "home", devId)
+			def ret = sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "home", devId)
+			if(ret && atomicState?.structData && atomicState?.structures && atomicState?.structData[atomicState?.structures]?.away) {
+				def t0 = atomicState?.structData
+				t0[atomicState?.structures].away = "home"
+				atomicState?.structData = t0
+			}
+			return ret
 		}
 	}
 }
