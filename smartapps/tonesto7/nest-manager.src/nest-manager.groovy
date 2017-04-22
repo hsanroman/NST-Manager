@@ -2327,7 +2327,7 @@ def getInstAutoTypesDesc() {
 		}
 		if(ver) {
 			def updVer = atomicState?.autoSaVer ?: ver
-			if(versionStr2Int(ver) < versionStr2Int(updVer)) {
+			if(versionStr2Int(ver) > versionStr2Int(updVer)) {
 				updVer = ver
 			}
 			atomicState.autoSaVer = updVer
