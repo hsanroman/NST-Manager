@@ -36,8 +36,18 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.5" }
-def appVerDate() { "4-21-2017" }
+def appVersion() { "5.0.6" }
+def appVerDate() { "4-22-2017" }
+def minVersions() {
+	return [
+		"automation":["val":503, "desc":"5.0.3"],
+		"thermostat":["val":501, "desc":"5.0.1"],
+		"protect":["val":501, "desc":"5.0.1"],
+		"presence":["val":501, "desc":"5.0.1"],
+		"weather":["val":503, "desc":"5.0.3"],
+		"camera":["val":502 , "desc":"5.0.2"],
+	]
+}
 
 preferences {
 	//startPage
@@ -2099,7 +2109,6 @@ def initManagerApp() {
 		atomicState?.installData = iData
 	}
 	if(atomicState?.installData?.usingNewAutoFile) {
-		state.remove("lastAnalyticUpdDt")
 		stateCleanup()
 	}
 	subscriber()
@@ -2327,7 +2336,7 @@ def getInstAutoTypesDesc() {
 		}
 		if(ver) {
 			def updVer = atomicState?.autoSaVer ?: ver
-			if(versionStr2Int(ver) > versionStr2Int(updVer)) {
+			if(versionStr2Int(ver) < versionStr2Int(updVer)) {
 				updVer = ver
 			}
 			atomicState.autoSaVer = updVer
@@ -6657,7 +6666,7 @@ def stateCleanup() {
 		"showProtAlarmStateEvts", "showAwayAsAuto", "cmdQ", "recentSendCmd", "currentWeather", "altNames", "locstr", "custLocStr", "autoAppInstalled", "nestStructures", "lastSentExceptionDataDt",
 		"tDevVer", "pDevVer", "camDevVer", "presDevVer", "weatDevVer", "vtDevVer", "dashSetup", "dashboardUrl", "apiIssues", "stateSize", "haveRun", "lastStMode", "lastPresSenAway", "automationsActive",
 		"temperatures", "powers", "energies", "use24Time", "useMilitaryTime", "advAppDebug", "appDebug", "awayModes", "homeModes", "childDebug", "updNotifyWaitVal", "appApiIssuesWaitVal",
-		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "autoSaVer"
+		"misPollNotifyWaitVal", "misPollNotifyMsgWaitVal", "devHealthMsgWaitVal", "nestLocAway", "heardFromRestDt", "autoSaVer", "lastAnalyticUpdDt"
  	]
 	data.each { item ->
 		state.remove(item?.toString())
@@ -6890,17 +6899,6 @@ def isInMode(modeList) {
 		return location.mode.toString() in modeList
 	}
 	return false
-}
-
-def minVersions() {
-	return [
-		"automation":["val":501, "desc":"5.0.1"],
-		"thermostat":["val":501, "desc":"5.0.1"],
-		"protect":["val":501, "desc":"5.0.1"],
-		"presence":["val":501, "desc":"5.0.1"],
-		"weather":["val":502, "desc":"5.0.2"],
-		"camera":["val":502 , "desc":"5.0.2"],
-	]
 }
 
 def notifValEnum(allowCust = false) {
