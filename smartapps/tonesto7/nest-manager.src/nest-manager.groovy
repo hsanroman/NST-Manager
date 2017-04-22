@@ -7669,6 +7669,9 @@ def getDeviceMetricCnts() {
 def createInstallDataJson() {
 	try {
 		generateInstallId()
+
+		def autoDesc = getInstAutoTypesDesc()			// This is a hack to get installedAutomations data updated without waiting for user to hit done
+
 		def tsVer = atomicState?.tDevVer ?: "Not Installed"
 		def ptVer = atomicState?.pDevVer ?: "Not Installed"
 		def cdVer = atomicState?.camDevVer ?: "Not Installed"
@@ -7677,8 +7680,6 @@ def createInstallDataJson() {
 		def vtsVer = atomicState?.vtDevVer ?: "Not Installed"
 		def autoVer = atomicState?.autoSaVer ?: "Not Installed"
 		def restVer = (atomicState?.restServiceData && atomicState?.restServiceData?.streaming) ? atomicState?.restServiceData?.version : "Not Installed"
-
-		def autoDesc = getInstAutoTypesDesc()			// This is a hack to get installedAutomations data updated without waiting for user to hit done
 
 		def versions = [
 			"apps":["manager":appVersion()?.toString(), "automation":autoVer, "service":restVer],
