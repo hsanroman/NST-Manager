@@ -2357,7 +2357,7 @@ def getInstAutoTypesDesc() {
 					break
 				case "schMot":
 					def ai = a?.getAutomationsInstalled()
-					schMotItems = a?.getSchMotConfigDesc(true)
+					schMotItems += a?.getSchMotConfigDesc(true)
 					if(ai) {
 						ai?.each { aut ->
 							aut?.each { it2 ->
@@ -2395,8 +2395,9 @@ def getInstAutoTypesDesc() {
 	def sch = dat?.schMot.findAll { it?.value > 0}
 	str += (sch?.size()) ? "\n• Thermostat (${sch?.size()})" : ""
 	def scii = 1
-	schMotItems?.each { sci ->
-		str += "${scii == schMotItems?.size() ? "\n  └" : "\n  ├"} $sci"
+	def newList = schMotItems?.unique()
+	newList?.sort()?.each { sci ->
+		str += "${scii == newList?.size() ? "\n  └" : "\n  ├"} $sci"
 		scii = scii+1
 	}
 	str += (disItems?.size() > 0) ? "\n• Disabled: (${disItems?.size()})" : ""
