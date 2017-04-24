@@ -3059,7 +3059,8 @@ def forcedPoll(type = null) {
 		atomicState.needStrPoll = true
 		atomicState.needDevPoll = true
 	}
-	updateChildData(true)
+	atomicState.forceChildUpd = true
+	updateChildData()
 }
 
 def postCmd() {
@@ -4992,13 +4993,12 @@ def getNestTimeZone() {
 
 def updateWebStuff(now = false) {
 	//LogTrace("updateWebStuff")
-	if(!atomicState?.appData || (getLastWebUpdSec() > (3600*4))) {
-		if(now) {
+	def nnow = now
+	if(!atomicState?.appData) { nnow = true }
+	if(nnow || (getLastWebUpdSec() > (3600*4))) {
+		if(nnow) {
 			getWebFileData()
 		} else { getWebFileData(false) }
-	}
-	if(atomicState?.isInstalled) {
-		if(getLastAnalyticUpdSec() > (3600*24)) { sendInstallData() }
 	}
 	def wValue = Math.max( (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900), 900)
 	if(atomicState?.weatherDevice && getLastWeatherUpdSec() > wValue) {
@@ -5008,7 +5008,10 @@ def updateWebStuff(now = false) {
 			if(canSchedule()) { runIn(20, "getWeatherConditions", [overwrite: true]) }
 		}
 	}
-	if(atomicState?.feedbackPending) { runIn(37, "sendFeedbackData", [overwrite: true]) }
+	if(atomicState?.isInstalled) {
+		if(getLastAnalyticUpdSec() > (3600*24)) { runIn(20, "sendInstallData", [overwrite: true]) }
+	}
+	if(atomicState?.feedbackPending) { sendFeedbackData() }
 }
 
 def getWeatherConditions(force = false) {
@@ -5164,7 +5167,6 @@ def webResponse(resp, data) {
 			atomicState?.appData = newdata
 			clientBlacklisted()
 			updateHandler()
-			//broadcastCheck()
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", true) }
