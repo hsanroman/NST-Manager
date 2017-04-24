@@ -265,7 +265,6 @@ def mainPage() {
 		atomicState.ok2InstallAutoFlag = false
 		incMainLoadCnt()
 		devPageFooter("mainLoadCnt", execTime)
-		runIn(5, "sendInstallData", [overwrite: true])
 	}
 }
 
