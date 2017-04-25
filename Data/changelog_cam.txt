@@ -1,3 +1,9 @@
+<p style="font-size: 15px;"><strong>V5.0.3 (April 25th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>UPDATED:</strong> Bug fixes to devices with public url not being shared</li>
+</ul>
+<br>
 <p style="font-size: 15px;"><strong>V5.0.2 (April 6th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
