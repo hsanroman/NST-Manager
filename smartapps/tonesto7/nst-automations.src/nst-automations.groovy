@@ -396,6 +396,13 @@ def mainAutoPage(params) {
 						nDesc += (nModeDelay && nModeDelayVal) ? "\n • Change Delay: (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})" : ""
 						nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
 								"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+						if(isNestModesConfigured()) {
+							nDesc += "\n • Set Nest Thermostats to ECO ${nModeSetEco ? "ON" : "OFF"}"
+							if(parent?.settings?.cameras) {
+								nDesc += "\n • Set Nest Cams On when Away ${nModeCamOnAway ? "ON" : "OFF"}"
+								nDesc += "\n • Set Nest Cams Off when Home ${nModeCamOffHome ? "ON" : "OFF"}"
+							}
+						}
 						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
 						def nModeDesc = isNestModesConfigured() ? "${nDesc}" : null
 						href "nestModePresPage", title: "Nest Mode Automation Config", description: nModeDesc ?: "Tap to configure", state: (nModeDesc ? "complete" : null), image: getAppImg("mode_automation_icon.png")

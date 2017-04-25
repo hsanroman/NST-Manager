@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.6" }
-def appVerDate() { "4-22-2017" }
+def appVersion() { "5.0.7" }
+def appVerDate() { "4-24-2017" }
 def minVersions() {
 	return [
 		"automation":["val":503, "desc":"5.0.3"],
@@ -45,7 +45,7 @@ def minVersions() {
 		"protect":["val":501, "desc":"5.0.1"],
 		"presence":["val":501, "desc":"5.0.1"],
 		"weather":["val":503, "desc":"5.0.3"],
-		"camera":["val":502 , "desc":"5.0.2"],
+		"camera":["val":503 , "desc":"5.0.3"],
 	]
 }
 
@@ -235,6 +235,11 @@ def mainPage() {
 			}
 		}
 		if(atomicState?.isInstalled) {
+			section("Notifications Options:") {
+				def t1 = getAppNotifConfDesc()
+				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
+						image: getAppImg("notification_icon2.png")
+			}
 			section("Manage Logging, Nest Login, Polling and More:") {
 				def descStr = ""
 				def sz = descStr.size()
@@ -252,11 +257,6 @@ def mainPage() {
 			}
 			section("Diagnostics, Donate, Release and License Info") { //, and Leave Feedback:") {
 				href "infoPage", title: "Help, Info, and More", description: "", image: getAppImg("info.png")
-			}
-			section("Notifications Options:") {
-				def t1 = getAppNotifConfDesc()
-				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
-						image: getAppImg("notification_icon2.png")
 			}
 			section("Remove All Apps, Automations, and Devices:") {
 				href "uninstallPage", title: "Uninstall this App", description: "", image: getAppImg("uninstall_icon.png")
@@ -430,27 +430,32 @@ def custWeatherPage() {
 	dynamicPage(name: "custWeatherPage", title: "", nextPage: "", install: false) {
 		def objs = [:]
 		def defZip = getStZipCode() ? getStZipCode() : getNestZipCode()
-		section("Select the Search method:") {
-			input ("useCustWeatherLoc", "bool", title: "Use semi-automated search?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
+		section("") {
+			input ("useCustWeatherLoc", "bool", title: "Use Custom Location?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
 		}
 		if(settings?.useCustWeatherLoc) {
-			section("Set Custom Weather Location") {
-				input("custLocSearchStr", "text", title: "Enter a location to search\nZipcode/City are valid", description: "The results will be available in the input below...", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
-				if(settings?.custLocSearchStr != null || settings?.custLocSearchStr != "") {
-					objs = getWeatherQueryResults(settings?.custLocSearchStr ? settings?.custLocSearchStr.toString() : null)
-					if(objs?.size() > 0) {
-						input(name: "custWeatherResultItems", title:"Search Results (Found: ${objs?.size()})", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:objs],
-								image: getAppImg("search_icon.png"))
+			section("Select the Search method:") {
+				input ("custWeatherLocSrch", "bool", title: "Use semi-automated search?", description: "", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("info_icon2.png"))
+			}
+			if(settings?.custWeatherLocSrch) {
+				section("Set Custom Weather Location") {
+					input("custLocSearchStr", "text", title: "Enter a location to search\nZipcode/City are valid", description: "The results will be available in the input below...", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+					if(settings?.custLocSearchStr != null || settings?.custLocSearchStr != "") {
+						objs = getWeatherQueryResults(settings?.custLocSearchStr ? settings?.custLocSearchStr.toString() : null)
+						if(objs?.size() > 0) {
+							input(name: "custWeatherResultItems", title:"Search Results (Found: ${objs?.size()})", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:objs],
+									image: getAppImg("search_icon.png"))
+						}
 					}
 				}
-			}
-		} else {
-			section("Manually Enter a Location:") {
-				href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
-						description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
-				input("custLocStr", "text", title: "Manaually Set Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
-				def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
-				paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+			} else {
+				section("Manually Enter a Location:") {
+					href url:"https://www.wunderground.com/weatherstation/ListStations.asp", style:"embedded", required:false, title:"Weather Station ID Lookup",
+							description: "Lookup Weather Station ID", image: getAppImg("search_icon.png")
+					input("custLocStr", "text", title: "Manaually Set Weather Location?", required: false, defaultValue: defZip, submitOnChange: true, image: getAppImg("weather_icon_grey.png"))
+					def validEnt = "\n\nWeather Stations: [pws:station_id]\nZipCodes: [90250]\nZWM: [zwm:zwm_number]"
+					paragraph "Valid location entries are:${validEnt}", image: getAppImg("blank_icon.png")
+				}
 			}
 		}
 		atomicState.lastWeatherUpdDt = 0
@@ -1757,15 +1762,15 @@ def getVoiceRprtPrefDesc() {
 
 def getPollingConfDesc() {
 	def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
-	def pollValDesc = (!settings?.pollValue || settings?.pollValue == "180") ? "" : " (Custom)"
-	def pollStrValDesc = (!settings?.pollStrValue || settings?.pollStrValue == "180") ? "" : " (Custom)"
+	def pollValDesc = (!settings?.pollValue || settings?.pollValue == "180") ? "" : (!atomicState?.streamPolling ? " (Custom)" : " (Stream)")
+	def pollStrValDesc = (!settings?.pollStrValue || settings?.pollStrValue == "180") ? "" : (!atomicState?.streamPolling ? " (Custom)" : " (Stream)")
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
 	pStr += rStrEn ? "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})" : ""
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
-	pStr += "\n• Device: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollValue?:180, pollValEnum(true))} ${pollValDesc}" : "300"})"
-	pStr += "\n• Structure: (${!atomicState?.streamPolling ? "${getInputEnumLabel(pollStrValue?:180, pollValEnum())} ${pollStrValDesc}" : "300"})"
+	pStr += "\n• Device: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollValue ?: 180) : 300), pollValEnum(true))}) ${pollValDesc}"
+	pStr += "\n• Structure: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollStrValue?:180) : 300), pollValEnum())}) ${pollStrValDesc}"
 	pStr += atomicState?.weatherDevice ? "\n• Weather Polling: (${getInputEnumLabel(pollWeatherValue?:900, notifValEnum())})${pollWeatherValDesc}" : ""
 	pStr += "\n• Forced Poll Refresh Limit:\n  └ (${getInputEnumLabel(pollWaitVal ?: 10, waitValEnum())})${pollWaitValDesc}"
 	return (pStr != "" ? pStr : "")
@@ -1802,7 +1807,8 @@ def getWeatherConfDesc() {
 
 def getCustWeatherLoc(desc=false) {
 	def res = null
-	if(settings?.useCustWeatherLoc == true && settings?.custWeatherResultItems != null) {
+	if(settings?.useCustWeatherLoc == false || settings?.useCustWeatherLoc == null) { return res }
+	if(settings?.custWeatherLocSrch == true && settings?.custWeatherResultItems != null) {
 		res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
 	} else if(settings?.useCustWeatherLoc == false && settings?.custLocStr != null) {
 		res = settings?.custLocStr
@@ -2357,7 +2363,7 @@ def getInstAutoTypesDesc() {
 					break
 				case "schMot":
 					def ai = a?.getAutomationsInstalled()
-					schMotItems = a?.getSchMotConfigDesc(true)
+					schMotItems += a?.getSchMotConfigDesc(true)
 					if(ai) {
 						ai?.each { aut ->
 							aut?.each { it2 ->
@@ -2395,8 +2401,9 @@ def getInstAutoTypesDesc() {
 	def sch = dat?.schMot.findAll { it?.value > 0}
 	str += (sch?.size()) ? "\n• Thermostat (${sch?.size()})" : ""
 	def scii = 1
-	schMotItems?.each { sci ->
-		str += "${scii == schMotItems?.size() ? "\n  └" : "\n  ├"} $sci"
+	def newList = schMotItems?.unique()
+	newList?.sort()?.each { sci ->
+		str += "${scii == newList?.size() ? "\n  └" : "\n  ├"} $sci"
 		scii = scii+1
 	}
 	str += (disItems?.size() > 0) ? "\n• Disabled: (${disItems?.size()})" : ""
@@ -3052,7 +3059,8 @@ def forcedPoll(type = null) {
 		atomicState.needStrPoll = true
 		atomicState.needDevPoll = true
 	}
-	updateChildData(true)
+	atomicState.forceChildUpd = true
+	updateChildData()
 }
 
 def postCmd() {
@@ -3850,7 +3858,7 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 	def curlbl = devLbl?.toString()
 	if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 	def newlbl = "getNest${abrevStr.capitalize()}Label"(apiName, devId)
-	LogAction("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} ||devId: ${devId}", "trace", false)
+	LogAction("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} || devId: ${devId}", "trace", false)
 	if(ovrRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 		if(curlbl != newlbl) {
 			LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -4985,13 +4993,12 @@ def getNestTimeZone() {
 
 def updateWebStuff(now = false) {
 	//LogTrace("updateWebStuff")
-	if(!atomicState?.appData || (getLastWebUpdSec() > (3600*4))) {
-		if(now) {
+	def nnow = now
+	if(!atomicState?.appData) { nnow = true }
+	if(nnow || (getLastWebUpdSec() > (3600*4))) {
+		if(nnow) {
 			getWebFileData()
 		} else { getWebFileData(false) }
-	}
-	if(atomicState?.isInstalled) {
-		if(getLastAnalyticUpdSec() > (3600*24)) { sendInstallData() }
 	}
 	def wValue = Math.max( (settings?.pollWeatherValue ? settings?.pollWeatherValue.toInteger() : 900), 900)
 	if(atomicState?.weatherDevice && getLastWeatherUpdSec() > wValue) {
@@ -5001,7 +5008,10 @@ def updateWebStuff(now = false) {
 			if(canSchedule()) { runIn(20, "getWeatherConditions", [overwrite: true]) }
 		}
 	}
-	if(atomicState?.feedbackPending) { runIn(37, "sendFeedbackData", [overwrite: true]) }
+	if(atomicState?.isInstalled) {
+		if(getLastAnalyticUpdSec() > (3600*24)) { runIn(20, "sendInstallData", [overwrite: true]) }
+	}
+	if(atomicState?.feedbackPending) { sendFeedbackData() }
 }
 
 def getWeatherConditions(force = false) {
@@ -5157,7 +5167,6 @@ def webResponse(resp, data) {
 			atomicState?.appData = newdata
 			clientBlacklisted()
 			updateHandler()
-			//broadcastCheck()
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", true) }
@@ -7667,17 +7676,15 @@ def getDeviceMetricCnts() {
 def createInstallDataJson() {
 	try {
 		generateInstallId()
-
 		def autoDesc = getInstAutoTypesDesc()			// This is a hack to get installedAutomations data updated without waiting for user to hit done
-
-		def tsVer = atomicState?.tDevVer ?: "Not Installed"
-		def ptVer = atomicState?.pDevVer ?: "Not Installed"
-		def cdVer = atomicState?.camDevVer ?: "Not Installed"
-		def pdVer = atomicState?.presDevVer ?: "Not Installed"
-		def wdVer = atomicState?.weatDevVer ?: "Not Installed"
-		def vtsVer = atomicState?.vtDevVer ?: "Not Installed"
-		def autoVer = atomicState?.autoSaVer ?: "Not Installed"
-		def restVer = (atomicState?.restServiceData && atomicState?.restServiceData?.streaming) ? atomicState?.restServiceData?.version : "Not Installed"
+		def tsVer = !atomicState?.tDevVer ? "Not Installed" : atomicState?.tDevVer
+		def ptVer = !atomicState?.pDevVer ? "Not Installed" : atomicState?.pDevVer
+		def cdVer = !atomicState?.camDevVer ? "Not Installed" : atomicState?.camDevVer
+		def pdVer = !atomicState?.presDevVer ? "Not Installed" : atomicState?.presDevVer
+		def wdVer = !atomicState?.weatDevVer ? "Not Installed" : atomicState?.weatDevVer
+		def vtsVer = !atomicState?.vtDevVer ? "Not Installed" : atomicState?.vtDevVer
+		def autoVer = !atomicState?.autoSaVer ? "Not Installed" : atomicState?.autoSaVer
+		def restVer = !atomicState?.restServiceData?.version ? "Not Installed" : atomicState?.restServiceData?.version
 
 		def versions = [
 			"apps":["manager":appVersion()?.toString(), "automation":autoVer, "service":restVer],

@@ -1,3 +1,8 @@
+V5.0.7 (April 25th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • FIXED: Bugs and made various stability improvements.
+
 V5.0.5 (April 20th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
