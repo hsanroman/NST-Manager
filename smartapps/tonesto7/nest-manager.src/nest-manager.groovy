@@ -3882,7 +3882,7 @@ void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	LogAction("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}", "trace", false)
 	if(ovrRideNames && curlbl != newlbl) {
 		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-		it?.label = newlbl?.toString()
+		setDeviceLabel(devId, newlbl?.toString())
 		curlbl = newlbl?.toString()
 	}
 	if(atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl" != curlbl) {
