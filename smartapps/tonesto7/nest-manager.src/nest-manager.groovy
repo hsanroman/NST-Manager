@@ -649,8 +649,8 @@ def pollPrefPage() {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
 			}
-			section("Configure Streaming Service:") {
-				if(settings?.restStreaming) {
+			if(settings?.restStreaming) {
+				section("Configure Streaming Service:") {
 					href "restSrvcDiscovery", title: "Auto-Discover Local Service", state: (settings?.selectedRestDevice ? "complete" : null),
 							description: settings?.selectedRestDevice ? "Selected Service:\n${settings?.selectedRestDevice}" : "Discover NST Service on your local network"
 					if(!settings?.selectedRestDevice) {
