@@ -652,7 +652,7 @@ def pollPrefPage() {
 			if(settings?.restStreaming) {
 				section("Configure Streaming Service:") {
 					href "restSrvcDiscovery", title: "Auto-Discover Local Service", state: (settings?.selectedRestDevice ? "complete" : null),
-							description: settings?.selectedRestDevice ? "Selected Service:\n${settings?.selectedRestDevice}" : "Discover NST Service on your local network"
+							description: selectedRestDiscSrvcDesc() ? "Selected Service:\n${selectedRestDiscSrvcDesc()}" : "Discover NST Service on your local network"
 					if(!settings?.selectedRestDevice) {
 						input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
 						input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
@@ -721,6 +721,15 @@ def getRestSrvcDesc() {
 }
 
 def getRestSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1" }
+
+def selectedRestDiscSrvcDesc() {
+	if(!settings?.selectedRestDevice) {
+		return null
+	} else {
+		def res = selectedRestDevice?.toString().split(":")
+		return "IP: ${res[0]}\nPort: ${res[1]}"
+	}
+}
 
 def restSrvcDiscovery(params=[:]) {
 	def devices = discoveredSrvcs()
