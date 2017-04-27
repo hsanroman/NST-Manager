@@ -649,10 +649,10 @@ def pollPrefPage() {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
 			}
-			section("Configure Streaming Service:") {
-				if(settings?.restStreaming) {
+			if(settings?.restStreaming) {
+				section("Configure Streaming Service:") {
 					href "restSrvcDiscovery", title: "Auto-Discover Local Service", state: (settings?.selectedRestDevice ? "complete" : null),
-							description: settings?.selectedRestDevice ? "Selected Service:\n${settings?.selectedRestDevice}" : "Discover NST Service on your local network"
+							description: selectedRestDiscSrvcDesc() ? "Selected Service:\n${selectedRestDiscSrvcDesc()}" : "Discover NST Service on your local network"
 					if(!settings?.selectedRestDevice) {
 						input(name: "restStreamIp", title:"Rest Service Address", type: "text", required: true, submitOnChange: true, image: getAppImg("ip_icon.png"))
 						input(name: "restStreamPort", title:"Rest Service Port", type: "number", defaultValue: 3000, required: true, submitOnChange: true, image: getAppImg("port_icon.png"))
@@ -721,6 +721,15 @@ def getRestSrvcDesc() {
 }
 
 def getRestSrvcUrn() { return "urn:schemas-upnp-org:service:NST-Streaming:1" }
+
+def selectedRestDiscSrvcDesc() {
+	if(!settings?.selectedRestDevice) {
+		return null
+	} else {
+		def res = selectedRestDevice?.toString().split(":")
+		return "IP: ${res[0]}\nPort: ${res[1]}"
+	}
+}
 
 def restSrvcDiscovery(params=[:]) {
 	def devices = discoveredSrvcs()
@@ -3882,7 +3891,7 @@ void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	LogAction("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}", "trace", false)
 	if(ovrRideNames && curlbl != newlbl) {
 		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
-		it?.label = newlbl?.toString()
+		setDeviceLabel(devId, newlbl?.toString())
 		curlbl = newlbl?.toString()
 	}
 	if(atomicState?.custLabelUsed && settings?."${abrevStr}Dev_lbl" != curlbl) {
@@ -4052,7 +4061,7 @@ def setStructureAway(child, value, virtual=false) {
 			} else { LogAction("setStructureAway - CANNOT Set Thermostat${pdevId} Presence: (${val}) child ${pChild}", "warn", true) }
 		}
 	} else {
-		LogAction("setStructureAway - Setting Nest Location:${!devId ? "" : " ${devId}"} (${val ? "Away" : "Home"})", "debug", true)
+		LogAction("setStructureAway - Setting Nest Location: (${child?.device?.displayName})${!devId ? "" : " ${devId}"} (${val ? "Away" : "Home"})", "debug", true)
 		if(val) {
 			def ret = sendNestApiCmd(atomicState?.structures, apiVar().rootTypes.struct, apiVar().cmdObjs.away, "away", devId)
 			// Below is to ensure automations read updated value even if queued
@@ -4159,7 +4168,7 @@ def setHvacMode(child, mode, virtual=false) {
 			} else { LogAction("setHvacMode - CANNOT Set Thermostat${pdevId} Mode: (${mode}) child ${pChild}", "warn", true) }
 		}
 	} else {
-		LogAction("setHvacMode - Setting Thermostat${!devId ? "" : " ${devId}"} Mode: (${mode})", "debug", true)
+		LogAction("setHvacMode - Setting Thermostat (${child?.device?.displayName})${!devId ? "" : " ${devId}"} Mode: (${mode})", "debug", true)
 		return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.hvacMode, mode.toString(), devId)
 	}
 }
@@ -4189,7 +4198,7 @@ def setTargetTemp(child, unit, temp, mode, virtual=false) {
 			} else { LogAction("setTargetTemp - CANNOT Set Thermostat${pdevId} Temp: (${temp})${unit} Mode: (${mode}) child ${pChild}", "warn", true) }
 		}
 	} else {
-		LogAction("setTargetTemp: ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
+		LogAction("setTargetTemp: (${child?.device?.displayName}) ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
 		if(unit == "C") {
 			return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetC, temp, devId)
 		}
@@ -4223,7 +4232,7 @@ def setTargetTempLow(child, unit, temp, virtual=false) {
 			} else { LogAction("setTargetTemp - CANNOT Set Thermostat${pdevId} HEAT: (${temp})${unit} child ${pChild}", "warn", true) }
 		}
 	} else {
-		LogAction("setTargetTempLow: ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
+		LogAction("setTargetTempLow: (${child?.device?.displayName}) ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
 		if(unit == "C") {
 			return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetLowC, temp, devId)
 		}
@@ -4257,7 +4266,7 @@ def setTargetTempHigh(child, unit, temp, virtual=false) {
 			} else { LogAction("setTargetTemp - CANNOT Set Thermostat${pdevId} COOL: (${temp})${unit} child ${pChild}", "warn", true) }
 		}
 	} else {
-		LogAction("setTargetTempHigh: ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
+		LogAction("setTargetTempHigh: (${child?.device?.displayName}) ${devId} | (${temp})${unit} | virtual ${virtual}", "debug", true)
 		if(unit == "C") {
 			return sendNestApiCmd(devId, apiVar().rootTypes.tstat, apiVar().cmdObjs.targetHighC, temp, devId)
 		}
