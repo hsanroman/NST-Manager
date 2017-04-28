@@ -36,8 +36,8 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.7" }
-def appVerDate() { "4-24-2017" }
+def appVersion() { "5.0.8" }
+def appVerDate() { "4-28-2017" }
 def minVersions() {
 	return [
 		"automation":["val":503, "desc":"5.0.3"],
@@ -3028,11 +3028,16 @@ def finishPollHandler(data) {
 
 def schedFinishPoll(devChg) {
 	def curNow = now()
+	atomicState?.lastFinishedPoll = curNow
+	finishPoll(false, devChg)
+	return
+/*
 	if(!atomicState?.lastFinishedPoll || curNow >= atomicState?.lastFinishedPoll + 3400) {
 		def devFlg = [dev:devChg]
 		runIn(4, "finishPollHandler", [overwrite: true, data: devFlg])
 		atomicState?.lastFinishedPoll = curNow
 	}
+*/
 }
 
 def forcedPoll(type = null) {
