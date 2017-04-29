@@ -5244,7 +5244,7 @@ def getFbAppSettings(now = true) {
 			allowAsync = true
 			metstr = "async"
 		}
-		LogAction("Getting appSettings.json File(${metstr})", "info", true)
+		LogAction("Getting appSettings.json File(${metstr})", "info", false)
 
 		if(now || !allowAsync) {
 			httpGet(params) { resp ->
@@ -7944,7 +7944,7 @@ def processFirebaseResponse(resp, data) {
 	//log.debug "type: ${typeDesc}"
 	try {
 		if(resp?.status == 200) {
-			LogAction("sendFirebaseData: ${typeDesc} Data Sent SUCCESSFULLY", "info", true)
+			LogAction("sendFirebaseData: ${typeDesc} Data Sent SUCCESSFULLY", "info", false)
 			if(typeDesc?.toString() == "Remote Diag Logs") {
 
 			} else {
@@ -7988,7 +7988,7 @@ def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
 		if(respData) {
 			//log.debug "respData: ${respData}"
 			if(respData?.status == 200) {
-				LogAction("sendFirebaseData: ${typeDesc} Data Sent SUCCESSFULLY", "info", true)
+				LogAction("sendFirebaseData: ${typeDesc} Data Sent SUCCESSFULLY", "info", false)
 				if(typeDesc.toString() == "Remote Diag Logs") {
 
 				} else {
@@ -8030,7 +8030,7 @@ def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
 		if(respData) {
 			//log.debug "respData: ${respData}"
 			if(respData?.status == 200) {
-				LogAction("sendDataToSlack: ${typeDesc} Data Sent SUCCESSFULLY", "info", true)
+				LogAction("sendDataToSlack: ${typeDesc} Data Sent SUCCESSFULLY", "info", false)
 				result = true
 			}
 			else if(respData?.status == 400) {
