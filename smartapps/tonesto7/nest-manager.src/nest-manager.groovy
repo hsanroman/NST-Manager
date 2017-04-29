@@ -2612,6 +2612,7 @@ def cleanRestAutomationTest() {
 def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
+		LogAction("checkIfSwupdated: new version ${appVersion()}", "info", true)
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
 		iData["shownChgLog"] = false
@@ -5059,7 +5060,7 @@ def updateWebStuff(now = false) {
 		}
 	}
 	if(atomicState?.isInstalled) {
-		if(getLastAnalyticUpdSec() > (3600*24)) { runIn(20, "sendInstallData", [overwrite: true]) }
+		if(getLastAnalyticUpdSec() > (3600*24) && canSchedule()) { runIn(105, "sendInstallData", [overwrite: true]) }
 	}
 	if(atomicState?.feedbackPending) { sendFeedbackData() }
 }
@@ -6721,7 +6722,6 @@ def setStateVar(frc = false) {
 }
 
 //Things that I need to clear up on updates go here
-//IMPORTANT: This must be run in it's own thread, and exit after running as the cleanup occurs on exit
 def stateCleanup() {
 	LogAction("stateCleanup", "trace", true)
 
@@ -6744,6 +6744,7 @@ def stateCleanup() {
 			state.remove(item?.toString())
 		}
 	}
+	atomicState.forceChildUpd = true
 	def sdata = [ "showAwayAsAuto", "temperatures", "powers", "energies", "childDevDataPageDev", "childDevDataRfsh", "childDevDataStateFilter", "childDevPageShowAttr", "childDevPageShowCapab", "childDevPageShowCmds" ]
 	sdata.each { item ->
 		if(settings?."${item}" != null) {
