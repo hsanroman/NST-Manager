@@ -37,15 +37,15 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.8" }
-def appVerDate() { "4-28-2017" }
+def appVerDate() { "4-29-2017" }
 def minVersions() {
 	return [
-		"automation":["val":503, "desc":"5.0.3"],
-		"thermostat":["val":501, "desc":"5.0.1"],
-		"protect":["val":501, "desc":"5.0.1"],
+		"automation":["val":504, "desc":"5.0.4"],
+		"thermostat":["val":502, "desc":"5.0.2"],
+		"protect":["val":502, "desc":"5.0.2"],
 		"presence":["val":501, "desc":"5.0.1"],
-		"weather":["val":503, "desc":"5.0.3"],
-		"camera":["val":503 , "desc":"5.0.3"],
+		"weather":["val":504, "desc":"5.0.4"],
+		"camera":["val":504 , "desc":"5.0.4"],
 	]
 }
 
@@ -240,7 +240,7 @@ def mainPage() {
 				href "notifPrefPage", title: "Notifications", description: (t1 ? "${t1}\n\nTap to modify" : "Tap to configure"), state: (t1 ? "complete" : null),
 						image: getAppImg("notification_icon2.png")
 			}
-			section("Manage Logging, Nest Login, Polling and More:") {
+			section("Manage Polling, Logging, Nest Login, and More:") {
 				def descStr = ""
 				def sz = descStr.size()
 				def t1 = getAppNotifConfDesc()
@@ -466,7 +466,7 @@ def custWeatherPage() {
 }
 
 def getWeatherQueryResults(query) {
-	LogAction("Getting Weather Query Results for '$query'", "trace", true)
+	LogTrace("Getting Weather Query Results for '$query'")
 	def objMap = [:]
 	if(query) {
 		def params = [uri: "http://autocomplete.wunderground.com/aq?query=${query.toString().encodeAsURL()}", contentType:"application/json", requestContentType:"application/json"]
@@ -734,7 +734,7 @@ def selectedRestDiscSrvcDesc() {
 }
 
 def restDiscoveryClean() {
-	LogAction("Cleaning Out Discovered Services...", "trace", true)
+	LogAction("Cleaning Out Discovered Services...", "trace", false)
 	atomicState.localNstSrvcs = [:]
 	atomicState.localRestSrvcs = [:]
 	atomicState.discRfshCnt = 0
@@ -818,7 +818,7 @@ void verifyDevices() {
 }
 
 def srvcBrdCastHandler(evt) {
-	LogAction("srvcBrdCastHandler", "debug", true)
+	LogTrace("srvcBrdCastHandler")
 	def description = evt.description
 	def hub = evt?.hubId
 	def parsedEvent = parseLanMessage(description)
@@ -838,7 +838,7 @@ def srvcBrdCastHandler(evt) {
 }
 
 void srvcDescRespHandler(physicalgraph.device.HubResponse hubResponse) {
-	//LogAction("srvcDescRespHandler", "debug", true)
+	LogTrace("srvcDescRespHandler")
 	def body = hubResponse.xml
 
 	if(!atomicState?.localNstSrvcs) { atomicState.localNstSrvcs = [:] }
@@ -990,7 +990,7 @@ def automationStatisticsPage() {
 }
 
 def locDesiredClear() {
-	//LogAction("locDesiredClear", "info", true)
+	LogTrace("locDesiredClear")
 	def list = [ "locDesiredHeatTemp", "locDesiredCoolTemp","locDesiredComfortDewpointMax", "locDesiredTempScale", "locDesiredButton" ]
 	list.each { item ->
 		settingUpdate(item.toString(), "")
@@ -2200,7 +2200,7 @@ def getRestHost() {
 	def autoHost = settings?.selectedRestDevice ?: null
 	def ip = settings?.restStreamIp ?: null
 	def port = settings?.restStreamPort ?: 3000
-	//LogAction("getRestHost: autoHost: ${autoHost}  ip: ${ip}  port: ${port}", "trace", true)
+	LogTrace("getRestHost: autoHost: ${autoHost}  ip: ${ip}  port: ${port}")
 	if(autoHost) {
 		res = autoHost
 	} else {
@@ -2231,7 +2231,7 @@ def restStreamHandler(close = false) {
 		atomicState.restStreamingOn = false
 		return
 	}
-	//LogAction("restStreamHandler(close: ${close}) host: ${host} lastRestHost: ${atomicState?.lastRestHost}", "debug", true)
+	LogTrace("restStreamHandler(close: ${close}) host: ${host} lastRestHost: ${atomicState?.lastRestHost}")
 	def connStatus = toClose ? false : true
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
@@ -2255,14 +2255,14 @@ def restStreamHandler(close = false) {
 }
 
 def restStreamCheck() {
-	//log.debug "restStreamCheck"
+	LogTrace("restStreamCheck")
 	def host = getRestHost()
 	if(!host) { return }
 	if(!atomicState?.authToken) {
-		LogAction("No authToken", "warn", false)
+		LogAction("restStreamCheck No authToken", "warn", false)
 		return
 	}
-	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", false)
+	LogTrace("restStreamCheck ip: ${ip} port: {$port}")
 	try {
 		atomicState.lastRestHost = host
 		def hubAction = new physicalgraph.device.HubAction(
@@ -2293,7 +2293,7 @@ def receiveStreamStatus() {
 		}
 		atomicState?.restStreamingOn = t0
 		if(!settings?.restStreaming && t0) {		// suppose to be off
-			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
+			LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", false)
 			restStreamHandler(true)
 		} else if (settings?.restStreaming && !atomicState?.restStreamingOn) {		// suppose to be on
 			runIn(21, "startStopStream", [overwrite: true])
@@ -2968,7 +2968,7 @@ def poll(force = false, type = null) {
 		}
 
 		if(settings?.restStreaming && atomicState?.restStreamingOn) {
-			LogAction("Skipping Poll because Rest Streaming is ON", "info", true)
+			LogAction("Skipping Poll because Rest Streaming is ON", "info", false)
 			if(!atomicState?.streamPolling) {	// set to stream polling
 				unschedule("poll")
 				atomicState.pollingOn = false
@@ -3010,7 +3010,6 @@ def poll(force = false, type = null) {
 				metstr = "async"
 			}
 			if(okStruct) {
-				//LogAction("Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago)"
 				if(allowAsync) {
 					str = queueGetApiData("str")
@@ -3019,7 +3018,6 @@ def poll(force = false, type = null) {
 				}
 			}
 			if(okDevice) {
-				//LogAction("Updating Device Data    (Last Updated: ${getLastDevicePollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += sstr != "" ? " | " : ""
 				sstr += "Updating Device Data (Last Updated: ${getLastDevicePollSec()} seconds ago)"
 				if(allowAsync) {
@@ -3029,7 +3027,6 @@ def poll(force = false, type = null) {
 				}
 			}
 			if(okMeta) {
-				//LogAction("Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago) (${metstr})", "info", true)
 				sstr += sstr != "" ? " | " : ""
 				sstr += "Updating Meta Data(Last Updated: ${getLastMetaPollSec()} seconds ago)"
 				if(allowAsync) {
@@ -3049,7 +3046,7 @@ def poll(force = false, type = null) {
 }
 
 def finishPoll(str=null, dev=null) {
-	LogAction("finishPoll($str, $dev) received", "info", false)
+	LogTrace("finishPoll($str, $dev) received")
 	if(atomicState?.pollBlocked) { LogAction("Poll BLOCKED", "trace", true); schedNextWorkQ(null); return }
 	if(dev || str || atomicState?.forceChildUpd || atomicState?.needChildUpd) { updateChildData() }
 	updateWebStuff()
@@ -3143,7 +3140,7 @@ def getApiData(type = null) {
 					LogTrace("API Structure Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.structData, t0, "str")
 					if(chg) {
-						LogAction("API Structure Data HAS Changed", "debug", true)
+						LogAction("API Structure Data HAS Changed", "debug", false)
 						result = true
 						atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 						locationPresNotify(getLocationPresence())
@@ -3168,7 +3165,7 @@ def getApiData(type = null) {
 					LogTrace("API Device Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.deviceData, t0, "dev")
 					if(chg) {
-						LogAction("API Device Data HAS Changed", "debug", true)
+						LogAction("API Device Data HAS Changed", "debug", false)
 						result = true
 					}
 					incApiDevReqCnt()
@@ -3190,7 +3187,7 @@ def getApiData(type = null) {
 					def nresp = resp?.data?.metadata
 					def chg = didChange(atomicState?.metaData, nresp, "meta")
 					if(chg) {
-						LogAction("API Meta Data HAS Changed", "debug", true)
+						LogAction("API Meta Data HAS Changed", "debug", false)
 						result = true
 					}
 					incApiMetaReqCnt()
@@ -3258,7 +3255,7 @@ def queueGetApiData(type = null, newUrl = null) {
 }
 
 def procNestResponse(resp, data) {
-	LogAction("procNestResponse(${data?.type})", "info", false)
+	LogTrace("procNestResponse(${data?.type})")
 	def str = false
 	def dev = false
 	def meta = false
@@ -3285,7 +3282,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Structure Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.structData, t0, "str")
 				if(chg) {
-					LogAction("API Structure Data HAS Changed", "debug", true)
+					LogAction("API Structure Data HAS Changed", "debug", false)
 					str = true
 					atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 					locationPresNotify(getLocationPresence())
@@ -3298,7 +3295,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Device Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.deviceData, t0, "dev")
 				if(chg) {
-					LogAction("API Device Data HAS Changed", "debug", true)
+					LogAction("API Device Data HAS Changed", "debug", false)
 					dev = true
 
 			//		atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
@@ -3314,7 +3311,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Meta Resp.Data: ${resp?.json}")
 				def chg = didChange(atomicState?.metaData, nresp, "meta")
 				if(chg) {
-					LogAction("API Meta Data HAS Changed", "debug", true)
+					LogAction("API Meta Data HAS Changed", "debug", false)
 					meta = true
 				}
 				atomicState.qmetaRequested = false
@@ -3375,7 +3372,7 @@ def receiveEventData() {
 				gotSomething = true
 				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
 			} else {
-				LogAction("got deviceData", "debug", false)
+				LogTrace("got deviceData")
 			}
 		}
 		if(evtData?.data?.structures) {
@@ -3383,9 +3380,9 @@ def receiveEventData() {
 			def chg = didChange(atomicState?.structData, evtData?.data?.structures, "str")
 			if(chg) {
 				gotSomething = true
-				LogAction("API Structure Data HAS Changed (Stream)", "debug", true)
+				LogAction("API Structure Data HAS Changed (Stream)", "debug", false)
 			} else {
-				LogAction("got structData", "debug", false)
+				LogTrace("got structData")
 			}
 		}
 		if(evtData?.data?.metadata) {
@@ -3393,9 +3390,9 @@ def receiveEventData() {
 			def chg = didChange(atomicState?.metaData, evtData?.data?.metadata, "meta")
 			if(chg) {
 				gotSomething = true
-				LogAction("API META Data HAS Changed (Stream)", "debug", true)
+				LogAction("API META Data HAS Changed (Stream)", "debug", false)
 			} else {
-				LogAction("got metaData", "debug", false)
+				LogTrace("got metaData")
 			}
 		}
 	} else {
@@ -3442,7 +3439,7 @@ def didChange(old, newer, type) {
 				if(t1 && t0 != t1) {
 					result = true
 					atomicState?.forceChildUpd = true
-					LogAction("structure old newer not the same ${atomicState?.structures}", "debug", false)
+					LogTrace("structure old newer not the same ${atomicState?.structures}")
 					//whatChanged(t0, t1, "/structures")
 				}
 				atomicState?.structData = newer
@@ -3456,7 +3453,7 @@ def didChange(old, newer, type) {
 					} else {
 						result = true
 						atomicState.needChildUpd = true
-						LogAction("thermostat old newer not the same ${t1}", "debug", false)
+						LogTrace("thermostat old newer not the same ${t1}")
 						if(t1 && old && old?.thermostats && newer?.thermostats && old?.thermostats[t1] && newer?.thermostats[t1]) {
 							//whatChanged(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}")
 						}
@@ -3471,7 +3468,7 @@ def didChange(old, newer, type) {
 					} else {
 						result = true
 						atomicState.needChildUpd = true
-						LogAction("protect old newer not the same ${t1}", "debug", false)
+						LogTrace("protect old newer not the same ${t1}")
 						if(t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms && old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1]) {
 							//whatChanged(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}")
 						}
@@ -3486,7 +3483,7 @@ def didChange(old, newer, type) {
 					} else {
 						result = true
 						atomicState.needChildUpd = true
-						LogAction("camera old newer not the same ${t1}", "debug", false)
+						LogTrace("camera old newer not the same ${t1}")
 						if(t1 && old && old?.cameras && newer?.cameras && old?.cameras[t1] && newer?.cameras[t1]) {
 							//whatChanged(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}")
 						}
@@ -3561,7 +3558,7 @@ def whatChanged(mapA, mapB, headstr) {
 }
 
 def updateChildData(force = false) {
-	LogAction("updateChildData($force) ${atomicState?.forceChildUpd} ${atomicState?.needChildUpd}", "info", false)
+	LogTrace("updateChildData($force) ${atomicState?.forceChildUpd} ${atomicState?.needChildUpd}")
 	if(atomicState?.pollBlocked) { return }
 	def nforce = atomicState?.forceChildUpd
 	atomicState.forceChildUpd = true
@@ -3911,7 +3908,7 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 	def curlbl = devLbl?.toString()
 	if(deflbl && deflbl == curlbl) { nameIsDefault = true }
 	def newlbl = "getNest${abrevStr.capitalize()}Label"(apiName, devId)
-	LogAction("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} || devId: ${devId}", "trace", false)
+	LogTrace("physDevLblHandler | deflbl: ${deflbl} | curlbl: ${curlbl} | newlbl: ${newlbl} | deflblval: ${deflblval} || devId: ${devId}")
 	if(ovrRideNames || (nameIsDefault && curlbl != newlbl)) {		// label change from nest
 		if(curlbl != newlbl) {
 			LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
@@ -3932,7 +3929,7 @@ void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, 
 void virtDevLblHandler(devId, devLbl, devMethAbrev, abrevStr, ovrRideNames) {
 	def curlbl = devLbl?.toString()
 	def newlbl = "getNest${devMethAbrev.capitalize()}Label"()
-	LogAction("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}", "trace", false)
+	LogTrace("virtDevLblHandler | curlbl: ${curlbl} | newlbl: ${newlbl} || devId: ${devId}")
 	if(ovrRideNames && curlbl != newlbl) {
 		LogAction("Changing name from ${curlbl} to ${newlbl}", "info", true)
 		setDeviceLabel(devId, newlbl?.toString())
@@ -4798,42 +4795,42 @@ def apiRespHandler(code, errJson, methodName) {
 def incApiStrReqCnt() {
 	long reqCnt = atomicState?.apiStrReqCnt ?: 0
 	reqCnt = reqCnt?.toLong()+1
-	LogAction("ApiStrReqCnt: $reqCnt", "info", false)
+	LogTrace("ApiStrReqCnt: $reqCnt")
 	atomicState?.apiStrReqCnt = reqCnt?.toLong()
 }
 
 def incApiDevReqCnt() {
 	long reqCnt = atomicState?.apiDevReqCnt ?: 0
 	reqCnt = reqCnt?.toLong()+1
-	LogAction("ApiDevReqCnt: $reqCnt", "info", false)
+	LogTrace("ApiDevReqCnt: $reqCnt")
 	atomicState?.apiDevReqCnt = reqCnt?.toLong()
 }
 
 def incApiMetaReqCnt() {
 	long reqCnt = atomicState?.apiMetaReqCnt ?: 0
 	reqCnt = reqCnt?.toLong()+1
-	LogAction("ApiMetaReqCnt: $reqCnt", "info", false)
+	LogTrace("ApiMetaReqCnt: $reqCnt")
 	atomicState?.apiMetaReqCnt = reqCnt?.toLong()
 }
 
 def incCmdCnt() {
 	long cmdCnt = atomicState?.apiCommandCnt ?: 0
 	cmdCnt = cmdCnt?.toLong()+1
-	LogAction("Api CmdCnt: $cmdCnt", "info", false)
+	LogTrace("Api CmdCnt: $cmdCnt")
 	atomicState?.apiCommandCnt = cmdCnt?.toLong()
 }
 
 def incRestStrEvtCnt() {
 	long evtCnt = atomicState?.apiRestStrEvtCnt ?: 0
 	evtCnt = evtCnt?.toLong()+1
-	LogAction("ApiRestStrEvtCnt: $evtCnt", "info", false)
+	LogTrace("ApiRestStrEvtCnt: $evtCnt")
 	atomicState?.apiRestStrEvtCnt = evtCnt?.toLong()
 }
 
 def incAppNotifSentCnt() {
 	long notCnt = atomicState?.appNotifSentCnt ?: 0
 	notCnt = notCnt?.toLong()+1
-	LogAction("AppNotifSentCnt: $notCnt", "info", false)
+	LogTrace("AppNotifSentCnt: $notCnt")
 	atomicState?.appNotifSentCnt = notCnt?.toLong()
 }
 
@@ -5071,7 +5068,7 @@ def getWeatherConditions(force = false) {
 	//LogTrace("getWeatherConditions")
 	if(atomicState?.weatherDevice) {
 		try {
-			LogAction("Retrieving Local Weather Conditions", "info", true)
+			LogAction("Retrieving Local Weather Conditions", "info", false)
 			def loc = ""
 			def curWeather = ""
 			def curForecast = ""
@@ -5187,7 +5184,7 @@ def getWebFileData(now = true) {
 			metstr = "async"
 		}
 
-		LogAction("Getting appData.json File(${metstr})", "info", true)
+		LogTrace("getWebFileData: Getting appData.json File(${metstr})")
 
 		if(now || !allowAsync) {
 			httpGet(params) { resp ->
@@ -5209,20 +5206,24 @@ def getWebFileData(now = true) {
 }
 
 def webResponse(resp, data) {
-	LogAction("webResponse(${data?.type})", "info", false)
+	LogTrace("webResponse(${data?.type})")
 	def result = false
 	if(resp?.status == 200) {
 		def newdata = resp?.data
 		if(data?.type == "async") { newdata = resp?.json }
+		def t0 = atomicState?.appData
+		def t1 = t0?.token
+		newdata["token"] = t1
 		LogTrace("webResponse Resp: ${newdata}")
-		if(!newdata?.equals(atomicState?.appData)) {
+		LogTrace("webResponse appData: ${t0}")
+		if(newdata && t0 != newdata) {
 			LogAction("appData.json File HAS Changed", "info", true)
 			atomicState?.appData = newdata
 			clientBlacklisted()
 			updateHandler()
 			helpHandler()
 			setStateVar(true)
-		} else { LogAction("appData.json did not change", "info", true) }
+		} else { LogAction("appData.json did not change", "info", false) }
 		getFbAppSettings(data?.type == "async" ? false : true )
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
@@ -5269,7 +5270,7 @@ def webFbResponse(resp, data) {
 		def newdata = resp?.data
 		if(data?.type == "async") { newdata = resp?.json }
 		LogTrace("webFbResponse Resp: ${newdata}")
-		LogAction("appSetttings.json File", "info", true)
+		LogAction("appSetttings.json File", "info", false)
 		def adata = atomicState?.appData
 		adata["token"] = newdata?.token
 		atomicState?.appData = adata
@@ -6506,7 +6507,7 @@ def clientSecret() {
 |									LOGGING AND Diagnostic										|
 *************************************************************************************************/
 def LogTrace(msg, logSrc=null) {
-	def trOn = advAppDebug ? true : false
+	def trOn = (appDebug && advAppDebug) ? true : false
 	if(trOn) {
 		def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
 		Logger(msg, "trace", theLogSrc)
@@ -6514,7 +6515,7 @@ def LogTrace(msg, logSrc=null) {
 }
 
 def LogAction(msg, type="debug", showAlways=false, logSrc=null) {
-	def isDbg = parent ? ((atomicState?.showDebug || showDebug)  ? true : false) : (appDebug ? true : false)
+	def isDbg = parent ? (showDebug  ? true : false) : (appDebug ? true : false)
 	def theLogSrc = (logSrc == null) ? (parent ? "Automation" : "NestManager") : logSrc
 	if(showAlways) { Logger(msg, type, theLogSrc) }
 	else if(isDbg && !showAlways) { Logger(msg, type, theLogSrc) }
@@ -6547,7 +6548,7 @@ def Logger(msg, type, logSrc=null) {
 				log.info "||| ${themsg}"
 				break
 			case "trace":
-				log.trace "|| ${themsg}"
+				log.trace "| ${themsg}"
 				break
 			case "error":
 				log.error "| ${themsg}"
@@ -8050,7 +8051,7 @@ def sendDataToSlack(data, pathVal, cmdType=null, type=null) {
 }
 
 def removeFirebaseData(pathVal) {
-	LogAction("removeFirebaseData(${pathVal})", "trace", true)
+	LogAction("removeFirebaseData(${pathVal})", "trace", false)
 	def result = true
 	try {
 		httpDelete(uri: "${getFirebaseAppUrl()}/${pathVal}") { resp ->
