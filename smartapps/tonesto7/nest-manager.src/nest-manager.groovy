@@ -660,6 +660,8 @@ def pollPrefPage() {
 					getRestSrvcDesc()
 					paragraph title: "Notice", "This is still an experimental feature.  It's subject to your local network and internet connections.  If communication is lost it will default back to standard polling."
 				}
+			} else {
+				restDiscoveryClean()
 			}
 			startStopStream()
 		}
@@ -731,6 +733,14 @@ def selectedRestDiscSrvcDesc() {
 	}
 }
 
+def restDiscoveryClean() {
+	LogAction("Cleaning Out Discovered Services...", "trace", true)
+	atomicState.localNstSrvcs = [:]
+	atomicState.localRestSrvcs = [:]
+	atomicState.discRfshCnt = 0
+	app.updateSetting("selectedRestDevice", "")
+}
+
 def restSrvcDiscovery(params=[:]) {
 	def devices = discoveredSrvcs()
 	def options = devices ?: []
@@ -740,11 +750,7 @@ def restSrvcDiscovery(params=[:]) {
 	atomicState?.discRfshCnt = discRfshCnt+1
 
 	if ((objsFound == 0 && atomicState?.discRfshCnt > 25) || params?.reset == "true") {
-		LogAction("Cleaning Out Discovered Services...", "trace", true)
-		atomicState.localNstSrvcs = [:]
-		atomicState.localRestSrvcs = [:]
-		atomicState.discRfshCnt = 0
-		app.updateSetting("selectedRestDevice", "")
+		restDiscoveryClean()
 	}
 
 	restSrvcSubscribe()
@@ -759,7 +765,7 @@ def restSrvcDiscovery(params=[:]) {
 
 	return dynamicPage(name:"restSrvcDiscovery", title:"", nextPage:"", refreshInterval:5) {
 		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
-			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(Discovered: ${objsFound})", multiple: false, options: options, image: getAppImg("two_way_icon.png")
+			input "selectedRestDevice", "enum", required:false, title: "Local NST Services\n(Discovered: ${objsFound})", multiple: false, options: options, submitOnChange: true, image: getAppImg("two_way_icon.png")
 		}
 		section("Options") {
 			href "restSrvcDiscovery", title:"Clear Discovered Services...", description:"", params: ["reset": "true"], image: getAppImg("reset_icon.png")
@@ -828,25 +834,17 @@ def srvcBrdCastHandler(evt) {
 		def t0 = atomicState?.localRestSrvcs
 		t0 << ["${ssdpUSN}": parsedEvent]
 		atomicState?.localRestSrvcs = t0
-
-		//devices << ["${ssdpUSN}": parsedEvent]
 	}
 }
 
 void srvcDescRespHandler(physicalgraph.device.HubResponse hubResponse) {
 	//LogAction("srvcDescRespHandler", "debug", true)
 	def body = hubResponse.xml
-/*
-	def srvcs = getSrvcs()
-	def srvc = srvcs?.find { it?.key?.contains(body?.device?.UDN.value?.toString()) }
-	if(srvc) {
-		LogAction("srvc: $srvc", "debug", true)
-		srvc.value << ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
-	}
-*/
+
 	if(!atomicState?.localNstSrvcs) { atomicState.localNstSrvcs = [:] }
+	def t1 = body?.device?.UDN?.toString().split(":")
 	def t0 = atomicState?.localNstSrvcs
-	t0["${body?.device?.UDN.value?.toString()}"] = ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
+	t0["${t1[1]}"] = ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
 	atomicState?.localNstSrvcs = t0
 }
 
