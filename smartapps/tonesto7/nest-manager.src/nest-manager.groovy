@@ -740,8 +740,9 @@ def restSrvcDiscovery(params=[:]) {
 	atomicState?.discRfshCnt = discRfshCnt+1
 
 	if ((objsFound == 0 && atomicState?.discRfshCnt > 25) || params?.reset == "true") {
-		log.trace "Cleaning Out Discovered Services..."
-		state?.localNstSrvcs = [:]
+		LogAction("Cleaning Out Discovered Services...", "trace", true)
+		atomicState.localNstSrvcs = [:]
+		atomicState.localRestSrvcs = [:]
 		atomicState.discRfshCnt = 0
 		app.updateSetting("selectedRestDevice", "")
 	}
@@ -754,6 +755,7 @@ def restSrvcDiscovery(params=[:]) {
 	if(((discRfshCnt % 3) == 0) && ((discRfshCnt % 5) != 0)) {
 		verifyDevices()
 	}
+	//LogAction("options: $options   devices: $devices  objsFound $objsFound", "debug", true)
 
 	return dynamicPage(name:"restSrvcDiscovery", title:"", nextPage:"", refreshInterval:5) {
 		section("Please wait while we discover your local NST Service devices. Discovery can take a couple minutes or more, so sit back and relax! Select your service below once discovered.") {
@@ -765,32 +767,42 @@ def restSrvcDiscovery(params=[:]) {
 	}
 }
 
-void sendNstSrvcDiscovery() {
-	LogAction("Sending SSDP discovery broadcast to find local NST Service...", "info", true)
-	sendHubCommand(new physicalgraph.device.HubAction("lan discovery ${getRestSrvcUrn()}", physicalgraph.device.Protocol.LAN))
-}
-
 Map discoveredSrvcs() {
 	def objs = getVerifiedSrvcs()
 	def res = [:]
-	objs?.each { res[it?.value?.host] = it?.value?.name	}
+	objs?.each { res[it?.value?.host] = it?.value?.name }
 	return res
 }
 
 def getVerifiedSrvcs() { getSrvcs().findAll { it?.value?.verified == true } }
 
-void restSrvcSubscribe() {
-	atomicState.ssdpOn = true
-	subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler)
+def getSrvcs() {
+	if (!atomicState?.localNstSrvcs) { atomicState.localNstSrvcs = [:] }
+	atomicState?.localNstSrvcs
 }
 
-def getSrvcs() {
-	if (!state?.localNstSrvcs) { state.localNstSrvcs = [:] }
-	state?.localNstSrvcs
+void restSrvcSubscribe() {
+	if(atomicState?.ssdpOn != true) {
+		LogAction("Enabling SSDP client", "info", true)
+		atomicState.ssdpOn = true
+		atomicState.localNstSrvcs = [:]
+		atomicState.localRestSrvcs = [:]
+		subscribe(location, "ssdpTerm.${getRestSrvcUrn()}", srvcBrdCastHandler)
+	}
+}
+
+void sendNstSrvcDiscovery() {
+	LogAction("Sending SSDP discovery broadcast to find local NST Service...", "info", true)
+	sendHubCommand(new physicalgraph.device.HubAction("lan discovery ${getRestSrvcUrn()}", physicalgraph.device.Protocol.LAN))
+}
+
+def getRestSrvcs() {
+	if(!atomicState?.localRestSrvcs) { atomicState.localRestSrvcs = [:] }
+	atomicState?.localRestSrvcs
 }
 
 void verifyDevices() {
-	def devices = getSrvcs().findAll { it?.value?.verified != true }
+	def devices = getRestSrvcs()
 	devices.each {
 		int port = convertHexToInt(it?.value?.deviceAddress)
 		String ip = convertHexToIP(it?.value?.networkAddress)
@@ -800,27 +812,42 @@ void verifyDevices() {
 }
 
 def srvcBrdCastHandler(evt) {
+	LogAction("srvcBrdCastHandler", "debug", true)
 	def description = evt.description
 	def hub = evt?.hubId
 	def parsedEvent = parseLanMessage(description)
 	parsedEvent << ["hub":hub]
-	def devices = getSrvcs()
+
+	//LogAction("parsedEvent: ${parsedEvent}", "info", false)
+
+	def devices = getRestSrvcs()
 	String ssdpUSN = parsedEvent?.ssdpUSN.toString()
 	if (devices?."${ssdpUSN}") {
 		//This area can be used to update service status in ST
 	} else {
-		devices << ["${ssdpUSN}": parsedEvent]
+		def t0 = atomicState?.localRestSrvcs
+		t0 << ["${ssdpUSN}": parsedEvent]
+		atomicState?.localRestSrvcs = t0
+
+		//devices << ["${ssdpUSN}": parsedEvent]
 	}
 }
 
 void srvcDescRespHandler(physicalgraph.device.HubResponse hubResponse) {
+	//LogAction("srvcDescRespHandler", "debug", true)
 	def body = hubResponse.xml
+/*
 	def srvcs = getSrvcs()
 	def srvc = srvcs?.find { it?.key?.contains(body?.device?.UDN.value?.toString()) }
-	if (srvc) {
-		log.debug "srvc: $srvc"
+	if(srvc) {
+		LogAction("srvc: $srvc", "debug", true)
 		srvc.value << ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
 	}
+*/
+	if(!atomicState?.localNstSrvcs) { atomicState.localNstSrvcs = [:] }
+	def t0 = atomicState?.localNstSrvcs
+	t0["${body?.device?.UDN.value?.toString()}"] = ["name":"${body?.device?.hostName} (${body?.device?.serviceIp})", "host": "${body?.device?.serviceIp}:${body?.device?.servicePort}", "verified": true]
+	atomicState?.localNstSrvcs = t0
 }
 
 def automationsPage() {
@@ -2161,6 +2188,7 @@ def startStopStream() {
 	else if ((!settings?.restStreaming || !strEn) && atomicState?.restStreamingOn) {
 		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
 		restStreamHandler(true)
+		atomicState?.restStreamingOn = false
 		runIn(5, "restStreamCheck", [overwrite: true])
 	}
 }
@@ -2174,6 +2202,7 @@ def getRestHost() {
 	def autoHost = settings?.selectedRestDevice ?: null
 	def ip = settings?.restStreamIp ?: null
 	def port = settings?.restStreamPort ?: 3000
+	//LogAction("getRestHost: autoHost: ${autoHost}  ip: ${ip}  port: ${port}", "trace", true)
 	if(autoHost) {
 		res = autoHost
 	} else {
@@ -2188,15 +2217,24 @@ def getRestHost() {
 }
 
 def restStreamHandler(close = false) {
+	def toClose = close
 	def host = getRestHost()
-	if(!host) { return }
+	if(!host) {
+		atomicState.restStreamingOn = false; 
+		host = atomicState?.lastRestHost ?: null
+		atomicState.lastRestHost = null
+		if(!host) { return }
+		toClose = true
+	} else {
+		atomicState.lastRestHost = host
+	}
 	if(!close && !atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
 		atomicState.restStreamingOn = false
 		return
 	}
-	LogAction("restStreamHandler(close: ${close})", "debug", false)
-	def connStatus = close ? false : true
+	//LogAction("restStreamHandler(close: ${close}) host: ${host} lastRestHost: ${atomicState?.lastRestHost}", "debug", true)
+	def connStatus = toClose ? false : true
 	try {
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
@@ -2224,11 +2262,11 @@ def restStreamCheck() {
 	if(!host) { return }
 	if(!atomicState?.authToken) {
 		LogAction("No authToken", "warn", false)
-		atomicState.restStreamingOn = false
 		return
 	}
 	LogAction("restStreamCheck ip: ${ip} port: {$port}", "debug", false)
 	try {
+		atomicState.lastRestHost = host
 		def hubAction = new physicalgraph.device.HubAction(
 			method: "POST",
 			headers: [
@@ -3362,6 +3400,9 @@ def receiveEventData() {
 				LogAction("got metaData", "debug", false)
 			}
 		}
+	} else {
+		LogAction("Sending restStreamHandler(Stop) Event to local node service", "debug", true)
+		restStreamHandler(true)
 	}
 	if(gotSomething) {
 		atomicState?.lastHeardFromNestDt = getDtNow()
