@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 // for the UI
 metadata {
@@ -762,7 +762,7 @@ def lastCheckinEvent(checkin, isOnline) {
 
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Previous Check-in: (${lastChk})")
+		LogAction("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Previous Check-in: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 		if(hcTimeout && lastConnSeconds >= 0 && isOnline.toString() == "true") { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
 		//Logger("lastConnSeconds: $lastConnSeconds")
@@ -1977,19 +1977,19 @@ void Logger(msg, logType = "debug") {
 	def smsg = state?.showLogNamePrefix ? "${device.displayName}: ${msg}" : "${msg}"
 	switch (logType) {
 		case "trace":
-			log.trace "${smsg}"
+			log.trace "|| ${smsg}"
 			break
 		case "debug":
 			log.debug "${smsg}"
 			break
 		case "info":
-			log.info "${smsg}"
+			log.info "||| ${smsg}"
 			break
 		case "warn":
-			log.warn "${smsg}"
+			log.warn "|| ${smsg}"
 			break
 		case "error":
-			log.error "${smsg}"
+			log.error "| ${smsg}"
 			break
 		default:
 			log.debug "${smsg}"
