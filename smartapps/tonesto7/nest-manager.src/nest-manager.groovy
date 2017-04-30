@@ -5564,7 +5564,6 @@ def reqSchedInfoRprt(child, report=true) {
 
 def getVoiceRprtCnt() {
 	def cnt = 0
-	//def devs = getAllChildDevices()
 	def devs = app.getChildDevices(true)
 	if(devs?.size() >= 1) {
 		devs?.each { dev ->
@@ -7428,7 +7427,6 @@ def childDevDataPage() {
 	dynamicPage(name: "childDevDataPage", refreshInterval:rVal, install: false) {
 		if(!atomicState?.diagDevStateFilters) { atomicState?.diagDevStateFilters = ["diagDevStateFilters"] }
 		def devices = app.getChildDevices(true)
-		//def devices = getAllChildDevices()
 		section("Device Selection:") {
 			input(name: "childDevDataPageDev", title: "Select Device(s) to View", type: "enum", required: false, multiple: true, submitOnChange: true, metadata: [values:buildDevInputMap()])
 			if(!settings?.childDevDataPageDev) { paragraph "Please select a device to view!", required: true, state: null }
@@ -7584,7 +7582,6 @@ def getChildStateKeys(type) {
 	def objs
 	switch (type) {
 		case "device":
-			//objs = getAllChildDevices()
 			objs = app.getChildDevices(true)
 			break
 		case "childapp":
@@ -7611,7 +7608,8 @@ def getChildStateKeys(type) {
 
 def buildDevInputMap() {
 	def devMap = [:]
-	getAllChildDevices()?.each {
+	def devices = app.getChildDevices(true)
+	devices?.each {
 		devMap[[it?.deviceNetworkId].join('.')] = it?.label
 	}
 	return devMap
@@ -7700,7 +7698,7 @@ def createManagerBackupDataJson() {
 
 def getDeviceMetricCnts() {
 	def data = [:]
-	def devs = getAllChildDevices()
+	def devs = app.getChildDevices(true)
 	if(devs?.size() >= 1) {
 		devs?.each { dev ->
 			def mData = dev?.getMetricCntData()
@@ -7899,7 +7897,7 @@ def sendFeedbackData(msg) {
 }
 
 def sendFirebaseData(data, pathVal, cmdType=null, type=null, noAsync=false) {
-	LogAction("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	LogTrace("sendFirebaseData(${data}, ${pathVal}, $cmdType, $type")
 
 	def allowAsync = false
 	def metstr = "sync"
@@ -7915,7 +7913,7 @@ def sendFirebaseData(data, pathVal, cmdType=null, type=null, noAsync=false) {
 }
 
 def queueFirebaseData(data, pathVal, cmdType=null, type=null) {
-	LogAction("queueFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	LogTrace("queueFirebaseData(${data}, ${pathVal}, $cmdType, $type")
 	def result = false
 	def json = new groovy.json.JsonOutput().prettyPrint(data)
 	def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
@@ -7938,7 +7936,7 @@ def queueFirebaseData(data, pathVal, cmdType=null, type=null) {
 }
 
 def processFirebaseResponse(resp, data) {
-	LogAction("processFirebaseResponse(${data?.type})", "info", false)
+	LogTrace("processFirebaseResponse(${data?.type})")
 	def result = false
 	def typeDesc = data?.type
 	//log.debug "type: ${typeDesc}"
@@ -7969,7 +7967,7 @@ def processFirebaseResponse(resp, data) {
 }
 
 def syncSendFirebaseData(data, pathVal, cmdType=null, type=null) {
-	LogAction("syncSendFirebaseData(${data}, ${pathVal}, $cmdType, $type", "trace", false)
+	LogTrace("syncSendFirebaseData(${data}, ${pathVal}, $cmdType, $type")
 	def result = false
 	def json = new groovy.json.JsonOutput().prettyPrint(data)
 	def params = [ uri: "${getFirebaseAppUrl()}/${pathVal}", body: json.toString() ]
