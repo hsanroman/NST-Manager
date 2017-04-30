@@ -7252,7 +7252,7 @@ void resetAlarmTest() {
 def getLastAlarmTestDtSec() { return !atomicState?.isAlarmCoTestActiveDt ? 100000 : GetTimeDiffSeconds(atomicState?.isAlarmCoTestActiveDt, null, "getLastAlarmTestDtSec").toInteger() }
 
 def simulateTestEventPage(params) {
-	def pName = getAutoType()
+	//def pName = getAutoType()
 	def testType
 	if(params?.testType) {
 		atomicState.curProtTestType = params?.testType
