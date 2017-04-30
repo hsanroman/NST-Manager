@@ -3364,13 +3364,12 @@ def receiveEventData() {
 		//atomicState.aaOldStreamData = evtData
 		//state.remove("aaOldStreamData")
 
-		//atomicState?.restStreamingOn = true
 		if(evtData?.data?.devices) {
 			//LogTrace("API Device Resp.Data: ${evtData?.data?.devices}")
+			gotSomething = true
 			def chg = didChange(atomicState?.deviceData, evtData?.data?.devices, "dev")
 			if(chg) {
 				devChgd = true
-				gotSomething = true
 				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
 			} else {
 				LogTrace("got deviceData")
@@ -3378,19 +3377,21 @@ def receiveEventData() {
 		}
 		if(evtData?.data?.structures) {
 			//LogTrace("API Structure Resp.Data: ${evtData?.data?.structures}")
+			gotSomething = true
 			def chg = didChange(atomicState?.structData, evtData?.data?.structures, "str")
 			if(chg) {
-				gotSomething = true
 				LogAction("API Structure Data HAS Changed (Stream)", "debug", false)
+				atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
+				locationPresNotify(getLocationPresence())
 			} else {
 				LogTrace("got structData")
 			}
 		}
 		if(evtData?.data?.metadata) {
 			//LogTrace("API Metadata Resp.Data: ${evtData?.data?.metadata}")
+			gotSomething = true
 			def chg = didChange(atomicState?.metaData, evtData?.data?.metadata, "meta")
 			if(chg) {
-				gotSomething = true
 				LogAction("API META Data HAS Changed (Stream)", "debug", false)
 			} else {
 				LogTrace("got metaData")
