@@ -3141,7 +3141,7 @@ def getApiData(type = null) {
 					LogTrace("API Structure Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.structData, t0, "str")
 					if(chg) {
-						LogAction("API Structure Data HAS Changed", "debug", false)
+						LogAction("API Structure Data HAS Changed", "info", true)
 						result = true
 						atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 						locationPresNotify(getLocationPresence())
@@ -3166,7 +3166,7 @@ def getApiData(type = null) {
 					LogTrace("API Device Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.deviceData, t0, "dev")
 					if(chg) {
-						LogAction("API Device Data HAS Changed", "debug", false)
+						LogAction("API Device Data HAS Changed", "info", true)
 						result = true
 					}
 					incApiDevReqCnt()
@@ -3188,7 +3188,7 @@ def getApiData(type = null) {
 					def nresp = resp?.data?.metadata
 					def chg = didChange(atomicState?.metaData, nresp, "meta")
 					if(chg) {
-						LogAction("API Meta Data HAS Changed", "debug", false)
+						LogAction("API Meta Data HAS Changed", "info", true)
 						result = true
 					}
 					incApiMetaReqCnt()
@@ -3283,7 +3283,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Structure Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.structData, t0, "str")
 				if(chg) {
-					LogAction("API Structure Data HAS Changed", "debug", false)
+					LogAction("API Structure Data HAS Changed", "info", true)
 					str = true
 					atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 					locationPresNotify(getLocationPresence())
@@ -3296,7 +3296,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Device Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.deviceData, t0, "dev")
 				if(chg) {
-					LogAction("API Device Data HAS Changed", "debug", false)
+					LogAction("API Device Data HAS Changed", "info", true)
 					dev = true
 
 			//		atomicState.thermostats =  settings?.thermostats ? statState(settings?.thermostats) : null
@@ -3312,7 +3312,7 @@ def procNestResponse(resp, data) {
 				LogTrace("API Meta Resp.Data: ${resp?.json}")
 				def chg = didChange(atomicState?.metaData, nresp, "meta")
 				if(chg) {
-					LogAction("API Meta Data HAS Changed", "debug", false)
+					LogAction("API Meta Data HAS Changed", "info", true)
 					meta = true
 				}
 				atomicState.qmetaRequested = false
@@ -3370,7 +3370,7 @@ def receiveEventData() {
 			def chg = didChange(atomicState?.deviceData, evtData?.data?.devices, "dev")
 			if(chg) {
 				devChgd = true
-				LogAction("API Device Data HAS Changed (Stream)", "debug", false)
+				LogAction("API Device Data HAS Changed (Stream)", "info", true)
 			} else {
 				LogTrace("got deviceData")
 			}
@@ -3380,7 +3380,7 @@ def receiveEventData() {
 			gotSomething = true
 			def chg = didChange(atomicState?.structData, evtData?.data?.structures, "str")
 			if(chg) {
-				LogAction("API Structure Data HAS Changed (Stream)", "debug", false)
+				LogAction("API Structure Data HAS Changed (Stream)", "info", true)
 				atomicState.structName = atomicState?.structData && atomicState?.structures ? atomicState?.structData[atomicState?.structures]?.name : null
 				locationPresNotify(getLocationPresence())
 			} else {
@@ -3392,7 +3392,7 @@ def receiveEventData() {
 			gotSomething = true
 			def chg = didChange(atomicState?.metaData, evtData?.data?.metadata, "meta")
 			if(chg) {
-				LogAction("API META Data HAS Changed (Stream)", "debug", false)
+				LogAction("API META Data HAS Changed (Stream)", "info", true)
 			} else {
 				LogTrace("got metaData")
 			}
