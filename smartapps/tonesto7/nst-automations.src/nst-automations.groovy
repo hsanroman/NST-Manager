@@ -638,7 +638,7 @@ def initAutoApp() {
 					])
 					numact += 1
 				}
-				//LogAction("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]", "info", true)
+				LogTrace("initAutoApp: [Schedule: $scd | sLbl: $sLbl | act: $act | newscd: $newscd]")
 				atomicState."sched${cnt}restrictions" = newscd
 				atomicState."schedule${cnt}SwEnabled" = (newscd?.s1 || newscd?.s0) ? true : false
 				atomicState."schedule${cnt}PresEnabled" = (newscd?.p1 || newscd?.p0) ? true : false
@@ -1099,7 +1099,7 @@ def scheduler() {
 
 def heartbeatAutomation() {
 	def autoType = getAutoType()
-	LogAction("Heartbeat ${autoType}: heartbeatAutomation()", "trace", false)
+	LogTrace("Heartbeat ${autoType}: heartbeatAutomation()")
 	def val = 900
 	if(autoType == "schMot") {
 		val = 220
@@ -1280,7 +1280,7 @@ def watchDogCheck() {
 					def exceeded = d1?.currentValue("safetyTempExceeded")?.toString()
 					if(exceeded == "true") {
 						watchDogAlarmActions(d1.displayName, dni, "temp")
-						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "trace", true)
+						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "warn", true)
 					} else {
 
 // This is allowing for warning if Nest has problem of system coming out of ECO while away
@@ -1292,7 +1292,7 @@ def watchDogCheck() {
 							if(!(curMode in ["eco", "off" ])) {
 								watchDogAlarmActions(d1.displayName, dni, "eco")
 								def pres = d1?.currentPresence?.toString()
-								LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} is away and thermostat is not in ECO (${curMode}) (${pres})", "trace", true)
+								LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} is away and thermostat is not in ECO (${curMode}) (${pres})", "warn", true)
 							}
 						}
 					}
@@ -1325,7 +1325,7 @@ def watchDogAlarmActions(dev, dni, actType) {
 			break
 	}
 	if(getLastWatDogSafetyAlertDtSec(dni) > getWatDogRepeatMsgDelayVal()) {
-		LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "trace", true)
+		LogAction("watchDogAlarmActions() | ${evtNotifMsg}", "warn", true)
 
 		if(allowNotif) {
 			sendEventPushNotifications(evtNotifMsg, "Warning", pName)
@@ -2133,7 +2133,7 @@ def getFanSwitchesSpdChk() {
 }
 
 def fanCtrlCheck() {
-	//LogAction("FanControl Event | Fan Switch Check", "trace", false)
+	LogAction("FanControl Event | Fan Switch Check", "trace", false)
 	try {
 		def fanCtrlTstat = schMotTstat
 
@@ -2664,7 +2664,7 @@ def isExtTmpConfigured() {
 }
 
 def getExtConditions( doEvent = false ) {
-	//LogAction("getExtConditions", "trace", true)
+	LogTrace("getExtConditions")
 	if(atomicState?.NeedwUpd && parent?.getWeatherDeviceInst()) {
 		def cur = parent?.getWData()
 		def weather = parent.getWeatherDevice()
@@ -4064,12 +4064,12 @@ def getCurrentSchedule() {
 	}
 	if(ccnt > schedList?.size()) { noSched = true }
 	else { mySched = ccnt }
-	//LogAction("getCurrentSchedule: mySched: $mySched noSched: $noSched ccnt: $ccnt res1: $res1", "trace", false)
+	LogTrace("getCurrentSchedule: mySched: $mySched noSched: $noSched ccnt: $ccnt res1: $res1")
 	return mySched
 }
 
 private checkRestriction(cnt) {
-	//	LogAction("checkRestriction:( $cnt )", "trace", false)
+	//LogTrace("checkRestriction:( $cnt )")
 	def sLbl = "schMot_${cnt}_"
 	def restriction
 	def act = settings["${sLbl}SchedActive"]
@@ -4119,7 +4119,7 @@ private checkRestriction(cnt) {
 	} else {
 		restriction = "an inactive schedule"
 	}
-	//LogAction("checkRestriction:( $cnt ) restriction: $restriction", "trace", false)
+	LogTrace("checkRestriction:( $cnt ) restriction: $restriction")
 	return restriction
 }
 
@@ -4306,7 +4306,7 @@ def isTimeBetween(start, end, now, tz) {
 */
 
 def checkOnMotion(mySched) {
-	//LogTrace("checkOnMotion($mySched)")
+	LogTrace("checkOnMotion($mySched)")
 	def sLbl = "schMot_${mySched}_"
 
 	if(settings["${sLbl}Motion"] && atomicState?."${sLbl}MotionActiveDt") {
@@ -5388,7 +5388,7 @@ def showUpdateSchedule(sNum=null,hideStr=null) {
 
 def editSchedule(schedData) {
 	def cnt = schedData?.secData?.scd
-	LogAction("editSchedule (${schedData?.secData})", "trace", false)
+	LogTrace("editSchedule (${schedData?.secData})")
 
 	def sLbl = "schMot_${cnt}_"
 	def canHeat = atomicState?.schMotTstatCanHeat
@@ -6048,7 +6048,7 @@ def voiceNotifString(phrase, pName) {
 }
 
 def getNotificationOptionsConf(pName) {
-	LogAction("getNotificationOptionsConf pName: $pName", "trace", false)
+	LogTrace("getNotificationOptionsConf pName: $pName")
 	def res = (settings?."${pName}NotificationsOn" &&
 			(getRecipientDesc(pName) ||
 			(settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer")) ||
@@ -6058,7 +6058,7 @@ def getNotificationOptionsConf(pName) {
 }
 
 def getNotifConfigDesc(pName) {
-	LogAction("getNotifConfigDesc pName: $pName", "trace", false)
+	LogTrace("getNotifConfigDesc pName: $pName")
 	def str = ""
 	if(settings?."${pName}NotificationsOn") {
 		str += ( getRecipientDesc(pName) || (settings?."${pName}AllowSpeechNotif" && (settings?."${pName}SpeechDevices" || settings?."${pName}SpeechMediaPlayer"))) ?
@@ -6258,7 +6258,7 @@ def sendNofificationMsg(msg, msgType, recips = null, sms = null, push = null) {
 *************************************************************************************************/
 
 def sendEventPushNotifications(message, type, pName) {
-	//LogTrace("sendEventPushNotifications($message, $type, $pName)")
+	LogTrace("sendEventPushNotifications($message, $type, $pName)")
 	if(settings["${pName}_Alert_1_Send_Push"] || settings["${pName}_Alert_2_Send_Push"]) {
 //TODO this portion is never reached
 		if(settings["${pName}_Alert_1_CustomPushMessage"]) {
