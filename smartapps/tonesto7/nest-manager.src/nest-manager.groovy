@@ -2538,7 +2538,7 @@ def onAppTouch(event) {
 
 def refresh(child = null) {
 	def devId = !child?.device?.deviceNetworkId ? child?.toString() : child?.device?.deviceNetworkId.toString()
-	LogAction("Refresh Received Device:${devId}", "debug", true)
+	LogAction("Refresh Received Device:${devId}", "debug", false)
 	return sendNestApiCmd(atomicState?.structures, "poll", "poll", 0, devId)
 }
 
@@ -4421,7 +4421,7 @@ def getQueueToWork() {
 			}
 		}
 	}
-	LogAction("getQueueToWork queue: ${qnum}", "info", false)
+	LogTrace("getQueueToWork queue: ${qnum}")
 	return qnum
 }
 
