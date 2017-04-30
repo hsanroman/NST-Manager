@@ -1334,14 +1334,22 @@ def buildNotifPrefMap() {
 	def res = [:]
 	res["app"] = [:]
 	res?.app["api"] = [
-		"issueMsg":(settings?.appApiIssuesMsg == false ? false : true), "issueMsgWait":(settings?.appApiIssuesWaitVal == null ? 900 : settings?.appApiIssuesWaitVal.toInteger()),
-		"cmdFailMsg":(settings?.appApiFailedCmdMsg == false ? false : true), "rateLimitMsg":(settings?.appApiRateLimitMsg == false ? false : true)
+		"issueMsg":(settings?.appApiIssuesMsg == false ? false : true),
+		"issueMsgWait":(settings?.appApiIssuesWaitVal == null ? 900 : settings?.appApiIssuesWaitVal.toInteger()),
+		"cmdFailMsg":(settings?.appApiFailedCmdMsg == false ? false : true),
+		"rateLimitMsg":(settings?.appApiRateLimitMsg == false ? false : true)
 	]
-	res?.app["updates"] = ["updMsg":(settings?.sendAppUpdateMsg == false ? false : true), "updMsgWait":(settings?.updNotifyWaitVal == null ? 43200 : settings?.updNotifyWaitVal.toInteger())]
+	res?.app["updates"] = [
+		"updMsg":(settings?.sendAppUpdateMsg == false ? false : true),
+		"updMsgWait":(settings?.updNotifyWaitVal == null ? 43200 : settings?.updNotifyWaitVal.toInteger())
+	]
 	res?.app["poll"] = ["missPollMsg":(settings?.sendMissedPollMsg == false ? false : true)]
 	res?.app["remind"] = ["logRemindMsg":(settings?.appDbgDiagRemindMsg == false ? false : true)]
 	res["dev"] = [:]
-	res?.dev["devHealth"] = ["healthMsg":(settings?.devHealthNotifyMsg == false ? false : true), "healthMsgWait":(settings?.devHealthMsgWaitVal == null ? 3600 : settings?.devHealthMsgWaitVal.toInteger())]
+	res?.dev["devHealth"] = [
+		"healthMsg":(settings?.devHealthNotifyMsg == false ? false : true),
+		"healthMsgWait":(settings?.devHealthMsgWaitVal == null ? 3600 : settings?.devHealthMsgWaitVal.toInteger())
+	]
 	res?.dev["camera"] = ["streamMsg":(settings?.camStreamNotifMsg == false ? false : true)]
 	res?.dev["weather"] = ["localAlertMsg":(settings?.weathAlertNotif == false ? false : true)]
 	res?.dev["tstat"] = [:]
@@ -2150,6 +2158,15 @@ def initManagerApp() {
 	}
 	if(atomicState?.installData?.usingNewAutoFile) {
 		stateCleanup()
+		def tstatAutoApp = getChildApps()?.find {
+			try {
+				def aa = it.getAutomationType()
+			}
+			catch (Exception e) {
+				log.error "BAD Automation file ${app?.label?.toString()}, please RE-INSTALL"
+				appUpdateNotify(true)
+			}
+		}
 	}
 	subscriber()
 	setPollingState()
@@ -2742,6 +2759,10 @@ def clearAllAutomationBackupData() {
 
 def getAutomationBackupData() {
 	return getWebData([uri: "https://st-nest-manager.firebaseio.com/backupData/clients/${atomicState?.installationId}/automationApps.json", contentType:"application/json"], "getAutomationBackup", false)
+}
+
+def migrationInProgress() {
+	return atomicState?.migrationInProgress == true ? true : false
 }
 
 /*
@@ -4929,10 +4950,10 @@ def missPollNotify(on, wait) {
 	}
 }
 
-def appUpdateNotify() {
+def appUpdateNotify(force=false) {
 	def on = atomicState?.notificationPrefs?.app?.updates?.updMsg
 	def wait = atomicState?.notificationPrefs?.app?.updates?.updMsgWait
-	if(!on || !wait) { return }
+	if(!force && (!on || !wait)) { return }
 	if(getLastUpdMsgSec() > wait.toInteger()) {
 		def appUpd = isAppUpdateAvail()
 		def autoappUpd = isAutoAppUpdateAvail()
@@ -4941,9 +4962,10 @@ def appUpdateNotify() {
 		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
 		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
 		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
-		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd) {
+		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || force) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
+			str += !force ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
@@ -6658,28 +6680,7 @@ void finishFixState() {
 			}
 		}
 	} else {
-		if(atomicState?.resetAllData) {
-			def tstat = settings?.schMotTstat
-			if(tstat) {
-LogAction("finishFixState found tstat", "info", true)
-				getTstatCapabilities(tstat, schMotPrefix())
-				if(!getMyLockId()) {
-					setMyLockId(app.id)
-				}
-				if(settings?.schMotRemoteSensor) {
-LogAction("finishFixState found remote sensor", "info", true)
-					if( parent?.remSenLock(tstat?.deviceNetworkId, getMyLockId()) ) {  // lock new ID
-						atomicState?.remSenTstat = tstat?.deviceNetworkId
-					}
-					if(isRemSenConfigured() && settings?.remSensorDay) {
-LogAction("finishFixState found remote sensor configured", "info", true)
-						if(settings?.vthermostat != null) { parent?.addRemoveVthermostat(tstat.deviceNetworkId, vthermostat, getMyLockId()) }
-					}
-				}
-			}
-			initAutoApp()
-			//updated()
-		}
+		LogAction("finishFixState called as CHILD", "error", true)
 	}
 }
 
@@ -8077,6 +8078,7 @@ def removeFirebaseData(pathVal) {
 |********************************************************************************************/
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+// Calls by Automation children
 // parent only method
 def automationNestModeEnabled(val=null) {
 	LogAction("automationNestModeEnabled: val: $val", "info", false)
@@ -8088,7 +8090,38 @@ def automationNestModeEnabled(val=null) {
 	return atomicState?.automationNestModeEnabled ?: false
 }
 
+def remSenLock(val, myId) {
+	def res = false
+	if(val && myId && !parent) {
+		def lval = atomicState?."remSenLock${val}"
+		if(!lval) {
+			atomicState?."remSenLock${val}" = myId
+			res = true
+		} else if(lval == myId) { res = true }
+	}
+	return res
+}
+
+def remSenUnlock(val, myId) {
+	def res = false
+	if(val && myId && !parent) {
+		def lval = atomicState?."remSenLock${val}"
+		if(lval) {
+			if(lval == myId) {
+				atomicState?."remSenLock${val}" = null
+				state.remove("remSenLock${val}" as String)
+				res = true
+			}
+		} else { res = true }
+	}
+	return res
+}
+
+// Most of this is obsolete after upgrade to V5 is complete
+
 def initAutoApp() {
+	def appLbl = getCurAppLbl()
+	LogAction("initAutoApp(): called by ${appLbl}; May need REINSTALL", "warn", true)
 /*
 	if (settings["automationTypeFlag"] && settings["restoreCompleted"] != true) {
 		log.debug "automationType: ${settings?.automationTypeFlag}"
@@ -8118,12 +8151,8 @@ def initAutoApp() {
 	state.remove("enRemDiagLogging")   // cause Automations to re-check with parent for value after updated is called
 }
 
-def migrationInProgress() {
-	return atomicState?.migrationInProgress == true ? true : false
-}
-
 def uninstAutomationApp() {
-	//LogTrace("uninstAutomationApp")
+	LogTrace("uninstAutomationApp")
 	def autoType = getAutoType()
 	//def migrate = parent?.migrationInProgress()
 	if(autoType == "schMot") {
@@ -8228,6 +8257,22 @@ def getAutoIcon(type) {
 	}
 }
 
+// /********************************************************************************
+// |		SCHEDULE, MODE, or MOTION CHANGES ADJUST THERMOSTAT SETPOINTS			|
+// |		(AND THERMOSTAT MODE) AUTOMATION CODE									|
+// *********************************************************************************/
+//
+def getTstatAutoDevId() {
+	if(settings?.schMotTstat) { return settings?.schMotTstat.deviceNetworkId.toString() }
+	return null
+}
+
+def isSchMotConfigured() {
+	return settings?.schMotTstat ? true : false
+}
+
+def getLastschMotEvalSec() { return !atomicState?.lastschMotEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastschMotEval, null, "getLastschMotEvalSec").toInteger() }
+
 //These are here to catch any events that occur before the migration occurs
 def heartbeatAutomation() { return }
 def runAutomationEval() { return }
@@ -8247,33 +8292,6 @@ def getIsAutomationDisabled() {
 	return (dis != null && dis == true) ? true : false
 }
 
-def remSenLock(val, myId) {
-	def res = false
-	if(val && myId && !parent) {
-		def lval = atomicState?."remSenLock${val}"
-		if(!lval) {
-			atomicState?."remSenLock${val}" = myId
-			res = true
-		} else if(lval == myId) { res = true }
-	}
-	return res
-}
-
-def remSenUnlock(val, myId) {
-	def res = false
-	if(val && myId && !parent) {
-		def lval = atomicState?."remSenLock${val}"
-		if(lval) {
-			if(lval == myId) {
-				atomicState?."remSenLock${val}" = null
-				state.remove("remSenLock${val}" as String)
-				res = true
-			}
-		} else { res = true }
-	}
-	return res
-}
-
 def fixTempSetting(Double temp) {
 	def newtemp = temp
 	if(temp != null) {
@@ -8288,16 +8306,6 @@ def fixTempSetting(Double temp) {
 		}
 	}
 	return newtemp
-}
-
-// /********************************************************************************
-// |		SCHEDULE, MODE, or MOTION CHANGES ADJUST THERMOSTAT SETPOINTS			|
-// |		(AND THERMOSTAT MODE) AUTOMATION CODE									|
-// *********************************************************************************/
-//
-def getTstatAutoDevId() {
-	if(settings?.schMotTstat) { return settings?.schMotTstat.deviceNetworkId.toString() }
-	return null
 }
 
 private tempRangeValues() {
@@ -8479,13 +8487,6 @@ def inputItemsToList(items) {
 	return null
 }
 
-
-def isSchMotConfigured() {
-	return settings?.schMotTstat ? true : false
-}
-
-def getLastschMotEvalSec() { return !atomicState?.lastschMotEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastschMotEval, null, "getLastschMotEvalSec").toInteger() }
-
 def getInputToStringDesc(inpt, addSpace = null) {
 	def cnt = 0
 	def str = ""
@@ -8571,6 +8572,8 @@ private getDeviceSupportedCommands(dev) {
 	return dev?.supportedCommands.findAll { it as String }
 }
 
+/*
+// obsolete
 def getTstatCapabilities(tstat, autoType, dyn = false) {
 	def canCool = true
 	def canHeat = true
@@ -8583,6 +8586,7 @@ def getTstatCapabilities(tstat, autoType, dyn = false) {
 	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
 	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
 }
+*/
 
 def getSafetyTemps(tstat, usedefault=true) {
 	def minTemp = tstat?.currentState("safetyTempMin")?.doubleValue
@@ -8622,6 +8626,8 @@ def getComfortDewpoint(tstat, usedefault=true) {
 	return maxDew
 }
 
+/*
+// obsolete
 def getSafetyTempsOk(tstat) {
 	def sTemps = getSafetyTemps(tstat)
 	//log.debug "sTempsOk: $sTemps"
@@ -8635,16 +8641,19 @@ def getSafetyTempsOk(tstat) {
 	return true
 }
 
+// obsolete
 def getGlobalDesiredHeatTemp() {
 	def t0 = parent?.settings?.locDesiredHeatTemp?.toDouble()
 	return t0 ?: null
 }
 
+// obsolete
 def getGlobalDesiredCoolTemp() {
 	def t0 = parent?.settings?.locDesiredCoolTemp?.toDouble()
 	return t0 ?: null
 }
 
+// obsolete
 def getClosedContacts(contacts) {
 	if(contacts) {
 		def cnts = contacts?.findAll { it?.currentContact == "closed" }
@@ -8653,6 +8662,7 @@ def getClosedContacts(contacts) {
 	return null
 }
 
+// obsolete
 def getOpenContacts(contacts) {
 	if(contacts) {
 		def cnts = contacts?.findAll { it?.currentContact == "open" }
@@ -8661,6 +8671,7 @@ def getOpenContacts(contacts) {
 	return null
 }
 
+// obsolete
 def getDryWaterSensors(sensors) {
 	if(sensors) {
 		def cnts = sensors?.findAll { it?.currentWater == "dry" }
@@ -8669,6 +8680,7 @@ def getDryWaterSensors(sensors) {
 	return null
 }
 
+// obsolete
 def getWetWaterSensors(sensors) {
 	if(sensors) {
 		def cnts = sensors?.findAll { it?.currentWater == "wet" }
@@ -8677,6 +8689,7 @@ def getWetWaterSensors(sensors) {
 	return null
 }
 
+// obsolete
 def isContactOpen(con) {
 	def res = false
 	if(con) {
@@ -8685,6 +8698,7 @@ def isContactOpen(con) {
 	return res
 }
 
+// obsolete
 def isSwitchOn(dev) {
 	def res = false
 	if(dev) {
@@ -8695,6 +8709,7 @@ def isSwitchOn(dev) {
 	return res
 }
 
+// obsolete
 def isPresenceHome(presSensor) {
 	def res = false
 	if(presSensor) {
@@ -8705,6 +8720,7 @@ def isPresenceHome(presSensor) {
 	return res
 }
 
+// obsolete
 def isSomebodyHome(sensors) {
 	if(sensors) {
 		def cnts = sensors?.findAll { it?.currentPresence == "present" }
@@ -8713,11 +8729,13 @@ def isSomebodyHome(sensors) {
 	return false
 }
 
+// obsolete
 def getTstatPresence(tstat) {
 	def pres = "not present"
 	if(tstat) { pres = tstat?.currentPresence }
 	return pres
 }
+*/
 
 /******************************************************************************
 *					Keep These Methods						  *
@@ -8732,8 +8750,8 @@ def longTimeMinEnum() {
 	]
 	return vals
 }
-*/
 
+// obsolete
 def longTimeSecEnum() {
 	def vals = [
 		0:"Off", 60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
@@ -8742,6 +8760,7 @@ def longTimeSecEnum() {
 	return vals
 }
 
+// obsolete
 def shortTimeEnum() {
 	def vals = [
 		1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
@@ -8750,7 +8769,6 @@ def shortTimeEnum() {
 	return vals
 }
 
-/*
 def smallTempEnum() {
 	def tempUnit = getTemperatureScale()
 	def vals = [
@@ -8759,8 +8777,8 @@ def smallTempEnum() {
 	]
 	return vals
 }
-*/
 
+// obsolete
 def switchRunEnum() {
 	def pName = schMotPrefix()
 	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
@@ -8775,6 +8793,7 @@ def switchRunEnum() {
 	return vals
 }
 
+// obsolete
 def fanModeTrigEnum() {
 	def pName = schMotPrefix()
 	def canCool = atomicState?."${pName}TstatCanCool" ? true : false
@@ -8790,6 +8809,7 @@ def fanModeTrigEnum() {
 	return vals
 }
 
+// obsolete
 def tModeHvacEnum(canHeat, canCool) {
 	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco"]
 	if(!canHeat) {
@@ -8801,11 +8821,13 @@ def tModeHvacEnum(canHeat, canCool) {
 	return vals
 }
 
+// obsolete
 def alarmActionsEnum() {
 	def vals = ["siren":"Siren", "strobe":"Strobe", "both":"Both (Siren/Strobe)"]
 	return vals
 }
 
+// obsolete
 def getEnumValue(enumName, inputName) {
 	def result = "unknown"
 	if(enumName) {
@@ -8818,6 +8840,7 @@ def getEnumValue(enumName, inputName) {
 	return result
 }
 
+// obsolete
 def getSunTimeState() {
 	def tz = TimeZone.getTimeZone(location.timeZone.ID)
 	def sunsetTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location?.currentValue('sunsetTime')).format('h:mm a', tz)
@@ -8826,6 +8849,7 @@ def getSunTimeState() {
 	atomicState.sunriseTm = sunriseTm
 }
 
+// obsolete
 def parseDt(format, dt) {
 	def result
 	def newDt = Date.parse("$format", dt)
@@ -8833,6 +8857,7 @@ def parseDt(format, dt) {
 	//log.debug "result: $result"
 	return result
 }
+*/
 
 def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
 
