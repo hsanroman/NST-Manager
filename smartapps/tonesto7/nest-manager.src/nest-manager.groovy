@@ -2161,9 +2161,10 @@ def initManagerApp() {
 		def tstatAutoApp = getChildApps()?.find {
 			try {
 				def aa = it.getAutomationType()
+				def bb = it.getCurrentSchedule()
 			}
 			catch (Exception e) {
-				log.error "BAD Automation file ${app?.label?.toString()}, please RE-INSTALL"
+				log.error "BAD Automation file ${app?.label?.toString()}, please RE-INSTALL automation file"
 				appUpdateNotify(true)
 			}
 		}
@@ -2279,7 +2280,7 @@ def restStreamCheck() {
 		LogAction("restStreamCheck No authToken", "warn", false)
 		return
 	}
-	LogTrace("restStreamCheck host: ${host} ip: ${ip} port: {$port}")
+	LogTrace("restStreamCheck host: ${host}")
 	try {
 		atomicState.lastRestHost = host
 		def hubAction = new physicalgraph.device.HubAction(
@@ -4963,7 +4964,7 @@ def appUpdateNotify(force=false) {
 		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || force) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
-			str += !force ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL"
+			str += !force ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL automation file sources"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
