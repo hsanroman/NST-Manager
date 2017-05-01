@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences { }
 
-def devVer() { return "5.0.1" }
+def devVer() { return "5.0.2" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -477,7 +477,7 @@ def lastCheckinEvent(checkin, isOnline) {
 
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
+		LogAction("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 
 		if(hcTimeout && lastConnSeconds >= 0) { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }

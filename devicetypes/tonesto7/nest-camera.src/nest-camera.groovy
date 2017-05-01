@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.3" }
+def devVer() { return "5.0.4" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -399,7 +399,7 @@ def lastCheckinEvent(checkin) {
 	def lastChk = device.currentState("lastConnection")?.value
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
-		Logger("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
+		LogAction("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
 		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }

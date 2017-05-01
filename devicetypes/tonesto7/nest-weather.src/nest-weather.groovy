@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.0.3" }
+def devVer() { return "5.0.4" }
 
 metadata {
 	definition (name: "${textDevName()}", namespace: "tonesto7", author: "Anthony S.") {
@@ -432,7 +432,7 @@ def apiStatusEvent(issue) {
 def humidityEvent(humidity) {
 	def hum = device.currentState("humidity")?.value
 	if(isStateChange(device, "humidity", humidity.toString())) {
-		Logger("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
+		LogAction("UPDATED | Humidity is (${humidity}) | Original State: (${hum})")
 		sendEvent(name:'humidity', value: humidity, unit: "%", descriptionText: "Humidity is ${humidity}" , displayed: false, isStateChange: true)
 	} else { LogAction("Humidity is (${humidity}) | Original State: (${hum})") }
 }
@@ -441,7 +441,7 @@ def illuminanceEvent(illum) {
 	if(illum != null) {
 		def cur = device.currentState("illuminance")?.value.toString()
 		if(isStateChange(device, "illuminance", illum.toString())) {
-			Logger("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
+			LogAction("UPDATED | Illuminance is (${illum}) | Original State: (${cur})")
 			sendEvent(name:'illuminance', value: illum, unit: "lux", descriptionText: "Illuminance is ${illum}" , displayed: false, isStateChange: true)
 		} else { LogAction("Illuminance is (${illum}) | Original State: (${cur})") }
 	}
@@ -451,7 +451,7 @@ def dewpointEvent(Double tempVal) {
 	def temp = device.currentState("dewpoint")?.value.toString()
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	if(isStateChange(device, "dewpoint", rTempVal.toString())) {
-		Logger("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
+		LogAction("UPDATED | DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'dewpoint', value: rTempVal, unit: state?.tempUnit, descriptionText: "Dew point Temperature is ${rTempVal}" , displayed: true, isStateChange: true)
 	} else { LogAction("DewPoint Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 }
@@ -461,7 +461,7 @@ def temperatureEvent(Double tempVal, Double feelsVal) {
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	def rFeelsVal = wantMetric() ? feelsVal.round(1) : feelsVal.round(0).toInteger()
 	if(isStateChange(device, "temperature", rTempVal.toString())) {
-		Logger("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
+		LogAction("UPDATED | Temperature is (${rTempVal}) | Original Temp: (${temp})")
 		sendEvent(name:'temperature', value: rTempVal, unit: state?.tempUnit, descriptionText: "Ambient Temperature is ${rTempVal}", displayed: true)
 	} else { LogAction("Temperature is (${rTempVal}) | Original Temp: (${temp})") }
 	if(isStateChange(device, "feelsLike", rFeelsVal.toString())) {
