@@ -2279,7 +2279,7 @@ def restStreamCheck() {
 		LogAction("restStreamCheck No authToken", "warn", false)
 		return
 	}
-	LogTrace("restStreamCheck ip: ${ip} port: {$port}")
+	LogTrace("restStreamCheck host: ${host} ip: ${ip} port: {$port}")
 	try {
 		atomicState.lastRestHost = host
 		def hubAction = new physicalgraph.device.HubAction(
@@ -3138,7 +3138,7 @@ def postCmd() {
 }
 
 def getApiData(type = null) {
-	//LogTrace("getApiData($type)")
+	LogTrace("getApiData($type)")
 	LogAction("getApiData($type)", "info", false)
 	def result = false
 	if(!type || !atomicState?.authToken) { return result }
@@ -3159,7 +3159,7 @@ def getApiData(type = null) {
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
 					def t0 = resp?.data
-					LogTrace("API Structure Resp.Data: ${t0}")
+					//LogTrace("API Structure Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.structData, t0, "str")
 					if(chg) {
 						LogAction("API Structure Data HAS Changed", "info", true)
@@ -3184,7 +3184,7 @@ def getApiData(type = null) {
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
 					def t0 = resp?.data
-					LogTrace("API Device Resp.Data: ${t0}")
+					//LogTrace("API Device Resp.Data: ${t0}")
 					def chg = didChange(atomicState?.deviceData, t0, "dev")
 					if(chg) {
 						LogAction("API Device Data HAS Changed", "info", true)
@@ -3202,7 +3202,7 @@ def getApiData(type = null) {
 				//def rCode = resp?.status ?: null
 				//def errorMsg = resp?.errorMessage ?: null
 				if(resp?.status == 200) {
-					LogTrace("API Metadata Resp.Data: ${resp?.data}")
+					//LogTrace("API Metadata Resp.Data: ${resp?.data}")
 					apiIssueEvent(false)
 					atomicState?.apiRateLimited = false
 					atomicState?.apiCmdFailData = null
@@ -3301,7 +3301,7 @@ def procNestResponse(resp, data) {
 			atomicState?.apiCmdFailData = null
 			if(type == "str") {
 				def t0 = resp?.json
-				LogTrace("API Structure Resp.Data: ${t0}")
+				//LogTrace("API Structure Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.structData, t0, "str")
 				if(chg) {
 					LogAction("API Structure Data HAS Changed", "info", true)
@@ -3314,7 +3314,7 @@ def procNestResponse(resp, data) {
 			}
 			if(type == "dev") {
 				def t0 = resp?.json
-				LogTrace("API Device Resp.Data: ${t0}")
+				//LogTrace("API Device Resp.Data: ${t0}")
 				def chg = didChange(atomicState?.deviceData, t0, "dev")
 				if(chg) {
 					LogAction("API Device Data HAS Changed", "info", true)
@@ -3330,7 +3330,7 @@ def procNestResponse(resp, data) {
 			}
 			if(type == "meta") {
 				def nresp = resp?.json?.metadata
-				LogTrace("API Meta Resp.Data: ${resp?.json}")
+				//LogTrace("API Meta Resp.Data: ${resp?.json}")
 				def chg = didChange(atomicState?.metaData, nresp, "meta")
 				if(chg) {
 					LogAction("API Meta Data HAS Changed", "info", true)
@@ -3651,8 +3651,8 @@ def updateChildData(force = false) {
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.tDevVer = t1 ?: ""
 					if(atomicState?.tDevVer != "" && (versionStr2Int(atomicState?.tDevVer) >= minVersions()?.thermostat?.val)) {
-						LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
-						//log.warn "oldTstatData: ${oldTstatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
+						//LogTrace("UpdateChildData >> Thermostat id: ${devId} | data: ${tData}")
+						LogTrace("updateChildData >> Thermostat id: ${devId} | oldTstatData: ${oldTstatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce")
 						it.generateEvent(tData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -3681,8 +3681,8 @@ def updateChildData(force = false) {
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.pDevVer = t1 ?: ""
 					if(atomicState?.pDevVer != "" && (versionStr2Int(atomicState?.pDevVer) >= minVersions()?.protect?.val)) {
-						LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
-						//log.warn "oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
+						//LogTrace("UpdateChildData >> Protect id: ${devId} | data: ${pData}")
+						LogTrace("UpdateChildData >> Protect id: ${devId} | oldProtData: ${oldProtData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce")
 						it.generateEvent(pData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -3711,7 +3711,8 @@ def updateChildData(force = false) {
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.camDevVer = t1 ?: ""
 					if(atomicState?.camDevVer != "" && (versionStr2Int(atomicState?.camDevVer) >= minVersions()?.camera?.val)) {
-						LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
+						//LogTrace("UpdateChildData >> Camera id: ${devId} | data: ${camData}")
+						LogTrace("UpdateChildData >> Camera id: ${devId} | oldCamData: ${oldCamData} cDataChecksum: ${cDataChecksum} force: $force  nforce: $nforce")
 						it.generateEvent(camData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -3739,8 +3740,7 @@ def updateChildData(force = false) {
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.presDevVer = t1 ?: ""
 					if(atomicState?.presDevVer != "" && (versionStr2Int(atomicState?.presDevVer) >= minVersions()?.presence?.val)) {
-						LogTrace("UpdateChildData >> Presence id: ${devId}")
-						//log.warn "oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce"
+						LogTrace("UpdateChildData >> Presence id: ${devId} | oldPresData: ${oldPresData} pDataChecksum: ${pDataChecksum} force: $force  nforce: $nforce")
 						it.generateEvent(pData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -3771,8 +3771,7 @@ def updateChildData(force = false) {
 					def t1 = it?.currentState("devVer")?.value?.toString()
 					atomicState?.weatDevVer = t1 ?: ""
 					if(atomicState?.weatDevVer != "" && (versionStr2Int(atomicState?.weatDevVer) >= minVersions()?.weather?.val)) {
-						//log.warn "oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce"
-						LogTrace("UpdateChildData >> Weather id: ${devId}")
+						LogTrace("UpdateChildData >> Weather id: ${devId} oldWeatherData: ${oldWeatherData} wDataChecksum: ${wDataChecksum} force: $force  nforce: $nforce")
 						it.generateEvent(wData)
 						if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 					} else {
@@ -3864,8 +3863,7 @@ def updateChildData(force = false) {
 						def t1 = it?.currentState("devVer")?.value?.toString()
 						atomicState?.vtDevVer = t1 ?: ""
 						if(atomicState?.vtDevVer != "" && (versionStr2Int(atomicState?.vtDevVer) >= minVersions()?.thermostat?.val)) {
-							LogTrace("UpdateChildData >> vThermostat id: ${devId} | data: ${tData}")
-							//log.warn "oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce"
+							LogTrace("UpdateChildData >> vThermostat id: ${devId} | oldvStatData: ${oldvStatData} tDataChecksum: ${tDataChecksum} force: $force  nforce: $nforce")
 							it.generateEvent(tData)
 							if(atomicState?."lastUpdated${devId}Dt" != null) { state.remove("lastUpdated${devId}Dt" as String) }
 						} else {
@@ -4517,7 +4515,7 @@ def storeLastCmdData(cmd, qnum) {
 }
 
 void workQueue() {
-	//LogTrace("workQueue")
+	LogTrace("workQueue")
 	def cmdDelay = getChildWaitVal()
 
 	if(!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
@@ -4586,7 +4584,7 @@ void workQueue() {
 }
 
 def finishWorkQ(cmd, result) {
-	//LogTrace("finishWorkQ")
+	LogTrace("finishWorkQ")
 	def cmdDelay = getChildWaitVal()
 
 	cmdProcState(false)
@@ -4648,7 +4646,7 @@ def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false
 		}
 		setLastCmdSentSeconds(qnum, getDtNow())
 
-		//LogTrace("queueProcNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}")
+		LogTrace("queueProcNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}")
 
 		def asyncargs = [
 			typeId: typeId,
@@ -4736,7 +4734,7 @@ def procNestApiCmd(uri, typeId, type, obj, objVal, qnum, redir = false) {
 		}
 		setLastCmdSentSeconds(qnum, getDtNow())
 
-		//LogTrace("procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}")
+		LogTrace("procNestApiCmd time update recentSendCmd:  ${getRecentSendCmd(qnum)}  last seconds:${getLastCmdSentSeconds(qnum)} queue: ${qnum}")
 
 		httpPutJson(params) { resp ->
 			def rCode = resp?.status ?: null
@@ -4980,7 +4978,7 @@ def appUpdateNotify(force=false) {
 }
 
 def updateHandler() {
-	//LogTrace("updateHandler")
+	LogTrace("updateHandler")
 	if(atomicState?.isInstalled) {
 		if(atomicState?.appData?.updater?.updateType.toString() == "critical" && atomicState?.lastCritUpdateInfo?.ver.toInteger() != atomicState?.appData?.updater?.updateVer.toInteger()) {
 			sendMsg("Critical", "There are Critical Updates available for ${appName()}! Please visit the IDE and make sure to update the App and Devices Code")
@@ -4999,7 +4997,7 @@ def updateHandler() {
 def getOk2Notify() { return (daysOk(settings?.quietDays) && notificationTimeOk() && modesOk(settings?.quietModes)) }
 
 def sendMsg(msgType, msg, showEvt=true, people = null, sms = null, push = null, brdcast = null) {
-	//LogTrace("sendMsg")
+	LogTrace("sendMsg")
 	def sentstr = "Push"
 	try {
 		def newMsg = "${msgType}: ${msg}" as String
@@ -5066,7 +5064,7 @@ def getNestTimeZone() {
 }
 
 def updateWebStuff(now = false) {
-	//LogTrace("updateWebStuff")
+	LogTrace("updateWebStuff")
 	def nnow = now
 	if(!atomicState?.appData) { nnow = true }
 	if(nnow || (getLastWebUpdSec() > (3600*4))) {
@@ -5089,7 +5087,7 @@ def updateWebStuff(now = false) {
 }
 
 def getWeatherConditions(force = false) {
-	//LogTrace("getWeatherConditions")
+	LogTrace("getWeatherConditions")
 	if(atomicState?.weatherDevice) {
 		try {
 			LogAction("Retrieving Local Weather Conditions", "info", false)
@@ -5502,16 +5500,27 @@ def isWeatherUpdateAvail() {
 }
 
 def reqSchedInfoRprt(child, report=true) {
-	//LogTrace("reqSchedInfoRprt: (${child.device.label})")
+	LogTrace("reqSchedInfoRprt: (${child.device.label})")
 	def result = null
 	if(!atomicState?.installData?.usingNewAutoFile) { return result }
 
 	def tstat = getChildDevice(child.device.deviceNetworkId)
 	if (tstat) {
 		def str = ""
-		def tstatAutoApp = getChildApps()?.find { (it.getAutomationType() == "schMot" && it?.getTstatAutoDevId() == tstat?.deviceNetworkId) }
-		def actSchedNum = tstatAutoApp?.getCurrentSchedule()
-		//
+		def tstatAutoApp = getChildApps()?.find {
+			//def aa = it.getAutomationType()
+			//def bb = it.getTstatAutoDevId()
+			//LogTrace("aa: ${aa} bb: ${bb} dni: ${tstat?.deviceNetworkId}")
+			(it.getAutomationType() == "schMot" && it?.getTstatAutoDevId() == tstat?.deviceNetworkId)
+		}
+		//LogTrace("tstatAutoApp: ${tstatAutoApp}")
+		def actSchedNum
+		try {
+			actSchedNum = tstatAutoApp ? tstatAutoApp?.getCurrentSchedule() : null
+		} catch (ex) {
+			log.error "BAD AUTOMATION FILE, FIX IN IDE; Likely put Nest Manager code in automation file", ex
+		}
+
 		if(actSchedNum) {
 			def reqSenHeatSetPoint = tstatAutoApp?.getRemSenHeatSetTemp()
 			def reqSenCoolSetPoint = tstatAutoApp?.getRemSenCoolSetTemp()
@@ -5960,7 +5969,7 @@ def getLocHub() {
 }
 
 def addRemoveDevices(uninst = null) {
-	//LogTrace("addRemoveDevices")
+	LogTrace("addRemoveDevices")
 	def retVal = false
 	try {
 		def devsInUse = []
@@ -6706,7 +6715,7 @@ def stateUpdate(key, value) {
 }
 
 def setStateVar(frc = false) {
-	//LogTrace("setStateVar")
+	LogTrace("setStateVar")
 	//If the developer changes the version in the web appData JSON it will trigger
 	//the app to create any new state values that might not exist or reset those that do to prevent errors
 	def stateVer = 3
@@ -7839,7 +7848,9 @@ def getDbExceptPath() { return atomicState?.appData?.database?.newexceptionPath 
 def getDbRemDiagPath() { return atomicState?.appData?.database?.remoteDiagPath ?: "remoteDiagLogs" }
 
 def sendExceptionData(ex, methodName, isChild = false, autoType = null) {
-	log.debug "sendExceptionData(method: $methodName, isChild: $isChild, autoType: $autoType)"
+	def labelstr = ""
+	if(atomicState?.debugAppendAppName) { labelstr = "${app.label} | " }
+	log.debug "${labelstr}sendExceptionData(method: $methodName, isChild: $isChild, autoType: $autoType)"
 	if(atomicState?.appData?.database?.disableExceptions == true) {
 		return
 	} else {
