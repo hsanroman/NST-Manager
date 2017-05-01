@@ -6888,7 +6888,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
 		def diff = (int) (long) (stop - start) / 1000
-		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
+		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
 }
@@ -8270,8 +8270,6 @@ def getTstatAutoDevId() {
 def isSchMotConfigured() {
 	return settings?.schMotTstat ? true : false
 }
-
-def getLastschMotEvalSec() { return !atomicState?.lastschMotEval ? 100000 : GetTimeDiffSeconds(atomicState?.lastschMotEval, null, "getLastschMotEvalSec").toInteger() }
 
 //These are here to catch any events that occur before the migration occurs
 def heartbeatAutomation() { return }
