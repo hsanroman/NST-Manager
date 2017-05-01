@@ -717,7 +717,7 @@ def uninstAutomationApp() {
 def getCurAppLbl() { return app?.label?.toString() }
 
 def getAutoTypeLabel() {
-	LogTrace("getAutoTypeLabel:")
+	LogTrace("getAutoTypeLabel()")
 	def type = atomicState?.automationType
 	def appLbl = getCurAppLbl()
 	def newName = appName() == "${appLabel()}" ? "NST Automations" : "${appName()}"
@@ -4116,10 +4116,10 @@ private checkRestriction(cnt) {
 				}
 			}
 		}
+		LogTrace("checkRestriction:( $cnt ) restriction: $restriction")
 	} else {
 		restriction = "an inactive schedule"
 	}
-	LogTrace("checkRestriction:( $cnt ) restriction: $restriction")
 	return restriction
 }
 
