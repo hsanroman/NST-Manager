@@ -1,3 +1,12 @@
+V5.0.8 (May 1st, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Detects and notifies on installation issues
+ • FIXED: Small bugs and optimization;  Quieting of logs
+
+Automation App:
+ • FIXED: Quieting of logs;  small bugs and optimizations
+ 
 V5.0.7 (April 25th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
