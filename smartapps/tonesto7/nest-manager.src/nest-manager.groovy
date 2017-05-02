@@ -36,11 +36,11 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.8" }
-def appVerDate() { "4-29-2017" }
+def appVersion() { "5.0.9" }
+def appVerDate() { "5-02-2017" }
 def minVersions() {
 	return [
-		"automation":["val":504, "desc":"5.0.4"],
+		"automation":["val":505, "desc":"5.0.5"],
 		"thermostat":["val":502, "desc":"5.0.2"],
 		"protect":["val":502, "desc":"5.0.2"],
 		"presence":["val":501, "desc":"5.0.1"],
@@ -2162,6 +2162,7 @@ def initManagerApp() {
 			try {
 				def aa = it.getAutomationType()
 				def bb = it.getCurrentSchedule()
+				def ai = it.getAutomationsInstalled()
 			}
 			catch (Exception e) {
 				log.error "BAD Automation file ${app?.label?.toString()}, please RE-INSTALL automation file"
@@ -3025,13 +3026,15 @@ def poll(force = false, type = null) {
 			LogAction("No Device or Structure poll - Devices Last Updated: ${getLastDevicePollSec()} seconds ago | Structures Last Updated ${getLastStructPollSec()} seconds ago", "info", true)
 		}
 		else {
+			def sstr = ""
+
 			def allowAsync = false
 			def metstr = "sync"
-			def sstr = ""
 			if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
 				allowAsync = true
 				metstr = "async"
 			}
+
 			if(okStruct) {
 				sstr += "Updating Structure Data (Last Updated: ${getLastStructPollSec()} seconds ago)"
 				if(allowAsync) {
@@ -4446,9 +4449,15 @@ def getQueueToWork() {
 	return qnum
 }
 
-
-void schedNextWorkQ(childId) {
+void schedNextWorkQ(childId, useShort=false) {
 	def cmdDelay = getChildWaitVal()
+
+	def allowAsync = false
+	if(atomicState?.appData && atomicState?.appData?.pollMethod?.allowAsync) {
+		allowAsync = true
+	}
+
+	if(useShort && allowAsync) { cmdDelay = 0 }
 	//
 	// This is throttling the rate of commands to the Nest service for this access token.
 	// If too many commands are sent Nest throttling could shut all write commands down for 1 hour to the device or structure
@@ -4461,12 +4470,16 @@ void schedNextWorkQ(childId) {
 	def timeVal = cmdDelay
 	if(qnum != null) {
 		if( !(getRecentSendCmd(qnum) > 0 || getLastCmdSentSeconds(qnum) > 60) ) {
-			timeVal = (60 - getLastCmdSentSeconds(qnum) + cmdDelay)
+			timeVal = (60 - getLastCmdSentSeconds(qnum) + getChildWaitVal())
 		}
 		def str = timeVal > cmdDelay ? "RATE LIMITING ON " : ""
-		LogAction("schedNextWorkQ ${str}queue: ${qnum} | schedTime: ${timeVal} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}", "info", true)
+		LogAction("schedNextWorkQ ${str}queue: ${qnum} | schedTime: ${timeVal} | recentSendCmd: ${getRecentSendCmd(qnum)} | last seconds: ${getLastCmdSentSeconds(qnum)} | cmdDelay: ${cmdDelay}, allowAsync: ${allowAsync}", "info", true)
 	}
-	runIn(timeVal, "workQueue", [overwrite: true])
+	if(timeVal != 0) {
+		runIn(timeVal, "workQueue", [overwrite: true])
+	} else {
+		workQueue()
+	}
 }
 
 private getRecentSendCmd(qnum) {
@@ -4517,7 +4530,7 @@ def storeLastCmdData(cmd, qnum) {
 
 void workQueue() {
 	LogTrace("workQueue")
-	def cmdDelay = getChildWaitVal()
+	//def cmdDelay = getChildWaitVal()
 
 	if(!atomicState?.cmdQlist) { atomicState?.cmdQlist = [] }
 	def cmdQueueList = atomicState?.cmdQlist
@@ -4588,7 +4601,6 @@ def finishWorkQ(cmd, result) {
 	LogTrace("finishWorkQ")
 	def cmdDelay = getChildWaitVal()
 
-	cmdProcState(false)
 	if( !result ) {
 		atomicState.forceChildUpd = true
 		atomicState.pollBlocked = false
@@ -4601,6 +4613,9 @@ def finishWorkQ(cmd, result) {
 		atomicState.forceChildUpd = true
 	}
 
+	atomicState?.cmdLastProcDt = getDtNow()
+	cmdProcState(false)
+
 	def qnum = getQueueToWork()
 	if(qnum == null) { qnum = 0 }
 
@@ -4609,14 +4624,12 @@ def finishWorkQ(cmd, result) {
 	if(cmdQueue?.size() == 0) {
 		atomicState.pollBlocked = false
 		atomicState.needChildUpd = true
-		cmdProcState(false)
-		runIn(cmdDelay * 2, "postCmd", [overwrite: true])
+		runIn(cmdDelay, "postCmd", [overwrite: true])
 	}
-	else { schedNextWorkQ(null) }
+	else { schedNextWorkQ(null, true) }
 
-	atomicState?.cmdLastProcDt = getDtNow()
 	if(cmdQueue?.size() > 10) {
-		sendMsg("Warning", "There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong", false)
+		sendMsg("Warning", "There is now ${cmdQueue?.size()} events in the Command Queue. Something must be wrong", true)
 		LogAction("${cmdQueue?.size()} events in the Command Queue", "warn", true)
 	}
 	return
@@ -4896,10 +4909,12 @@ def deviceHealthNotify(child, Boolean isHealthy) {
 }
 
 def locationPresNotify(pres) {
-	if(!pres || atomicState?.notificationPrefs?.locationChg != true) { return }
-	def lastStatus = atomicState?.nestLocStatus
-	if(lastStatus && lastStatus != pres) {
-		sendMsg("${app?.name} Nest Location Info", "\n(${atomicState?.structName}) location has been changed to [${pres.toString().capitalize()}]")
+	if(!pres) { return }
+	if(atomicState?.notificationPrefs?.locationChg == true) {
+		def lastStatus = atomicState?.nestLocStatus
+		if(lastStatus && lastStatus != pres) {
+			sendMsg("${app?.name} Nest Location Info", "\n(${atomicState?.structName}) location has been changed to [${pres.toString().capitalize()}]")
+		}
 	}
 	atomicState?.nestLocStatus = pres
 }
@@ -4912,7 +4927,7 @@ def apiIssueNotify(msgOn, rateOn, wait) {
 		def msg = ""
 		msg += !rateLimit && apiIssue ? "\nThe Nest API appears to be having issues. This will effect the updating of device and location data.\nThe issues started at (${atomicState?.apiIssueDt})" : ""
 		msg += rateLimit ? "${apiIssue ? "\n\n" : "\n"}Your API connection is currently being Rate-limited for excessive commands." : ""
-		sendMsg("${app?.name} API Issue Warning", msg, false)
+		sendMsg("${app?.name} API Issue Warning", msg, true)
 		LogAction(msg, (cmdFail ? "error" : "warn"), true)
 		atomicState?.lastApiIssueMsgDt = getDtNow()
 	}
@@ -4934,7 +4949,7 @@ def loggingRemindNotify(msgOn) {
 	def dbgAlert = (getDebugLogsOnSec() > 86400)
 	if(sendOk && dbgAlert) {
 		def msg = "Your debug logging has remained enabled for more than 24 hours please disable them to reduce resource usage on ST platform."
-		sendMsg(("${app?.name} Debug Logging Reminder"), msg, false)
+		sendMsg(("${app?.name} Debug Logging Reminder"), msg, true)
 		atomicState?.lastLogRemindMsgDt = getDtNow()
 	}
 }
@@ -4973,7 +4988,7 @@ def appUpdateNotify(force=false) {
 			str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 			str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 			str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
-			sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", false)
+			sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", true)
 		}
 	}
 }
@@ -5344,7 +5359,7 @@ def broadcastCheck() {
 	def bCastData = atomicState?.appData?.broadcast
 	if(atomicState?.isInstalled && bCastData) {
 		if(bCastData?.msgId != null && atomicState?.lastBroadcastId != bCastData?.msgId) {
-			sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), false, null, null, null, true)
+			sendMsg(strCapitalize(bCastData?.type), bCastData?.message.toString(), true, null, null, null, true)
 			atomicState?.lastBroadcastId = bCastData?.msgId
 		}
 		if(bCastData?.devBannerMsg != null && atomicState?.devBannerData?.msgId != bCastData?.devBannerMsg?.msgId) {
