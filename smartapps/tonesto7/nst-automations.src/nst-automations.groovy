@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.0.4" }
-def appVerDate() { "4-29-2017" }
+def appVersion() { "5.0.5" }
+def appVerDate() { "5-02-2017" }
 
 preferences {
 	//startPage
@@ -3854,11 +3854,11 @@ def checkNestMode() {
 			if(away && !nestModeAway) {
 				LogAction("checkNestMode: ${awayDesc} Nest 'Away'", "info", true)
 				didsomething = true
+				setAway(true)
+				atomicState?.nModeTstatLocAway = true
 				if(nModeSetEco) {
 					adjustEco(true, pName)
 				}
-				setAway(true)
-				atomicState?.nModeTstatLocAway = true
 				if(allowNotif) {
 					sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info", pName)
 				}
@@ -3868,7 +3868,6 @@ def checkNestMode() {
 			else if(home && nestModeAway) {
 				LogAction("checkNestMode: ${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
-				storeLastAction("Set Nest Location (Home)", getDtNow())
 				setAway(false)
 				atomicState?.nModeTstatLocAway = false
 				if(nModeSetEco) { adjustEco(false, pName) }
