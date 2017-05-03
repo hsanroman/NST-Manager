@@ -68,7 +68,7 @@
         "disVoiceUsageRprt": false
     },
     "clientBL": {
-        "clients": []
+        "clients": ["b15cc626-7cb6-47fb-a97c-c89739593261", "32289926-4f76-44e5-bcd6-52c8e7c39df0", "5da73c07-0865-4744-8c9c-db0a9164d0e5", "67992f8b-7e9d-49bf-b160-36c401f55c36", "9a266379-f9df-4064-9fb7-5d40ca0e8b6f"]
     },
     "clientRemDiagAuth": {
         "clients": ["bad978ab-f37e-48c9-909c-1971e1970364", "44360aba-62c0-4f6b-a2c9-c93668c64352", "14157c70-619b-4718-b34d-55e6cfb06200"]
