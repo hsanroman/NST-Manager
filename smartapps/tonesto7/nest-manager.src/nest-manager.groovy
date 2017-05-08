@@ -6316,7 +6316,7 @@ def removeTestDevs() {
 
 def preReqCheck() {
 	//LogTrace("preReqCheckTest()")
-	if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":"Not Set", "updatedDt":"Not Set", "freshInstall":false, "shownDonation":false, "shownChgLog":true, "shownFeedback":false] }
+	if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "updatedDt":"Not Set", "freshInstall":true, "shownDonation":false, "shownFeedback":false, "shownChgLog":true, "usingNewAutoFile":true] }
 	if(!location?.timeZone || !location?.zipCode) {
 		atomicState.preReqTested = false
 		LogAction("SmartThings Location not returning (TimeZone: ${location?.timeZone}) or (ZipCode: ${location?.zipCode}) Please edit these settings under the IDE", "warn", true)
@@ -6641,7 +6641,7 @@ def fixState() {
 	def before = getStateSizePerc()
 	if(!parent) {
 		if(!atomicState?.resetAllData && resetAllData) {
-			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete" ]) }
+			def data = getState()?.findAll { !(it?.key in ["accessToken", "authToken", "enRemDiagLogging", "installationId", "remDiagLogActivatedDt", "installData", "remDiagLogDataStore", "remDiagDataSentDt", "remDiagLogSentCnt", "resetAllData", "pollingOn", "apiCommandCnt", "autoMigrationComplete" ]) }
 			data.each { item ->
 				state.remove(item?.key.toString())
 			}
@@ -6672,7 +6672,7 @@ void finishFixState() {
 			atomicState.devNameOverride = settings?.devNameOverride ? true : false
 			atomicState.useAltNames = settings?.useAltNames ? true : false
 			atomicState.custLabelUsed = settings?.useCustDevNames ? true : false
-			if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "updatedDt":"Not Set", "freshInstall":false, "shownDonation":false, "shownChgLog":true, "shownFeedback":false] }
+			if(!atomicState?.installData) { atomicState?.installData = ["initVer":appVersion(), "dt":getDtNow().toString(), "updatedDt":"Not Set", "freshInstall":true, "shownDonation":false, "shownFeedback":false, "shownChgLog":true, "usingNewAutoFile":true] }
 
 			getWebFileData() // get the appData and calls setStateVar
 
@@ -6859,7 +6859,12 @@ def showChgLogOk() {
 
 def getDaysSinceInstall() {
 	def instDt = atomicState?.installData?.dt
-	if(instDt == null || instDt == "Not Set") { return 0 }
+	if(instDt == null || instDt == "Not Set") {
+		def iData = atomicState?.installData
+		iData["dt"] = getDtNow().toString()
+		atomicState?.installData = iData
+		return 0
+	}
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", instDt)
 	def stop = new Date()
 	if(start && stop) {
