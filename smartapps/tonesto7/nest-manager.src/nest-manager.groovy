@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.9" }
-def appVerDate() { "5-04-2017" }
+def appVerDate() { "5-08-2017" }
 def minVersions() {
 	return [
 		"automation":["val":505, "desc":"5.0.5"],
@@ -2426,8 +2426,15 @@ def getInstAutoTypesDesc() {
 					dat["nestMode"] = dat["nestMode"] ? dat["nestMode"]+1 : 1
 					break
 				case "schMot":
-					def ai = a?.getAutomationsInstalled()
-					schMotItems += a?.getSchMotConfigDesc(true)
+					def ai
+					try {
+						ai = a?.getAutomationsInstalled()
+						schMotItems += a?.getSchMotConfigDesc(true)
+					}
+					catch (Exception e) {
+						log.error "BAD Automation file ${a?.label?.toString()}, please RE-INSTALL automation file"
+						appUpdateNotify(true)
+					}
 					if(ai) {
 						ai?.each { aut ->
 							aut?.each { it2 ->
