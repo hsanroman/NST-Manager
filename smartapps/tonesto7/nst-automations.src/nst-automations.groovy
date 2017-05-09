@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.5" }
-def appVerDate() { "5-02-2017" }
+def appVerDate() { "5-08-2017" }
 
 preferences {
 	//startPage
@@ -1204,7 +1204,28 @@ def getAutomationStats() {
 
 def storeLastAction(actionDesc, actionDt, autoType=null, dev=null) {
 	if(actionDesc && actionDt) {
-		atomicState?.lastAutoActionData = ["actionDesc":actionDesc, "dt":actionDt]
+
+		def newVal = ["actionDesc":actionDesc, "dt":actionDt, "autoType":autoType]
+		atomicState?.lastAutoActionData = newVal
+
+		def list = atomicState?.detailActionHistory ?: []
+		def listSize = 30
+		if(list?.size() < listSize) {
+			list.push(newVal)
+		}
+		else if(list?.size() > listSize) {
+			def nSz = (list?.size()-listSize) + 1
+			def nList = list?.drop(nSz)
+			nList?.push(newVal)
+			list = nList
+		}
+		else if(list?.size() == listSize) {
+			def nList = list?.drop(1)
+			nList?.push(newVal)
+			list = nList
+		}
+		if(list) { atomicState?.detailActionHistory = list }
+
 		if(dev) {
 			sendAutoChgToDevice(dev, autoType, actionDesc)		// THIS ONLY WORKS ON NEST THERMOSTATS
 		}
@@ -1530,7 +1551,7 @@ def remSendoSetCool(chgval, onTemp, offTemp) {
 			}
 			if(setTstatAutoTemps(remSenTstat, chgval, cHeat, "remSen")) {
 				//LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to (${chgval}°${getTemperatureScale()}) ", "info", true)
-				//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow())
+				//storeLastAction("Adjusted Cool Setpoint to (${chgval}°${getTemperatureScale()}) Heat Setpoint to (${cHeat}°${getTemperatureScale()})", getDtNow(), "remSen")
 				if(remSenTstatMir) { remSenTstatMir*.setCoolingSetpoint(chgval) }
 			}
 			return true // let all this take effect
@@ -1570,7 +1591,7 @@ def remSendoSetHeat(chgval, onTemp, offTemp) {
 			}
 			if(setTstatAutoTemps(remSenTstat, cCool, chgval, "remSen")) {
 				//LogAction("Remote Sensor: HEAT - Adjusting HeatSetpoint to (${chgval}°${getTemperatureScale()})", "info", true)
-				//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow())
+				//storeLastAction("Adjusted Heat Setpoint to (${chgval}°${getTemperatureScale()}) Cool Setpoint to (${cCool}°${getTemperatureScale()})", getDtNow(), "remSen")
 				if(remSenTstatMir) { remSenTstatMir*.setHeatingSetpoint(chgval) }
 			}
 			return true // let all this take effect
@@ -2275,7 +2296,7 @@ def doFanOperation(tempDiff) {
 					sw.on()
 					swOn = true
 					atomicState.haveRunFan = true
-					storeLastAction("Turned On $sw)", getDtNow())
+					storeLastAction("Turned On $sw)", getDtNow(), pName)
 				} else {
 					if(!swOn && savedHaveRun) {
 						LogAction("doFanOperation: savedHaveRun state shows switch ${sw} turned OFF outside of automation requests", "info", true)
@@ -2288,35 +2309,35 @@ def doFanOperation(tempDiff) {
 							if(speed != "LOW") {
 								sw.lowSpeed()
 								LogAction("doFanOperation: Temp Difference (${tempDiff}°${getTemperatureScale()}) is BELOW the Medium Speed Threshold of (${settings?."${pName}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (LOW SPEED)", "info", true)
-								storeLastAction("Set Fan $sw to Low Speed", getDtNow())
+								storeLastAction("Set Fan $sw to Low Speed", getDtNow(), pName)
 							}
 						}
 						else if(tempDiff >= settings?."${pName}FanSwitchMedSpeed".toDouble() && tempDiff < settings?."${pName}FanSwitchHighSpeed".toDouble()) {
 							if(speed != "MED") {
 								sw.medSpeed()
 								LogAction("doFanOperation: Temp Difference (${tempDiff}°${getTemperatureScale()}) is ABOVE the Medium Speed Threshold of (${settings?."${pName}FanSwitchMedSpeed"}) | Turning '${sw}' Fan Switch on (MEDIUM SPEED)", "info", true)
-								storeLastAction("Set Fan $sw to Medium Speed", getDtNow())
+								storeLastAction("Set Fan $sw to Medium Speed", getDtNow(), pName)
 							}
 						}
 						else if(tempDiff >= settings?."${pName}FanSwitchHighSpeed".toDouble()) {
 							if(speed != "HIGH") {
 								sw.highSpeed()
 								LogAction("doFanOperation: Temp Difference (${tempDiff}°${getTemperatureScale()}) is ABOVE the High Speed Threshold of (${settings?."${pName}FanSwitchHighSpeed"}) | Turning '${sw}' Fan Switch on (HIGH SPEED)", "info", true)
-								storeLastAction("Set Fan $sw to High Speed", getDtNow())
+								storeLastAction("Set Fan $sw to High Speed", getDtNow(), pName)
 							}
 						}
 					} else {
 						if(speed != "HIGH") {
 							sw.highSpeed()
 							LogAction("doFanOperation: Fan supports multiple speeds, with speed control disabled | Turning '${sw}' Fan Switch on (HIGH SPEED)", "info", true)
-							storeLastAction("Set Fan $sw to High Speed", getDtNow())
+							storeLastAction("Set Fan $sw to High Speed", getDtNow(), pName)
 						}
 					}
 				}
 			} else {
 				if(swOn && savedHaveRun) {
 					LogAction("doFanOperation: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw}' Switch (OFF)", "info", true)
-					storeLastAction("Turned Off (${sw})", getDtNow())
+					storeLastAction("Turned Off (${sw})", getDtNow(), pName)
 					sw.off()
 					atomicState.haveRunFan = false
 				} else {
@@ -2624,7 +2645,7 @@ def humCtrlCheck() {
 					sw.on()
 					swOn = true
 					atomicState.haveRunHumidifier = true
-					storeLastAction("Turned On $sw)", getDtNow())
+					storeLastAction("Turned On $sw)", getDtNow(), pName)
 				} else {
 					if(!swOn && savedHaveRun) {
 						LogAction("humCtrlCheck: savedHaveRun state shows switch ${sw} turned OFF outside of automation requests", "info", true)
@@ -2634,7 +2655,7 @@ def humCtrlCheck() {
 				//if(swOn && savedHaveRun) {
 				if(swOn) {
 					LogAction("humCtrlCheck: Fan Switch (${sw?.displayName}) is (${swOn ? "ON" : "OFF"}) | Turning '${sw}' Switch (OFF)", "info", true)
-					storeLastAction("Turned Off (${sw})", getDtNow())
+					storeLastAction("Turned Off (${sw})", getDtNow(), pName)
 					sw.off()
 					atomicState.haveRunHumidifier = false
 				} else {
@@ -3713,7 +3734,7 @@ def nModeGenericEvt(evt) {
 	}
 }
 
-def adjustCameras(on) {
+def adjustCameras(on, sendAutoType=null) {
 	def cams = parent?.getCams()
 	def foundCams
 	if(cams) {
@@ -3728,7 +3749,7 @@ def adjustCameras(on) {
 					didstr = "Off"
 				}
 				LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev})", "info", true)
-				storeLastAction("Turned ${didstr} Streaming $cam", getDtNow())
+				storeLastAction("Turned ${didstr} Streaming $cam", getDtNow(), sendAutoType)
 				return dev
 			}
 		}
@@ -3768,6 +3789,7 @@ def adjustEco(on, senderAutoType=null) {
 
 def setAway(away) {
 	def tstats = parent?.getTstats()
+	def didstr = away ? "AWAY" : "HOME"
 	def foundTstats
 	if(tstats) {
 		foundTstats = tstats?.collect { dni ->
@@ -3778,7 +3800,6 @@ def setAway(away) {
 				} else {
 					d1?.present()
 				}
-				def didstr = away ? "AWAY" : "HOME"
 				LogAction("setAway($away): | Thermostat: ${d1?.displayName} setting to $didstr", "trace", true)
 				storeLastAction("Set ${d1?.displayName} to $didstr", getDtNow(), "nMode", d1)
 				return d1
@@ -3790,9 +3811,8 @@ def setAway(away) {
 		} else {
 			parent?.setStructureAway(null, false)
 		}
-		def didstr = away ? "AWAY" : "HOME"
 		LogAction("setAway($away): | Setting structure to $didstr", "trace", true)
-		storeLastAction("Set structure to $didstr", getDtNow(), "nMode", d1)
+		storeLastAction("Set structure to $didstr", getDtNow(), "nMode")
 	}
 }
 
@@ -3862,7 +3882,7 @@ def checkNestMode() {
 				if(allowNotif) {
 					sendEventPushNotifications("${awayDesc} Nest 'Away'", "Info", pName)
 				}
-				if(nModeCamOnAway) { adjustCameras(true) }
+				if(nModeCamOnAway) { adjustCameras(true, pName) }
 			}
 			//else if(home && nestModeAway && !modeMatch) {
 			else if(home && nestModeAway) {
@@ -3874,7 +3894,7 @@ def checkNestMode() {
 				if(allowNotif) {
 					sendEventPushNotifications("${homeDesc} Nest 'Home'", "Info", pName)
 				}
-				if(nModeCamOffHome) { adjustCameras(false) }
+				if(nModeCamOffHome) { adjustCameras(false, pName) }
 			}
 			else {
 				LogAction("checkNestMode: No Changes | ${nModePresSensor ? "isPresenceHome: ${isPresenceHome(nModePresSensor)} | " : ""}ST-Mode: ($curStMode) | NestModeAway: ($nestModeAway) | Away: ($away) | Home: ($home)", "info", false)
@@ -4479,7 +4499,7 @@ def setTstatTempCheck() {
 					if(oldHeat != heatTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Heat Setpoint '${heatTemp}' on (${tstat}) | Old Setpoint: '${oldHeat}'", "info", false)
-						//storeLastAction("Set ${settings?.schMotTstat} Heat Setpoint to ${heatTemp}", getDtNow())
+						//storeLastAction("Set ${settings?.schMotTstat} Heat Setpoint to ${heatTemp}", getDtNow(), pName)
 					} else { heatTemp = null }
 				}
 
@@ -4489,13 +4509,13 @@ def setTstatTempCheck() {
 					if(oldCool != coolTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Cool Setpoint '${coolTemp}' on (${tstat}) | Old Setpoint: '${oldCool}'", "info", false)
-						//storeLastAction("Set ${settings?.schMotTstat} Cool Setpoint to ${coolTemp}", getDtNow())
+						//storeLastAction("Set ${settings?.schMotTstat} Cool Setpoint to ${coolTemp}", getDtNow(), pName)
 					} else { coolTemp = null }
 				}
 				if(needChg) {
 					if(setTstatAutoTemps(settings?.schMotTstat, coolTemp?.toDouble(), heatTemp?.toDouble(), pName, tstatMir)) {
 						//LogAction("setTstatTempCheck: [Temp Change | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp ]", "info", true)
-						//storeLastAction("Set ${tstat} Cool Setpoint ${coolTemp} Heat Setpoint ${heatTemp}", getDtNow())
+						//storeLastAction("Set ${tstat} Cool Setpoint ${coolTemp} Heat Setpoint ${heatTemp}", getDtNow(), pName)
 					} else {
 						LogAction("setTstatTempCheck: Thermostat Set ERROR [ newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp ]", "info", true)
 					}
@@ -6408,17 +6428,17 @@ def sendEventAlarmAction(evtNum, autoType) {
 					case "both":
 						atomicState?."${autoType}alarmEvt${evtNum}StartDt" = getDtNow()
 						aDev?.both()
-						storeLastAction("Set Alarm BOTH ON", getDtNow())
+						storeLastAction("Set Alarm BOTH ON", getDtNow(), autoType)
 						break
 					case "siren":
 						atomicState?."${autoType}alarmEvt${evtNum}StartDt" = getDtNow()
 						aDev?.siren()
-						storeLastAction("Set Alarm SIREN ON", getDtNow())
+						storeLastAction("Set Alarm SIREN ON", getDtNow(), autoType)
 						break
 					case "strobe":
 						atomicState?."${autoType}alarmEvt${evtNum}StartDt" = getDtNow()
 						aDev?.strobe()
-						storeLastAction("Set Alarm STROBE ON", getDtNow())
+						storeLastAction("Set Alarm STROBE ON", getDtNow(), autoType)
 						break
 					default:
 						resval = false
@@ -6721,52 +6741,57 @@ def getTstatPresence(tstat) {
 
 def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
-	try {
-		if(mode) {
-			if(mode == "auto") { tstat.auto(); result = true }
-			else if(mode == "heat") { tstat.heat(); result = true }
-			else if(mode == "cool") { tstat.cool(); result = true }
-			else if(mode == "off") { tstat.off(); result = true }
-			else if(mode == "eco") {
-				tstat.eco(); result = true
-				log.debug "setTstatMode mode action | type: $autoType"
-				if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+	if(mode) {
+		if(mode == "auto") { tstat.auto(); result = true }
+		else if(mode == "heat") { tstat.heat(); result = true }
+		else if(mode == "cool") { tstat.cool(); result = true }
+		else if(mode == "off") { tstat.off(); result = true }
+		else {
+			try {
+				if(mode == "eco") {
+					tstat.eco(); result = true
+					LogTrace("setTstatMode mode action | type: $autoType")
+					if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+				}
 			}
-
-			if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
-			else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
-		} else {
-			LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
+			catch (ex) {
+				log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
+				parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+			}
 		}
-	}
-	catch (ex) {
-		log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
-		parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+
+		if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
+		else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
+	} else {
+		LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
 	}
 	return result
 }
 
 def setMultipleTstatMode(tstats, mode, autoType=null) {
 	def result = false
-//	try {
-		if(tstats && mode) {
-			tstats?.each { ts ->
-				if(setTstatMode(ts, mode, autoType)) {   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
-					LogAction("Setting ${ts} Mode to (${mode})", "info", true)
-					storeLastAction("Set ${ts} to (${mode})", getDtNow())
-					result = true
-				} else {
-					LogAction("Failed Setting ${ts} Mode to (${mode})", "warn", true)
-					return false
-				}
+	if(tstats && mode) {
+		tstats?.each { ts ->
+			def retval
+//			try {
+				retval = setTstatMode(ts, mode, autoType)   // THERE IS A PROBLEM HERE IF MIRROR THERMOSTATS ARE NOT NEST
+//			} catch (ex) {
+//				log.error "setMultipleTstatMode() Exception:", ex
+//				parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
+//			}
+
+			if(retval) {
+				LogAction("Setting ${ts} Mode to (${mode})", "info", true)
+				storeLastAction("Set ${ts} to (${mode})", getDtNow(), autoType)
+				result = true
+			} else {
+				LogAction("Failed Setting ${ts} Mode to (${mode})", "warn", true)
+				return false
 			}
-		} else {
-			LogAction("setMultipleTstatMode(${tstats}, $mode, $autoType) | Invalid or Missing tstats or Mode received: ${mode}", "warn", true)
 		}
-//	} catch (ex) {
-//		log.error "setMultipleTstatMode() Exception:", ex
-//		parent?.sendExceptionData(ex, "setMultipleTstatMode", true, getAutoType())
-//	}
+	} else {
+		LogAction("setMultipleTstatMode(${tstats}, $mode, $autoType) | Invalid or Missing tstats or Mode received: ${mode}", "warn", true)
+	}
 	return result
 }
 
