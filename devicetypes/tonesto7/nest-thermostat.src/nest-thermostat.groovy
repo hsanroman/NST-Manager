@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.2" }
+def devVer() { return "5.0.3" }
 
 // for the UI
 metadata {
@@ -1293,7 +1293,7 @@ void levelUpDown(tempVal, chgType = null) {
 	//LogAction("levelUpDown()...($tempVal | $chgType)", "trace")
 	def hvacMode = getHvacMode()
 
-	if (canChangeTemp()) {
+	if(canChangeTemp()) {
 	// From RBOY https://community.smartthings.com/t/multiattributetile-value-control/41651/23
 	// Determine OS intended behaviors based on value behaviors (urrgghhh.....ST!)
 		def upLevel
@@ -1467,10 +1467,11 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		return diff
 	} else { return null }
 }
-// Nest does not allow temp changes in away modes
+
+// Nest does not allow temp changes in off, eco modes
 def canChangeTemp() {
 	//LogAction("canChangeTemp()...", "trace")
-	def curPres = getNestPresence()
+	//def curPres = getNestPresence()
 	//if (curPres == "home" && state?.nestHvac_mode != "eco") {
 	if(state?.nestHvac_mode != "eco") {
 		def hvacMode = getHvacMode()
@@ -1493,9 +1494,9 @@ def canChangeTemp() {
 
 void changeSetpoint() {
 	//LogAction("changeSetpoint()... ($val)", "trace")
-	if ( canChangeTemp() ) {
+	def hvacMode = getHvacMode()
+	if(canChangeTemp()) {
 		def md
-		def hvacMode = getHvacMode()
 		def curHeatpoint = getHeatTemp()
 		def curCoolpoint = getCoolTemp()
 
@@ -1553,7 +1554,7 @@ void changeSetpoint() {
 				//thermostatSetpointEvent(temp)
 				break
 		}
-	}
+	} else { Logger("changeSetpoint: Cannot adjust temperature due to hvacMode ${hvacMode}") }
 	pauseEvent("false")
 }
 
@@ -1625,7 +1626,7 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 			break
 		}
 	} else {
-		Logger("Skipping heat change")
+		Logger("Skipping heat change canHeat: ${canHeat}  hvacMode: ${hvacMode}")
 		result = false
 	}
 	if(result) {
@@ -1701,7 +1702,7 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 				break
 		}
 	} else {
-		Logger("Skipping cool change")
+		Logger("Skipping cool change canCool: ${canCool}  hvacMode: ${hvacMode}")
 		result = false
 	}
 	if(result) {
