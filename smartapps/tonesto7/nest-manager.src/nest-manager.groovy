@@ -2424,6 +2424,11 @@ def getInstAutoTypesDesc() {
 			switch(type) {
 				case "nMode":
 					dat["nestMode"] = dat["nestMode"] ? dat["nestMode"]+1 : 1
+ 					if(dat.nestMode > 1) {
+ 						dat.nestMode = dat.nestMode - 1
+ 						LogAction("Deleting Extra Nest Mode (${a?.id})", "warn", true)
+ 						deleteChildApp(a)
+ 					}
 					break
 				case "schMot":
 					def ai
@@ -4985,10 +4990,12 @@ def appUpdateNotify(force=false) {
 		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
 		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
 		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+		def blackListed = (atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) ? true : false
 		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || force) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
-			str += !force ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL automation file sources"
+			str += !force && blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
+			str += !force && !blackListed ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL automation file sources"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
@@ -5271,6 +5278,9 @@ def webResponse(resp, data) {
 			helpHandler()
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", false) }
+		if(atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) {
+			appUpdateNotify(true)
+		}
 		getFbAppSettings(data?.type == "async" ? false : true )
 		atomicState?.lastWebUpdDt = getDtNow()
 		result = true
