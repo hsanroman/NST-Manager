@@ -2260,7 +2260,8 @@ def restStreamHandler(close = false) {
 				"nesttoken": "${atomicState?.authToken}",
 				"connStatus": "${connStatus}",
 				"callback": "${getApiURL()}",
-				"sttoken": "${atomicState?.accessToken}"
+				"sttoken": "${atomicState?.accessToken}",
+				"structure": "${atomicState?.structures}"
 			],
 			path: "/stream",
 			body: ""
@@ -2289,7 +2290,8 @@ def restStreamCheck() {
 			headers: [
 				"HOST": host,
 				"callback": "${getApiURL()}",
-				"sttoken": "${atomicState?.accessToken}"
+				"sttoken": "${atomicState?.accessToken}",
+				"structure": "${atomicState?.structures}"
 			],
 			path: "/status",
 			body: ""
