@@ -509,9 +509,11 @@ void processEvent(data) {
 			switch (tempUnit) {
 				case "C":
 					if(eventData?.data?.locked_temp_min_c && eventData?.data?.locked_temp_max_c) { lockedTempEvent(eventData?.data?.locked_temp_min_c, eventData?.data?.locked_temp_max_c) }
+					def temp = eventData?.data?.ambient_temperature_c.toDouble()
+					temperatureEvent(temp)
+
 					def heatingSetpoint = 0.0
 					def coolingSetpoint = 0.0
-					def temp = eventData?.data?.ambient_temperature_c.toDouble()
 					def targetTemp = eventData?.data?.target_temperature_c.toDouble()
 
 					if(hvacMode == "cool") {
@@ -530,7 +532,20 @@ void processEvent(data) {
 						if(eventData?.data?.eco_temperature_low_c) { heatingSetpoint = eventData?.data?.eco_temperature_low_c.toDouble() }
 						else if(eventData?.data?.away_temperature_low_c) { heatingSetpoint = eventData?.data?.away_temperature_low_c.toDouble() }
 					}
-					temperatureEvent(temp)
+
+					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
+						coolingSetpointEvent(coolingSetpoint)
+						if(hvacMode == "eco" && state?.has_auto == false) { targetTemp = coolingSetpoint }
+					} else {
+						clearCoolingSetpoint()
+					}
+					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
+						heatingSetpointEvent(heatingSetpoint)
+						if(hvacMode == "eco" && state?.has_auto == false) { targetTemp = heatingSetpoint }
+					} else {
+						clearHeatingSetpoint()
+					}
+
 					if(hvacMode in ["cool", "heat"] || (hvacMode == "eco" && state?.has_auto == false)) {
 						thermostatSetpointEvent(targetTemp)
 					} else {
@@ -538,23 +553,15 @@ void processEvent(data) {
 						sendEvent(name:'thermostatSetpointMin', value: "",  descriptionText: "Clear Thermostat SetpointMin", displayed: false)
 						sendEvent(name:'thermostatSetpointMax', value: "",  descriptionText: "Clear Thermostat SetpointMax", displayed: false)
 					}
-					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
-						coolingSetpointEvent(coolingSetpoint)
-					} else {
-						clearCoolingSetpoint()
-					}
-					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
-						heatingSetpointEvent(heatingSetpoint)
-					} else {
-						clearHeatingSetpoint()
-					}
 					break
 
 				case "F":
 					if(eventData?.data?.locked_temp_min_f && eventData?.data?.locked_temp_max_f) { lockedTempEvent(eventData?.data?.locked_temp_min_f, eventData?.data?.locked_temp_max_f) }
+					def temp = eventData?.data?.ambient_temperature_f
+					temperatureEvent(temp)
+
 					def heatingSetpoint = 0
 					def coolingSetpoint = 0
-					def temp = eventData?.data?.ambient_temperature_f
 					def targetTemp = eventData?.data?.target_temperature_f
 
 					if(hvacMode == "cool") {
@@ -573,23 +580,25 @@ void processEvent(data) {
 						if(eventData?.data?.eco_temperature_low_f)  { heatingSetpoint = eventData?.data?.eco_temperature_low_f }
 						else if(eventData?.data?.away_temperature_low_f)  { heatingSetpoint = eventData?.data?.away_temperature_low_f }
 					}
-					temperatureEvent(temp)
+
+					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
+						coolingSetpointEvent(coolingSetpoint)
+						if(hvacMode == "eco" && state?.has_auto == false) { targetTemp = coolingSetpoint }
+					} else {
+						clearCoolingSetpoint()
+					}
+					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
+						heatingSetpointEvent(heatingSetpoint)
+						if(hvacMode == "eco" && state?.has_auto == false) { targetTemp = heatingSetpoint }
+					} else {
+						clearHeatingSetpoint()
+					}
 					if(hvacMode in ["cool", "heat"] || (hvacMode == "eco" && state?.has_auto == false)) {
 						thermostatSetpointEvent(targetTemp)
 					} else {
 						sendEvent(name:'thermostatSetpoint', value: "",  descriptionText: "Clear Thermostat Setpoint", displayed: true)
 						sendEvent(name:'thermostatSetpointMin', value: "",  descriptionText: "Clear Thermostat SetpointMin", displayed: false)
 						sendEvent(name:'thermostatSetpointMax', value: "",  descriptionText: "Clear Thermostat SetpointMax", displayed: false)
-					}
-					if(hvacMode in ["cool", "auto", "eco"] && state?.can_cool) {
-						coolingSetpointEvent(coolingSetpoint)
-					} else {
-						clearCoolingSetpoint()
-					}
-					if(hvacMode in ["heat", "auto", "eco"] && state?.can_heat) {
-						heatingSetpointEvent(heatingSetpoint)
-					} else {
-						clearHeatingSetpoint()
 					}
 					break
 
