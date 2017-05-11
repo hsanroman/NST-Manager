@@ -401,7 +401,9 @@ def mainAutoPage(params) {
 							if(parent?.settings?.cameras) {
 								nDesc += "\n • Set Nest Cams On when Away ${nModeCamOnAway ? "ON" : "OFF"}"
 								nDesc += "\n • Set Nest Cams Off when Home ${nModeCamOffHome ? "ON" : "OFF"}"
-								nDesc += "\n • Nest Cams Selected: (${nModeCamsSel.size()})"
+								if(settings?.nModeCamsSel) {
+									nDesc += "\n • Nest Cams Selected: (${nModeCamsSel.size()})"
+								}
 							}
 						}
 						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
