@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.5" }
-def appVerDate() { "5-08-2017" }
+def appVerDate() { "5-11-2017" }
 
 preferences {
 	//startPage
@@ -401,6 +401,7 @@ def mainAutoPage(params) {
 							if(parent?.settings?.cameras) {
 								nDesc += "\n • Set Nest Cams On when Away ${nModeCamOnAway ? "ON" : "OFF"}"
 								nDesc += "\n • Set Nest Cams Off when Home ${nModeCamOffHome ? "ON" : "OFF"}"
+								nDesc += "\n • Nest Cams Selected: (${nModeCamsSel.size()})"
 							}
 						}
 						nDesc += (nModePresSensor || nModeSwitch) || (!nModePresSensor && !nModeSwitch && (nModeAwayModes && nModeHomeModes)) ? "\n\nTap to modify" : ""
@@ -3665,8 +3666,7 @@ def nestModePresPage() {
 		}
 		if((nModeHomeModes && nModeAwayModes) || nModePresSensor || nModeSwitch) {
 			section("Additional Settings:") {
-// TODO FIX THIS ICON
-				input (name: "nModeSetEco", type: "bool", title: "Set ECO mode when away?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("thermostat_icon.png"))
+				input (name: "nModeSetEco", type: "bool", title: "Set ECO mode when away?", required: false, defaultValue: false, submitOnChange: true, image: getDevImg("eco_icon.png"))
 				input (name: "nModeDelay", type: "bool", title: "Delay Changes?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("delay_time_icon.png"))
 				if(nModeDelay) {
 					input "nModeDelayVal", "enum", title: "Delay before change?", required: false, defaultValue: 60, metadata: [values:longTimeSecEnum()],
@@ -3675,6 +3675,10 @@ def nestModePresPage() {
 				if(parent?.settings?.cameras) {
 					input (name: "nModeCamOnAway", type: "bool", title: "Turn On Nest Cams when Away?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_green_icon.png"))
 					input (name: "nModeCamOffHome", type: "bool", title: "Turn Off Nest Cams when Home?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("camera_gray_icon.png"))
+					if(settings?.nModeCamOffHome || settings?.nModeCamOnAway) {
+						paragraph title: "Optional" , "You can choose which cameras are changed when Home/Away.  If you don't select any devices all will be changed."
+						input (name: "nModeCamsSel", type: "device.nestCamera", title: "Select your Nest Cams?", required: false, multiple: true, submitOnChange: true, image: getAppImg("camera_blue_icon.png"))
+					}
 				}
 			}
 		}
@@ -3735,11 +3739,15 @@ def nModeGenericEvt(evt) {
 }
 
 def adjustCameras(on, sendAutoType=null) {
-	def cams = parent?.getCams()
+	def cams = settings?.nModeCamsSel ?: parent?.getCams()
 	def foundCams
 	if(cams) {
-		foundCams = cams?.collect { dni ->
-			def dev = parent.getCameraDevice(dni)
+		if(settings?.nModeCamsSel) {
+			foundCams = cams
+		} else {
+			foundCams = cams?.collect { parent.getCameraDevice(it) }
+		}
+		foundCams.each { dev ->
 			if(dev) {
 				def didstr = "On"
 				if(on) {
