@@ -23,7 +23,6 @@ metadata {
 		capability "Motion Sensor"
 		capability "Sound Sensor"
 		capability "Refresh"
-		capability "Notification"
 		capability "Image Capture"
 		capability "Video Camera"
 		//capability "Video Capture"
