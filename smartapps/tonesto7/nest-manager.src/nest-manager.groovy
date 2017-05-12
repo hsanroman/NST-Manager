@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: NST Manager                                                          |
-|        Copyright (C) 2017 Anthony S.                                                      |
+|    Copyright (C) 2017 Anthony S.                                                      	|
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.9" }
-def appVerDate() { "5-08-2017" }
+def appVerDate() { "5-12-2017" }
 def minVersions() {
 	return [
 		"automation":["val":505, "desc":"5.0.5"],
@@ -204,7 +204,7 @@ def mainPage() {
 			if(settings?.restStreaming) {
 				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
 				href "pollPrefPage", title: "", state: ((atomicState?.restStreamingOn && rStrEn) ? "complete" : null), image: getAppImg("two_way_icon.png"),
-						description: "Rest Streaming: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn || !rStrEn) ? "Not Active" : "Active"})"
+						description: "Nest Streaming: (${(!atomicState?.restStreamingOn || !rStrEn) ? "Inactive" : "Active"})"
 			}
 			if(atomicState?.appData && !appDevType() && isAppUpdateAvail()) {
 				href url: stIdeLink(), style:"external", required: false, title:"An Update is Available for ${appName()}!",
@@ -1809,7 +1809,7 @@ def getPollingConfDesc() {
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
 	def pollWaitValDesc = (!settings?.pollWaitVal || settings?.pollWaitVal == "10") ? "" : " (Custom)"
 	def pStr = ""
-	pStr += rStrEn ? "Nest Stream: (${(settings.restStreaming && rStrEn) ? "On" : "Off"}) (${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"})" : ""
+	pStr += rStrEn ? "Nest Stream: (${(settings.restStreaming && rStrEn) ? "${(!atomicState?.restStreamingOn) ? "Not Active" : "Active"}" : "Off"})" : ""
 	pStr += "\nPolling: (${!atomicState?.pollingOn ? "Not Active" : "Active"})"
 	pStr += "\n• Device: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollValue ?: 180) : 300), pollValEnum(true))}) ${pollValDesc}"
 	pStr += "\n• Structure: (${getInputEnumLabel((!atomicState?.streamPolling ? (pollStrValue?:180) : 300), pollValEnum())}) ${pollStrValDesc}"
@@ -2237,7 +2237,7 @@ def restStreamHandler(close = false) {
 	def toClose = close
 	def host = getRestHost()
 	if(!host) {
-		atomicState.restStreamingOn = false; 
+		atomicState.restStreamingOn = false;
 		host = atomicState?.lastRestHost ?: null
 		atomicState.lastRestHost = null
 		if(!host) { return }
@@ -8623,22 +8623,6 @@ private getDeviceSupportedCommands(dev) {
 	return dev?.supportedCommands.findAll { it as String }
 }
 
-/*
-// obsolete
-def getTstatCapabilities(tstat, autoType, dyn = false) {
-	def canCool = true
-	def canHeat = true
-	def hasFan = true
-	if(tstat?.currentCanCool) { canCool = tstat?.currentCanCool.toBoolean() }
-	if(tstat?.currentCanHeat) { canHeat = tstat?.currentCanHeat.toBoolean() }
-	if(tstat?.currentHasFan) { hasFan = tstat?.currentHasFan.toBoolean() }
-
-	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanCool" = canCool
-	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatCanHeat" = canHeat
-	atomicState?."${autoType}${dyn ? "_${tstat?.deviceNetworkId}_" : ""}TstatHasFan" = hasFan
-}
-*/
-
 def getSafetyTemps(tstat, usedefault=true) {
 	def minTemp = tstat?.currentState("safetyTempMin")?.doubleValue
 	def maxTemp = tstat?.currentState("safetyTempMax")?.doubleValue
@@ -8676,239 +8660,6 @@ def getComfortDewpoint(tstat, usedefault=true) {
 	}
 	return maxDew
 }
-
-/*
-// obsolete
-def getSafetyTempsOk(tstat) {
-	def sTemps = getSafetyTemps(tstat)
-	//log.debug "sTempsOk: $sTemps"
-	if(sTemps) {
-		def curTemp = tstat?.currentTemperature?.toDouble()
-		//log.debug "curTemp: ${curTemp}"
-		if( ((sTemps?.min != null && sTemps?.min.toDouble() != 0) && (curTemp < sTemps?.min.toDouble())) || ((sTemps?.max != null && sTemps?.max?.toDouble() != 0) && (curTemp > sTemps?.max?.toDouble())) ) {
-			return false
-		}
-	} // else { log.debug "getSafetyTempsOk: no safety Temps" }
-	return true
-}
-
-// obsolete
-def getGlobalDesiredHeatTemp() {
-	def t0 = parent?.settings?.locDesiredHeatTemp?.toDouble()
-	return t0 ?: null
-}
-
-// obsolete
-def getGlobalDesiredCoolTemp() {
-	def t0 = parent?.settings?.locDesiredCoolTemp?.toDouble()
-	return t0 ?: null
-}
-
-// obsolete
-def getClosedContacts(contacts) {
-	if(contacts) {
-		def cnts = contacts?.findAll { it?.currentContact == "closed" }
-		return cnts ?: null
-	}
-	return null
-}
-
-// obsolete
-def getOpenContacts(contacts) {
-	if(contacts) {
-		def cnts = contacts?.findAll { it?.currentContact == "open" }
-		return cnts ?: null
-	}
-	return null
-}
-
-// obsolete
-def getDryWaterSensors(sensors) {
-	if(sensors) {
-		def cnts = sensors?.findAll { it?.currentWater == "dry" }
-		return cnts ?: null
-	}
-	return null
-}
-
-// obsolete
-def getWetWaterSensors(sensors) {
-	if(sensors) {
-		def cnts = sensors?.findAll { it?.currentWater == "wet" }
-		return cnts ?: null
-	}
-	return null
-}
-
-// obsolete
-def isContactOpen(con) {
-	def res = false
-	if(con) {
-		if(con?.currentSwitch == "on") { res = true }
-	}
-	return res
-}
-
-// obsolete
-def isSwitchOn(dev) {
-	def res = false
-	if(dev) {
-		dev?.each { d ->
-			if(d?.currentSwitch == "on") { res = true }
-		}
-	}
-	return res
-}
-
-// obsolete
-def isPresenceHome(presSensor) {
-	def res = false
-	if(presSensor) {
-		presSensor?.each { d ->
-			if(d?.currentPresence == "present") { res = true }
-		}
-	}
-	return res
-}
-
-// obsolete
-def isSomebodyHome(sensors) {
-	if(sensors) {
-		def cnts = sensors?.findAll { it?.currentPresence == "present" }
-		return cnts ? true : false
-	}
-	return false
-}
-
-// obsolete
-def getTstatPresence(tstat) {
-	def pres = "not present"
-	if(tstat) { pres = tstat?.currentPresence }
-	return pres
-}
-*/
-
-/******************************************************************************
-*					Keep These Methods						  *
-*******************************************************************************/
-/*
-def switchEnumVals() { return [0:"Off", 1:"On", 2:"On/Off"] }
-
-def longTimeMinEnum() {
-	def vals = [
-		1:"1 Minute", 2:"2 Minutes", 3:"3 Minutes", 4:"4 Minutes", 5:"5 Minutes", 10:"10 Minutes", 15:"15 Minutes", 20:"20 Minutes", 25:"25 Minutes", 30:"30 Minutes",
-		45:"45 Minutes", 60:"1 Hour", 120:"2 Hours", 240:"4 Hours", 360:"6 Hours", 720:"12 Hours", 1440:"24 Hours"
-	]
-	return vals
-}
-
-// obsolete
-def longTimeSecEnum() {
-	def vals = [
-		0:"Off", 60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes", 1500:"25 Minutes",
-		1800:"30 Minutes", 2700:"45 Minutes", 3600:"1 Hour", 7200:"2 Hours", 14400:"4 Hours", 21600:"6 Hours", 43200:"12 Hours", 86400:"24 Hours", 10:"10 Seconds(Testing)"
-	]
-	return vals
-}
-
-// obsolete
-def shortTimeEnum() {
-	def vals = [
-		1:"1 Second", 2:"2 Seconds", 3:"3 Seconds", 4:"4 Seconds", 5:"5 Seconds", 6:"6 Seconds", 7:"7 Seconds",
-		8:"8 Seconds", 9:"9 Seconds", 10:"10 Seconds", 15:"15 Seconds", 30:"30 Seconds", 60:"60 Seconds"
-	]
-	return vals
-}
-
-def smallTempEnum() {
-	def tempUnit = getTemperatureScale()
-	def vals = [
-		1:"1°${tempUnit}", 2:"2°${tempUnit}", 3:"3°${tempUnit}", 4:"4°${tempUnit}", 5:"5°${tempUnit}", 6:"6°${tempUnit}", 7:"7°${tempUnit}",
-		8:"8°${tempUnit}", 9:"9°${tempUnit}", 10:"10°${tempUnit}"
-	]
-	return vals
-}
-
-// obsolete
-def switchRunEnum() {
-	def pName = schMotPrefix()
-	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
-	def vals = [
-		1:"Heating and Cooling", 2:"With Fan Only", 3:"Heating", 4:"Cooling"
-	]
-	if(!hasFan) {
-		vals = [
-			1:"Heating and Cooling", 3:"Heating", 4:"Cooling"
-		]
-	}
-	return vals
-}
-
-// obsolete
-def fanModeTrigEnum() {
-	def pName = schMotPrefix()
-	def canCool = atomicState?."${pName}TstatCanCool" ? true : false
-	def canHeat = atomicState?."${pName}TstatCanHeat" ? true : false
-	def hasFan = atomicState?."${pName}TstatHasFan" ? true : false
-	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco", "any":"Any Mode"]
-	if(!canHeat) {
-		vals = ["cool":"Cool", "eco":"Eco", "any":"Any Mode"]
-	}
-	if(!canCool) {
-		vals = ["heat":"Heat", "eco":"Eco", "any":"Any Mode"]
-	}
-	return vals
-}
-
-// obsolete
-def tModeHvacEnum(canHeat, canCool) {
-	def vals = ["auto":"Auto", "cool":"Cool", "heat":"Heat", "eco":"Eco"]
-	if(!canHeat) {
-		vals = ["cool":"Cool", "eco":"Eco"]
-	}
-	if(!canCool) {
-		vals = ["heat":"Heat", "eco":"Eco"]
-	}
-	return vals
-}
-
-// obsolete
-def alarmActionsEnum() {
-	def vals = ["siren":"Siren", "strobe":"Strobe", "both":"Both (Siren/Strobe)"]
-	return vals
-}
-
-// obsolete
-def getEnumValue(enumName, inputName) {
-	def result = "unknown"
-	if(enumName) {
-		enumName?.each { item ->
-			if(item?.key.toString() == inputName?.toString()) {
-				result = item?.value
-			}
-		}
-	}
-	return result
-}
-
-// obsolete
-def getSunTimeState() {
-	def tz = TimeZone.getTimeZone(location.timeZone.ID)
-	def sunsetTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location?.currentValue('sunsetTime')).format('h:mm a', tz)
-	def sunriseTm = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location?.currentValue('sunriseTime')).format('h:mm a', tz)
-	atomicState.sunsetTm = sunsetTm
-	atomicState.sunriseTm = sunriseTm
-}
-
-// obsolete
-def parseDt(format, dt) {
-	def result
-	def newDt = Date.parse("$format", dt)
-	result = formatDt(newDt)
-	//log.debug "result: $result"
-	return result
-}
-*/
 
 def askAlexaImgUrl() { return "https://raw.githubusercontent.com/MichaelStruck/SmartThingsPublic/master/smartapps/michaelstruck/ask-alexa.src/AskAlexa512.png" }
 
