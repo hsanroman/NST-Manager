@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.4" }
+def devVer() { return "5.0.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -260,8 +260,6 @@ def processEvent() {
 	}
 	def eventData = state?.eventData
 	state.eventData = null
-	state?.ok2Checkin = false
-	state?.ok2CheckinRes = []
 	def dtNow = getDtNow()
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
@@ -400,7 +398,9 @@ def lastCheckinEvent(checkin) {
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
 		LogAction("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false)
+		state?.ok2Checkin = false
+		state?.ok2CheckinRes = []
 	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
