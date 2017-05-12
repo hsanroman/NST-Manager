@@ -475,7 +475,7 @@ void processEvent(data) {
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
-
+			fanModeEvent(eventData?.data?.fan_timer_active.toString())
 			def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
 			def newMode = device?.currentState("nestThermostatMode")?.value.toString()
@@ -487,7 +487,7 @@ void processEvent(data) {
 			hasLeafEvent(eventData?.data?.has_leaf)
 			humidityEvent(eventData?.data?.humidity.toString())
 			operatingStateEvent(eventData?.data?.hvac_state.toString())
-			fanModeEvent(eventData?.data?.fan_timer_active.toString())
+
 			if(!eventData?.data?.last_connection) { lastCheckinEvent(null,null) }
 			else { lastCheckinEvent(eventData?.data?.last_connection, eventData?.data?.is_online.toString()) }
 			sunlightCorrectionEnabledEvent(eventData?.data?.sunlight_correction_enabled)
@@ -1050,9 +1050,19 @@ def fanModeEvent(fanActive) {
 	} else { LogAction("Fan Active: (${val}) | Original State: (${fanMode})") }
 }
 
-def operatingStateEvent(operatingState) {
-	def hvacState = device.currentState("thermostatOperatingState")?.value
-	def operState = (operatingState == "off") ? "idle" : operatingState
+def operatingStateEvent(opState) {
+	def hvacState = device.currentState("thermostatOperatingState")?.stringValue
+	def fanOn = device.currentState("thermostatFanMode")?.stringValue == "on" ? true : false
+	def operState = null
+	if (fanOn && opState == "off") {
+		operState = "fan only"
+	} else {
+		if(opState.toString() == "off") {
+			operState = "idle"
+		} else {
+			operState = opState
+		}
+	}
 	if(isStateChange(device, "thermostatOperatingState", operState.toString())) {
 		Logger("UPDATED | OperatingState is (${operState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
 		sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
