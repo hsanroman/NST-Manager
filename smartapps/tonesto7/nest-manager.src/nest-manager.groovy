@@ -1,6 +1,6 @@
 /********************************************************************************************
 |    Application Name: NST Manager                                                          |
-|    Copyright (C) 2017 Anthony S.                                                      	|
+|    Copyright (C) 2017 Anthony S.                                                          |
 |    Authors: Anthony S. (@tonesto7), Eric S. (@E_sch)                                      |
 |    Contributors: Ben W. (@desertblade)                                                    |
 |    A few code methods are modeled from those in CoRE by Adrian Caramaliu                  |
@@ -37,15 +37,15 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.9" }
-def appVerDate() { "5-12-2017" }
+def appVerDate() { "5-13-2017" }
 def minVersions() {
 	return [
 		"automation":["val":505, "desc":"5.0.5"],
-		"thermostat":["val":502, "desc":"5.0.2"],
+		"thermostat":["val":503, "desc":"5.0.3"],
 		"protect":["val":502, "desc":"5.0.2"],
 		"presence":["val":501, "desc":"5.0.1"],
 		"weather":["val":504, "desc":"5.0.4"],
-		"camera":["val":504 , "desc":"5.0.4"],
+		"camera":["val":505 , "desc":"5.0.5"],
 	]
 }
 
