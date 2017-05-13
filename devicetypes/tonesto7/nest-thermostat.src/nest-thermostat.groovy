@@ -81,6 +81,7 @@ metadata {
 		attribute "onlineStatus", "string"
 		attribute "nestPresence", "string"
 		attribute "nestThermostatMode", "string"
+		attribute "nestThermostatOperatingState", "string"
 		attribute "presence", "string"
 		attribute "canHeat", "string"
 		attribute "canCool", "string"
@@ -475,7 +476,7 @@ void processEvent(data) {
 			canHeatCool(eventData?.data?.can_heat, eventData?.data?.can_cool)
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
-			fanModeEvent(eventData?.data?.fan_timer_active.toString())
+
 			def curMode = device?.currentState("nestThermostatMode")?.value.toString()
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
 			def newMode = device?.currentState("nestThermostatMode")?.value.toString()
@@ -486,7 +487,8 @@ void processEvent(data) {
 			hvacPreviousModeEvent(eventData?.data?.previous_hvac_mode.toString())
 			hasLeafEvent(eventData?.data?.has_leaf)
 			humidityEvent(eventData?.data?.humidity.toString())
-			operatingStateEvent(eventData?.data?.hvac_state.toString())
+			operatingStateEvent(eventData?.data?.hvac_state.toString())  // in races, operatingState has precedence; unresolvable
+			fanModeEvent(eventData?.data?.fan_timer_active.toString())
 
 			if(!eventData?.data?.last_connection) { lastCheckinEvent(null,null) }
 			else { lastCheckinEvent(eventData?.data?.last_connection, eventData?.data?.is_online.toString()) }
@@ -726,7 +728,7 @@ def sunlightCorrectionActiveEvent(sunAct) {
 def timeToTargetEvent(ttt, tttTr) {
 	//log.debug "timeToTargetEvent($ttt, $tttTr)"
 	def val = device.currentState("timeToTarget")?.stringValue
-	def opIdle = device.currentState("thermostatOperatingState").stringValue == "idle" ? true : false
+	def opIdle = device.currentState("nestThermostatOperatingState").stringValue == "off" ? true : false
 	//log.debug "opIdle: $opIdle"
 	def nVal
 	if(ttt) {
@@ -1047,26 +1049,35 @@ def fanModeEvent(fanActive) {
 	if(isStateChange(device, "thermostatFanMode", val.toString())) {
 		Logger("UPDATED | Fan Mode: (${val.toString().capitalize()}) | Original State: (${fanMode.toString().capitalize()})")
 		sendEvent(name: "thermostatFanMode", value: val, descriptionText: "Fan Mode is: ${val}", displayed: true, isStateChange: true, state: val)
+		operatingStateEvent()	// try to resolve nasty race.  Race cannot be avoided due to three variables trying to show same status
 	} else { LogAction("Fan Active: (${val}) | Original State: (${fanMode})") }
 }
 
-def operatingStateEvent(opState) {
-	def hvacState = device.currentState("thermostatOperatingState")?.stringValue
+def operatingStateEvent(opState=null) {
+	def nesthvacState = device.currentState("nestThermostatOperatingState")?.stringValue
+	def operState = opState == null ? nesthvacState : opState
+	if(operState == null) { return }  // try to resolve nasty race.  Race cannot be avoided due to three variables trying to show same status
+	def newoperState = (operState == "off") ? "idle" : operState
+
 	def fanOn = device.currentState("thermostatFanMode")?.stringValue == "on" ? true : false
-	def operState = null
-	if (fanOn && opState == "off") {
-		operState = "fan only"
-	} else {
-		if(opState.toString() == "off") {
-			operState = "idle"
-		} else {
-			operState = opState
-		}
+	if (fanOn && operState == "idle") {
+		newoperState = "fan only"
 	}
-	if(isStateChange(device, "thermostatOperatingState", operState.toString())) {
-		Logger("UPDATED | OperatingState is (${operState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
-		sendEvent(name: 'thermostatOperatingState', value: operState, descriptionText: "Device is ${operState}", displayed: true, isStateChange: true)
-	} else { LogAction("OperatingState is (${operState}) | Original State: (${hvacState})") }
+
+	if(isStateChange(device, "nestThermostatOperatingState", operState.toString())) {
+		Logger("UPDATED | nestOperatingState is (${operState.toString().capitalize()}) | Original State: (${nesthvacState.toString().capitalize()})")
+		sendEvent(name: 'nestThermostatOperatingState', value: operState, descriptionText: "Device is ${operState}")
+	} else {
+		LogAction("nestOperatingState is (${operState}) | Original State: (${nesthvacState})")
+	}
+
+	def hvacState = device.currentState("thermostatOperatingState")?.stringValue
+	if(isStateChange(device, "thermostatOperatingState", newoperState.toString())) {
+		Logger("UPDATED | OperatingState is (${newoperState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
+		sendEvent(name: 'thermostatOperatingState', value: newoperState, descriptionText: "Device is ${newoperState}", displayed: true, isStateChange: true)
+	} else {
+		LogAction("OperatingState is (${newoperState}) | Original State: (${hvacState})")
+	}
 }
 
 def tempLockOnEvent(isLocked) {
@@ -2323,7 +2334,7 @@ String getDataString(Integer seriesIndex) {
 			if(myval == "idle") { myval = 0 }
 			if(myval == "cooling") { myval = 8 }
 			if(myval == "heating") { myval = 16 }
-			//else { }
+			else { myval = 0 }
 		}
 /*
 		if(myhas_fan && seriesIndex == 8) {
