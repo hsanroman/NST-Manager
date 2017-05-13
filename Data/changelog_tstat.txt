@@ -1,3 +1,10 @@
+<p style="font-size: 15px;"><strong>V5.0.3 (May 13th, 2017):</strong><p>
+<hr noshade>
+<ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
+    <li><strong>UPDATED:</strong> UPDATED: added operating state fan only.</li>
+    <li><strong>UPDATED:</strong> UPDATED: added temperature settings min, max attributes.</li>
+</ul>
+<br>
 <p style="font-size: 15px;"><strong>V5.0.2 (May 1st, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
