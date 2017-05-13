@@ -45,7 +45,8 @@ def minVersions() {
 		"protect":["val":502, "desc":"5.0.2"],
 		"presence":["val":501, "desc":"5.0.1"],
 		"weather":["val":504, "desc":"5.0.4"],
-		"camera":["val":505 , "desc":"5.0.5"],
+		"camera":["val":505, "desc":"5.0.5"],
+		"stream":["val":85, "desc":"0.8.5"]
 	]
 }
 
@@ -2325,6 +2326,13 @@ def receiveStreamStatus() {
 				unsubscribe()
 				atomicState.ssdpOn = false
 				subscriber()
+			}
+			atomicState?.streamDevVer = resp?.version ?: ""
+			if(atomicState?.streamDevVer != "" && (versionStr2Int(atomicState?.streamDevVer) >= minVersions()?.stream?.val)) {
+				;
+			} else {
+				LogAction("NEED SOFTWARE UPDATE: Stream service (v${atomicState?.streamDevVer}) REQUIRED: (v${minVersions()?.stream?.desc}) Update the Device to latest", "error", true)
+				appUpdateNotify()
 			}
 		}
 		atomicState?.restServiceData = resp
@@ -4992,6 +5000,7 @@ def appUpdateNotify(force=false) {
 		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
 		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
 		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
+		def streamUpd = atomicState?.streamDevVer ? isStreamUpdateAvail() : null
 		def blackListed = (atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) ? true : false
 		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || force) {
 			atomicState?.lastUpdMsgDt = getDtNow()
@@ -5006,6 +5015,7 @@ def appUpdateNotify(force=false) {
 			str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 			str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 			str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
+			str += !streamUpd ? "" : "\nStream Service: v${atomicState?.appData?.eventStreaming?.minVersion?.toString()}"
 			sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", true)
 		}
 	}
@@ -5497,7 +5507,7 @@ def isCodeUpdateAvailable(newVer, curVer, type) {
 			result = (latestVer == newVer) ? true : false
 		}
 	}
-	//log.debug "type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result"
+	LogTrace("type: $type | newVer: $newVer | curVer: $curVer | newestVersion: ${latestVer} | result: $result")
 	return result
 }
 
@@ -5533,6 +5543,11 @@ def isTstatUpdateAvail() {
 
 def isWeatherUpdateAvail() {
 	if(isCodeUpdateAvailable(atomicState?.appData?.updater?.versions?.weather?.ver, atomicState?.weatDevVer, "weather")) { return true }
+	return false
+}
+
+def isStreamUpdateAvail() {
+	if(isCodeUpdateAvailable(atomicState?.appData?.eventStreaming?.minVersion, atomicState?.streamDevVer, "stream")) { return true }
 	return false
 }
 
