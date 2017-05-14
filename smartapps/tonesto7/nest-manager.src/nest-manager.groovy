@@ -2507,8 +2507,11 @@ def subscriber() {
 }
 
 private adj_temp(tempF) {
+	if(getObjType(tempF) in ["List", "ArrayList"]) {
+		LogAction("adj_temp: error temp ${tempF} is list", "error", true)
+	}
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * 5/9 as Double
+		return (tempF - 32) * (5 / 9) as Double
 	} else {
 		return tempF
 	}
@@ -2539,7 +2542,7 @@ def setPollingState() {
 			def timgcd = gcd([pollTime, pollStrTime, weatherTimer])
 			def random = new Random()
 			def random_int = random.nextInt(60)
-			timgcd = (timgcd.toInteger() / 60) < 1 ? 1 : timgcd.toInteger()/60
+			timgcd = (timgcd.toInteger() / 60) < 1 ? 1 : timgcd.toInteger() / 60
 			def random_dint = random.nextInt(timgcd.toInteger())
 			LogAction("POLL scheduled (${random_int} ${random_dint}/${timgcd} * * * ?)", "info", true)
 			schedule("${random_int} ${random_dint}/${timgcd} * * * ?", poll)	// this runs every timgcd minutes
@@ -3832,10 +3835,10 @@ def updateChildData(force = false) {
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * 9/5 + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32) as Integer
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * 5/9 as Double
+							tempC = (tempF - 32) * (5 / 9) as Double
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
@@ -3844,20 +3847,20 @@ def updateChildData(force = false) {
 						def ctempF = 0
 						if(getTemperatureScale() == "C") {
 							ctempC = automationChildApp.getRemSenCoolSetTemp()
-							ctempF = (ctempC * 9/5 + 32.0) as Integer
+							ctempF = (ctempC * (9 / 5) + 32.0) as Integer
 						} else {
 							ctempF = automationChildApp.getRemSenCoolSetTemp()
-							ctempC = (ctempF - 32.0) * 5/9 as Double
+							ctempC = (ctempF - 32.0) * (5 / 9) as Double
 						}
 
 						def htempC = 0.0
 						def htempF = 0
 						if(getTemperatureScale() == "C") {
 							htempC = automationChildApp.getRemSenHeatSetTemp()
-							htempF = (htempC * 9/5 + 32.0) as Integer
+							htempF = (htempC * (9 / 5) + 32.0) as Integer
 						} else {
 							htempF = automationChildApp.getRemSenHeatSetTemp()
-							htempC = (htempF - 32.0) * 5/9 as Double
+							htempC = (htempF - 32.0) * (5 / 9) as Double
 						}
 
 						if(data?.hvac_mode.toString() == "heat-cool") {
@@ -4037,7 +4040,7 @@ def ok2PollMetaData() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needMetaPoll) { return true }
 	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
-	def val = pollTime/3
+	def val = pollTime / 3
 	if(val > 60) { val = 50 }
 	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
 }
@@ -4046,7 +4049,7 @@ def ok2PollDevice() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
-	def val = pollTime/3
+	def val = pollTime / 3
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
@@ -4056,7 +4059,7 @@ def ok2PollStruct() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-	def val = pollStrTime/3
+	def val = pollStrTime / 3
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
@@ -6857,7 +6860,7 @@ def getUse24Time()		{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) }
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -8359,15 +8362,18 @@ def getIsAutomationDisabled() {
 }
 
 def fixTempSetting(Double temp) {
+	if(getObjType(temp) in ["List", "ArrayList"]) {
+		LogAction("fixTempSetting: error temp ${temp} is list", "error", true)
+	}
 	def newtemp = temp
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (newtemp - 32.0) * (5/9) as Double)
+				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double)
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((newtemp * (9/5) as Double) + 32.0) ).toInteger()
+				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger()
 			}
 		}
 	}
@@ -8526,6 +8532,8 @@ def roundTemp(Double temp) {
 		else if(temp instanceof BigDecimal) {
 			//log.debug "roundTemp: ($temp) is BigDecimal"
 			newtemp = temp.toInteger()
+		} else if(getObjType(temp) in ["List", "ArrayList"]) {
+			LogAction("roundTemp: error temp ${temp} is list", "error", true)
 		}
 	}
 	return newtemp
