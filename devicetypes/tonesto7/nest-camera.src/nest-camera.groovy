@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.4" }
+def devVer() { return "5.0.5" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -23,7 +23,6 @@ metadata {
 		capability "Motion Sensor"
 		capability "Sound Sensor"
 		capability "Refresh"
-		capability "Notification"
 		capability "Image Capture"
 		capability "Video Camera"
 		//capability "Video Capture"
@@ -260,8 +259,6 @@ def processEvent() {
 	}
 	def eventData = state?.eventData
 	state.eventData = null
-	state?.ok2Checkin = false
-	state?.ok2CheckinRes = []
 	def dtNow = getDtNow()
 	//log.trace("processEvent Parsing data ${eventData}")
 	try {
@@ -337,6 +334,10 @@ def getDeviceStateData() {
 }
 
 def addCheckinReason(str) {
+	if(state?.ok2Checkin != true) {
+		state?.ok2CheckinRes = []
+		state?.ok2Checkin = true
+	}
 	def res = state?.ok2CheckinRes ?: []
 	res.push(str?.toString())
 	state?.ok2CheckinRes = res
@@ -386,7 +387,6 @@ def deviceVerEvent(ver) {
 	if(isStateChange(device, "devTypeVer", newData?.toString())) {
 		Logger("UPDATED | Device Type Version is: (${newData}) | Original State: (${curData})")
 		sendEvent(name: 'devTypeVer', value: newData, displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("devTypeVer")
 	} else { LogAction("Device Type Version is: (${newData}) | Original State: (${curData})") }
 }
@@ -400,7 +400,8 @@ def lastCheckinEvent(checkin) {
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConn?.toString())) {
 		LogAction("UPDATED | Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+		sendEvent(name: 'lastConnection', value: lastConn?.toString(), displayed: false)
+		state?.ok2Checkin = false
 	} else { LogAction("Last Nest Check-in was: (${lastConn}) | Original State: (${lastChk})") }
 }
 
@@ -414,7 +415,6 @@ def lastOnlineEvent(dt) {
 	if(isStateChange(device, "lastOnlineChange", lastOnl?.toString())) {
 		Logger("UPDATED | Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})")
 		sendEvent(name: 'lastOnlineChange', value: lastOnl, displayed: false, isStateChange: true)
-		state?.ok2Checkin = true
 		addCheckinReason("lastOnlineChange")
 	} else { LogAction("Last Online Change was: (${lastOnl}) | Original State: (${lastOnlVal})") }
 }
@@ -429,7 +429,6 @@ def onlineStatusEvent(isOnline) {
 	if(isStateChange(device, "onlineStatus", onlineStat.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
 		sendEvent(name: "onlineStatus", value: onlineStat.toString(), descriptionText: "Online Status is: ${onlineStat}", displayed: true, isStateChange: true, state: onlineStat)
-		state?.ok2Checkin = true
 		addCheckinReason("onlineStatusChange")
 	} else { LogAction("Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})") }
 }
@@ -448,7 +447,6 @@ def isStreamingEvent(isStreaming, override=false) {
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
 		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
 		cameraStreamNotify(state?.isStreaming)
-		state?.ok2Checkin = true
 		addCheckinReason("isStreaming")
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
 }
@@ -460,7 +458,6 @@ def audioInputEnabledEvent(on) {
 	if(isStateChange(device, "audioInputEnabled", val.toString())) {
 		Logger("UPDATED | Audio Input Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "audioInputEnabled", value: val, descriptionText: "Audio Input Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("audioInputEnabled")
 	} else { LogAction("Audio Input Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -472,7 +469,6 @@ def videoHistEnabledEvent(on) {
 	if(isStateChange(device, "videoHistoryEnabled", val.toString())) {
 		Logger("UPDATED | Video History Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "videoHistoryEnabled", value: val, descriptionText: "Video History Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("videoHistoryEnabled")
 	} else { LogAction("Video History Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -484,7 +480,6 @@ def publicShareEnabledEvent(on) {
 	if(isStateChange(device, "publicShareEnabled", val.toString())) {
 		Logger("UPDATED | Public Sharing Status is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "publicShareEnabled", value: val, descriptionText: "Public Sharing Status is: ${val}", displayed: true, isStateChange: true, state: val)
-		state?.ok2Checkin = true
 		addCheckinReason("publicShareEnabled")
 	} else { LogAction("Public Sharing Status is: (${val}) | Original State: (${isOn})") }
 }
@@ -495,7 +490,6 @@ def softwareVerEvent(ver) {
 	if(isStateChange(device, "softwareVer", ver.toString())) {
 		Logger("UPDATED | Firmware Version: (${ver}) | Original State: (${verVal})")
 		sendEvent(name: 'softwareVer', value: ver, descriptionText: "Firmware Version is now v${ver}", displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("softwareVer")
 	} else { LogAction("Firmware Version: (${ver}) | Original State: (${verVal})") }
 }
@@ -547,7 +541,6 @@ def lastEventDataEvent(data) {
 		Logger("│	Start Time: (${newStartDt})")
 		Logger("│	Type: ${evtType}")
 		Logger("┌──────────New Camera Event──────────")
-		state?.ok2Checkin = true
 		addCheckinReason("lastEventData")
 	} else {
 		LogAction("Last Event Start Time: (${newStartDt}) - Zones: ${evtZoneNames} | Original State: (${curStartDt})")
@@ -590,7 +583,6 @@ def motionEvtHandler(data) {
 	if(isStateChange(device, "motion", motionStat.toString())) {
 		Logger("UPDATED | Motion Sensor is: (${motionStat}) | Original State: (${curMotion})")
 		sendEvent(name: "motion", value: motionStat, descriptionText: "Motion Sensor is: ${motionStat}", displayed: true, isStateChange: true, state: motionStat)
-		state?.ok2Checkin = true
 		addCheckinReason("motion")
 	} else { LogAction("Motion Sensor is: (${motionStat}) | Original State: (${curMotion})") }
 }
@@ -620,7 +612,6 @@ def soundEvtHandler(data) {
 	if(isStateChange(device, "sound", sndStat.toString())) {
 		Logger("UPDATED | Sound Sensor State: (${sndStat}) | Original State: (${curSound})")
 		sendEvent(name: "sound", value: sndStat, descriptionText: "Sound Sensor is: ${sndStat}", displayed: true, isStateChange: true, state: sndStat)
-		state?.ok2Checkin = true
 		addCheckinReason("sound")
 	} else { LogAction("Sound Sensor State: (${sndStat}) | Original State: (${curSound})") }
 }
@@ -633,7 +624,6 @@ def debugOnEvent(debug) {
 	if(isStateChange(device, "debugOn", dVal.toString())) {
 		Logger("UPDATED | Device Debug Logging is: (${dVal}) | Original State: (${val})")
 		sendEvent(name: 'debugOn', value: dVal, displayed: false)
-		state?.ok2Checkin = true
 		addCheckinReason("debugOn")
 	} else { LogAction("Device Debug Logging is: (${dVal}) | Original State: (${val})") }
 }
@@ -645,7 +635,6 @@ def apiStatusEvent(issue) {
 	if(isStateChange(device, "apiStatus", newStat.toString())) {
 		Logger("UPDATED | API Status is: (${newStat}) | Original State: (${curStat})")
 		sendEvent(name: "apiStatus", value: newStat, descriptionText: "API Status is: ${newStat}", displayed: true, isStateChange: true, state: newStat)
-		state?.ok2Checkin = true
 		addCheckinReason("apiStatus")
 	} else { LogAction("API Status is: (${newStat}) | Original State: (${curStat})") }
 }
@@ -661,7 +650,6 @@ def lastUpdatedEvent(sendEvt=false) {
 	if(sendEvt && state?.isOnline) {
 		LogAction("Last Parent Refresh time: (${lastDt}) | Previous Time: (${lastUpd})")
 		sendEvent(name: 'lastUpdatedDt', value: formatDt(now)?.toString(), displayed: false, isStateChange: true)
-		state?.ok2Checkin = true
 		addCheckinReason("lastUpdatedDt")
 	}
 }
@@ -679,7 +667,6 @@ def vidHistoryTimeEvent() {
 		Logger("UPDATED | Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})")
 		sendEvent(name: "minVideoHistoryHours", value: newMin, descriptionText: "Minimum Video Recording History Hours is Now: (${newMin} hours)", displayed: false, isStateChange: true, state: newMin)
 		sendEvent(name: "maxVideoHistoryHours", value: newMax, descriptionText: "Maximum Video Recording History Hours is Now: (${newMax} hours)", displayed: false, isStateChange: true, state: newMax)
-		state?.ok2Checkin = true
 		addCheckinReason("videoHistoryTime")
 	} else { LogAction("Video Recording History Hours is Now: (Minimum: ${newMin} hours | Maximum: ${newMax} hours) | Original State: (Minimum: ${curMin} | Maximum: ${curMax})") }
 }

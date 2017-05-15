@@ -24,19 +24,19 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.0.8"
+                "ver": "5.0.9"
             },
             "autoapp": {
-                "ver": "5.0.4"
+                "ver": "5.0.5"
             },
             "thermostat": {
-                "ver": "5.0.2"
+                "ver": "5.0.3"
             },
             "protect": {
                 "ver": "5.0.2"
             },
             "camera": {
-                "ver": "5.0.4"
+                "ver": "5.0.5"
             },
             "presence": {
                 "ver": "5.0.1"
@@ -81,7 +81,7 @@
     },
     "eventStreaming": {
         "enabled": false,
-        "minVersion": "0.4.0"
+        "minVersion": "0.8.5"
     },
     "healthcheck": {
         "camTimeout": 120,
