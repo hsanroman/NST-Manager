@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.9" }
-def appVerDate() { "5-13-2017" }
+def appVerDate() { "5-15-2017" }
 def minVersions() {
 	return [
 		"automation":["val":505, "desc":"5.0.5"],
@@ -2371,15 +2371,19 @@ def initWatchdogApp() {
 	def watDogApp = getChildApps()?.findAll { it?.getAutomationType() == "watchDog" }
 	if(watDogApp?.size() < 1) {
 		LogAction("Installing Watchdog App", "info", true)
-		addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
+		try {
+			addChildApp(appNamespace(), autoAppName(), getWatDogAppChildName(), [settings:[watchDogFlag:["type":"bool", "value":true]]])
+		} catch (ex) {
+			appUpdateNotify(true)
+		}
 	} else if(watDogApp?.size() >= 1) {
 		def cnt = 1
 		watDogApp?.each { chld ->
 			if(cnt == 1) {
-				//LogAction("Running Update Command on Watchdog", "warn", true)
+				LogTrace("initWatchdogApp: Running Update Command on Watchdog")
 				chld.update()
 			} else if(cnt > 1) {
-				LogAction("Deleting Extra Watchdog (${chld?.id})", "warn", true)
+				LogAction("initWatchdogApp: Deleting Extra Watchdog (${chld?.id})", "warn", true)
 				deleteChildApp(chld)
 			}
 			cnt = cnt+1
@@ -5009,7 +5013,7 @@ def appUpdateNotify(force=false) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
 			str += !force && blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
-			str += !force && !blackListed ? "" : "\nBAD AUTOMATIONS FILE, please REINSTALL automation file sources"
+			str += !force && !blackListed ? "" : "\nBAD or MISSING AUTOMATIONS FILE, please REINSTALL automation file sources"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
