@@ -5009,11 +5009,11 @@ def appUpdateNotify(force=false) {
 		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
 		def streamUpd = atomicState?.streamDevVer ? isStreamUpdateAvail() : null
 		def blackListed = (atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) ? true : false
-		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || force) {
+		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || blackListed || force) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
-			str += !force && blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
-			str += !force && !blackListed ? "" : "\nBAD or MISSING AUTOMATIONS FILE, please REINSTALL automation file sources"
+			str += !blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
+			str += !force ? "" : "\nBAD or MISSING AUTOMATIONS FILE, please REINSTALL automation file sources"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
