@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.0.9" }
-def appVerDate() { "5-15-2017" }
+def appVerDate() { "5-16-2017" }
 def minVersions() {
 	return [
 		"automation":["val":505, "desc":"5.0.5"],
@@ -2331,7 +2331,7 @@ def receiveStreamStatus() {
 			if(atomicState?.streamDevVer != "" && (versionStr2Int(atomicState?.streamDevVer) >= minVersions()?.stream?.val)) {
 				;
 			} else {
-				LogAction("NEED SOFTWARE UPDATE: Stream service (v${atomicState?.streamDevVer}) REQUIRED: (v${minVersions()?.stream?.desc}) Update the Device to latest", "error", true)
+				LogAction("NEED SOFTWARE UPDATE: Stream service (v${atomicState?.streamDevVer}) | REQUIRED: (v${minVersions()?.stream?.desc}) | Update the Device to latest", "error", true)
 				appUpdateNotify()
 			}
 		}
@@ -2427,7 +2427,7 @@ def getInstAutoTypesDesc() {
 		}
 
 		if(versionStr2Int(ver) < minVersions()?.automation?.val) {
-			LogAction("NEED SOFTWARE UPDATE: Automation ${a?.label} (v${ver}) REQUIRED: (v${minVersions()?.automation?.desc}) Update the NST automation to latest", "error", true)
+			LogAction("NEED SOFTWARE UPDATE: Automation ${a?.label} (v${ver}) | REQUIRED: (v${minVersions()?.automation?.desc}) | Update the NST automation to latest", "error", true)
 			appUpdateNotify()
 		}
 
@@ -3692,7 +3692,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) | REQUIRED: (v${minVersions()?.thermostat?.desc}) | Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(tData)
@@ -3722,7 +3722,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) REQUIRED: (v${minVersions()?.protect?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Protect ${devId} (v${atomicState?.pDevVer}) | REQUIRED: (v${minVersions()?.protect?.desc}) | Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(pData)
@@ -3752,7 +3752,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) REQUIRED: (v${minVersions()?.camera?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Camera ${devId} (v${atomicState?.camDevVer}) | REQUIRED: (v${minVersions()?.camera?.desc}) | Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(camData)
@@ -3780,7 +3780,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) REQUIRED: (v${minVersions()?.presence?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Presence ${devId} (v${atomicState?.presDevVer}) | REQUIRED: (v${minVersions()?.presence?.desc}) | Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(pData)
@@ -3811,7 +3811,7 @@ def updateChildData(force = false) {
 						if(atomicState?."lastUpdated${devId}Dt" == null) {
 							atomicState."lastUpdated${devId}Dt" = getDtNow()
 						} else {
-							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) REQUIRED: (v${minVersions()?.weather?.desc}) Update the Device to latest", "error", true)
+							LogAction("NEED SOFTWARE UPDATE: Weather ${devId} (v${atomicState?.weatDevVer}) | REQUIRED: (v${minVersions()?.weather?.desc}) | Update the Device to latest", "error", true)
 							appUpdateNotify()
 						}
 						it.generateEvent(wData)
@@ -3903,7 +3903,7 @@ def updateChildData(force = false) {
 							if(atomicState?."lastUpdated${devId}Dt" == null) {
 								atomicState."lastUpdated${devId}Dt" = getDtNow()
 							} else {
-								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) REQUIRED: (v${minVersions()?.thermostat?.desc}) Update the Device to latest", "error", true)
+								LogAction("NEED SOFTWARE UPDATE: Thermostat ${devId} (v${atomicState?.tDevVer}) | REQUIRED: (v${minVersions()?.thermostat?.desc}) | Update the Device to latest", "error", true)
 							}
 							it.generateEvent(tData)
 						}
@@ -4995,32 +4995,33 @@ def missPollNotify(on, wait) {
 	}
 }
 
-def appUpdateNotify(force=false) {
+def appUpdateNotify(badAuto=false) {
 	def on = atomicState?.notificationPrefs?.app?.updates?.updMsg
 	def wait = atomicState?.notificationPrefs?.app?.updates?.updMsgWait
-	if(!force && (!on || !wait)) { return }
+	if(!badAuto && (!on || !wait)) { return }
 	if(getLastUpdMsgSec() > wait.toInteger()) {
-		def appUpd = isAppUpdateAvail()
-		def autoappUpd = isAutoAppUpdateAvail()
-		def protUpd = atomicState?.protects ? isProtUpdateAvail() : null
-		def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : null
-		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : null
-		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : null
-		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : null
-		def streamUpd = atomicState?.streamDevVer ? isStreamUpdateAvail() : null
+		def appUpd = isAppUpdateAvail() == true ? true : false
+		def autoappUpd = isAutoAppUpdateAvail() == true ? true : false
+		def protUpd = atomicState?.protects ? isProtUpdateAvail() : false
+		def presUpd = atomicState?.presDevice ? isPresUpdateAvail() : false
+		def tstatUpd = atomicState?.thermostats ? isTstatUpdateAvail() : false
+		def weatherUpd = atomicState?.weatherDevice ? isWeatherUpdateAvail() : false
+		def camUpd = atomicState?.cameras ? isCamUpdateAvail() : false
+		def streamUpd = atomicState?.streamDevVer ? isStreamUpdateAvail() : false
 		def blackListed = (atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) ? true : false
-		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || vtstatUpd || blackListed || force) {
+		//log.debug "appUpd: $appUpd || protUpd: $protUpd || presUpd: $presUpd || tstatUpd: $tstatUpd || weatherUpd: $weatherUpd || camUpd: $camUpd || blackListed: $blackListed || badAuto: $badAuto"
+		if(appUpd || protUpd || presUpd || tstatUpd || weatherUpd || camUpd || blackListed || badAuto) {
 			atomicState?.lastUpdMsgDt = getDtNow()
 			def str = ""
 			str += !blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
-			str += !force ? "" : "\nBAD or MISSING AUTOMATIONS FILE, please REINSTALL automation file sources"
+			str += !badAuto ? "" : "\nInvalid or Missing Automation File, please Reinstall the correct automation file"
 			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
 			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
 			str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
 			str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
 			str += !tstatUpd ? "" : "\nThermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
-			str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
+			// str += !vtstatUpd ? "" : "\nVirtual Thermostat: v${atomicState?.appData?.updater?.versions?.thermostat?.ver?.toString()}"
 			str += !weatherUpd ? "" : "\nWeather App: v${atomicState?.appData?.updater?.versions?.weather?.ver?.toString()}"
 			str += !streamUpd ? "" : "\nStream Service: v${atomicState?.appData?.eventStreaming?.minVersion?.toString()}"
 			sendMsg("Info", "${appName()} Update(s) are Available:${str} \n\nPlease visit the IDE to Update code", true)
@@ -5298,7 +5299,7 @@ def webResponse(resp, data) {
 			setStateVar(true)
 		} else { LogAction("appData.json did not change", "info", false) }
 		if(atomicState?.appData && !appDevType() && atomicState?.clientBlacklisted) {
-			appUpdateNotify(true)
+			appUpdateNotify()
 		}
 		getFbAppSettings(data?.type == "async" ? false : true )
 		atomicState?.lastWebUpdDt = getDtNow()
