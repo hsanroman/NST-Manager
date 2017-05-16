@@ -773,7 +773,7 @@ def lastCheckinEvent(checkin, isOnline) {
 	def hcTimeout = getHcTimeout()
 	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
 	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-	def lastConnSeconds = checkin ? getTimeDiffSeconds(lastChk) : 3000
+	def lastConnSeconds = (checkin && lastChk != "Not Available") ? getTimeDiffSeconds(lastChk) : 3000
 
 	state?.lastConnection = lastConn?.toString()
 	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
