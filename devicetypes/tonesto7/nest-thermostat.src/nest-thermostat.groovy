@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.3" }
+def devVer() { return "5.0.4" }
 
 // for the UI
 metadata {
@@ -477,9 +477,9 @@ void processEvent(data) {
 			hasFan(eventData?.data?.has_fan.toString())
 			presenceEvent(eventData?.pres.toString())
 
-			def curMode = device?.currentState("nestThermostatMode")?.value.toString()
+			def curMode = device?.currentState("nestThermostatMode")?.stringValue
 			hvacModeEvent(eventData?.data?.hvac_mode.toString())
-			def newMode = device?.currentState("nestThermostatMode")?.value.toString()
+			def newMode = device?.currentState("nestThermostatMode")?.stringValue
 			if(newMode == "eco" && curMode != newMode) {
 				ecoDescEvent("Set Outside of this DTH")
 			} else { ecoDescEvent(null, true) }
@@ -680,7 +680,7 @@ def pauseEvent(val) {
 }
 
 def deviceVerEvent(ver) {
-	def curData = device.currentState("devTypeVer")?.value.toString()
+	def curData = device.currentState("devTypeVer")?.stringValue
 	def pubVer = ver ?: null
 	def dVer = devVer() ?: null
 	state.updateAvailable = isCodeUpdateAvailable(pubVer, dVer)
@@ -826,7 +826,7 @@ def tempUnitEvent(unit) {
 
 // TODO NOT USED
 def targetTempEvent(Double targetTemp) {
-	def temp = device.currentState("targetTemperature")?.value.toString()
+	def temp = device.currentState("targetTemperature")?.stringValue
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	if(isStateChange(device, "targetTemperature", rTargetTemp.toString())) {
 		Logger("UPDATED | targetTemperature is (${rTargetTemp}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
@@ -835,7 +835,7 @@ def targetTempEvent(Double targetTemp) {
 }
 
 def thermostatSetpointEvent(Double targetTemp) {
-	def temp = device.currentState("thermostatSetpoint")?.value.toString()
+	def temp = device.currentState("thermostatSetpoint")?.stringValue
 	def rTargetTemp = wantMetric() ? targetTemp.round(1) : targetTemp.round(0).toInteger()
 	//if(isStateChange(device, "thermostatSetPoint", rTargetTemp.toString())) {
 	if(!temp.equals(rTargetTemp.toString())) {
@@ -862,7 +862,7 @@ def thermostatSetpointEvent(Double targetTemp) {
 }
 
 def temperatureEvent(Double tempVal) {
-	def temp = device.currentState("temperature")?.value.toString()
+	def temp = device.currentState("temperature")?.stringValue
 	def rTempVal = wantMetric() ? tempVal.round(1) : tempVal.round(0).toInteger()
 	if(isStateChange(device, "temperature", rTempVal.toString())) {
 		Logger("UPDATED | Temperature is (${rTempVal}${tUnitStr()}) | Original Temp: (${temp}${tUnitStr()})")
@@ -872,7 +872,7 @@ def temperatureEvent(Double tempVal) {
 }
 
 def heatingSetpointEvent(Double tempVal) {
-	def temp = device.currentState("heatingSetpoint")?.value.toString()
+	def temp = device.currentState("heatingSetpoint")?.stringValue
 	if(tempVal.toInteger() == 0 || !state?.can_heat || (getHvacMode == "off")) {
 		if(temp != "") { clearHeatingSetpoint() }
 	} else {
@@ -906,7 +906,7 @@ def heatingSetpointEvent(Double tempVal) {
 }
 
 def coolingSetpointEvent(Double tempVal) {
-	def temp = device.currentState("coolingSetpoint")?.value.toString()
+	def temp = device.currentState("coolingSetpoint")?.stringValue
 	if(tempVal.toInteger() == 0 || !state?.can_cool || (getHvacMode == "off")) {
 		if(temp != "") { clearCoolingSetpoint() }
 	} else {
@@ -993,7 +993,7 @@ def whoMadeChanges(autoType, desc, dt) {
 
 def ecoDescEvent(val, updChk=false) {
 	//log.debug "ecoDescEvent($val)"
-	def curMode = device?.currentState("nestThermostatMode")?.value.toString()
+	def curMode = device?.currentState("nestThermostatMode")?.stringValue
 	def curEcoDesc = device?.currentState("whoSetEcoMode")?.value ?: null
 
 	def newVal = updChk ? curEcoDesc : val
@@ -1011,7 +1011,7 @@ def ecoDescEvent(val, updChk=false) {
 }
 
 def hvacModeEvent(mode) {
-	def hvacMode = !state?.hvac_mode ? device.currentState("thermostatMode")?.value.toString() : state.hvac_mode
+	def hvacMode = !state?.hvac_mode ? device.currentState("thermostatMode")?.stringValue : state.hvac_mode
 	def newMode = (mode == "heat-cool") ? "auto" : mode
 	if(mode == "eco") {
 		if(state?.can_cool && state?.can_heat) { newMode = "auto" }
@@ -1034,7 +1034,7 @@ def hvacModeEvent(mode) {
 }
 
 def hvacPreviousModeEvent(mode) {
-	def hvacMode = !state?.previous_hvac_mode ? device.currentState("previousthermostatMode")?.value.toString() : state.previous_hvac_mode
+	def hvacMode = !state?.previous_hvac_mode ? device.currentState("previousthermostatMode")?.stringValue : state.previous_hvac_mode
 	def newMode = (mode == "heat-cool") ? "auto" : mode
 	state?.previous_hvac_mode = newMode
 	if(!hvacMode.equals(newMode)) {
@@ -1081,7 +1081,7 @@ def operatingStateEvent(opState=null) {
 }
 
 def tempLockOnEvent(isLocked) {
-	def curState = device.currentState("tempLockOn")?.value.toString()
+	def curState = device.currentState("tempLockOn")?.stringValue
 	def newState = isLocked?.toString()
 	state?.tempLockOn = newState
 	if(isStateChange(device, "tempLockOn", newState.toString())) {
@@ -1128,18 +1128,17 @@ def checkSafetyTemps() {
 	def curMinTemp = device.currentState("safetyTempMin")?.doubleValue
 	def curMaxTemp = device.currentState("safetyTempMax")?.doubleValue
 	def curTemp = device.currentState("temperature")?.doubleValue
-	def curRangeStr = device.currentState("safetyTempExceeded")?.toString()
-	def curInRange = !curRangeStr?.toBoolean()
-	def inRange = true
-	if(curMinTemp && curMinTemp > curTemp) { inRange = false }
-	if(curMaxTemp && curMaxTemp < curTemp) { inRange = false }
-	def t0 = !(inRange.toBoolean())
-	LogAction("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${t0.toBoolean()} | curInRange: ${curInRange} | inRange: ${inRange})")
-	if(curRangeStr == null || inRange != curInRange) {
-		sendEvent(name:'safetyTempExceeded', value: t0.toBoolean(),  descriptionText: "Safety Temperature ${inRange ? "OK" : "Exceeded"} ${curTemp}${state?.tempUnit}", displayed: true, isStateChange: true)
-		Logger("UPDATED | Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
+	def curRangeStr = device.currentState("safetyTempExceeded")?.stringValue
+	def outOfRange = false
+	if(curMinTemp && curTemp < curMinTemp ) { outOfRange = true }
+	if(curMaxTemp && curTemp > curMaxTemp) { outOfRange = true }
+	//log.debug "curMinTemp: $curMinTemp | curMaxTemp: $curMaxTemp | curTemp: $curTemp | outOfRange: $outOfRange | curRangeStr: $curRangeStr"
+	LogAction("checkSafetyTemps: (curMinTemp: ${curMinTemp} | curMaxTemp: ${curMaxTemp} | curTemp: ${curTemp} | exceeded: ${outOfRange} | curRangeStr: ${curRangeStr})")
+	if(isStateChange(device, "safetyTempExceeded", outOfRange.toString())) {
+		sendEvent(name:'safetyTempExceeded', value: outOfRange.toString(), descriptionText: "Safety Temperature ${outOfRange ? "Exceeded" : "OK"} ${curTemp}${state?.tempUnit}", displayed: true, isStateChange: true)
+		Logger("UPDATED | Safety Temperature Exceeded is (${outOfRange}) | Current Temp: (${curTemp}${state?.tempUnit}) | Min: ($curMinTemp${state?.tempUnit}) | Max: ($curMaxTemp${state?.tempUnit})")
 	} else {
-		LogAction("Safety Temperature Exceeded is (${t0.toBoolean()}) | Current Temp: (${curTemp}${state?.tempUnit})")
+		LogAction("Safety Temperature Exceeded is (${outOfRange}) | Current Temp: (${curTemp}${state?.tempUnit})")
 	}
 }
 
@@ -1265,21 +1264,21 @@ def getHeatTemp() {
 }
 
 def getFanMode() {
-	return !device.currentState("thermostatFanMode")?.value ? "unknown" : device.currentState("thermostatFanMode")?.value.toString()
+	return !device.currentState("thermostatFanMode")?.value ? "unknown" : device.currentState("thermostatFanMode")?.stringValue
 }
 
 def getHvacMode() {
-	return !state?.nestHvac_mode ? device.currentState("nestThermostatMode")?.value.toString() : state.nestHvac_mode
-	//return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.value.toString()
+	return !state?.nestHvac_mode ? device.currentState("nestThermostatMode")?.stringValue : state.nestHvac_mode
+	//return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.stringValue
 }
 
 def getHvacState() {
-	return !device.currentState("thermostatOperatingState") ? "unknown" : device.currentState("thermostatOperatingState")?.value.toString()
+	return !device.currentState("thermostatOperatingState") ? "unknown" : device.currentState("thermostatOperatingState")?.stringValue
 }
 
 def getNestPresence() {
-	return !state?.nestPresence ? device.currentState("nestPresence")?.value.toString() : state.nestPresence
-	//return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.value.toString()
+	return !state?.nestPresence ? device.currentState("nestPresence")?.stringValue : state.nestPresence
+	//return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.stringValue
 }
 
 def getPresence() {
