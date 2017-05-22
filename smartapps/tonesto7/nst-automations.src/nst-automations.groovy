@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.0.5" }
-def appVerDate() { "5-11-2017" }
+def appVersion() { "5.0.6" }
+def appVerDate() { "5-22-2017" }
 
 preferences {
 	//startPage
@@ -2921,7 +2921,8 @@ def extTmpTempCheck(cTimeOut = false) {
 			def speakOnRestore = allowSpeech && settings?."${pName}SpeechOnRestore" ? true : false
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
-			if(!modeOff && atomicState?.extTmpTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
+// if we requested off; and someone switched us on or nMode took over...
+			if( atomicState?.extTmpTstatOffRequested && (!modeEco || (modeEco && parent.setNModeActive(null))) ) {  // reset timer and states
 				LogAction("extTmpTempCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				atomicState.extTmpTstatOffRequested = false
@@ -2939,7 +2940,7 @@ def extTmpTempCheck(cTimeOut = false) {
 
 			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) { atomicState.extTmpChgWhileOnDt = getDtNow() }
 
-			def okToRestore = (modeOff && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
+			def okToRestore = (modeEco && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
 			def tempWithinThreshold = extTmpTempOk()
 
 			if(!tempWithinThreshold || timeOut || !safetyOk || !schedOk) {
@@ -2948,7 +2949,10 @@ def extTmpTempCheck(cTimeOut = false) {
 				if(okToRestore) {
 					if(getExtTmpWhileOffDtSec() >= (getExtTmpOnDelayVal() - 5) || timeOut || !safetyOk) {
 						def lastMode = null
-						if(atomicState?.extTmpRestoreMode) { lastMode = atomicState?.extTmpRestoreMode }
+						if(atomicState?.extTmpRestoreMode) {
+							lastMode = extTmpTstat?.currentpreviousthermostatMode?.toString()
+							if(!lastMode) { lastMode = atomicState?.extTmpRestoreMode }
+						}
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(extTmpTstat, lastMode, pName)) {
@@ -3205,7 +3209,8 @@ def conWatCheck(cTimeOut = false) {
 
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 
-			if(!modeOff && atomicState?.conWatTstatOffRequested) {  // someone switched us on when we had turned things off, so reset timer and states
+// if we requested off; and someone switched us on or nMode took over...
+			if( atomicState?.conWatTstatOffRequested && (!modeEco || (modeEco && parent.setNModeActive(null))) ) {  // so reset timer and states
 				LogAction("conWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
 				atomicState?.conWatRestoreMode = null
 				atomicState?.conWatTstatOffRequested = false
@@ -3227,7 +3232,10 @@ def conWatCheck(cTimeOut = false) {
 				if(okToRestore) {
 					if(getConWatCloseDtSec() >= (getConWatOnDelayVal() - 5) || timeOut || !safetyOk) {
 						def lastMode = null
-						if(atomicState?.conWatRestoreMode) { lastMode = atomicState?.conWatRestoreMode }
+						if(atomicState?.conWatRestoreMode) {
+							lastMode = conWatTstat?.currentpreviousthermostatMode?.toString()
+							if(!lastMode) { lastMode = atomicState?.conWatRestoreMode }
+						}
 						if(lastMode && (lastMode != curMode || timeOut || !safetyOk || !schedOk)) {
 							scheduleAutomationEval(60)
 							if(setTstatMode(conWatTstat, lastMode, pName)) {
@@ -3514,7 +3522,7 @@ def leakWatCheck() {
 							if(!safetyOk) {
 								LogAction("leakWatCheck: | Unable to restore mode and safety temperatures are exceeded", "warn", true)
 							} else {
-								LogAction("leakWatCheck: | Skipping Restore: Mode to Restore is same as Current Mode ${curMode}", "info", true)
+								LogAction("leakWatCheck: | Skipping Restore: Mode to Restore (${lastMode}) is same as Current Mode ${curMode}", "info", true)
 							}
 						}
 					} else {
@@ -3773,16 +3781,20 @@ def adjustEco(on, senderAutoType=null) {
 		foundTstats = tstats?.collect { dni ->
 			def d1 = parent.getThermostatDevice(dni)
 			if(d1) {
+// TODO or if we are off, we requested off, and NMODE took over
 				def didstr = null
 				def curMode = d1?.currentnestThermostatMode?.toString()
-				if(on && !(curMode in ["eco", "off"])) {
+				//if(on && !(curMode in ["eco", "off"])) {
+				if(on) {
 					didstr = "ECO"
 					setTstatMode(d1, "eco", senderAutoType)
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
 				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
-				if(!on && curMode in ["eco"]) {
-					if(prevMode && prevMode != curMode) {
+				//if(!on && curMode in ["eco"]) {
+				if(!on) {
+					//if(prevMode && prevMode != curMode) {
+					if(prevMode) {
 						didstr = "$prevMode"
 						setTstatMode(d1, prevMode, senderAutoType)
 					}
@@ -6751,27 +6763,41 @@ def getTstatPresence(tstat) {
 
 def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
+// TODO or if we are off, we requested off, and NMODE took over
 	if(mode) {
-		if(mode == "auto") { tstat.auto(); result = true }
-		else if(mode == "heat") { tstat.heat(); result = true }
-		else if(mode == "cool") { tstat.cool(); result = true }
-		else if(mode == "off") { tstat.off(); result = true }
-		else {
-			try {
-				if(mode == "eco") {
-					tstat.eco(); result = true
-					LogTrace("setTstatMode mode action | type: $autoType")
-					if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+		if(autoType == "nMode") {
+			if(mode == "eco") {
+				parent.setNModeActive(true)
+				// set nMode has it in manager
+				if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+			} else {
+				parent.setNModeActive(false)
+				// clear nMode has it in manager
+			} 
+		}
+		def curMode = tstat?.currentnestThermostatMode?.toString()
+		if (curMode != mode) {
+			if(mode == "auto") { tstat.auto(); result = true }
+			else if(mode == "heat") { tstat.heat(); result = true }
+			else if(mode == "cool") { tstat.cool(); result = true }
+			else if(mode == "off") { tstat.off(); result = true }
+			else {
+				try {
+					if(mode == "eco") {
+						tstat.eco(); result = true
+						LogTrace("setTstatMode mode action | type: $autoType")
+						if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+					}
 				}
-			}
-			catch (ex) {
-				log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
-				parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+				catch (ex) {
+					log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
+					parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+				}
 			}
 		}
 
 		if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
-		else { LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "error", true) }
+		else { LogAction("setTstatMode() | No Mode change: ${mode}", "info", true) }
 	} else {
 		LogAction("setTstatMode() | Invalid or Missing Mode received: ${mode}", "warn", true)
 	}
