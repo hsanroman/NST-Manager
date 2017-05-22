@@ -36,11 +36,11 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.9" }
-def appVerDate() { "5-19-2017" }
+def appVersion() { "5.1.0" }
+def appVerDate() { "5-22-2017" }
 def minVersions() {
 	return [
-		"automation":["val":505, "desc":"5.0.5"],
+		"automation":["val":506, "desc":"5.0.6"],
 		"thermostat":["val":504, "desc":"5.0.4"],
 		"protect":["val":502, "desc":"5.0.2"],
 		"presence":["val":501, "desc":"5.0.1"],
@@ -2515,7 +2515,7 @@ private adj_temp(tempF) {
 		LogAction("adj_temp: error temp ${tempF} is list", "error", true)
 	}
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * (5 / 9) as Double
+		return (tempF - 32) * (5 / 9) as Double //
 	} else {
 		return tempF
 	}
@@ -2661,6 +2661,7 @@ def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
 		LogAction("checkIfSwupdated: new version ${appVersion()}", "info", true)
+		atomicState.swVersion = appVersion()
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
 		iData["shownChgLog"] = false
@@ -3839,10 +3840,10 @@ def updateChildData(force = false) {
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * (9 / 5) + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32) as Integer //
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * (5 / 9) as Double
+							tempC = (tempF - 32) * (5 / 9) as Double //
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
@@ -3851,20 +3852,20 @@ def updateChildData(force = false) {
 						def ctempF = 0
 						if(getTemperatureScale() == "C") {
 							ctempC = automationChildApp.getRemSenCoolSetTemp()
-							ctempF = (ctempC * (9 / 5) + 32.0) as Integer
+							ctempF = (ctempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							ctempF = automationChildApp.getRemSenCoolSetTemp()
-							ctempC = (ctempF - 32.0) * (5 / 9) as Double
+							ctempC = (ctempF - 32.0) * (5 / 9) as Double //
 						}
 
 						def htempC = 0.0
 						def htempF = 0
 						if(getTemperatureScale() == "C") {
 							htempC = automationChildApp.getRemSenHeatSetTemp()
-							htempF = (htempC * (9 / 5) + 32.0) as Integer
+							htempF = (htempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							htempF = automationChildApp.getRemSenHeatSetTemp()
-							htempC = (htempF - 32.0) * (5 / 9) as Double
+							htempC = (htempF - 32.0) * (5 / 9) as Double //
 						}
 
 						if(data?.hvac_mode.toString() == "heat-cool") {
@@ -4044,7 +4045,7 @@ def ok2PollMetaData() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needMetaPoll) { return true }
 	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	if(val > 60) { val = 50 }
 	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
 }
@@ -4053,7 +4054,7 @@ def ok2PollDevice() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
@@ -4063,7 +4064,7 @@ def ok2PollStruct() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-	def val = pollStrTime / 3
+	def val = pollStrTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
@@ -5444,6 +5445,7 @@ def ver2IntArray(val) {
 	def ver = val?.split("\\.")
 	return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
+
 def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
@@ -6865,7 +6867,7 @@ def getUse24Time()		{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) } //
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -6961,7 +6963,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		def diff = (int) (long) (stop - start) / 1000 //
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
@@ -8193,6 +8195,18 @@ def remSenUnlock(val, myId) {
 	return res
 }
 
+def setNModeActive(val=null) {
+	LogAction("setNModeActive: val: $val", "info", false)
+	if(automationNestModeEnabled(null)) {
+		if(val == null) {
+			return atomicState?.automationNestModeEcoActive ?: false
+		} else {
+			atomicState.automationNestModeEcoActive = val.toBoolean()
+		}
+	} else { atomicState.automationNestModeEcoActive = false }
+	return atomicState?.automationNestModeEcoActive ?: false
+}
+
 // Most of this is obsolete after upgrade to V5 is complete
 
 def initAutoApp() {
@@ -8374,11 +8388,11 @@ def fixTempSetting(Double temp) {
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double)
+				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double) //
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger()
+				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger() //
 			}
 		}
 	}
@@ -8524,7 +8538,7 @@ def roundTemp(Double temp) {
 	if(temp == null) { return null }
 	def newtemp
 	if( getTemperatureScale() == "C") {
-		newtemp = Math.round(temp.round(1) * 2) / 2.0f
+		newtemp = Math.round(temp.round(1) * 2) / 2.0f //
 	} else {
 		if(temp instanceof Integer) {
 			//log.debug "roundTemp: ($temp) is Integer"
