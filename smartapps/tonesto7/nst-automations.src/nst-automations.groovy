@@ -143,7 +143,7 @@ def subscriber() {
 
 private adj_temp(tempF) {
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * 5/9 as Double
+		return ((tempF - 32) * (5 / 9)) as Double //
 	} else {
 		return tempF
 	}
@@ -1505,7 +1505,7 @@ def getDeviceTempAvg(items) {
 	if(!items) { return tempVal }
 	else if(items?.size() > 1) {
 		tmpAvg = items*.currentTemperature
-		if(tmpAvg && tmpAvg?.size() > 1) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
+		if(tmpAvg && tmpAvg?.size() > 1) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) } //
 	}
 	else { tempVal = getDeviceTemp(items) }
 	return tempVal.toDouble()
@@ -1769,7 +1769,7 @@ private remSenCheck() {
 						}
 						def coolDiff1 = Math.abs(curTstatTemp - curCoolSetpoint)
 						LogAction("Remote Sensor: COOL - coolDiff1: ${coolDiff1} tempChangeVal: ${tempChangeVal}", "trace", false)
-						if(coolDiff1 < (tempChangeVal / 2)) {
+						if(coolDiff1 < (tempChangeVal / 2)) { //
 							chg = true
 							LogAction("Remote Sensor: COOL - Adjusting CoolSetpoint to maintain state", "info", true)
 						}
@@ -1935,11 +1935,11 @@ def fixTempSetting(Double temp) {
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (newtemp - 32.0) * (5/9) as Double)
+				newtemp = roundTemp( ((newtemp - 32.0) * (5 / 9)) as Double) //
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((newtemp * (9/5) as Double) + 32.0) ).toInteger()
+				newtemp = roundTemp( (((newtemp * (9 / 5)) as Double) + 32.0) ).toInteger() //
 			}
 		}
 	}
@@ -2495,7 +2495,7 @@ def getDeviceVarAvg(items, var) {
 	if(!items) { return tempVal }
 	else {
 		tmpAvg = items*."${var}"
-		if(tmpAvg && tmpAvg?.size() > 0) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) }
+		if(tmpAvg && tmpAvg?.size() > 0) { tempVal = (tmpAvg?.sum().toDouble() / tmpAvg?.size().toDouble()).round(1) } //
 	}
 	return tempVal.toDouble()
 }
@@ -2708,12 +2708,12 @@ def getExtConditions( doEvent = false ) {
 			def f_temp = 0 as Integer
 			if(getTemperatureScale() == "C") {
 				c_temp = dp as Double
-				f_temp = c_temp * 9/5 + 32
+				f_temp = ((c_temp * (9 / 5)) + 32) as Integer //
 			} else {
 				f_temp = dp as Integer
-				c_temp = (f_temp - 32) * 5/9 as Double
+				c_temp = ((f_temp - 32) * (5 / 9)) as Double //
 			}
-			atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f
+			atomicState?.curWeatherDewpointTemp_c = Math.round(c_temp.round(1) * 2) / 2.0f //
 			atomicState?.curWeatherDewpointTemp_f = Math.round(f_temp) as Integer
 
 			atomicState.NeedwUpd = false
@@ -2756,7 +2756,7 @@ def getDesiredTemp(curMode) {
 	def desiredTemp = 0
 	if(desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
 	else if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp }
-	else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && (modeAuto || modeEco) ) { desiredTemp = (desiredCoolTemp + desiredHeatTemp)/2.0 }
+	else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && (modeAuto || modeEco) ) { desiredTemp = (desiredCoolTemp + desiredHeatTemp) / 2.0 } //
 	else if(desiredHeatTemp && modeEco) { desiredTemp = desiredHeatTemp }
 	else if(desiredCoolTemp && modeEco) { desiredTemp = desiredCoolTemp }
 
@@ -5688,7 +5688,7 @@ def roundTemp(Double temp) {
 	if(temp == null) { return null }
 	def newtemp
 	if( getTemperatureScale() == "C") {
-		newtemp = Math.round(temp.round(1) * 2) / 2.0f
+		newtemp = Math.round(temp.round(1) * 2) / 2.0f //
 	} else {
 		if(temp instanceof Integer) {
 			//log.debug "roundTemp: ($temp) is Integer"
@@ -7125,7 +7125,7 @@ def getUse24Time()			{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
 def getStateSize()			{ return state?.toString().length() }
-def getStateSizePerc()			{ return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()			{ return (int) ((stateSize / 100000)*100).toDouble().round(0) } //
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -7216,7 +7216,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		def diff = (int) (long) (stop - start) / 1000 //
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
