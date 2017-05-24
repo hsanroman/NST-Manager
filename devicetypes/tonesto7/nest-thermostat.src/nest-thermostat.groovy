@@ -381,9 +381,9 @@ def modifyDeviceStatus(status) {
 
 def ping() {
 	Logger("ping...")
-	if(useTrackedHealth()) {
+//	if(useTrackedHealth()) {
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -453,12 +453,12 @@ void processEvent(data) {
 			debugOnEvent(eventData?.debug ? true : false)
 			deviceVerEvent(eventData?.latestVer.toString())
 			if(virtType()) { nestTypeEvent("virtual") } else { nestTypeEvent("physical") }
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
 					verifyHC()
 				}
-			}
+//			}
 			if(state?.swVersion != devVer()) {
 				initialize()
 				state.swVersion = devVer()
