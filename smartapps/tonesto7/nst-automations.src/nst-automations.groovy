@@ -2923,7 +2923,7 @@ def extTmpTempCheck(cTimeOut = false) {
 			if(!modeOff) { atomicState."${pName}timeOutOn" = false; timeOut = false }
 // if we requested off; and someone switched us on or nMode took over...
 			if( atomicState?.extTmpTstatOffRequested && (!modeEco || (modeEco && parent.setNModeActive(null))) ) {  // reset timer and states
-				LogAction("extTmpTempCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
+				LogAction("extTmpTempCheck: | ${!modeEco ? "HVAC turned on when automation had OFF" : "Automation overridden by nMODE"}, resetting state to match", "warn", true)
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				atomicState.extTmpTstatOffRequested = false
 				atomicState?.extTmpRestoreMode = null
@@ -3211,7 +3211,7 @@ def conWatCheck(cTimeOut = false) {
 
 // if we requested off; and someone switched us on or nMode took over...
 			if( atomicState?.conWatTstatOffRequested && (!modeEco || (modeEco && parent.setNModeActive(null))) ) {  // so reset timer and states
-				LogAction("conWatCheck: | System turned on when automation had OFF, resetting state to match", "warn", true)
+				LogAction("conWatCheck: | ${!modeEco ? "HVAC turned on when automation had OFF" : "Automation overridden by nMODE"}, resetting state to match", "warn", true)
 				atomicState?.conWatRestoreMode = null
 				atomicState?.conWatTstatOffRequested = false
 				atomicState?.conWatOpenDt = getDtNow()
