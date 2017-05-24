@@ -445,7 +445,7 @@ def isStreamingEvent(isStreaming, override=false) {
 	if(isStateChange(device, "isStreaming", val.toString())) {
 		Logger("UPDATED | Camera Live Video Streaming is: (${val}) | Original State: (${isOn})")
 		sendEvent(name: "isStreaming", value: val, descriptionText: "Camera Live Video Streaming is: ${val}", displayed: true, isStateChange: true, state: val)
-		sendEvent(name: "switch", value: (val == "on" ? val : "off"))
+		sendEvent(name: "switch", value: (val == "on" ? val : "off"), displayed: false)
 		cameraStreamNotify(state?.isStreaming)
 		addCheckinReason("isStreaming")
 	} else { LogAction("Camera Live Video Streaming is: (${val}) | Original State: (${isOn})") }
