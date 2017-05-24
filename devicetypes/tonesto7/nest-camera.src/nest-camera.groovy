@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.0.5" }
+def devVer() { return "5.0.6" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -164,7 +164,7 @@ def useTrackedHealth() { return state?.useTrackedHealth ?: false }
 
 def getHcTimeout() {
 	def to = state?.hcTimeout
-	return ((to instanceof Integer) ? to.toInteger() : 60)*60
+	return ((to instanceof Integer) ? to.toInteger() : 120)*60
 }
 
 void verifyHC() {
@@ -190,10 +190,10 @@ def modifyDeviceStatus(status) {
 }
 
 def ping() {
-	if(useTrackedHealth()) {
-		Logger("ping...")
+	Logger("ping...")
+//	if(useTrackedHealth()) {
 		keepAwakeEvent()
-	}
+//	}
 }
 
 def keepAwakeEvent() {
@@ -272,12 +272,12 @@ def processEvent() {
 			state.streamMsg = eventData?.streamNotify == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
 			state.motionSndChgWaitVal = eventData?.motionSndChgWaitVal ? eventData?.motionSndChgWaitVal.toInteger() : 60
-			if(useTrackedHealth()) {
+//			if(useTrackedHealth()) {
 				if(eventData.hcTimeout && (state?.hcTimeout != eventData?.hcTimeout || !state?.hcTimeout)) {
 					state.hcTimeout = eventData?.hcTimeout
 					verifyHC()
 				}
-			}
+//			}
 			state?.useMilitaryTime = eventData?.mt ? true : false
 			state.clientBl = eventData?.clientBl == true ? true : false
 			state.mobileClientType = eventData?.mobileClientType
@@ -323,7 +323,7 @@ def processEvent() {
 }
 
 def getStateSize()      { return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) } //
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -720,7 +720,7 @@ def getRecTimeDesc(val) {
 	def result = null
 	if(val && val instanceof Integer) {
 		if(val.toInteger() > 24) {
-			def nVal = (val/24).toDouble().round(0)
+			def nVal = (val/24).toDouble().round(0) //
 			result = "${nVal.toInteger()} days"
 		} else {
 			result = "${val} hours"
@@ -916,7 +916,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 			def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 			def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 			def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-			def diff = (int) (long) (stop - start) / 1000
+			def diff = (int) (long) (stop - start) / 1000 //
 			return diff
 		} else { return null }
 	} catch (ex) {
