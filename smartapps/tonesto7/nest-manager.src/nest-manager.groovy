@@ -43,9 +43,9 @@ def minVersions() {
 		"automation":["val":506, "desc":"5.0.6"],
 		"thermostat":["val":505, "desc":"5.0.5"],
 		"protect":["val":503, "desc":"5.0.2"],
-		"presence":["val":501, "desc":"5.0.1"],
-		"weather":["val":504, "desc":"5.0.4"],
-		"camera":["val":505, "desc":"5.0.5"],
+		"presence":["val":502, "desc":"5.0.2"],
+		"weather":["val":505, "desc":"5.0.5"],
+		"camera":["val":506, "desc":"5.0.6"],
 		"stream":["val":85, "desc":"0.8.5"]
 	]
 }
@@ -3631,11 +3631,11 @@ def updateChildData(force = false) {
 		def mobClientType = settings?.mobileClientType
 		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
-		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 35
+		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 120
 		def hcProtWireTimeout = atomicState?.appData?.healthcheck?.protWireTimeout ?: 35
-		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 35
+		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 1500
 		def hcTstatTimeout = atomicState?.appData?.healthcheck?.tstatTimeout ?: 35
-		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
+		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 120
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
 		def devBannerData = atomicState?.devBannerData ?: null
