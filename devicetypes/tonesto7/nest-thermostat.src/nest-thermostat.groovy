@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.4" }
+def devVer() { return "5.0.5" }
 
 // for the UI
 metadata {
@@ -41,8 +41,6 @@ metadata {
 		//command "setAway"
 		//command "setHome"
 		command "setPresence"
-		//command "setFanMode"
-		//command "setTemperature"
 		command "setThermostatMode"
 		command "levelUpDown"
 		command "levelUp"
@@ -623,7 +621,7 @@ void processEvent(data) {
 }
 
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize/100000)*100).toDouble().round(0) } //
 
 def getDataByName(String name) {
 	state[name] ?: device.getDataValue(name)
@@ -760,31 +758,36 @@ def debugOnEvent(debug) {
 }
 
 def lastCheckinEvent(checkin, isOnline) {
-	//log.trace("lastCheckinEvent($checkin, $isOnline)")
 	def formatVal = state?.useMilitaryTime ? "MMM d, yyyy - HH:mm:ss" : "MMM d, yyyy - h:mm:ss a"
 	def tf = new SimpleDateFormat(formatVal)
 	tf.setTimeZone(getTimeZone())
+
 	def lastChk = device.currentState("lastConnection")?.value
+	def lastConnSeconds = (lastChk && lastChk != "Not Available") ? getTimeDiffSeconds(lastChk) : 3000
 
 	def prevOnlineStat = device.currentState("onlineStatus")?.value
 
+	def hcTimeout = getHcTimeout()
+	def curConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def curConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
+	def curConnSeconds = (checkin && curConnFmt != "Not Available") ? getTimeDiffSeconds(curConnFmt) : 3000
+
 	def onlineStat = isOnline.toString() == "true" ? "online" : "offline"
 
-	def hcTimeout = getHcTimeout()
-	def lastConn = checkin ? "${tf.format(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-	def lastConnFmt = checkin ? "${formatDt(Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", checkin))}" : "Not Available"
-	def lastConnSeconds = (checkin && lastChk != "Not Available") ? getTimeDiffSeconds(lastChk) : 3000
+	state?.lastConnection = curConn?.toString()
+	if(isStateChange(device, "lastConnection", curConnFmt.toString())) {
+		LogAction("UPDATED | Last Nest Check-in was: (${curConnFmt}) | Previous Check-in: (${lastChk})")
+		sendEvent(name: 'lastConnection', value: curConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
+	} else { LogAction("Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})") }
 
-	state?.lastConnection = lastConn?.toString()
-	if(isStateChange(device, "lastConnection", lastConnFmt.toString())) {
-		LogAction("UPDATED | Last Nest Check-in was: (${lastConnFmt}) | Previous Check-in: (${lastChk})")
-		sendEvent(name: 'lastConnection', value: lastConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
-		if(hcTimeout && lastConnSeconds >= 0 && isOnline.toString() == "true") { onlineStat = lastConnSeconds < hcTimeout ? "online" : "offline" }
-		//Logger("lastConnSeconds: $lastConnSeconds")
-	} else { LogAction("Last Nest Check-in was: (${lastConnFmt}) | Original State: (${lastChk})") }
+	Logger("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+
+	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
+		onlineStat = "offline"
+		Logger("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
+	}
 
 	state?.onlineStatus = onlineStat
-	//log.debug "onlineStatus: $onlineStat"
 	modifyDeviceStatus(onlineStat)
 	if(isStateChange(device, "onlineStatus", onlineStat?.toString())) {
 		Logger("UPDATED | Online Status is: (${onlineStat}) | Original State: (${prevOnlineStat})")
@@ -1165,16 +1168,15 @@ def comfortDewpointEvent(comfortDew) {
 	def newMaxDew = comfortDew ? comfortDew?.toDouble() : 0.0
 	//if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString()) || isStateChange(device, "comfortDewpointMin", newMinDew.toString())) {
 	if(isStateChange(device, "comfortDewpointMax", newMaxDew.toString())) {
-		//LogAction("UPDATED | Comfort Dewpoint Minimum is (${newMinDew}) | Original Temp: (${curMinDew})")
 		Logger("UPDATED | Comfort Dewpoint Maximum is (${newMaxDew}) | Original Dewpoint: (${curMaxDew})")
 		//sendEvent(name:'comfortDewpointMin', value: newMinDew, unit: "%", descriptionText: "Comfort Dewpoint Minimum is ${newMinDew}", displayed: true, isStateChange: true)
 		sendEvent(name:'comfortDewpointMax', value: newMaxDew, unit: state?.tempUnit, descriptionText: "Comfort Dewpoint Maximum is ${newMaxDew}", displayed: true, isStateChange: true)
 	} else {
-		//LogAction("Comfort Dewpoint is (${newMinDew}) | Original Minimum Dewpoint: (${curMinDew})")
 		LogAction("Comfort Dewpoint Maximum is (${newMaxDew}) | Original Maximum Dewpoint: (${curMaxDew})")
 	}
 }
 
+/*
 def onlineStatusEvent(online) {
 	def isOn = device.currentState("onlineStatus")?.value
 	def val = online ? "Online" : "Offline"
@@ -1185,6 +1187,7 @@ def onlineStatusEvent(online) {
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: (val == "Online" ? "online" : "offline"), displayed: false)
 	} else { LogAction("Online Status is: (${val}) | Original State: (${isOn})") }
 }
+*/
 
 def apiStatusEvent(issue) {
 	def curStat = device.currentState("apiStatus")?.value
@@ -1269,7 +1272,6 @@ def getFanMode() {
 
 def getHvacMode() {
 	return !state?.nestHvac_mode ? device.currentState("nestThermostatMode")?.stringValue : state.nestHvac_mode
-	//return !device.currentState("thermostatMode") ? "unknown" : device.currentState("thermostatMode")?.stringValue
 }
 
 def getHvacState() {
@@ -1278,7 +1280,6 @@ def getHvacState() {
 
 def getNestPresence() {
 	return !state?.nestPresence ? device.currentState("nestPresence")?.stringValue : state.nestPresence
-	//return !device.currentState("nestPresence") ? "home" : device.currentState("nestPresence")?.stringValue
 }
 
 def getPresence() {
@@ -1535,7 +1536,7 @@ def GetTimeDiffSeconds(lastDate) {
 	def lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastDate)
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(lastDt)).getTime()
 	def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(now)).getTime()
-	def diff = (int) (long) (stop - start) / 1000
+	def diff = (int) (long) (stop - start) / 1000 //
 	return diff
 }
 
@@ -1549,7 +1550,7 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		def diff = (int) (long) (stop - start) / 1000 //
 		//LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
@@ -1558,8 +1559,6 @@ def getTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 // Nest does not allow temp changes in off, eco modes
 def canChangeTemp() {
 	//LogAction("canChangeTemp()...", "trace")
-	//def curPres = getNestPresence()
-	//if(curPres == "home" && state?.nestHvac_mode != "eco") {
 	if(state?.nestHvac_mode != "eco") {
 		def hvacMode = getHvacMode()
 		switch (hvacMode) {
@@ -1669,7 +1668,7 @@ void setHeatingSetpoint(Double reqtemp, manChg=false) {
 	if(canHeat && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
-				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f //
 				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
 				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if(temp) {
@@ -1744,7 +1743,7 @@ void setCoolingSetpoint(Double reqtemp, manChg=false) {
 	if(canCool && state?.nestHvac_mode != "eco") {
 		switch (tempUnit) {
 			case "C":
-				temp = Math.round(reqtemp.round(1) * 2) / 2.0f
+				temp = Math.round(reqtemp.round(1) * 2) / 2.0f //
 				if(curMinTemp < 9.0) { curMinTemp = 9.0 }
 				if(curMaxTemp > 32.0) { curMaxTemp = 32.0 }
 				if(temp) {
@@ -2058,7 +2057,7 @@ void setThermostatFanMode(fanModeStr, manChg=false) {
 
 
 /**************************************************************************
-|												LOGGING FUNCTIONS												  |
+|									LOGGING FUNCTIONS											|
 ***************************************************************************/
 
 void Logger(msg, logType = "debug") {
@@ -2354,28 +2353,9 @@ String getDataString(Integer seriesIndex) {
 		dataArray[myindex] = myval
 		dataArray[0] = [it[0],it[1],0]
 
-/*
-		//reduce # of points to graph
-		if(lastVal != myval) {
-			lastAdded = true
-			if(lastdataArray) {   //controls curves
-				dataString += lastdataArray?.toString() + ","
-			}
-			lastdataArray = null
-			lastVal = myval
-			dataString += dataArray?.toString() + ","
-		} else { lastAdded = false; lastdataArray = dataArray }
-*/
 		dataString += dataArray?.toString() + ","
 		return false
 	}
-
-/*
-	if(!lastAdded && dataString) {
-		dataArray[myindex] = myval
-		dataString += dataArray?.toString() + ","
-	}
-*/
 
 	if(dataString == "") {
 		dataArray[0] = [0,0,0]
@@ -3036,7 +3016,7 @@ def getIntListAvg(itemList) {
 	def iCnt = itemList?.size()
 	if(iCnt >= 1) {
 		if(iCnt > 1) {
-			avgRes = (itemList?.sum().toDouble() / iCnt.toDouble()).round(0)
+			avgRes = (itemList?.sum().toDouble() / iCnt.toDouble()).round(0) //
 		} else { itemList?.each { avgRes = avgRes + it.toInteger() } }
 	}
 	//log.debug "[getIntListAvg] avgRes: $avgRes"
@@ -3045,10 +3025,10 @@ def getIntListAvg(itemList) {
 
 def secToTimeMap(long seconds) {
 	long sec = (seconds % 60) ?: 0L
-	long minutes = ((seconds % 3600) / 60) ?: 0L
-	long hours = ((seconds % 86400) / 3600) ?: 0L
-	long days = (seconds / 86400) ?: 0L
-	long years = (days / 365) ?: 0L
+	long minutes = ((seconds % 3600) / 60) ?: 0L //
+	long hours = ((seconds % 86400) / 3600) ?: 0L //
+	long days = (seconds / 86400) ?: 0L //
+	long years = (days / 365) ?: 0L //
 	def res = ["m":minutes, "h":hours, "d":days, "y":years]
 	return res
 }
@@ -3376,7 +3356,7 @@ def getGraphHTML() {
 					<div class="swiper-pagination"></div>
 
 					<div style="text-align: center;">
-						<p class="slideFooterMsg">Swipe/Tap to Change Slide</p>
+						<p class="slideFooterMsg">Swipe-Tap to Change Slide</p>
 					</div>
 				</div>
 				<script>
@@ -3531,11 +3511,11 @@ def showChartHtml() {
 	def m3Data = []
 	grpUseData?.each { mon ->
 		def data = mon?.value
-		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0
-		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0
+		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def mName = getMonthNumToStr(mon?.key)
 		lStr += "\n$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool) | FanOn: ($fanOn) | FanAuto: ($fanAuto)"
 		def iNum = 1
@@ -3714,6 +3694,7 @@ def showChartHtml() {
 			</section>
   		  </div>
 	  """
+/* */
 	return data
 }
 
@@ -3769,7 +3750,7 @@ def getDayTimePerc(val,data) {
 	//log.debug "getDayTimePerc($val, $data)"
 	//log.debug "getDayElapSec: ${getDayElapSec()}"
 	if(!data) { return null }
-	return (int) ((val.toInteger()/getDayElapSec())*100).toDouble().round(0)
+	return (int) ((val.toInteger()/getDayElapSec())*100).toDouble().round(0) //
 }
 
 def getDayElapSec() {
@@ -3780,7 +3761,7 @@ def getDayElapSec() {
 	c.set(Calendar.SECOND, 0);
 	c.set(Calendar.MILLISECOND, 0);
 	long passed = now - c.getTimeInMillis();
-	return (long) passed / 1000;
+	return (long) passed / 1000; //
 }
 
 def getTimeMapString(data) {
@@ -3853,7 +3834,7 @@ def incProgModeChgCnt() { state?.progModeChgCnt = (state?.progModeChgCnt ? state
 def incManFanChgCnt() 	{ state?.manFanChgCnt = (state?.manFanChgCnt ? state?.manFanChgCnt.toInteger()+1 : 1) }
 def incProgFanChgCnt() 	{ state?.progFanChgCnt = (state?.progFanChgCnt ? state?.progFanChgCnt.toInteger()+1 : 1) }
 def incHtmlLoadCnt() 	{ state?.htmlLoadCnt = (state?.htmlLoadCnt ? state?.htmlLoadCnt.toInteger()+1 : 1) }
-def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
+//def incInfoBtnTapCnt()	{ state?.infoBtnTapCnt = (state?.infoBtnTapCnt ? state?.infoBtnTapCnt.toInteger()+1 : 1); return ""; }
 
 def getMetricCntData() {
 	def ttype = ""
@@ -3885,7 +3866,7 @@ def getExtTempVoiceDesc() {
 
 private adj_temp(tempF) {
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * 5/9 as Double
+		return (tempF - 32) * 5/9 as Double //
 	} else {
 		return tempF
 	}
