@@ -780,11 +780,11 @@ def lastCheckinEvent(checkin, isOnline) {
 		sendEvent(name: 'lastConnection', value: curConnFmt?.toString(), displayed: state?.showProtActEvts, isStateChange: true)
 	} else { LogAction("Last Nest Check-in was: (${curConnFmt}) | Original State: (${lastChk})") }
 
-	Logger("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
+	LogAction("lastCheckinEvent($checkin, $isOnline) | onlineStatus: $onlineStat | lastConnSeconds: $lastConnSeconds | hcTimeout: ${hcTimeout} | curConnSeconds: ${curConnSeconds}")
 
 	if(hcTimeout && isOnline.toString() == "true" && curConnSeconds > hcTimeout && lastConnSeconds > hcTimeout) {
 		onlineStat = "offline"
-		Logger("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
+		LogAction("lastCheckinEvent: UPDATED onlineStatus: $onlineStat")
 	}
 
 	state?.onlineStatus = onlineStat
