@@ -552,7 +552,7 @@ def infoPage () {
 				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
-			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		section("Credits:") {
