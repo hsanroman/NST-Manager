@@ -3,7 +3,8 @@
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>UPDATED:</strong> Updates to healthcheck parameters & optimizations</li>
 </ul>
-<br><p style="font-size: 15px;"><strong>V5.0.5 (May 13th, 2017):</strong><p>
+<br>
+<p style="font-size: 15px;"><strong>V5.0.5 (May 13th, 2017):</strong><p>
 <hr noshade>
 <ul style="font-size: 12px; padding: 0 10px 0 10px; Margin: 0;">
     <li><strong>UPDATED:</strong> Removed capability that is not available (Notification) & optimizations</li>
