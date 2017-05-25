@@ -273,16 +273,16 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "Hello sorry to interupt but it has been 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
-			str += "If you enjoy our software please remember that we have spent thousand's of hours of our spare time working on features and stability for this application and devices."
-			str += "If you have already donated please ignore and thank you very much for your support!"
+			str += "Hello User, \n\nPlease forgive the interuption but it's been 30 days since you installed this SmartApp and we wanted to present you with this reminder that we do accept donations (We do not require them)."
+			str += "\n\nIf you have been enjoying our software and devices please remember that we have spent thousand's of hours of our spare time working on features and stability for those applications and devices."
+			str += "\n\nIf you have already donated please ignore and thank you very much for your support!"
 
-			str += "\n\nThanks again for using ${appName()}"
-			paragraph title: "Donation Reminder", str, required: true, state: null
+			str += "\n\nThanks again for using NST Manager"
+			paragraph str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
 			//href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
-			paragraph "This is message will not be shown again", state: "complete"
+			paragraph "This message will not be shown again", state: "complete"
 		}
 		def iData = atomicState?.installData
 		iData["shownDonation"] = true
