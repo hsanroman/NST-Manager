@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.1.0" }
-def appVerDate() { "5-24-2017" }
+def appVerDate() { "5-25-2017" }
 def minVersions() {
 	return [
 		"automation":["val":506, "desc":"5.0.6"],
@@ -273,7 +273,7 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "Hello User, \n\nPlease forgive the interuption but it's been 30 days since you installed this SmartApp and we wanted to present you with this reminder that we do accept donations (We do not require them)."
+			str += "Hello User, \n\nPlease forgive the interuption but it's been 30 days since you installed/updated this SmartApp and we wanted to present you with this reminder that we do accept donations (We do not require them)."
 			str += "\n\nIf you have been enjoying our software and devices please remember that we have spent thousand's of hours of our spare time working on features and stability for those applications and devices."
 			str += "\n\nIf you have already donated please ignore and thank you very much for your support!"
 
@@ -281,8 +281,6 @@ def donationPage() {
 			paragraph str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
-			//href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
-			paragraph "This message will not be shown again", state: "complete"
 		}
 		def iData = atomicState?.installData
 		iData["shownDonation"] = true
@@ -2665,6 +2663,8 @@ def checkIfSwupdated() {
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
 		iData["shownChgLog"] = false
+		iData["shownFeedback"] = false
+		iData["shownDonation"] = false
 		atomicState?.installData = iData
 		def cApps = getChildApps()
 		if(cApps) {
@@ -6883,11 +6883,11 @@ def getLocationModes() {
 }
 
 def showDonationOk() {
-	return (!atomicState?.installData?.shownDonation && getDaysSinceInstall() >= 30) ? true : false
+	return (!atomicState?.installData?.shownDonation && getDaysSinceUpdated() >= 30) ? true : false
 }
 
 def showFeedbackOk() {
-	return (!atomicState?.installData?.shownFeedback && getDaysSinceInstall() >= 7) ? true : false
+	return (!atomicState?.installData?.shownFeedback && getDaysSinceUpdated() >= 7) ? true : false
 }
 
 def showChgLogOk() {
@@ -6903,6 +6903,22 @@ def getDaysSinceInstall() {
 		return 0
 	}
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", instDt)
+	def stop = new Date()
+	if(start && stop) {
+		return (stop - start)
+	}
+	return 0
+}
+
+def getDaysSinceUpdated() {
+	def updDt = atomicState?.installData?.updatedDt
+	if(updDt == null || updDt == "Not Set") {
+		def iData = atomicState?.installData
+		iData["updatedDt"] = getDtNow().toString()
+		atomicState?.installData = iData
+		return 0
+	}
+	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", updDt)
 	def stop = new Date()
 	if(start && stop) {
 		return (stop - start)
