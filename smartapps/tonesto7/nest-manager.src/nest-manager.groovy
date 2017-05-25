@@ -736,8 +736,8 @@ def selectedRestDiscSrvcDesc() {
 
 def restDiscoveryClean() {
 	LogAction("Cleaning Out Discovered Services...", "trace", false)
-	atomicState.localNstSrvcs = [:]
-	atomicState.localRestSrvcs = [:]
+	atomicState.localNstSrvcs = [:]		// verified Nest services
+	atomicState.localRestSrvcs = [:]	// services that broadcasted, will be verified then added to localNstSrvcs list
 	atomicState.discRfshCnt = 0
 	app.updateSetting("selectedRestDevice", "")
 }
