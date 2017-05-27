@@ -1848,11 +1848,12 @@ def getWeatherConfDesc() {
 
 def getCustWeatherLoc(desc=false) {
 	def res = null
-	if(settings?.useCustWeatherLoc == false || settings?.useCustWeatherLoc == null) { return res }
-	if(settings?.custWeatherLocSrch == true && settings?.custWeatherResultItems != null) {
-		res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
-	} else if(settings?.useCustWeatherLoc == false && settings?.custLocStr != null) {
-		res = settings?.custLocStr
+	if(settings?.custWeatherLocSrch == true) {
+		if(settings?.custWeatherResultItems != null) {
+			res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
+		} else if(settings?.custLocStr != null) {
+			res = settings?.custLocStr
+		}
 	}
 	return res
 }
