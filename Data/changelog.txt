@@ -2,6 +2,7 @@ V5.1.0 (May 25st, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
  • UPDATED: Support automation precedence
+ * FIXED: Bug in honoring weather station custom settings
 
 Automation App 5.0.6:
  • UPDATED: nMode automation precedence for setting ECO.  Other automations honor override by Nest Mode automation
