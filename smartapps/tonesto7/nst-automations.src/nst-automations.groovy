@@ -1946,7 +1946,7 @@ def fixTempSetting(Double temp) {
 	return newtemp
 }
 
-def getRemSenCoolSetTemp(curMode=null) {
+def getRemSenCoolSetTemp(curMode=null, useCurrent=true) {
 	def coolTemp
 	if(curMode != "eco") {
 		if(getLastOverrideCoolSec() < (3600 * 4)) {
@@ -1976,13 +1976,13 @@ def getRemSenCoolSetTemp(curMode=null) {
 			}
 		}
 	}
-	if(coolTemp == null) {
+	if(coolTemp == null && useCurrent) {
 		coolTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "cool") : coolTemp
 	}
 	return coolTemp
 }
 
-def getRemSenHeatSetTemp(curMode=null) {
+def getRemSenHeatSetTemp(curMode=null, useCurrent=true) {
 	def heatTemp
 	if(curMode != "eco") {
 		if(getLastOverrideHeatSec() < (3600 * 4)) {
@@ -2013,7 +2013,7 @@ def getRemSenHeatSetTemp(curMode=null) {
 		}
 	}
 
-	if(heatTemp == null) {
+	if(heatTemp == null && useCurrent) {
 		heatTemp = schMotTstat ? getTstatSetpoint(schMotTstat, "heat") : heatTemp
 	}
 	return heatTemp
@@ -2744,7 +2744,9 @@ def getExtTmpDewPoint() {
 	return extDp
 }
 
-def getDesiredTemp(curMode) {
+def getDesiredTemp() {
+	def extTmpTstat = settings?.schMotTstat
+	def curMode = extTmpTstat.currentnestThermostatMode.toString()
 	def modeOff = (curMode in ["off"]) ? true : false
 	def modeEco = (curMode in ["eco"]) ? true : false
 	def modeCool = (curMode == "cool") ? true : false
@@ -2753,16 +2755,36 @@ def getDesiredTemp(curMode) {
 
 	def desiredHeatTemp = getRemSenHeatSetTemp(curMode)
 	def desiredCoolTemp = getRemSenCoolSetTemp(curMode)
+	def lastMode = extTmpTstat?.currentpreviousthermostatMode?.toString()
+	if(modeEco) {
+		if( !lastMode && atomicState?.extTmpTstatOffRequested && atomicState?.extTmplastMode) {
+			lastMode = atomicState?.extTmplastMode
+			//atomicState?.extTmpLastDesiredTemp
+		}
+		if(lastMode) {
+			desiredHeatTemp = getRemSenHeatSetTemp(lastMode, false)
+			desiredCoolTemp = getRemSenCoolSetTemp(lastMode, false)
+			LogAction("getDesiredTemp: Using lastMode: ${lastMode} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested} | curMode: ${curMode}", "debug", false)
+			modeOff = (lastMode in ["off"]) ? true : false
+			modeCool = (lastMode == "cool") ? true : false
+			modeHeat = (lastMode == "heat") ? true : false
+			modeAuto = (lastMode == "auto") ? true : false
+		}
+	}
+
 	def desiredTemp = 0
-	if(desiredHeatTemp && modeHeat) { desiredTemp = desiredHeatTemp }
-	else if(desiredCoolTemp && modeCool) { desiredTemp = desiredCoolTemp }
-	else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && (modeAuto || modeEco) ) { desiredTemp = (desiredCoolTemp + desiredHeatTemp) / 2.0 } //
-	else if(desiredHeatTemp && modeEco) { desiredTemp = desiredHeatTemp }
-	else if(desiredCoolTemp && modeEco) { desiredTemp = desiredCoolTemp }
+	if(!modeOff) {
+		if(desiredHeatTemp && modeHeat)		{ desiredTemp = desiredHeatTemp }
+		else if(desiredCoolTemp && modeCool)	{ desiredTemp = desiredCoolTemp }
+		else if(desiredHeatTemp && desiredCoolTemp && (desiredHeatTemp < desiredCoolTemp) && modeAuto ) {
+			desiredTemp = (desiredCoolTemp + desiredHeatTemp) / 2.0 //
+		}
+		//else if(desiredHeatTemp && modeEco)	{ desiredTemp = desiredHeatTemp }
+		//else if(desiredCoolTemp && modeEco)	{ desiredTemp = desiredCoolTemp }
+		else if(!desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
 
-	if(modeOff && !desiredTemp && atomicState?.extTmpLastDesiredTemp) { desiredTemp = atomicState?.extTmpLastDesiredTemp }
-
-	LogAction("getDesiredTemp: curMode: ${curMode} | Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+		LogAction("getDesiredTemp: curMode: ${curMode} | lastMode: ${lastMode} | Desired Temp: ${desiredTemp} | Desired Heat Temp: ${desiredHeatTemp} | Desired Cool Temp: ${desiredCoolTemp} extTmpLastDesiredTemp: ${atomicState?.extTmpLastDesiredTemp}", "info", false)
+	}
 
 	return desiredTemp
 }
@@ -2771,26 +2793,26 @@ def extTmpTempOk() {
 	//LogTrace("extTmpTempOk")
 	def pName = extTmpPrefix()
 	try {
+		def execTime = now()
 		def extTmpTstat = settings?.schMotTstat
 		def extTmpTstatMir = settings?.schMotTstatMir
 
-		def execTime = now()
 		def intTemp = extTmpTstat ? getRemoteSenTemp().toDouble() : null
 		def extTemp = getExtTmpTemperature()
-		def curMode = extTmpTstat.currentnestThermostatMode.toString()
+
 		def dpLimit = getComfortDewpoint(extTmpTstat)
 		def curDp = getExtTmpDewPoint()
 		def diffThresh = Math.abs(getExtTmpTempDiffVal())
 
+		def curMode = extTmpTstat.currentnestThermostatMode.toString()
 		def modeOff = (curMode == "off") ? true : false
 		def modeCool = (curMode == "cool") ? true : false
 		def modeHeat = (curMode == "heat") ? true : false
 		def modeEco = (curMode == "eco") ? true : false
+		def modeAuto = (curMode == "auto") ? true : false
 
 		def canHeat = atomicState?.schMotTstatCanHeat
 		def canCool = atomicState?.schMotTstatCanCool
-
-		def modeAuto = ((curMode == "auto") || (curMode == "eco" && canHeat && canCool)) ? true : false
 
 		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
@@ -2826,18 +2848,42 @@ def extTmpTempOk() {
 		if(modeAuto && retval) {
 			desiredHeatTemp = getRemSenHeatSetTemp(curMode)
 			desiredCoolTemp = getRemSenCoolSetTemp(curMode)
-			if( !(extTemp > desiredHeatTemp+diffThresh && extTemp < desiredCoolTemp-diffThresh) ) {
+		}
+		def lastMode = extTmpTstat?.currentpreviousthermostatMode?.toString()
+		if(curMode == "eco") {
+			if(!lastMode && atomicState?.extTmpTstatOffRequested && atomicState?.extTmplastMode) {
+				lastMode = atomicState?.extTmplastMode
+				//atomicState?.extTmpLastDesiredTemp
+			}
+			if(lastMode) {
+				LogAction("extTmpTempOk: Resetting mode curMode: ${curMode} | to previous mode lastMode: ${lastMode} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
+				desiredHeatTemp = getRemSenHeatSetTemp(lastMode, false)
+				desiredCoolTemp = getRemSenCoolSetTemp(lastMode, false)
+				if(!desiredHeatTemp) { desiredHeatTemp = atomicState?.extTmpLastDesiredHTemp }
+				if(!desiredCoolTemp) { desiredCoolTemp = atomicState?.extTmpLastDesiredCTemp }
+				modeOff = (lastMode == "off") ? true : false
+				modeCool = (lastMode == "cool") ? true : false
+				modeHeat = (lastMode == "heat") ? true : false
+				modeEco = (lastMode == "eco") ? true : false
+				modeAuto = (lastMode == "auto") ? true : false
+			}
+		}
+
+		if(modeAuto && retval && desiredHeatTemp && desiredCoolTemp) {
+			if( !(extTemp >= (desiredHeatTemp+diffThresh) && extTemp <= (desiredCoolTemp-diffThresh)) ) {
 				retval = false
 				tempOk = false
 				str = "within range (${desiredHeatTemp} ${desiredCoolTemp})"
 			}
+			atomicState?.extTmpLastDesiredHTemp = desiredHeatTemp
+			atomicState?.extTmpLastDesiredCTemp = desiredCoolTemp
 		}
 
 		def tempDiff
 		def desiredTemp
 
 		if(!modeAuto && retval) {
-			desiredTemp = getDesiredTemp(curMode)
+			desiredTemp = getDesiredTemp()
 			if(!desiredTemp) {
 				desiredTemp = intTemp
 				LogAction("extTmpTempOk: No Desired Temp found, using interior Temp", "warn", true)
@@ -2932,13 +2978,14 @@ def extTmpTempCheck(cTimeOut = false) {
 			}
 
 			def mylastMode = atomicState?."${pName}lastMode"  // when we state change that could change desired Temp ensure delays happen before off can happen again
-			atomicState?."${pName}lastMode" = curMode
-
 			def lastDesired = atomicState?.extTmpLastDesiredTemp   // this catches scheduled temp or hvac mode changes
-			def desiredTemp = getDesiredTemp(curMode)
-			if(desiredTemp) { atomicState?.extTmpLastDesiredTemp = desiredTemp }
+			def desiredTemp = getDesiredTemp()
 
-			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) { atomicState.extTmpChgWhileOnDt = getDtNow() }
+			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) {
+				atomicState?."${pName}lastMode" = curMode
+				if(desiredTemp) { atomicState?.extTmpLastDesiredTemp = desiredTemp }
+				atomicState.extTmpChgWhileOnDt = getDtNow()
+			}
 
 			def okToRestore = (modeEco && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
 			def tempWithinThreshold = extTmpTempOk()
