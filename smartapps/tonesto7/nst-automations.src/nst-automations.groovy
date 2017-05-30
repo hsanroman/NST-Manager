@@ -3085,7 +3085,7 @@ def extTmpTempCheck(cTimeOut = false) {
 						LogAction("extTmpTempCheck: Saving ${extTmpTstat?.label} (${strCapitalize(atomicState?.extTmpRestoreMode)}) mode", "info", true)
 						scheduleAutomationEval(60)
 						if(setTstatMode(extTmpTstat, "eco", pName)) {
-							storeLastAction("Set Thermostat to ECO", getDtNow(), pName, extTmpTstat)
+							storeLastAction("Set Thermostat ${extTmpTstat?.displayName} to ECO", getDtNow(), pName, extTmpTstat)
 							atomicState?.extTmpTstatOffRequested = true
 							atomicState.extTmpChgWhileOffDt = getDtNow()
 							scheduleTimeoutRestore(pName)
@@ -3813,8 +3813,8 @@ def adjustCameras(on, sendAutoType=null) {
 					dev?.off()
 					didstr = "Off"
 				}
-				LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev})", "info", true)
-				storeLastAction("Turned ${didstr} Streaming $cam", getDtNow(), sendAutoType)
+				LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev?.displayName})", "info", true)
+				storeLastAction("Turned ${didstr} Streaming ${dev?.displayName}", getDtNow(), sendAutoType)
 				return dev
 			}
 		}
@@ -6864,8 +6864,8 @@ def setMultipleTstatMode(tstats, mode, autoType=null) {
 //			}
 
 			if(retval) {
-				LogAction("Setting ${ts} Mode to (${mode})", "info", true)
-				storeLastAction("Set ${ts} to (${mode})", getDtNow(), autoType)
+				LogAction("Setting ${ts?.displayName} Mode to (${mode})", "info", true)
+				storeLastAction("Set ${ts?.displayName} to (${mode})", getDtNow(), autoType)
 				result = true
 			} else {
 				LogAction("Failed Setting ${ts} Mode to (${mode})", "warn", true)
