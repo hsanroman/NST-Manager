@@ -7861,14 +7861,14 @@ def createInstallDataJson() {
 		def data = []
 		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"guid":atomicState?.installationId, "beta":betaMarker(), "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 				"installDt": atomicState?.installData?.dt, "updatedDt": atomicState?.installData?.updatedDt, "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "apiStrReqCnt":apiStrReqCnt,
 				"apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt, "appNotifSentCnt":appNotifSentCnt, "apiRestStrEvtCnt":apiRestStrEvtCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt,
 				"stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString(), "optOut":false
 			]
 		} else {
 			data = [
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"guid":atomicState?.installationId, "beta":betaMarker(), "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 				"apiStrReqCnt":apiStrReqCnt, "apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt, "installDt": atomicState?.installData?.dt,  "updatedDt": atomicState?.installData?.updatedDt,
 				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "apiRestStrEvtCnt":apiRestStrEvtCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString(), "optOut":true
 			]

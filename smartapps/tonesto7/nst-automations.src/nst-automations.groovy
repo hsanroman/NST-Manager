@@ -6820,7 +6820,7 @@ def setTstatMode(tstat, mode, autoType=null) {
 			} else {
 				parent.setNModeActive(false)
 				// clear nMode has it in manager
-			} 
+			}
 		}
 		def curMode = tstat?.currentnestThermostatMode?.toString()
 		if (curMode != mode) {
@@ -7443,14 +7443,14 @@ def appNamespace()	{ return "tonesto7" }
 def appLabel()		{ return "NST Automations" }
 def appParentName()	{ return "Nest Manager" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return betaMarker() ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
-def betaMarker()	{ return false }
+def betaMarker()	{ return true }
 def appDevType()	{ return false }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
 	def cur = parent ? parent?.state?.appData?.updater?.versions?.autoapp?.ver.toString() : null
-	def beta = betaMarker() ? "" : ""
+	def beta = betaMarker() ? " Beta" : ""
 	def str = ""
 	str += "${appName()}"
 	str += isAppUpdateAvail() ? "\n• ${textVersion()} (Latest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
