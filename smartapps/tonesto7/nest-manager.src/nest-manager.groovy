@@ -36,16 +36,16 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.9" }
-def appVerDate() { "5-19-2017" }
+def appVersion() { "5.1.0" }
+def appVerDate() { "5-26-2017" }
 def minVersions() {
 	return [
-		"automation":["val":505, "desc":"5.0.5"],
-		"thermostat":["val":504, "desc":"5.0.4"],
-		"protect":["val":502, "desc":"5.0.2"],
-		"presence":["val":501, "desc":"5.0.1"],
-		"weather":["val":504, "desc":"5.0.4"],
-		"camera":["val":505, "desc":"5.0.5"],
+		"automation":["val":506, "desc":"5.0.6"],
+		"thermostat":["val":505, "desc":"5.0.5"],
+		"protect":["val":503, "desc":"5.0.3"],
+		"presence":["val":502, "desc":"5.0.2"],
+		"weather":["val":505, "desc":"5.0.5"],
+		"camera":["val":506, "desc":"5.0.6"],
 		"stream":["val":85, "desc":"0.8.5"]
 	]
 }
@@ -273,16 +273,14 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "Hello sorry to interupt but it has been 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
-			str += "If you enjoy our software please remember that we have spent thousand's of hours of our spare time working on features and stability for this application and devices."
-			str += "If you have already donated please ignore and thank you very much for your support!"
+			str += "Hello User, \n\nPlease forgive the interuption but it's been 30 days since you installed/updated this SmartApp and we wanted to present you with this reminder that we do accept donations (We do not require them)."
+			str += "\n\nIf you have been enjoying our software and devices please remember that we have spent thousand's of hours of our spare time working on features and stability for those applications and devices."
+			str += "\n\nIf you have already donated please ignore and thank you very much for your support!"
 
-			str += "\n\nThanks again for using ${appName()}"
-			paragraph title: "Donation Reminder", str, required: true, state: null
+			str += "\n\nThanks again for using NST Manager"
+			paragraph str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
-			//href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
-			paragraph "This is message will not be shown again", state: "complete"
 		}
 		def iData = atomicState?.installData
 		iData["shownDonation"] = true
@@ -554,7 +552,7 @@ def infoPage () {
 				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
-			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		section("Credits:") {
@@ -736,8 +734,8 @@ def selectedRestDiscSrvcDesc() {
 
 def restDiscoveryClean() {
 	LogAction("Cleaning Out Discovered Services...", "trace", false)
-	atomicState.localNstSrvcs = [:]
-	atomicState.localRestSrvcs = [:]
+	atomicState.localNstSrvcs = [:]		// verified Nest services
+	atomicState.localRestSrvcs = [:]	// services that broadcasted, will be verified then added to localNstSrvcs list
 	atomicState.discRfshCnt = 0
 	app.updateSetting("selectedRestDevice", "")
 }
@@ -1850,11 +1848,12 @@ def getWeatherConfDesc() {
 
 def getCustWeatherLoc(desc=false) {
 	def res = null
-	if(settings?.useCustWeatherLoc == false || settings?.useCustWeatherLoc == null) { return res }
-	if(settings?.custWeatherLocSrch == true && settings?.custWeatherResultItems != null) {
-		res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
-	} else if(settings?.useCustWeatherLoc == false && settings?.custLocStr != null) {
-		res = settings?.custLocStr
+	if(settings?.custWeatherLocSrch == true) {
+		if(settings?.custWeatherResultItems != null) {
+			res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
+		} else if(settings?.custLocStr != null) {
+			res = settings?.custLocStr
+		}
 	}
 	return res
 }
@@ -2515,7 +2514,7 @@ private adj_temp(tempF) {
 		LogAction("adj_temp: error temp ${tempF} is list", "error", true)
 	}
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * (5 / 9) as Double
+		return (tempF - 32) * (5 / 9) as Double //
 	} else {
 		return tempF
 	}
@@ -2661,9 +2660,12 @@ def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
 		LogAction("checkIfSwupdated: new version ${appVersion()}", "info", true)
+		atomicState.swVersion = appVersion()
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
 		iData["shownChgLog"] = false
+		iData["shownFeedback"] = false
+		iData["shownDonation"] = false
 		atomicState?.installData = iData
 		def cApps = getChildApps()
 		if(cApps) {
@@ -3630,11 +3632,11 @@ def updateChildData(force = false) {
 		def mobClientType = settings?.mobileClientType
 		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
-		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 35
+		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 120
 		def hcProtWireTimeout = atomicState?.appData?.healthcheck?.protWireTimeout ?: 35
-		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 35
+		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 1500
 		def hcTstatTimeout = atomicState?.appData?.healthcheck?.tstatTimeout ?: 35
-		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
+		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 120
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
 		def devBannerData = atomicState?.devBannerData ?: null
@@ -3839,10 +3841,10 @@ def updateChildData(force = false) {
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * (9 / 5) + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32) as Integer //
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * (5 / 9) as Double
+							tempC = (tempF - 32) * (5 / 9) as Double //
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
@@ -3851,20 +3853,20 @@ def updateChildData(force = false) {
 						def ctempF = 0
 						if(getTemperatureScale() == "C") {
 							ctempC = automationChildApp.getRemSenCoolSetTemp()
-							ctempF = (ctempC * (9 / 5) + 32.0) as Integer
+							ctempF = (ctempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							ctempF = automationChildApp.getRemSenCoolSetTemp()
-							ctempC = (ctempF - 32.0) * (5 / 9) as Double
+							ctempC = (ctempF - 32.0) * (5 / 9) as Double //
 						}
 
 						def htempC = 0.0
 						def htempF = 0
 						if(getTemperatureScale() == "C") {
 							htempC = automationChildApp.getRemSenHeatSetTemp()
-							htempF = (htempC * (9 / 5) + 32.0) as Integer
+							htempF = (htempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							htempF = automationChildApp.getRemSenHeatSetTemp()
-							htempC = (htempF - 32.0) * (5 / 9) as Double
+							htempC = (htempF - 32.0) * (5 / 9) as Double //
 						}
 
 						if(data?.hvac_mode.toString() == "heat-cool") {
@@ -4044,7 +4046,7 @@ def ok2PollMetaData() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needMetaPoll) { return true }
 	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	if(val > 60) { val = 50 }
 	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
 }
@@ -4053,7 +4055,7 @@ def ok2PollDevice() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
@@ -4063,7 +4065,7 @@ def ok2PollStruct() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-	def val = pollStrTime / 3
+	def val = pollStrTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
@@ -5444,6 +5446,7 @@ def ver2IntArray(val) {
 	def ver = val?.split("\\.")
 	return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
+
 def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
@@ -6865,7 +6868,7 @@ def getUse24Time()		{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) } //
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -6881,11 +6884,11 @@ def getLocationModes() {
 }
 
 def showDonationOk() {
-	return (!atomicState?.installData?.shownDonation && getDaysSinceInstall() >= 30) ? true : false
+	return (!atomicState?.installData?.shownDonation && getDaysSinceUpdated() >= 30) ? true : false
 }
 
 def showFeedbackOk() {
-	return (!atomicState?.installData?.shownFeedback && getDaysSinceInstall() >= 7) ? true : false
+	return (!atomicState?.installData?.shownFeedback && getDaysSinceUpdated() >= 7) ? true : false
 }
 
 def showChgLogOk() {
@@ -6901,6 +6904,22 @@ def getDaysSinceInstall() {
 		return 0
 	}
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", instDt)
+	def stop = new Date()
+	if(start && stop) {
+		return (stop - start)
+	}
+	return 0
+}
+
+def getDaysSinceUpdated() {
+	def updDt = atomicState?.installData?.updatedDt
+	if(updDt == null || updDt == "Not Set") {
+		def iData = atomicState?.installData
+		iData["updatedDt"] = getDtNow().toString()
+		atomicState?.installData = iData
+		return 0
+	}
+	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", updDt)
 	def stop = new Date()
 	if(start && stop) {
 		return (stop - start)
@@ -6961,7 +6980,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		def diff = (int) (long) (stop - start) / 1000 //
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
@@ -8193,6 +8212,18 @@ def remSenUnlock(val, myId) {
 	return res
 }
 
+def setNModeActive(val=null) {
+	LogAction("setNModeActive: val: $val", "info", false)
+	if(automationNestModeEnabled(null)) {
+		if(val == null) {
+			return atomicState?.automationNestModeEcoActive ?: false
+		} else {
+			atomicState.automationNestModeEcoActive = val.toBoolean()
+		}
+	} else { atomicState.automationNestModeEcoActive = false }
+	return atomicState?.automationNestModeEcoActive ?: false
+}
+
 // Most of this is obsolete after upgrade to V5 is complete
 
 def initAutoApp() {
@@ -8374,11 +8405,11 @@ def fixTempSetting(Double temp) {
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double)
+				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double) //
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger()
+				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger() //
 			}
 		}
 	}
@@ -8524,7 +8555,7 @@ def roundTemp(Double temp) {
 	if(temp == null) { return null }
 	def newtemp
 	if( getTemperatureScale() == "C") {
-		newtemp = Math.round(temp.round(1) * 2) / 2.0f
+		newtemp = Math.round(temp.round(1) * 2) / 2.0f //
 	} else {
 		if(temp instanceof Integer) {
 			//log.debug "roundTemp: ($temp) is Integer"
