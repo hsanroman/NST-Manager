@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.6" }
-def appVerDate() { "5-22-2017" }
+def appVerDate() { "5-30-2017" }
 
 preferences {
 	//startPage
@@ -2972,6 +2972,7 @@ def extTmpTempCheck(cTimeOut = false) {
 				LogAction("extTmpTempCheck: | ${!modeEco ? "HVAC turned on when automation had OFF" : "Automation overridden by nMODE"}, resetting state to match", "warn", true)
 				atomicState.extTmpChgWhileOnDt = getDtNow()
 				atomicState.extTmpTstatOffRequested = false
+				atomicState.extTmpChgWhileOffDt = getDtNow()
 				atomicState?.extTmpRestoreMode = null
 				atomicState."${pName}timeOutOn" = false
 				unschedTimeoutRestore(pName)
@@ -2981,10 +2982,14 @@ def extTmpTempCheck(cTimeOut = false) {
 			def lastDesired = atomicState?.extTmpLastDesiredTemp   // this catches scheduled temp or hvac mode changes
 			def desiredTemp = getDesiredTemp()
 
-			if(!modeOff && ( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) ) {
-				atomicState?."${pName}lastMode" = curMode
-				if(desiredTemp) { atomicState?.extTmpLastDesiredTemp = desiredTemp }
-				atomicState.extTmpChgWhileOnDt = getDtNow()
+			if( (mylastMode != curMode) || (desiredTemp && desiredTemp != lastDesired)) {
+				if(!modeOff) {
+					atomicState?."${pName}lastMode" = curMode
+					if(desiredTemp) { atomicState?.extTmpLastDesiredTemp = desiredTemp }
+					atomicState.extTmpChgWhileOnDt = getDtNow()
+				} else {
+					//atomicState.extTmpChgWhileOffDt = getDtNow()
+				}
 			}
 
 			def okToRestore = (modeEco && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
@@ -4568,7 +4573,7 @@ def setTstatTempCheck() {
 					if(oldHeat != heatTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Heat Setpoint '${heatTemp}' on (${tstat}) | Old Setpoint: '${oldHeat}'", "info", false)
-						//storeLastAction("Set ${settings?.schMotTstat} Heat Setpoint to ${heatTemp}", getDtNow(), pName)
+						//storeLastAction("Set ${settings?.schMotTstat} Heat Setpoint to ${heatTemp}", getDtNow(), pName, tstat)
 					} else { heatTemp = null }
 				}
 
@@ -4578,13 +4583,13 @@ def setTstatTempCheck() {
 					if(oldCool != coolTemp) {
 						needChg = true
 						LogAction("setTstatTempCheck: Schedule Cool Setpoint '${coolTemp}' on (${tstat}) | Old Setpoint: '${oldCool}'", "info", false)
-						//storeLastAction("Set ${settings?.schMotTstat} Cool Setpoint to ${coolTemp}", getDtNow(), pName)
+						//storeLastAction("Set ${settings?.schMotTstat} Cool Setpoint to ${coolTemp}", getDtNow(), pName, tstat)
 					} else { coolTemp = null }
 				}
 				if(needChg) {
 					if(setTstatAutoTemps(settings?.schMotTstat, coolTemp?.toDouble(), heatTemp?.toDouble(), pName, tstatMir)) {
 						//LogAction("setTstatTempCheck: [Temp Change | newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp ]", "info", true)
-						//storeLastAction("Set ${tstat} Cool Setpoint ${coolTemp} Heat Setpoint ${heatTemp}", getDtNow(), pName)
+						//storeLastAction("Set ${tstat} Cool Setpoint ${coolTemp} Heat Setpoint ${heatTemp}", getDtNow(), pName, tstat)
 					} else {
 						LogAction("setTstatTempCheck: Thermostat Set ERROR [ newHvacMode: $newHvacMode | tstatHvacMode: $tstatHvacMode | heatTemp: $heatTemp | coolTemp: $coolTemp ]", "info", true)
 					}

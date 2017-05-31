@@ -3660,6 +3660,7 @@ def updateChildData(force = false) {
 
 		def devices = app.getChildDevices(true)
 		devices?.each {
+			if(atomicState?.pollBlocked) { return true }
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
 				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min" ?: null)
@@ -3938,6 +3939,7 @@ def updateChildData(force = false) {
 		atomicState?.lastChildUpdDt = null
 		return
 	}
+	if(atomicState?.pollBlocked) { return }
 	atomicState.forceChildUpd = false
 	atomicState.needChildUpd = false
 }
@@ -4377,6 +4379,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			def qnum = getQueueNumber(cmdTypeId, childId)
 			if(qnum == -1 ) { return false }
 
+			atomicState?.pollBlocked = true
 			def now = new Date()
 			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal, now]
 
@@ -4422,7 +4425,6 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			}
 
 			LogAction("${str} in Queue ${qnum} (qsize: ${tempQueue?.size()}): $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
-			atomicState?.pollBlocked = true
 			atomicState?.lastQcmd = cmdData
 			schedNextWorkQ(childId)
 			return true

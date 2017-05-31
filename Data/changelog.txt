@@ -1,4 +1,4 @@
-V5.1.0 (May 25st, 2017):
+V5.1.0 (May 30th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
  • UPDATED: Support automation precedence
@@ -6,6 +6,7 @@ Manager App:
 
 Automation App 5.0.6:
  • UPDATED: nMode automation precedence for setting ECO.  Other automations honor override by Nest Mode automation
+ • FIXED: Issue in external temperature automation to check schedules for temperature settings to decide to end ECO settings
  
  V5.0.9 (May 13st, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔

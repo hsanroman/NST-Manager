@@ -38,6 +38,11 @@ metadata {
 		command "away"
 		command "present"
 		command "eco"
+		command "offbtn"
+		command "ecobtn"
+		command "heatbtn"
+		command "coolbtn"
+		command "autobtn"
 		//command "setAway"
 		//command "setHome"
 		command "setPresence"
@@ -155,21 +160,21 @@ metadata {
 
 
 		standardTile("offBtn", "device.off", width:1, height:1, decoration: "flat") {
-			state("default", action: "off", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
+			state("default", action: "offbtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/off_btn_icon.png")
 		}
 		standardTile("ecoBtn", "device.eco", width:1, height:1, decoration: "flat") {
-			state("default", action: "eco", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
+			state("default", action: "ecobtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/eco_icon.png")
 		}
 		standardTile("heatBtn", "device.canHeat", width:1, height:1, decoration: "flat") {
-			state("true", action: "heat", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
+			state("true", action: "heatbtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_btn_icon.png")
 			state "false", label: ''
 		}
 		standardTile("coolBtn", "device.canCool", width:1, height:1, decoration: "flat") {
-			state("true", action: "cool", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
+			state("true", action: "coolbtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/cool_btn_icon.png")
 			state "false", label: ''
 		}
 		standardTile("autoBtn", "device.hasAuto", width:1, height:1, decoration: "flat") {
-			state("true", action: "auto", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
+			state("true", action: "autobtn", icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/heat_cool_btn_icon.png")
 			state "false", label: ''
 		}
 
@@ -1949,6 +1954,26 @@ void auto(manChg=false) {
 	if(manChg) { incManModeChgCnt() } else { incProgModeChgCnt() }
 }
 
+void offbtn() {
+	off(true)
+}
+
+void heatbtn() {
+	heat(true)
+}
+
+void coolbtn() {
+	cool(true)
+}
+
+void autobtn() {
+	auto(true)
+}
+
+void ecobtn() {
+	eco(true)
+}
+
 void eco(manChg=false) {
 	LogAction("eco()...", "trace")
 	hvacModeEvent("eco")
@@ -3170,7 +3195,7 @@ def getGraphHTML() {
 
 		def whoSetEco = device?.currentValue("whoSetEcoMode")
 		def whoSetEcoDt = state?.ecoDescDt
-		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of this DTH", "A ST Automation"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
+		def ecoDesc = whoSetEco && !(whoSetEco in ["Not in Eco Mode", "Unknown", "Not Set", "Set Outside of this DTH", "A ST Automation", "User Changed (ST)"]) ? "Eco Set By: ${getAutoChgType(whoSetEco)}" : "${whoSetEco}"
 
 		def ecoDescDt = whoSetEcoDt != null ? """<tr><td class="dateTimeTextSmall">${whoSetEcoDt ?: ""}</td></tr>""" : ""
 		def schedData = state?.curAutoSchedData
