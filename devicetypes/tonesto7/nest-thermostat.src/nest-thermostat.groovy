@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.5" }
+def devVer() { return "5.0.6" }
 
 // for the UI
 metadata {
@@ -2347,8 +2347,6 @@ String getDataString(Integer seriesIndex) {
 			LogAction("getDataString: bad column result", "error")
 	}
 
-	//dataTable.each() {
-
 	dataTable.any { it ->
 		myval = it[2]
 
@@ -2371,11 +2369,24 @@ String getDataString(Integer seriesIndex) {
 		}
 /*
 		if(myhas_fan && seriesIndex == 8) {
-			if(myval == "auto") { myval = 0 }
-			if(myval == "on") { myval = 8 }
-			//if(myval == "circulate") { myval = 8 }
+			switch(myval) {
+				case "auto":
+					myval = 0
+					break
+				case "on":
+					myval = 8
+					break
+				case "circulate":
+					myval = 8
+					break
+				default:
+					myval = 0
+					break
+
+			}
 		}
 */
+
 		if(seriesIndex == 5) {
 			if(myval == 0) { return false }
 		// state.can_cool
