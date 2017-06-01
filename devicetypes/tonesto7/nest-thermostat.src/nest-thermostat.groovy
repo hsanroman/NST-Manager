@@ -2354,10 +2354,20 @@ String getDataString(Integer seriesIndex) {
 
 		//convert idle / non-idle to numeric value
 		if(myindex == 3) {
-			if(myval == "idle") { myval = 0 }
-			if(myval == "cooling") { myval = 8 }
-			if(myval == "heating") { myval = 16 }
-			else { myval = 0 }
+			switch(myval) {
+				case "idle":
+					myval = 0
+				break
+				case "cooling":
+					myval = 8
+				break
+				case "heating":
+					myval = 16
+				break
+				default:
+					myval = 0
+				break
+			}
 		}
 /*
 		if(myhas_fan && seriesIndex == 8) {
