@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.5" }
+def devVer() { return "5.0.6" }
 
 // for the UI
 metadata {
@@ -2347,25 +2347,46 @@ String getDataString(Integer seriesIndex) {
 			LogAction("getDataString: bad column result", "error")
 	}
 
-	//dataTable.each() {
-
 	dataTable.any { it ->
 		myval = it[2]
 
 		//convert idle / non-idle to numeric value
 		if(myindex == 3) {
-			if(myval == "idle") { myval = 0 }
-			if(myval == "cooling") { myval = 8 }
-			if(myval == "heating") { myval = 16 }
-			else { myval = 0 }
+			switch(myval) {
+				case "idle":
+					myval = 0
+				break
+				case "cooling":
+					myval = 8
+				break
+				case "heating":
+					myval = 16
+				break
+				default:
+					myval = 0
+				break
+			}
 		}
 /*
 		if(myhas_fan && seriesIndex == 8) {
-			if(myval == "auto") { myval = 0 }
-			if(myval == "on") { myval = 8 }
-			//if(myval == "circulate") { myval = 8 }
+			switch(myval) {
+				case "auto":
+					myval = 0
+					break
+				case "on":
+					myval = 8
+					break
+				case "circulate":
+					myval = 8
+					break
+				default:
+					myval = 0
+					break
+
+			}
 		}
 */
+
 		if(seriesIndex == 5) {
 			if(myval == 0) { return false }
 		// state.can_cool
