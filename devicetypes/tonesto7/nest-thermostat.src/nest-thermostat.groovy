@@ -2362,6 +2362,9 @@ String getDataString(Integer seriesIndex) {
 				case "heating":
 					myval = 16
 				break
+				case "fan only":
+					myval = 4
+				break
 				default:
 					myval = 0
 				break
@@ -2663,14 +2666,16 @@ def updateOperatingHistory(today) {
 		def Op_coolingusage = getSumUsage(state.operatingStateTableYesterday, "cooling").toInteger()
 		def Op_heatingusage = getSumUsage(state.operatingStateTableYesterday, "heating").toInteger()
 		def Op_idle = getSumUsage(state.operatingStateTableYesterday, "idle").toInteger()
+		def Op_fanonly = getSumUsage(state.operatingStateTableYesterday, "fan only").toInteger()
 		def fan_on = getSumUsage(state.fanModeTableYesterday, "on").toInteger()
 		def fan_auto = getSumUsage(state.fanModeTableYesterday, "auto").toInteger()
 
-		log.info "fanon ${fan_on}  fanauto: ${fan_auto} opidle: ${Op_idle}  cool: ${Op_coolingusage} heat: ${Op_heatingusage}"
+		log.info "fanon ${fan_on}  fanauto: ${fan_auto} opidle: ${Op_idle}  cool: ${Op_coolingusage} heat: ${Op_heatingusage} fanonly: ${Op_fanonly}"
 
 		hm."OperatingState_Day${hm.currentDay}_cooling" = Op_coolingusage
 		hm."OperatingState_Day${hm.currentDay}_heating" = Op_heatingusage
 		hm."OperatingState_Day${hm.currentDay}_idle" = Op_idle
+		hm."OperatingState_Day${hm.currentDay}_fanonly" = Op_fanonly
 		hm."FanMode_Day${hm.currentDay}_On" = fan_on
 		hm."FanMode_Day${hm.currentDay}_auto" = fan_auto
 
@@ -2678,11 +2683,13 @@ def updateOperatingHistory(today) {
 		hm.OperatingState_DayWeekago_cooling = hm."OperatingState_Day${hm.currentDay}_cooling"
 		hm.OperatingState_DayWeekago_heating = hm."OperatingState_Day${hm.currentDay}_heating"
 		hm.OperatingState_DayWeekago_idle = hm."OperatingState_Day${hm.currentDay}_idle"
+		hm.OperatingState_DayWeekago_fanonly = hm."OperatingState_Day${hm.currentDay}_fanonly"
 		hm.FanMode_DayWeekago_On = hm."FanMode_Day${hm.currentDay}_On"
 		hm.FanMode_DayWeekago_auto = hm."FanMode_Day${hm.currentDay}_auto"
 		hm."OperatingState_Day${hm.currentDay}_cooling" = 0L
 		hm."OperatingState_Day${hm.currentDay}_heating" = 0L
 		hm."OperatingState_Day${hm.currentDay}_idle" = 0L
+		hm."OperatingState_Day${hm.currentDay}_fanonly" = 0L
 		hm."FanMode_Day${hm.currentDay}_On" = 0L
 		hm."FanMode_Day${hm.currentDay}_auto" = 0L
 
@@ -2692,6 +2699,8 @@ def updateOperatingHistory(today) {
 		hm."OperatingState_Month${hm.currentMonth}_heating" = t1 + Op_heatingusage
 		t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0L
 		hm."OperatingState_Month${hm.currentMonth}_idle" = t1 + Op_idle
+		t1 = hm["OperatingState_Month${hm.currentMonth}_fanonly"]?.toInteger() ?: 0L
+		hm."OperatingState_Month${hm.currentMonth}_fanonly" = t1 + Op_fanonly
 		t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0L
 		hm."FanMode_Month${hm.currentMonth}_On" = t1 + fan_on
 		t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0L
@@ -2702,6 +2711,7 @@ def updateOperatingHistory(today) {
 			hm.OperatingState_MonthYearago_cooling = hm."OperatingState_Month${hm.currentMonth}_cooling"
 			hm.OperatingState_MonthYearago_heating = hm."OperatingState_Month${hm.currentMonth}_heating"
 			hm.OperatingState_MonthYearago_idle = hm."OperatingState_Month${hm.currentMonth}_idle"
+			hm.OperatingState_MonthYearago_fanonly = hm."OperatingState_Month${hm.currentMonth}_fanonly"
 			hm.FanMode_MonthYearago_On = hm."FanMode_Month${hm.currentMonth}_On"
 			hm.FanMode_MonthYearago_auto = hm."FanMode_Month${hm.currentMonth}_auto"
 			hm."OperatingState_Month${hm.currentMonth}_cooling" = 0L
@@ -2717,6 +2727,8 @@ def updateOperatingHistory(today) {
 		hm.OperatingState_thisYear_heating = t1 + Op_heatingusage
 		t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0L
 		hm.OperatingState_thisYear_idle = t1 + Op_idle
+		t1 = hm[OperatingState_thisYear_fanonly]?.toInteger() ?: 0L
+		hm.OperatingState_thisYear_fanonly = t1 + Op_fanonly
 		t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0L
 		hm.FanMode_thisYear_On = t1 + fan_on
 		t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0L
@@ -2727,12 +2739,14 @@ def updateOperatingHistory(today) {
 			hm.OperatingState_lastYear_cooling = hm.OperatingState_thisYear_cooling
 			hm.OperatingState_lastYear_heating = hm.OperatingState_thisYear_heating
 			hm.OperatingState_lastYear_idle = hm.OperatingState_thisYear_idle
+			hm.OperatingState_lastYear_fanonly = hm.OperatingState_thisYear_fanonly
 			hm.FanMode_lastYear_On = hm.FanMode_thisYear_On
 			hm.FanMode_lastYear_auto = hm.FanMode_thisYear_auto
 
 			hm.OperatingState_thisYear_cooling = 0L
 			hm.OperatingState_thisYear_heating = 0L
 			hm.OperatingState_thisYear_idle = 0L
+			hm.OperatingState_thisYear_fanonly = 0L
 			hm.FanMode_thisYear_On = 0L
 			hm.FanMode_thisYear_auto = 0L
 		}
@@ -2809,10 +2823,10 @@ def initHistoryStore() {
 		currentDay: dayNum,
 		currentMonth: monthNum,
 		currentYear: yearNum,
-		OperatingState_DayWeekago_cooling: 0L, OperatingState_DayWeekago_heating: 0L, OperatingState_DayWeekago_idle: 0L,
-		OperatingState_MonthYearago_cooling: 0L, OperatingState_MonthYearago_heating: 0L, OperatingState_MonthYearago_idle: 0L,
-		OperatingState_thisYear_cooling: 0L, OperatingState_thisYear_heating: 0L, OperatingState_thisYear_idle: 0L,
-		OperatingState_lastYear_cooling: 0L, OperatingState_lastYear_heating: 0L, OperatingState_lastYear_idle: 0L,
+		OperatingState_DayWeekago_cooling: 0L, OperatingState_DayWeekago_heating: 0L, OperatingState_DayWeekago_idle: 0L, OperatingState_DayWeekago_fanonly: 0L,
+		OperatingState_MonthYearago_cooling: 0L, OperatingState_MonthYearago_heating: 0L, OperatingState_MonthYearago_idle: 0L, OperatingState_MonthYearago_fanonly: 0L,
+		OperatingState_thisYear_cooling: 0L, OperatingState_thisYear_heating: 0L, OperatingState_thisYear_idle: 0L, OperatingState_thisYear_fanonly: 0L,
+		OperatingState_lastYear_cooling: 0L, OperatingState_lastYear_heating: 0L, OperatingState_lastYear_idle: 0L, OperatingState_lastYear_fanonly: 0L,
 		FanMode_DayWeekago_On: 0L, FanMode_DayWeekago_auto: 0L,
 		FanMode_MonthYearago_On: 0L, FanMode_MonthYearago_auto: 0L,
 		FanMode_thisYear_On: 0L, FanMode_thisYear_auto: 0L,
@@ -2820,12 +2834,12 @@ def initHistoryStore() {
 	]
 
 	for(int i = 1; i <= 7; i++) {
-		historyStoreMap << ["OperatingState_Day${i}_cooling": 0L, "OperatingState_Day${i}_heating": 0L, "OperatingState_Day${i}_idle": 0L]
+		historyStoreMap << ["OperatingState_Day${i}_cooling": 0L, "OperatingState_Day${i}_heating": 0L, "OperatingState_Day${i}_idle": 0L, "OperatingState_Day${i}_fanonly": 0L]
 		historyStoreMap << ["FanMode_Day${i}_On": 0L, "FanMode_Day${i}_auto": 0L]
 	}
 
 	for(int i = 1; i <= 12; i++) {
-		historyStoreMap << ["OperatingState_Month${i}_cooling": 0L, "OperatingState_Month${i}_heating": 0L, "OperatingState_Month${i}_idle": 0L]
+		historyStoreMap << ["OperatingState_Month${i}_cooling": 0L, "OperatingState_Month${i}_heating": 0L, "OperatingState_Month${i}_idle": 0L, "OperatingState_Month${i}_fanonly": 0L]
 		historyStoreMap << ["FanMode_Month${i}_On": 0L, "FanMode_Month${i}_auto": 0L]
 	}
 
@@ -2839,6 +2853,7 @@ def getTodaysUsage() {
 	timeMap << ["cooling":["tData":secToTimeMap(hm?."OperatingState_Day${hm?.currentDay}_cooling"), "tSec":hm?."OperatingState_Day${hm?.currentDay}_cooling"]]
 	timeMap << ["heating":["tData":secToTimeMap(hm?."OperatingState_Day${hm?.currentDay}_heating"), "tSec":hm?."OperatingState_Day${hm?.currentDay}_heating"]]
 	timeMap << ["idle":["tData":secToTimeMap(hm?."OperatingState_Day${hm?.currentDay}_idle"), "tSec":hm?."OperatingState_Day${hm?.currentDay}_idle"]]
+	timeMap << ["fanonly":["tData":secToTimeMap(hm?."OperatingState_Day${hm?.currentDay}_fanonly"), "tSec":hm?."OperatingState_Day${hm?.currentDay}_fanonly"]]
 	timeMap << ["fanOn":["tData":secToTimeMap(hm?."FanMode_Day${hm?.currentDay}_On"), "tSec":hm?."FanMode_Day${hm?.currentDay}_On"]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(hm?."FanMode_Day${hm?.currentDay}_auto"), "tSec":hm?."FanMode_Day${hm?.currentDay}_auto"]]
 	return timeMap
@@ -2850,18 +2865,21 @@ def getWeeksUsage() {
 	def coolVal = 0L
 	def heatVal = 0L
 	def idleVal = 0L
+	def fanonlyVal = 0L
 	def fanOnVal = 0L
 	def fanAutoVal = 0L
 	for(int i = 1; i <= 7; i++) {
 		coolVal = coolVal + hm?."OperatingState_Day${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Day${i}_heating"?.toInteger()
 		idleVal = idleVal + hm?."OperatingState_Day${i}_idle"?.toInteger()
+		fanonlyVal = fanonlyVal + hm?."OperatingState_Day${i}_fanonly"?.toInteger()
 		fanOnVal = fanOnVal + hm?."FanMode_Day${i}_On"?.toInteger()
 		fanAutoVal = fanAutoVal + hm?."FanMode_Day${i}_auto"?.toInteger()
 	}
 	timeMap << ["cooling":["tData":secToTimeMap(coolVal), "tSec":coolVal]]
 	timeMap << ["heating":["tData":secToTimeMap(heatVal), "tSec":heatVal]]
 	timeMap << ["idle":["tData":secToTimeMap(idleVal), "tSec":idleVal]]
+	timeMap << ["fanonly":["tData":secToTimeMap(fanonlyVal), "tSec":fanonlyVal]]
 	timeMap << ["fanOn":["tData":secToTimeMap(fanOnVal), "tSec":fanOnVal]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(fanAutoVal), "tSec":fanAutoVal]]
 	//log.debug "weeksUsage: ${timeMap}"
@@ -2876,6 +2894,7 @@ def getMonthsUsage(monNum) {
 	timeMap << ["cooling":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_cooling"), "tSec":hm?."OperatingState_Month${mVal}_cooling"]]
 	timeMap << ["heating":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_heating"), "tSec":hm?."OperatingState_Month${mVal}_heating"]]
 	timeMap << ["idle":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_idle"), "tSec":hm?."OperatingState_Month${mVal}_idle"]]
+	timeMap << ["fanonly":["tData":secToTimeMap(hm?."OperatingState_Month${mVal}_fanonly"), "tSec":hm?."OperatingState_Month${mVal}_fanonly"]]
 	timeMap << ["fanOn":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_On"), "tSec":hm?."FanMode_Month${mVal}_On"]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(hm?."FanMode_Month${mVal}_auto"), "tSec":hm?."FanMode_Month${mVal}_auto"]]
 	//log.debug "monthsUsage: $mVal ${timeMap}"
@@ -2895,6 +2914,7 @@ def getLast3MonthsUsageMap() {
 			newMap << ["cooling":["tSec":(hm?."OperatingState_Month${mVal}_cooling" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["heating":["tSec":(hm?."OperatingState_Month${mVal}_heating" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["idle":["tSec":(hm?."OperatingState_Month${mVal}_idle" ?: 0L), "iNum":cnt, "mName":mName]]
+			newMap << ["fanonly":["tSec":(hm?."OperatingState_Month${mVal}_fanonly" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["fanOn":["tSec":(hm?."FanMode_Month${mVal}_On" ?: 0L), "iNum":cnt, "mName":mName]]
 			newMap << ["fanAuto":["tSec":(hm?."FanMode_Month${mVal}_auto" ?: 0L), "iNum":cnt, "mName":mName]]
 			timeMap << [(mVal):newMap]
@@ -2917,18 +2937,21 @@ def getYearsUsage() {
 	def coolVal = 0L
 	def heatVal = 0L
 	def idleVal = 0L
+	def fanonlyVal = 0L
 	def fanOnVal = 0L
 	def fanAutoVal = 0L
 	for(int i = 1; i <= 12; i++) {
 		coolVal = coolVal + hm?."OperatingState_Month${i}_cooling"?.toInteger()
 		heatVal = heatVal + hm?."OperatingState_Month${i}_heating"?.toInteger()
 		idleVal = idleVal + hm?."OperatingState_Month${i}_idle"?.toInteger()
+		fanonlyVal = fanonlyVal + hm?."OperatingState_Month${i}_fanonly"?.toInteger()
 		fanOnVal = fanOnVal + hm?."FanMode_Month${i}_On"?.toInteger()
 		fanAutoVal = fanAutoVal + hm?."FanMode_Month${i}_auto"?.toInteger()
 	}
 	timeMap << ["cooling":["tData":secToTimeMap(coolVal), "tSec":coolVal]]
 	timeMap << ["heating":["tData":secToTimeMap(heatVal), "tSec":heatVal]]
 	timeMap << ["idle":["tData":secToTimeMap(idleVal), "tSec":idleVal]]
+	timeMap << ["fanonly":["tData":secToTimeMap(fanonlyVal), "tSec":fanonlyVal]]
 	timeMap << ["fanOn":["tData":secToTimeMap(fanOnVal), "tSec":fanOnVal]]
 	timeMap << ["fanAuto":["tData":secToTimeMap(fanAutoVal), "tSec":fanAutoVal]]
 	//log.debug "yearsUsage: ${timeMap}"
@@ -2955,6 +2978,7 @@ def getHistoryStore() {
 	def Op_coolingusage = getSumUsage(state.operatingStateTable, "cooling").toInteger()
 	def Op_heatingusage = getSumUsage(state.operatingStateTable, "heating").toInteger()
 	def Op_idle = getSumUsage(state.operatingStateTable, "idle").toInteger()
+	def Op_fanonly = getSumUsage(state.operatingStateTable, "fan only").toInteger()
 	def fan_on = getSumUsage(state.fanModeTable, "on").toInteger()
 	def fan_auto = getSumUsage(state.fanModeTable, "auto").toInteger()
 
@@ -2964,6 +2988,7 @@ def getHistoryStore() {
 	hm."OperatingState_Day${hm.currentDay}_cooling" = Op_coolingusage
 	hm."OperatingState_Day${hm.currentDay}_heating" = Op_heatingusage
 	hm."OperatingState_Day${hm.currentDay}_idle" = Op_idle
+	hm."OperatingState_Day${hm.currentDay}_fanonly" = Op_fanonly
 	hm."FanMode_Day${hm.currentDay}_On" = fan_on
 	hm."FanMode_Day${hm.currentDay}_auto" = fan_auto
 
@@ -2973,6 +2998,8 @@ def getHistoryStore() {
 	hm."OperatingState_Month${hm.currentMonth}_heating" = t1 + Op_heatingusage
 	t1 = hm["OperatingState_Month${hm.currentMonth}_idle"]?.toInteger() ?: 0L
 	hm."OperatingState_Month${hm.currentMonth}_idle" = t1 + Op_idle
+	t1 = hm["OperatingState_Month${hm.currentMonth}_fanonly"]?.toInteger() ?: 0L
+	hm."OperatingState_Month${hm.currentMonth}_fanonly" = t1 + Op_fanonly
 	t1 = hm["FanMode_Month${hm.currentMonth}_On"]?.toInteger() ?: 0L
 	hm."FanMode_Month${hm.currentMonth}_On" = t1 + fan_on
 	t1 = hm["FanMode_Month${hm.currentMonth}_auto"]?.toInteger() ?: 0L
@@ -2984,6 +3011,8 @@ def getHistoryStore() {
 	hm.OperatingState_thisYear_heating = t1 + Op_heatingusage
 	t1 = hm[OperatingState_thisYear_idle]?.toInteger() ?: 0L
 	hm.OperatingState_thisYear_idle = t1 + Op_idle
+	t1 = hm[OperatingState_thisYear_fanonly]?.toInteger() ?: 0L
+	hm.OperatingState_thisYear_fanonly = t1 + Op_fanonly
 	t1 = hm[FanMode_thisYear_On]?.toInteger() ?: 0L
 	hm.FanMode_thisYear_On = t1 + fan_on
 	t1 = hm[FanMode_thisYear_auto]?.toInteger() ?: 0L
@@ -3534,6 +3563,7 @@ def showChartHtml() {
 	def thData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
 	def tcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
 	def tiData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	def tfData = (uData?.fanonly?.tSec.toLong()/3600).toDouble().round(0)
 	def tfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
 	def tfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
@@ -3542,6 +3572,7 @@ def showChartHtml() {
 	def mhData = (uData?.heating?.tSec.toLong()/3600).toDouble().round(0)
 	def mcData = (uData?.cooling?.tSec.toLong()/3600).toDouble().round(0)
 	def miData = (uData?.idle?.tSec.toLong()/3600).toDouble().round(0)
+	def mfData = (uData?.fanonly?.tSec.toLong()/3600).toDouble().round(0)
 	def mfoData = (uData?.fanOn?.tSec.toLong()/3600).toDouble().round(0)
 	def mfaData = (uData?.fanAuto?.tSec.toLong()/3600).toDouble().round(0)
 
@@ -3555,19 +3586,22 @@ def showChartHtml() {
 	def m1Data = []
 	def m2Data = []
 	def m3Data = []
+//TODO fix for fanonly
 	grpUseData?.each { mon ->
 		def data = mon?.value
 		def heat = data?.heating ? (data?.heating?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def cool = data?.cooling ? (data?.cooling?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def idle = data?.idle ? (data?.idle?.tSec.toLong()/3600).toDouble().round(0) : 0 //
+		def fanonly = data?.fanonly ? (data?.fanonly?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def fanOn = data?.fanOn ? (data?.fanOn?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def fanAuto = data?.fanAuto ? (data?.fanAuto?.tSec.toLong()/3600).toDouble().round(0) : 0 //
 		def mName = getMonthNumToStr(mon?.key)
-		lStr += "\n$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool) | FanOn: ($fanOn) | FanAuto: ($fanAuto)"
+		lStr += "\n$mName Usage - Idle: ($idle) | Heat: ($heat) | Cool: ($cool) | Fanonly: (${fanonly}) FanOn: ($fanOn) | FanAuto: ($fanAuto)"
 		def iNum = 1
 		if(data?.idle?.iNum) { iNum = data?.idle?.iNum.toInteger()	}
 		else if(data?.heating?.iNum) {iNum = data?.heating?.iNum.toInteger() }
 		else if(data?.cooling?.iNum == 1) { iNum = data?.cooling?.iNum.toInteger() }
+		else if(data?.fanonly?.iNum == 1) { iNum = data?.fanonly?.iNum.toInteger() }
 		else if(data?.fanOn?.iNum == 1) { iNum = data?.fanOn?.iNum.toInteger() }
 
 		if(iNum == 1) {
@@ -3763,12 +3797,12 @@ def hideChartHtml() {
 def getMonthUseChartData(mNum=null) {
 	def today = new Date()
 	def monthNum = mNum ?: today.format("MM", location.timeZone).toInteger()
-	def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
+	def hData = null; def cData = null; def fData = null; def iData = null; def f1Data = null; def f0Data = null;
 	def uData = getMonthsUsage(monthNum)
 	log.debug "uData: $uData"
 	uData?.each { item ->
 		log.debug "item: $item"
-		def type = item?.key
+		def type = item?.key.toString()
 		def tData = item?.value?.tData
 		def h = tData?.h.toInteger()
 		def m = tData?.m.toInteger()
@@ -3778,6 +3812,7 @@ def getMonthUseChartData(mNum=null) {
 			if(type == "heating") 	{ hData = item }
 			if(type == "cooling") 	{ cData = item }
 			if(type == "idle")	  	{ iData = item }
+			if(type == "fanonly")	  	{ fData = item }
 			//if(type == "fanOn")   	{ f1Data = item }
 			//if(type == "fanAuto")	{ f0Data = item }
 		}
@@ -3928,7 +3963,7 @@ def getUsageVoiceReport(type) {
 			break
 		case "runtimeMonth":
 			return generateUsageText("month", getMonthsUsage())
-			 break
+			break
 		default:
 			return "I'm sorry but the report type received was not valid"
 			break
@@ -3938,10 +3973,10 @@ def getUsageVoiceReport(type) {
 def generateUsageText(timeType, timeMap) {
 	def str = ""
 	if(timeType && timeMap) {
-		def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null;
+		def hData = null; def cData = null;	def iData = null; def f1Data = null; def f0Data = null; fData = null;
 
 		timeMap?.each { item ->
-			def type = item?.key
+			def type = item?.key.toString()
 			def tData = item?.value?.tData
 			def h = tData?.h.toInteger()
 			def m = tData?.m.toInteger()
@@ -3951,55 +3986,68 @@ def generateUsageText(timeType, timeMap) {
 				if(type == "heating") 	{ hData = item }
 				if(type == "cooling") 	{ cData = item }
 				if(type == "idle")	  	{ iData = item }
+				if(type == "fanonly")   	{ fData = item }
 				//if(type == "fanOn")   	{ f1Data = item }
 				//if(type == "fanAuto")	{ f0Data = item }
 			//}
 		}
-		if(hData || cData || iData) {// || f1Data || f0Data) {
+		if(hData || cData || iData || fData) {// || f1Data || f0Data) {
 			str += " Based on the devices activity so far today. "
 			def showAnd = hData || cData //|| f0Data || f1Data
-			def iTime = 0; def hTime = 0; def cTime = 0;
-			def iTmStr; def hTmStr; def cTmStr;
+			def iTime = 0; def hTime = 0; def cTime = 0; def fTime = 0;
+			def iTmStr; def hTmStr; def cTmStr; def fTmStr;
 
 			//Fills Idle Usage Data
-			if(iData?.key == "idle") {
+			if(iData?.key.toString() == "idle") {
 				iTmStr = getTimeMapString(iData?.value?.tData)
 				iTime = getDayTimePerc(iData?.value?.tSec.toInteger(),iData?.value?.tData)
 			}
 			//Fills Heating Usage Data
-			if(hData?.key == "heating") {
+			if(hData?.key.toString() == "heating") {
 				hTmStr = getTimeMapString(hData?.value?.tData)
 				hTime = getDayTimePerc(hData?.value?.tSec.toInteger(),hData?.value?.tData)
 			}
 
 			//Fills Cooling Usage Data
-			if(cData?.key == "cooling") {
+			if(cData?.key.toString() == "cooling") {
 				cTmStr = getTimeMapString(cData?.value?.tData)
 				cTime = getDayTimePerc(cData?.value?.tSec.toInteger(),cData?.value?.tData)
 			}
 
-			def tmMap = new TreeMap<Integer, String>(["${hTime}":"heating", "${cTime}":"cooling", "${iTime}":"idle"])
+			//Fills fanonly Usage Data
+			if(fData?.key.toString() == "fanonly") {
+				fTmStr = getTimeMapString(fData?.value?.tData)
+				fTime = getDayTimePerc(fData?.value?.tSec.toInteger(),fData?.value?.tData)
+			}
+
+			def tmMap = new TreeMap<Integer, String>(["${hTime}":"heating", "${cTime}":"cooling", "${iTime}":"idle", "${fTime}":"fanonly"])
 			def mSz = tmMap?.size()
 			def last = null
 			tmMap?.reverseEach {
 				if(it?.key.toInteger() > 0) {
 					switch(it?.value.toString()) {
 						case "idle":
-							def lastOk = (last in ["cooling", "heating"])
+							def lastOk = (last in ["cooling", "heating", "fanonly"])
 							str += lastOk ? " and" : ""
 							str += getIdleUsageDesc(iTime,, iTmStr, timeType)
 							last = it?.value.toString()
 							break
 						case "heating":
-							def lastOk = (last in ["idle", "cooling"])
+							def lastOk = (last in ["idle", "cooling", "fanonly"])
 							str += lastOk ? " and" : ""
 							str += getHeatUsageDesc(hTime, hTmStr, timeType)
 							last = it?.value.toString()
 							break
 						case "cooling":
-							def lastOk = (last in ["idle", "heating"])
+							def lastOk = (last in ["idle", "heating", "fanonly"])
 							str += lastOk ? " and" : ""
 							str += getCoolUsageDesc(cTime, cTmStr, timeType)
+							last = it?.value.toString()
+							break
+						case "fanonly":
+							def lastOk = (last in ["idle", "heating", "cooling"])
+							str += lastOk ? " and" : ""
+							str += getFanonlyUsageDesc(fTime, fTmStr, timeType)
 							last = it?.value.toString()
 							break
 					}
@@ -4028,6 +4076,16 @@ def getIdleUsageDesc(perc, tmStr, timeType) {
 	if(timeType == "today") {
 		if(perc>0 && perc <=100) {
 			str += " The device has been idle ${perc} percent of the day at "
+			str += tmStr
+		}
+	}
+}
+
+def getFanonlyUsageDesc(perc, tmStr, timeType) {
+	def str = ""
+	if(timeType == "today") {
+		if(perc>0 && perc <=100) {
+			str += " The Fan has been on ${perc} percent of the day at "
 			str += tmStr
 		}
 	}
