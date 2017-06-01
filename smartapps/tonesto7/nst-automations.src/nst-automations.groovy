@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.6" }
-def appVerDate() { "5-30-2017" }
+def appVerDate() { "5-31-2017" }
 
 preferences {
 	//startPage
@@ -394,8 +394,7 @@ def mainAutoPage(params) {
 						nDesc += (nModePresSensor && !nModeSwitch) ? "\n\n${nModePresenceDesc()}" : ""
 						nDesc += (nModeSwitch && !nModePresSensor) ? "\n • Using Switch: (State: ${isSwitchOn(nModeSwitch) ? "ON" : "OFF"})" : ""
 						nDesc += (nModeDelay && nModeDelayVal) ? "\n • Change Delay: (${getEnumValue(longTimeSecEnum(), nModeDelayVal)})" : ""
-						nDesc += (settings?."${getAutoType()}Modes" || settings?."${getAutoType()}Days" || (settings?."${getAutoType()}StartTime" && settings?."${getAutoType()}StopTime")) ?
-								"\n • Evaluation Allowed: (${autoScheduleOk(getAutoType()) ? "ON" : "OFF"})" : ""
+						nDesc += (isNestModesConfigured() ) ? "\n • Restrictions Active: (${autoScheduleOk(getAutoType()) ? "NO" : "YES"})" : ""
 						if(isNestModesConfigured()) {
 							nDesc += "\n • Set Thermostats to ECO: (${nModeSetEco ? "On" : "Off"})"
 							if(parent?.settings?.cameras) {
@@ -675,10 +674,7 @@ def initAutoApp() {
 	}
 	app.updateLabel(getAutoTypeLabel())
 	LogAction("Automation Label: ${getAutoTypeLabel()}", "info", true)
-	atomicState?.lastAutomationSchedDt = null
-	if(!autoDisabled) {
-		heartbeatAutomation()
-	}
+
 	//if(settings["backedUpData"] && atomicState?.restoreCompleted) { }
 
 	state.remove("motionnullLastisBtwn")
@@ -694,6 +690,8 @@ def initAutoApp() {
 	state.remove("lastaway")
 	state.remove("debugAppendAppName")   // cause Automations to re-check with parent for value
 	state.remove("enRemDiagLogging")   // cause Automations to re-check with parent for value after updated is called
+
+	scheduleAutomationEval(30)
 }
 
 def uninstAutomationApp() {
@@ -859,6 +857,7 @@ def getIsAutomationDisabled() {
 def subscribeToEvents() {
 	//Remote Sensor Subscriptions
 	def autoType = getAutoType()
+	def swlist = []
 
 	//Nest Mode Subscriptions
 	if(autoType == "nMode") {
@@ -881,6 +880,17 @@ def subscribeToEvents() {
 					return d1
 				}
 			}
+			def t0 = []
+			if(settings["nModerestrictionSwitchOn"]) { t0 = t0 + settings["nModerestrictionSwitchOn"] }
+			if(settings["nModerestrictionSwitchOff"]) { t0 = t0 + settings["nModerestrictionSwitchOff"] }
+			for(sw in t0) {
+				if(swlist?.contains(sw)) {
+					//log.trace "found $sw"
+				} else {
+					swlist.push(sw)
+					subscribe(sw, "switch", automationGenericEvt)
+				}
+			}
 		}
 	}
 
@@ -894,8 +904,23 @@ def subscribeToEvents() {
 			if(settings?.schMotWaterOff) {
 				if(isLeakWatConfigured()) { subscribe(leakWatSensors, "water", leakWatSensorEvt) }
 			}
+//TODO add switches to adjust schedule
+// humCtrl, extTmp, conWat, nMode
 			if(settings?.schMotContactOff) {
-				if(isConWatConfigured()) { subscribe(conWatContacts, "contact", conWatContactEvt) }
+				if(isConWatConfigured()) {
+					subscribe(conWatContacts, "contact", conWatContactEvt)
+					def t0 = []
+					if(settings["conWatrestrictionSwitchOn"]) { t0 = t0 + settings["conWatrestrictionSwitchOn"] }
+					if(settings["conWatrestrictionSwitchOff"]) { t0 = t0 + settings["conWatrestrictionSwitchOff"] }
+					for(sw in t0) {
+						if(swlist?.contains(sw)) {
+							//log.trace "found $sw"
+						} else {
+							swlist.push(sw)
+							subscribe(sw, "switch", automationGenericEvt)
+						}
+					}
+				}
 			}
 			if(settings?.schMotHumidityControl) {
 				if(isHumCtrlConfigured()) {
@@ -911,6 +936,17 @@ def subscribeToEvents() {
 							}
 						} else { LogAction("No weather device found", "error", true) }
 					}
+					def t0 = []
+					if(settings["humCtrlrestrictionSwitchOn"]) { t0 = t0 + settings["humCtrlrestrictionSwitchOn"] }
+					if(settings["humCtrlrestrictionSwitchOff"]) { t0 = t0 + settings["humCtrlrestrictionSwitchOff"] }
+					for(sw in t0) {
+						if(swlist?.contains(sw)) {
+							//log.trace "found $sw"
+						} else {
+							swlist.push(sw)
+							subscribe(sw, "switch", automationGenericEvt)
+						}
+					}
 				}
 			}
 
@@ -925,6 +961,17 @@ def subscribeToEvents() {
 								subscribe(weather, "dewpoint", extTmpGenericEvt)
 							}
 						} else { LogAction("No weather device found", "error", true) }
+					}
+					def t0 = []
+					if(settings["extTmprestrictionSwitchOn"]) { t0 = t0 + settings["extTmprestrictionSwitchOn"] }
+					if(settings["extTmprestrictionSwitchOff"]) { t0 = t0 + settings["extTmprestrictionSwitchOff"] }
+					for(sw in t0) {
+						if(swlist?.contains(sw)) {
+							//log.trace "found $sw"
+						} else {
+							swlist.push(sw)
+							subscribe(sw, "switch", automationGenericEvt)
+						}
 					}
 					if(!settings?.extTmpUseWeather && settings?.extTmpTempSensor) { subscribe(extTmpTempSensor, "temperature", extTmpGenericEvt, [filterEvents: false]) }
 					atomicState.extTmpChgWhileOnDt = getDtNow()
@@ -963,7 +1010,6 @@ def subscribeToEvents() {
 			def sLbl
 			def cnt = 1
 			def prlist = []
-			def swlist = []
 			def mtlist = []
 			schedList?.each { scd ->
 				sLbl = "schMot_${scd}_"
@@ -2959,8 +3005,6 @@ def extTmpTempCheck(cTimeOut = false) {
 			def curMode = extTmpTstat?.currentnestThermostatMode?.toString()
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
 			def modeEco = (curMode in ["eco"]) ? true : false
-			def safetyOk = getSafetyTempsOk(extTmpTstat)
-			def schedOk = extTmpScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -2992,6 +3036,8 @@ def extTmpTempCheck(cTimeOut = false) {
 				}
 			}
 
+			def safetyOk = getSafetyTempsOk(extTmpTstat)
+			def schedOk = extTmpScheduleOk()
 			def okToRestore = (modeEco && atomicState?.extTmpTstatOffRequested && atomicState?.extTmpRestoreMode) ? true : false
 			def tempWithinThreshold = extTmpTempOk()
 
@@ -3212,7 +3258,7 @@ def isConWatConfigured() {
 }
 
 def getConWatContactsOk() { return settings?.conWatContacts?.currentState("contact")?.value.contains("open") ? false : true }
-def conWatContactOk() { return (!settings?.conWatContacts) ? false : true }
+//def conWatContactOk() { return (!settings?.conWatContacts) ? false : true }
 def conWatScheduleOk() { return autoScheduleOk(conWatPrefix()) }
 def getConWatOpenDtSec() { return !atomicState?.conWatOpenDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatOpenDt, null, "getConWatOpenDtSec").toInteger() }
 def getConWatCloseDtSec() { return !atomicState?.conWatCloseDt ? 100000 : GetTimeDiffSeconds(atomicState?.conWatCloseDt, null, "getConWatCloseDtSec").toInteger() }
@@ -3249,8 +3295,6 @@ def conWatCheck(cTimeOut = false) {
 			def curNestPres = getTstatPresence(conWatTstat)
 			def modeOff = (curMode in ["off", "eco"]) ? true : false
 			def openCtDesc = getOpenContacts(conWatContacts) ? " '${getOpenContacts(conWatContacts)?.join(", ")}' " : " a selected contact "
-			def safetyOk = getSafetyTempsOk(conWatTstat)
-			def schedOk = conWatScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -3275,6 +3319,8 @@ def conWatCheck(cTimeOut = false) {
 			atomicState?."${pName}lastMode" = curMode
 			if(!modeOff && (mylastMode != curMode)) { atomicState?.conWatOpenDt = getDtNow() }
 
+			def safetyOk = getSafetyTempsOk(conWatTstat)
+			def schedOk = conWatScheduleOk()
 			def okToRestore = (modeOff && atomicState?.conWatTstatOffRequested) ? true : false
 			def contactsOk = getConWatContactsOk()
 
@@ -3510,8 +3556,6 @@ def leakWatCheck() {
 			def curNestPres = getTstatPresence(leakWatTstat)
 			def modeOff = (curMode == "off") ? true : false
 			def wetCtDesc = getWetWaterSensors(leakWatSensors) ? " '${getWetWaterSensors(leakWatSensors)?.join(", ")}' " : " a selected leak sensor "
-			def safetyOk = getSafetyTempsOk(leakWatTstat)
-			//def schedOk = leakWatScheduleOk()
 			def allowNotif = settings?."${pName}NotificationsOn" ? true : false
 			def allowSpeech = allowNotif && settings?."${pName}AllowSpeechNotif" ? true : false
 			def allowAlarm = allowNotif && settings?."${pName}AllowAlarmNotif" ? true : false
@@ -3523,6 +3567,8 @@ def leakWatCheck() {
 				atomicState?.leakWatTstatOffRequested = false
 			}
 
+			def safetyOk = getSafetyTempsOk(leakWatTstat)
+			//def schedOk = leakWatScheduleOk()
 			def okToRestore = (modeOff && atomicState?.leakWatTstatOffRequested) ? true : false
 			def sensorsOk = getLeakWatSensorsOk()
 
@@ -4787,8 +4833,8 @@ def schMotModePage() {
 						leakDesc += settings?.leakWatSensors ? "\n\n${autoStateDesc("leakWat")}" : ""
 						leakDesc += (settings?.leakWatSensors) ? "\n\nSettings:" : ""
 						leakDesc += settings?.leakWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.leakWatOnDelay)})" : ""
-						leakDesc += (settings?.leakWatModes || settings?.leakWatDays || (settings?.leakWatStartTime && settings?.leakWatStopTime)) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(leakWatPrefix()) ? "ON" : "OFF"})" : ""
+						//leakDesc += (settings?.leakWatModes || settings?.leakWatDays || (settings?.leakWatStartTime && settings?.leakWatStopTime)) ?
+							//"\n • Restrictions Active: (${autoScheduleOk(leakWatPrefix()) ? "NO" : "YES"})" : ""
 						def t1 = getNotifConfigDesc(leakWatPrefix())
 						leakDesc += t1 ? "\n\n${t1}" : ""
 						leakDesc += (settings?.leakWatSensors) ? "\n\nTap to modify" : ""
@@ -4814,8 +4860,7 @@ def schMotModePage() {
 						conDesc += settings?.conWatOffDelay ? "\n • Eco Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOffDelay)})" : ""
 						conDesc += settings?.conWatOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.conWatOnDelay)})" : ""
 						conDesc += settings?.conWatRestoreDelayBetween ? "\n • Delay Between Restores:\n   └ (${getEnumValue(longTimeSecEnum(), settings?.conWatRestoreDelayBetween)})" : ""
-						conDesc += (settings?."${conWatPrefix()}Modes" || settings?."${conWatPrefix()}Days" || (settings?."${conWatPrefix()}StartTime" && settings?."${conWatPrefix()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(conWatPrefix()) ? "ON" : "OFF"})" : ""
+						conDesc += (settings?.conWatContacts) ? "\n • Restrictions Active: (${autoScheduleOk(conWatPrefix()) ? "NO" : "YES"})" : ""
 						def t1 = getNotifConfigDesc(conWatPrefix())
 						conDesc += t1 ? "\n\n${t1}" : ""
 						conDesc += (settings?.conWatContacts) ? "\n\nTap to modify" : ""
@@ -4840,9 +4885,8 @@ def schMotModePage() {
 					humDesc += (settings?.humCtrlUseWeather || settings?.humCtrlTempSensor) ? "\n\nSettings:" : ""
 					humDesc += (!settings?.humCtrlUseWeather && settings?.humCtrlTempSensor) ? "\n • Temp Sensor: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
 					humDesc += (settings?.humCtrlUseWeather && !settings?.humCtrlTempSensor) ? "\n • Weather: (${getHumCtrlTemperature()}${tempScaleStr})" : ""
-					humDesc += (settings?."${humCtrlPrefix()}Modes" || settings?."${humCtrlPrefix()}Days" || (settings?."${humCtrlPrefix()}StartTime" && settings?."${humCtrlPrefix()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(humCtrlPrefix()) ? "ON" : "OFF"})" : ""
-					//TODO need this in schedule
+					humDesc += (settings?.humCtrlSwitches) ?  "\n • Restrictions Active: (${autoScheduleOk(humCtrlPrefix()) ? "NO" : "YES"})" : ""
+			//TODO need this in schedule
 					humDesc += ((settings?.humCtrlTempSensor || settings?.humCtrlUseWeather) ) ? "\n\nTap to modify" : ""
 					def humCtrlDesc = isHumCtrlConfigured() ? "${humDesc}" : null
 					href "tstatConfigAutoPage", title: "Humidifier Config", description: humCtrlDesc ?: "Tap to configure", params: ["configType":"humCtrl"], required: true, state: (humCtrlDesc ? "complete" : null),
@@ -4863,8 +4907,7 @@ def schMotModePage() {
 						extDesc += settings?.extTmpDiffVal ? "\n • Threshold: (${settings?.extTmpDiffVal}${tempScaleStr})" : ""
 						extDesc += settings?.extTmpOffDelay ? "\n • ECO Delay: (${getEnumValue(longTimeSecEnum(), settings?.extTmpOffDelay)})" : ""
 						extDesc += settings?.extTmpOnDelay ? "\n • On Delay: (${getEnumValue(longTimeSecEnum(), settings?.extTmpOnDelay)})" : ""
-						extDesc += (settings?."${extTmpPrefix()}Modes" || settings?."${extTmpPrefix()}Days" || (settings?."${extTmpPrefix()}StartTime" && settings?."${extTmpPrefix()}StopTime")) ?
-							"\n • Evaluation Allowed: (${autoScheduleOk(extTmpPrefix()) ? "ON" : "OFF"})" : ""
+						extDesc += (settings?.extTmpTempSensor || settings?.extTmpUseWeather) ? "\n • Restrictions Active: (${autoScheduleOk(extTmpPrefix()) ? "NO" : "YES"})" : ""
 						def t0 = getNotifConfigDesc(extTmpPrefix())
 						extDesc += t0 ? "\n\n${t0}" : ""
 						extDesc += ((settings?.extTmpTempSensor || settings?.extTmpUseWeather) ) ? "\n\nTap to modify" : ""
@@ -6276,29 +6319,52 @@ def setDayModeTimePage(params) {
 			input "${pName}Days", "enum", title: "${inverted ? "Not": "Only"} These Days", multiple: true, required: false, options: timeDayOfWeekOptions(), image: getAppImg("day_calendar_icon2.png")
 			input "${pName}Modes", "mode", title: "${inverted ? "Not": "Only"} in These Modes", multiple: true, required: false, image: getAppImg("mode_icon.png")
 		}
+//TODO add switches to adjust schedule
+		section("Switches:") {
+			input "${pName}restrictionSwitchOn", "capability.switch", title: "Only execute when these switches are all ON", multiple: true, required: false, image: getAppImg("switch_on_icon.png")
+			input "${pName}restrictionSwitchOff", "capability.switch", title: "Only execute when these switches are all OFF", multiple: true, required: false, image: getAppImg("switch_off_icon.png")
+		}
 	}
 }
 
 def getDayModeTimeDesc(pName) {
 	def startTime = settings?."${pName}StartTime"
-	def stopInput = settings?."${pName}StopInput"
 	def stopTime = settings?."${pName}StopTime"
 	def dayInput = settings?."${pName}Days"
 	def modeInput = settings?."${pName}Modes"
 	def inverted = settings?."${pName}DmtInvert" ?: null
+	def swOnInput = settings?."${pName}restrictionSwitchOn"
+	def swOffInput = settings?."${pName}restrictionSwitchOff"
 	def str = ""
 	def days = getInputToStringDesc(dayInput)
 	def modes = getInputToStringDesc(modeInput)
+	def swOn = getInputToStringDesc(swOnInput)
+	def swOff = getInputToStringDesc(swOffInput)
 	str += ((startTime && stopTime) || modes || days) ? "${!inverted ? "When" : "When Not"}:" : ""
 	str += (startTime && stopTime) ? "\n • Time: ${time2Str(settings?."${pName}StartTime")} - ${time2Str(settings?."${pName}StopTime")}" : ""
-	str += days ? "${(startTime || stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
-	str += modes ? "${(startTime || stopTime || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
+	str += days ? "${(startTime && stopTime) ? "\n" : ""}\n • Day${isPluralString(dayInput)}: ${days}" : ""
+	str += modes ? "${((startTime && stopTime) || days) ? "\n" : ""}\n • Mode${isPluralString(modeInput)}: ${modes}" : ""
+	str += swOn ? "${((startTime && stopTime) || days || modes) ? "\n" : ""}\n • Switch${isPluralString(swOnInput)} that must be on: ${getRestSwitch(swOnInput)}" : ""
+	str += swOff ? "${((startTime && stopTime) || days || modes || swOn) ? "\n" : ""}\n • Switch${isPluralString(swOffInput)} that must be off: ${getRestSwitch(swOffInput)}" : ""
+//TODO add switches to adjust schedule
 	str += (str != "") ? "\n\nTap to modify" : ""
 	return str
 }
 
+def getRestSwitch(swlist) {
+	def swDesc = ""
+	def swCnt = 0
+	def rmSwCnt = swlist?.size() ?: 0
+	swlist?.sort { it?.displayName }?.each { sw ->
+		swCnt = swCnt+1
+		swDesc += "${swCnt >= 1 ? "${swCnt == rmSwCnt ? "\n   └" : "\n   ├"}" : "\n   └"} ${sw?.label}: (${strCapitalize(sw?.currentSwitch)})"
+	}
+	return (swDesc == "") ? null : "${swDesc}"
+}
+
 def getDmtSectionDesc(autoType) {
 	return settings["${autoType}DmtInvert"] ? "Do Not Act During these Days, Times, or Modes:" : "Only Act During these Days, Times, or Modes:"
+//TODO add switches to adjust schedule
 }
 
 /************************************************************************************************
@@ -6310,6 +6376,7 @@ def autoScheduleOk(autoType) {
 		def inverted = settings?."${autoType}DmtInvert" ? true : false
 		def modeOk = true
 		modeOk = (!settings?."${autoType}Modes" || ((isInMode(settings?."${autoType}Modes") && !inverted) || (!isInMode(settings?."${autoType}Modes") && inverted))) ? true : false
+
 		//dayOk
 		def dayOk = true
 		def dayFmt = new SimpleDateFormat("EEEE")
@@ -6325,8 +6392,29 @@ def autoScheduleOk(autoType) {
 			timeOk = ((inTime && !inverted) || (!inTime && inverted)) ? true : false
 		}
 
-		//LogAction("autoScheduleOk( dayOk: $dayOk | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | inverted: ${inverted})", "info", false)
-		return (modeOk && dayOk && timeOk) ? true : false
+//TODO add switches to adjust schedule
+		def soFarOk = (modeOk && dayOk && timeOk) ? true : false
+		def swOk = true
+		if(soFarOk && settings?."${autoType}restrictionSwitchOn") {
+			for(sw in settings["${autoType}restrictionSwitchOn"]) {
+				if (sw.currentValue("switch") != "on") {
+					swOk = false
+					break
+				}
+			}
+		}
+		soFarOk = (modeOk && dayOk && timeOk && swOk) ? true : false
+		if(soFarOk && settings?."${autoType}restrictionSwitchOff") {
+			for(sw in settings["${autoType}restrictionSwitchOff"]) {
+				if (sw.currentValue("switch") != "off") {
+					swOk = false
+					break
+				}
+			}
+		}
+
+		LogAction("autoScheduleOk( dayOk: $dayOk | modeOk: $modeOk | dayOk: ${dayOk} | timeOk: $timeOk | swOk: $swOk | inverted: ${inverted})", "info", false)
+		return (modeOk && dayOk && timeOk && swOk) ? true : false
 	} catch (ex) {
 		log.error "${autoType}-autoScheduleOk Exception:", ex
 		parent?.sendExceptionData(ex, "autoScheduleOk", true, getAutoType())
