@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.0.6" }
+def devVer() { return "5.0.7" }
 
 // for the UI
 metadata {
@@ -1065,7 +1065,8 @@ def operatingStateEvent(opState=null) {
 	def nesthvacState = device.currentState("nestThermostatOperatingState")?.stringValue
 	def operState = opState == null ? nesthvacState : opState
 	if(operState == null) { return }  // try to resolve nasty race.  Race cannot be avoided due to three variables trying to show same status
-	def newoperState = (operState == "off") ? "idle" : operState
+	operState = (operState == "off") ? "idle" : operState
+	def newoperState = operState
 
 	def fanOn = device.currentState("thermostatFanMode")?.stringValue == "on" ? true : false
 	if (fanOn && operState == "idle") {
