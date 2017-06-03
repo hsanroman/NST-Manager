@@ -2416,7 +2416,7 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def returnToAuto = false
 	if(hvacMode in ["off", "eco"]) { returnToAuto = true }
 
-	def curOperState = tstat?.currentThermostatOperatingState.toString()
+	def curOperState = tstat?.currentnestThermostatOperatingState.toString()
 	def curFanMode = tstat?.currentThermostatFanMode.toString()
 
 	def tstatOperStateOk = (curOperState == "idle") ? true : false
