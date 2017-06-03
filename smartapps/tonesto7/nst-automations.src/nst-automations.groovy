@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.0.6" }
-def appVerDate() { "5-31-2017" }
+def appVersion() { "5.0.7" }
+def appVerDate() { "6-03-2017" }
 
 preferences {
 	//startPage
@@ -2860,7 +2860,7 @@ def extTmpTempOk() {
 		def canHeat = atomicState?.schMotTstatCanHeat
 		def canCool = atomicState?.schMotTstatCanCool
 
-		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
+		LogAction("extTmpTempOk: Inside Temp: ${intTemp} | curMode: ${curMode} | modeOff: ${modeOff} | modeEco: ${modeEco} | modeAuto: ${modeAuto} || extTmpTstatOffRequested: ${atomicState?.extTmpTstatOffRequested}", "debug", false)
 
 		def retval = true
 		def tempOk = true
@@ -2907,7 +2907,7 @@ def extTmpTempOk() {
 				desiredCoolTemp = getRemSenCoolSetTemp(lastMode, false)
 				if(!desiredHeatTemp) { desiredHeatTemp = atomicState?.extTmpLastDesiredHTemp }
 				if(!desiredCoolTemp) { desiredCoolTemp = atomicState?.extTmpLastDesiredCTemp }
-				modeOff = (lastMode == "off") ? true : false
+				//modeOff = (lastMode == "off") ? true : false
 				modeCool = (lastMode == "cool") ? true : false
 				modeHeat = (lastMode == "heat") ? true : false
 				modeEco = (lastMode == "eco") ? true : false
@@ -3858,14 +3858,21 @@ def adjustCameras(on, sendAutoType=null) {
 		foundCams.each { dev ->
 			if(dev) {
 				def didstr = "On"
-				if(on) {
-					dev?.on()
-				} else {
-					dev?.off()
-					didstr = "Off"
+				try {
+					if(on) {
+						dev?.on()
+					} else {
+						dev?.off()
+						didstr = "Off"
+					}
+					LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev?.displayName})", "info", true)
+					storeLastAction("Turned ${didstr} Streaming ${dev?.displayName}", getDtNow(), sendAutoType)
 				}
-				LogAction("adjustCameras: Turning Streaming ${didstr} for (${dev?.displayName})", "info", true)
-				storeLastAction("Turned ${didstr} Streaming ${dev?.displayName}", getDtNow(), sendAutoType)
+				catch (ex) {
+					log.error "adjustCameras() Exception: ${dev?.label} does not support commands on / off", ex
+					sendNofificationMsg("Warning", "Camera commands not found, check IDE logs and installation instructions")
+					parent?.sendExceptionData(ex, "adjustCameras", true, getAutoType())
+				}
 				return dev
 			}
 		}
@@ -6905,35 +6912,42 @@ def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
 // TODO or if we are off, we requested off, and NMODE took over
 	if(mode) {
-		if(autoType == "nMode") {
-			if(mode == "eco") {
-				parent.setNModeActive(true)
-				// set nMode has it in manager
-				if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-			} else {
-				parent.setNModeActive(false)
-				// clear nMode has it in manager
+		try {
+			if(autoType == "nMode") {
+				if(mode == "eco") {
+					parent.setNModeActive(true)
+					// set nMode has it in manager
+					if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+				} else {
+					parent.setNModeActive(false)
+					// clear nMode has it in manager
+				}
 			}
-		}
-		def curMode = tstat?.currentnestThermostatMode?.toString()
-		if (curMode != mode) {
-			if(mode == "auto") { tstat.auto(); result = true }
-			else if(mode == "heat") { tstat.heat(); result = true }
-			else if(mode == "cool") { tstat.cool(); result = true }
-			else if(mode == "off") { tstat.off(); result = true }
-			else {
+			def curMode = tstat?.currentnestThermostatMode?.toString()
+			if (curMode != mode) {
 				try {
-					if(mode == "eco") {
-						tstat.eco(); result = true
-						LogTrace("setTstatMode mode action | type: $autoType")
-						if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+					if(mode == "auto") { tstat.auto(); result = true }
+					else if(mode == "heat") { tstat.heat(); result = true }
+					else if(mode == "cool") { tstat.cool(); result = true }
+					else if(mode == "off") { tstat.off(); result = true }
+					else {
+						if(mode == "eco") {
+							tstat.eco(); result = true
+							LogTrace("setTstatMode mode action | type: $autoType")
+							if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+						}
 					}
 				}
 				catch (ex) {
-					log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}", ex
+					log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
 					parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
 				}
 			}
+		}
+		catch (ex) {
+			log.error "setTstatMode() Exception: Missing parent method setNModeActive; check IDE and install instructions", ex
+			sendNofificationMsg("Warning", "Improper installation of software, check IDE logs and installation instructions")
+			parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
 		}
 
 		if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
