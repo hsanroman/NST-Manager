@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.7" }
-def appVerDate() { "6-03-2017" }
+def appVerDate() { "6-04-2017" }
 
 preferences {
 	//startPage
@@ -2155,7 +2155,11 @@ def remSenRuleEnum(type=null) {
 def fanCtrlPrefix() { return "fanCtrl" }
 
 def isFanCtrlConfigured() {
-	return ( (settings?.fanCtrlFanSwitches && settings?.fanCtrlFanSwitchTriggerType && settings?.fanCtrlFanSwitchHvacModeFilter) || (isFanCircConfigured())) ? true : false
+	return ( isFanCtrlSwConfigured() || isFanCircConfigured()) ? true : false
+}
+
+def isFanCtrlSwConfigured() {
+	return (settings?.fanCtrlFanSwitches && settings?.fanCtrlFanSwitchTriggerType && settings?.fanCtrlFanSwitchHvacModeFilter) ? true : false
 }
 
 def isFanCircConfigured() {
@@ -2187,6 +2191,11 @@ def getFanSwitchDesc(showOpt = true) {
 
 	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Enabled" : ""
 	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Rule: (${getEnumValue(remSenRuleEnum("fan"), settings?.schMotFanRuleType)})" : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTempDiffDegrees) ? ("\n • Threshold: (${settings?.fanCtrlTempDiffDegrees}${tempScaleStr})") : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlOnTime) ? ("\n • Circulate Time : (${getEnumValue(fanTimeSecEnum(), settings?.fanCtrlOnTime)})") : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTimeBetweenRuns) ? ("\n • Time Between Cycles:: (${getEnumValue(longTimeSecEnum(), settings?.fanCtrlTimeBetweenRuns)})") : ""
+
+	swDesc += (settings?."${pName}FanSwitches" || settings?.schMotCirculateTstatFan) ? "\n\n • Restrictions Active: (${autoScheduleOk(fanCtrlPrefix()) ? "NO" : "YES"})" : ""
 
 	return (swDesc == "") ? null : "${swDesc}"
 }
@@ -2202,13 +2211,15 @@ def getFanSwitchesSpdChk() {
 	return (devCnt >= 1) ? true : false
 }
 
+def fanCtrlScheduleOk() { return autoScheduleOk(fanCtrlPrefix()) }
+
 def fanCtrlCheck() {
 	LogAction("FanControl Event | Fan Switch Check", "trace", false)
 	try {
 		def fanCtrlTstat = schMotTstat
 
 		if(atomicState?.disableAutomation) { return }
-		if(!fanCtrlFanSwitches) { return }
+		if( !isFanCtrlConfigured()) { return }
 
 		def execTime = now()
 		//atomicState?.lastEvalDt = getDtNow()
@@ -2223,10 +2234,12 @@ def fanCtrlCheck() {
 		LogAction("fanCtrlCheck: Desired Temps - Heat: ${reqHeatSetPoint} | Cool: ${reqCoolSetPoint}", "info", false)
 		LogAction("fanCtrlCheck: Current Thermostat Sensor Temp: ${curTstatTemp} Temp Difference: (${tempDiff})", "info", false)
 
-		doFanOperation(tempDiff)
+		if(isFanCtrlSwConfigured()) {
+			doFanOperation(tempDiff)
+		}
 
-		if(schMotCirculateTstatFan) {
-			def threshold = !remSenTempDiffDegrees ? 2.0 : remSenTempDiffDegrees.toDouble()
+		if(isFanCircConfigured()) {
+			def threshold = !fanCtrlTempDiffDegrees ? 2.0 : fanCtrlTempDiffDegrees.toDouble()
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
 			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
@@ -2337,6 +2350,12 @@ def doFanOperation(tempDiff) {
 			hvacFanOn = false  // force off of fans
 		}
 
+		def schedOk = fanCtrlScheduleOk()
+		if(!schedOk) {
+			LogAction("doFanOperation: Evaluating turn fans off; Schedule is restricted", "info", true)
+			hvacFanOn = false  // force off of fans
+		}
+
 		settings?."${pName}FanSwitches"?.each { sw ->
 			def swOn = (sw?.currentSwitch.toString() == "on") ? true : false
 			if(hvacFanOn) {
@@ -2402,8 +2421,8 @@ def doFanOperation(tempDiff) {
 	}
 }
 
-def getLastRemSenFanRunDtSec() { return !atomicState?.lastRemSenFanRunDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastRemSenFanRunDt, null, "getLastRemSenFanRunDtSec").toInteger() }
-def getLastRemSenFanOffDtSec() { return !atomicState?.lastRemSenFanOffDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastRemSenFanOffDt, null, "getLastRemSenFanOffDtSec").toInteger() }
+def getLastFanCtrlFanRunDtSec() { return !atomicState?.lastfanCtrlRunDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastfanCtrlRunDt, null, "getLastFanCtrlFanRunDtSec").toInteger() }
+def getLastFanCtrlFanOffDtSec() { return !atomicState?.lastfanCtrlFanOffDt ? 100000 : GetTimeDiffSeconds(atomicState?.lastfanCtrlFanOffDt, null, "getLastFanCtrlFanOffDtSec").toInteger() }
 
 
 // CONTROLS THE THERMOSTAT FAN
@@ -2411,10 +2430,26 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	def tstat = schMotTstat
 	def tstatsMir = schMotTstatMir
 
+	def theFanIsOn = false
 	def hvacMode = tstat ? tstat?.currentnestThermostatMode.toString() : null
 
 	def returnToAuto = false
 	if(hvacMode in ["off", "eco"]) { returnToAuto = true }
+
+	// Track approximate fan on / off times
+	if( !fanOn && atomicState?.lastfanCtrlRunDt > atomicState?.lastfanCtrlFanOffDt ) {
+		atomicState?.lastfanCtrlFanOffDt = getDtNow()
+		returnToAuto = true
+	}
+
+	if( fanOn && atomicState?.lastfanCtrlRunDt < atomicState?.lastfanCtrlFanOffDt ) {
+		atomicState?.lastfanCtrlFanRunDt = getDtNow()
+	}
+
+	def schedOk = fanCtrlScheduleOk()
+	if(!schedOk) {
+		returnToAuto = true
+	}
 
 	def curOperState = tstat?.currentnestThermostatOperatingState.toString()
 	def curFanMode = tstat?.currentThermostatFanMode.toString()
@@ -2424,57 +2459,69 @@ def circulateFanControl(operType, Double curSenTemp, Double reqSetpointTemp, Dou
 	if(!tstatOperStateOk) {
 		LogAction("Circulate Fan Run: The Thermostat OperatingState is Currently (${strCapitalize(curOperState)}) Skipping", "info", true)
 
-		if( atomicState?.lastRemSenFanOffDt > atomicState?.lastRemSenFanRunDt) { return }
+		if( atomicState?.lastfanCtrlFanOffDt > atomicState?.lastfanCtrlRunDt) { return }
 		returnToAuto = true
 	}
 	def fanTempOk = getCirculateFanTempOk(curSenTemp, reqSetpointTemp, threshold, fanOn, operType)
 
-	if(hvacMode in ["heat", "auto", "cool"] && fanTempOk && !fanOn && !returnToAuto) {
-		def waitTimeVal = remSenTimeBetweenRuns?.toInteger() ?: 3600
-		def timeSinceLastOffOk = (getLastRemSenFanOffDtSec() > waitTimeVal) ? true : false
-		if(!timeSinceLastOffOk) {
-			def remaining = waitTimeVal - getLastRemSenFanOffDtSec()
-			LogAction("Circulate Fan: Want to RUN Fan | Delaying for wait period ${waitTimeVal}, remaining ${remaining} seconds", "info", true)
-			remaining = remaining > 20 ? remaining : 20
-			remaining = remaining < 60 ? remaining : 60
-			scheduleAutomationEval(remaining)
-			return
-		}
-		LogAction("Circulate Fan: Activating '${tstat?.displayName}'' Fan for ${strCapitalize(operType)}ING Circulation", "debug", true)
-		tstat?.fanOn()
-		storeLastAction("Turned ${tstat} Fan 'On'", getDtNow(), "fanCtrl", tstat)
-		if(tstatsMir) {
-			tstatsMir?.each { mt ->
-				LogAction("Circulate Fan: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan", "debug", true)
-				mt?.fanOn()
+	if(hvacMode in ["heat", "auto", "cool"] && fanTempOk && !returnToAuto) {
+		if(!fanOn) {
+			def waitTimeVal = fanCtrlTimeBetweenRuns?.toInteger() ?: 1200
+			def timeSinceLastOffOk = (getLastFanCtrlFanOffDtSec() > waitTimeVal) ? true : false
+			if(!timeSinceLastOffOk) {
+				def remaining = waitTimeVal - getLastFanCtrlFanOffDtSec()
+				LogAction("Circulate Fan: Want to RUN Fan | Delaying for wait period ${waitTimeVal}, remaining ${remaining} seconds", "info", true)
+				remaining = remaining > 20 ? remaining : 20
+				remaining = remaining < 60 ? remaining : 60
+				scheduleAutomationEval(remaining)
+				return
 			}
+			LogAction("Circulate Fan: Activating '${tstat?.displayName}'' Fan for ${strCapitalize(operType)}ING Circulation", "debug", true)
+			tstat?.fanOn()
+			storeLastAction("Turned ${tstat} Fan 'On'", getDtNow(), "fanCtrl", tstat)
+			if(tstatsMir) {
+				tstatsMir?.each { mt ->
+					LogAction("Circulate Fan: Mirroring Primary Thermostat: Activating '${mt?.displayName}' Fan", "debug", true)
+					mt?.fanOn()
+					storeLastAction("Turned ${mt.displayName} Fan 'On'", getDtNow(), "fanCtrl", mt)
+				}
+			}
+			atomicState?.lastfanCtrlRunDt = getDtNow()
+			theFanIsOn = true
 		}
-		atomicState?.lastRemSenFanRunDt = getDtNow()
 
 	} else {
-		if(fanOn && (returnToAuto || !fanTempOk)) {
-			if(!returnToAuto) {
-				def timeSinceLastRunOk = (getLastRemSenFanRunDtSec() > 600) ? true : false
+		if(returnToAuto || !fanTempOk) {
+			if(fanOn && !returnToAuto) {
+				def fanOnTimeVal = fanCtrlOnTime?.toInteger() ?: 600
+				def timeSinceLastRunOk = (getLastFanCtrlFanRunDtSec() > fanOnTimeVal) ? true : false // fan left on for minimum
 				if(!timeSinceLastRunOk) {
-					def remaining = 600 - getLastRemSenFanRunDtSec()
-					LogAction("Circulate Fan Run: Want to STOP Fan Delaying for wait period 600, remaining ${remaining} seconds", "info", true)
+					def remaining = fanOnTimeVal - getLastFanCtrlFanRunDtSec()
+					LogAction("Circulate Fan Run: Want to STOP Fan | Delaying for run period ${fanOnTimeVal}, remaining ${remaining} seconds", "info", true)
 					remaining = remaining > 20 ? remaining : 20
 					remaining = remaining < 60 ? remaining : 60
 					scheduleAutomationEval(remaining)
 					return
 				}
 			}
-			LogAction("Circulate Fan: Turning OFF '${remSenTstat?.displayName}' Fan that was used for ${strCapitalize(operType)}ING Circulation", "info", true)
-			tstat?.fanAuto()
-			storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow(), "fanCtrl", tstat)
-			if(tstatsMir) {
-				tstatsMir?.each { mt ->
-					LogAction("Circulate Fan: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan", "info", true)
-					mt?.fanAuto()
+			if(fanOn) {
+				LogAction("Circulate Fan: Turning OFF '${tstat?.displayName}' Fan that was used for ${strCapitalize(operType)}ING Circulation", "info", true)
+				tstat?.fanAuto()
+				storeLastAction("Turned ${tstat} Fan to 'Auto'", getDtNow(), "fanCtrl", tstat)
+				if(tstatsMir) {
+					tstatsMir?.each { mt ->
+						LogAction("Circulate Fan: Mirroring Primary Thermostat: Turning OFF '${mt?.displayName}' Fan", "info", true)
+						mt?.fanAuto()
+						storeLastAction("Turned ${mt.displayName} Fan 'Off'", getDtNow(), "fanCtrl", mt)
+					}
 				}
+				atomicState?.lastfanCtrlFanOffDt = getDtNow()
+				theFanIsOn = false
 			}
-			atomicState?.lastRemSenFanOffDt = getDtNow()
 		}
+	}
+	if(theFanIsOn) {
+		scheduleAutomationEval(120)
 	}
 }
 
@@ -2482,6 +2529,7 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 	LogAction("RemSenFanTempOk Debug:", "debug", false)
 
 	def turnOn = false
+/*
 	def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
 	if(threshold > (adjust * 2.0)) {
 		adjust = adjust * 2.0
@@ -2493,24 +2541,28 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 	}
 
 	LogAction(" ├ adjust: ${adjust}}°${getTemperatureScale()}", "debug", false)
+*/
 	LogAction(" ├ operType: (${strCapitalize(operType)})", "debug", false)
 	LogAction(" ├ Sensor Temp: ${senTemp}°${getTemperatureScale()} | Requested Setpoint Temp: ${reqsetTemp}°${getTemperatureScale()}", "debug", false)
 
 	def ontemp
-	def offtemp
+//	def offtemp
 
 	if(operType == "cool") {
 		ontemp = reqsetTemp + threshold
-		offtemp = reqsetTemp
-		if((senTemp > offtemp) && (senTemp <= (ontemp - adjust))) { turnOn = true }
+//		offtemp = reqsetTemp
+		if(senTemp >= ontemp) { turnOn = true }
+//		if((senTemp > offtemp) && (senTemp <= (ontemp - adjust))) { turnOn = true }
 	}
 	if(operType == "heat") {
 		ontemp = reqsetTemp - threshold
-		offtemp = reqsetTemp
-		if((senTemp < offtemp) && (senTemp >= (ontemp + adjust))) { turnOn = true }
+//		offtemp = reqsetTemp
+		if(senTemp <= ontemp) { turnOn = true }
+//		if((senTemp < offtemp) && (senTemp >= (ontemp + adjust))) { turnOn = true }
 	}
 
-	LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}°${getTemperatureScale()}", "debug", false)
+	//LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}°${getTemperatureScale()}", "debug", false)
+	LogAction(" ├ onTemp: ${ontemp}°${getTemperatureScale()}", "debug", false)
 	LogAction(" ├ FanAlreadyOn: (${strCapitalize(fanOn)})", "debug", false)
 	LogAction(" ┌ Final Result: (${strCapitalize(turnOn)})", "debug", false)
 	LogAction("getCirculateFanTempOk: ", "debug", false)
@@ -4774,14 +4826,14 @@ def schMotModePage() {
 					def titStr = "Run External Fan while HVAC is Operating"
 					if(atomicState?.schMotTstatHasFan) { titStr += " or Use HVAC Fan for Circulation" }
 					input (name: "schMotOperateFan", type: "bool", title: "${titStr}?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("fan_control_icon.png"))
+					def fanCtrlDescStr = ""
+					def t0 = getFanSwitchDesc()
 					if(settings?.schMotOperateFan) {
-						def fanCtrlDescStr = ""
-						def t0 = getFanSwitchDesc()
 						fanCtrlDescStr += t0 ? "${t0}" : ""
-						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
-						href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
-								required: true, image: getAppImg("configure_icon.png")
 					}
+					def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
+					href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
+							required: true, image: getAppImg("configure_icon.png")
 				} else if(!tStatPhys) {
 					paragraph "Fan Control is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
 				}
@@ -4995,6 +5047,7 @@ def tstatConfigAutoPage(params) {
 			break
 		case "fanCtrl":
 			pName = fanCtrlPrefix()
+			pTitle = "Fan Automation"
 			break
 		case "remSen":
 			pName = remSenPrefix()
@@ -5049,7 +5102,7 @@ def tstatConfigAutoPage(params) {
 				section {
 					def str = ""
 					str += "• Temperature: (${tStatTemp})"
-					str += "\n• Setpoints: (H: ${canHeat ? "${tStatHeatSp}${tempScaleStr}" : "NA"}/C: ${canCool ? "${tStatCoolSp}${tempScaleStr}" : "NA"})"
+					str += "\n• Setpoints: (H: ${canHeat ? "${tStatHeatSp}${tempScaleStr}" : "NA"}/C: ${canCool ? "${tStatCoolSp}${tempScaleStr}" : "NA"})" //
 					paragraph title: "${tStatName}\nSchedules and Setpoints:", "${str}", state: "complete", image: getAppImg("info_icon2.png")
 				}
 				showUpdateSchedule(null, hidestr)
@@ -5093,9 +5146,19 @@ def tstatConfigAutoPage(params) {
 						input (name: "schMotCirculateTstatFan", type: "bool", title: "Run HVAC Fan for Circulation?", description: desc, required: reqinp, defaultValue: false, submitOnChange: true, image: getAppImg("fan_circulation_icon.png"))
 						if(settings?.schMotCirculateTstatFan) {
 							input("schMotFanRuleType", "enum", title: "(Rule) Action Type", options: remSenRuleEnum("fan"), required: true, image: getAppImg("rule_icon.png"))
+							paragraph "Temp difference to trigger Action Type.", title: "What is the Action Threshold Temp?", image: getAppImg("instruct_icon.png")
+							input "fanCtrlTempDiffDegrees", "decimal", title: "Action Threshold Temp (${tempScaleStr})", required: true, defaultValue: 2.0, image: getAppImg("temp_icon.png")
+							input name: "fanCtrlOnTime", type: "enum", title: "Minimum circulate Time\n(Optional)", defaultValue: 600, metadata: [values:fanTimeSecEnum()], required: true, submitOnChange: true, image: getAppImg("timer_icon.png")
+							input name: "fanCtrlTimeBetweenRuns", type: "enum", title: "Delay Between On/Off Cycles\n(Optional)", defaultValue: 1200, metadata: [values:longTimeSecEnum()], required: true, submitOnChange: true, image: getAppImg("delay_time_icon.png")
 						}
 					}
 				}
+				section(getDmtSectionDesc(fanCtrlPrefix())) {
+					def pageDesc = getDayModeTimeDesc(pName)
+					href "setDayModeTimePage", title: "Configured Restrictions", description: pageDesc, params: ["pName": "${pName}"], state: (pageDesc ? "complete" : null),
+							image: getAppImg("cal_filter_icon.png")
+				}
+
 				if(settings?."${pName}FanSwitches") {
 					def schTitle
 					if(!atomicState?.activeSchedData?.size()) {
@@ -7091,6 +7154,13 @@ def longTimeMinEnum() {
 	return vals
 }
 */
+
+def fanTimeSecEnum() {
+	def vals = [
+		60:"1 Minute", 120:"2 Minutes", 180:"3 Minutes", 240:"4 Minutes", 300:"5 Minutes", 600:"10 Minutes", 900:"15 Minutes", 1200:"20 Minutes"
+	]
+	return vals
+}
 
 def longTimeSecEnum() {
 	def vals = [
