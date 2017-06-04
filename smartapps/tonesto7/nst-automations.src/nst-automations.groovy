@@ -812,7 +812,7 @@ def automationsInst() {
 	atomicState.isExtTmpConfigured = 	isExtTmpConfigured() ? true : false
 	atomicState.isRemSenConfigured =	isRemSenConfigured() ? true : false
 	atomicState.isTstatSchedConfigured = 	isTstatSchedConfigured() ? true : false
-	atomicState.isFanCtrlConfigured = 	isFanCtrlConfigured() ? true : false
+	atomicState.isFanCtrlConfigured = 	isFanCtrlSwConfigured() ? true : false
 	atomicState.isFanCircConfigured = 	isFanCircConfigured() ? true : false
 	atomicState?.isInstalled = true
 }
@@ -833,7 +833,7 @@ def getAutomationsInstalled() {
 			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
 			if(isRemSenConfigured())		{ tmp[aType].push("remSen") }
 			if(isTstatSchedConfigured()) 		{ tmp[aType].push("tSched") }  // This is number of schedules active
-			if(isFanCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
+			if(isFanSwCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
 			if(isFanCircConfigured()) 		{ tmp[aType].push("fanCirc") }
 			if(tmp?.size()) { list.push(tmp) }
 			break
@@ -997,9 +997,20 @@ def subscribeToEvents() {
 			if(isTstatSchedConfigured()) {
 			}
 			if(settings?.schMotOperateFan) {
-				if(isFanCtrlConfigured() && fanCtrlFanSwitches) {
+				if(isFanCtrlSwConfigured() && fanCtrlFanSwitches) {
 					subscribe(fanCtrlFanSwitches, "switch", automationGenericEvt)
 					subscribe(fanCtrlFanSwitches, "level", automationGenericEvt)
+				}
+				def t0 = []
+				if(settings["fanCtrlrestrictionSwitchOn"]) { t0 = t0 + settings["fanCtrlrestrictionSwitchOn"] }
+				if(settings["fanCtrlrestrictionSwitchOff"]) { t0 = t0 + settings["fanCtrlrestrictionSwitchOff"] }
+				for(sw in t0) {
+					if(swlist?.contains(sw)) {
+						//log.trace "found $sw"
+					} else {
+						swlist.push(sw)
+						subscribe(sw, "switch", automationGenericEvt)
+					}
 				}
 			}
 			if(settings?.schMotOperateFan || settings?.schMotRemoteSensor || settings?.schMotHumidityControl) {
@@ -2155,15 +2166,15 @@ def remSenRuleEnum(type=null) {
 def fanCtrlPrefix() { return "fanCtrl" }
 
 def isFanCtrlConfigured() {
-	return ( isFanCtrlSwConfigured() || isFanCircConfigured()) ? true : false
+	return ( settings?.schMotOperateFan && (isFanCtrlSwConfigured() || isFanCircConfigured())) ? true : false
 }
 
 def isFanCtrlSwConfigured() {
-	return (settings?.fanCtrlFanSwitches && settings?.fanCtrlFanSwitchTriggerType && settings?.fanCtrlFanSwitchHvacModeFilter) ? true : false
+	return (settings?.schMotOperateFan && settings?.fanCtrlFanSwitches && settings?.fanCtrlFanSwitchTriggerType && settings?.fanCtrlFanSwitchHvacModeFilter) ? true : false
 }
 
 def isFanCircConfigured() {
-	return (settings?.schMotCirculateTstatFan && settings?.schMotFanRuleType) ? true : false
+	return (settings?.schMotOperateFan && settings?.schMotCirculateTstatFan && settings?.schMotFanRuleType) ? true : false
 }
 
 def getFanSwitchDesc(showOpt = true) {
