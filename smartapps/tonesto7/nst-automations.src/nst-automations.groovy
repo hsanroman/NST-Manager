@@ -2589,14 +2589,14 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 	resultStr += "of Threshold Limits | "
 	if(!turnOn && fanOn) {
 		resultStr += "Turning Thermostat Fan OFF"
+		disp = true
 	} else if(turnOn && !fanOn) {
 		resultStr += "Turning Thermostat Fan ON"
+		disp = true
 	} else if(turnOn && fanOn) {
 		resultStr += "Fan is ON"
-		disp = true
 	} else if(!turnOn && !fanOn) {
 		resultStr += "Fan is OFF"
-		disp = true
 	}
 	LogAction("${resultStr}", "info", disp)
 
