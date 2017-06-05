@@ -36,16 +36,16 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.1.1" }
-def appVerDate() { "6-03-2017" }
+def appVersion() { "5.1.0" }
+def appVerDate() { "6-05-2017" }
 def minVersions() {
 	return [
-		"automation":["val":507, "desc":"5.0.7"],
-		"thermostat":["val":507, "desc":"5.0.7"],
-		"protect":["val":503, "desc":"5.0.3"],
-		"presence":["val":502, "desc":"5.0.2"],
-		"weather":["val":505, "desc":"5.0.5"],
-		"camera":["val":506, "desc":"5.0.6"],
+		"automation":["val":507, "desc":"5.1.0"],
+		"thermostat":["val":507, "desc":"5.1.0"],
+		"protect":["val":503, "desc":"5.1.0"],
+		"presence":["val":502, "desc":"5.1.0"],
+		"weather":["val":505, "desc":"5.1.0"],
+		"camera":["val":506, "desc":"5.1.0"],
 		"stream":["val":85, "desc":"0.8.5"]
 	]
 }
