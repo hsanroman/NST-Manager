@@ -833,7 +833,7 @@ def getAutomationsInstalled() {
 			if(isExtTmpConfigured()) 		{ tmp[aType].push("extTmp") }
 			if(isRemSenConfigured())		{ tmp[aType].push("remSen") }
 			if(isTstatSchedConfigured()) 		{ tmp[aType].push("tSched") }  // This is number of schedules active
-			if(isFanSwCtrlConfigured()) 		{ tmp[aType].push("fanCtrl") }
+			if(isFanCtrlSwConfigured()) 		{ tmp[aType].push("fanCtrl") }
 			if(isFanCircConfigured()) 		{ tmp[aType].push("fanCirc") }
 			if(tmp?.size()) { list.push(tmp) }
 			break
