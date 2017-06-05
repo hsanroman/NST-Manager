@@ -28,7 +28,7 @@ definition(
 }
 
 def appVersion() { "5.0.7" }
-def appVerDate() { "6-04-2017" }
+def appVerDate() { "6-05-2017" }
 
 preferences {
 	//startPage
@@ -2250,7 +2250,8 @@ def fanCtrlCheck() {
 		}
 
 		if(isFanCircConfigured()) {
-			def threshold = !fanCtrlTempDiffDegrees ? 2.0 : fanCtrlTempDiffDegrees.toDouble()
+			def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
+			def threshold = !fanCtrlTempDiffDegrees ? adjust : fanCtrlTempDiffDegrees.toDouble()
 			def curTstatFanMode = schMotTstat?.currentThermostatFanMode.toString()
 			def fanOn = (curTstatFanMode == "on" || curTstatFanMode == "circulate") ? true : false
 			def hvacMode = schMotTstat ? schMotTstat?.currentnestThermostatMode.toString() : null
@@ -2556,34 +2557,48 @@ def getCirculateFanTempOk(Double senTemp, Double reqsetTemp, Double threshold, B
 	LogAction(" ├ operType: (${strCapitalize(operType)})", "debug", false)
 	LogAction(" ├ Sensor Temp: ${senTemp}°${getTemperatureScale()} | Requested Setpoint Temp: ${reqsetTemp}°${getTemperatureScale()}", "debug", false)
 
-	def ontemp
-//	def offtemp
+//	def ontemp
+	def offtemp
 
 	if(operType == "cool") {
-		ontemp = reqsetTemp + threshold
-//		offtemp = reqsetTemp
-		if(senTemp >= ontemp) { turnOn = true }
+//		ontemp = reqsetTemp + threshold
+		offtemp = reqsetTemp
+		if(senTemp >= (offtemp + threshold)) { turnOn = true }
 //		if((senTemp > offtemp) && (senTemp <= (ontemp - adjust))) { turnOn = true }
 	}
 	if(operType == "heat") {
-		ontemp = reqsetTemp - threshold
-//		offtemp = reqsetTemp
-		if(senTemp <= ontemp) { turnOn = true }
+//		ontemp = reqsetTemp - threshold
+		offtemp = reqsetTemp
+		if(senTemp <= (offtemp - threshold)) { turnOn = true }
 //		if((senTemp < offtemp) && (senTemp >= (ontemp + adjust))) { turnOn = true }
 	}
 
 	//LogAction(" ├ onTemp: ${ontemp} | offTemp: ${offtemp}}°${getTemperatureScale()}", "debug", false)
-	LogAction(" ├ onTemp: ${ontemp}°${getTemperatureScale()}", "debug", false)
+	LogAction(" ├ offTemp: ${offtemp}°${getTemperatureScale()} | Temp Threshold: ${threshold}°${getTemperatureScale()}", "debug", false)
 	LogAction(" ├ FanAlreadyOn: (${strCapitalize(fanOn)})", "debug", false)
 	LogAction(" ┌ Final Result: (${strCapitalize(turnOn)})", "debug", false)
 	LogAction("getCirculateFanTempOk: ", "debug", false)
 
+	def resultStr = "getCirculateFanTempOk: The Temperature Difference is "
+	if(turnOn) {
+		resultStr += " within "
+	} else {
+		resultStr += " Outside "
+	}
+	def disp = false
+	resultStr += "of Threshold Limits | "
 	if(!turnOn && fanOn) {
-		LogAction("getCirculateFanTempOk: The Temperature Difference is Outside of Threshold Limits | Turning Thermostat Fan OFF", "info", true)
+		resultStr += "Turning Thermostat Fan OFF"
+	} else if(turnOn && !fanOn) {
+		resultStr += "Turning Thermostat Fan ON"
+	} else if(turnOn && fanOn) {
+		resultStr += "Fan is ON"
+		disp = true
+	} else if(!turnOn && !fanOn) {
+		resultStr += "Fan is OFF"
+		disp = true
 	}
-	if(turnOn && !fanOn) {
-		LogAction("getCirculateFanTempOk: The Temperature Difference is within the Threshold Limit | Turning Thermostat Fan ON", "info", true)
-	}
+	LogAction("${resultStr}", "info", disp)
 
 	return turnOn
 }
@@ -5158,7 +5173,8 @@ def tstatConfigAutoPage(params) {
 						if(settings?.schMotCirculateTstatFan) {
 							input("schMotFanRuleType", "enum", title: "(Rule) Action Type", options: remSenRuleEnum("fan"), required: true, image: getAppImg("rule_icon.png"))
 							paragraph "Temp difference to trigger Action Type.", title: "What is the Action Threshold Temp?", image: getAppImg("instruct_icon.png")
-							input "fanCtrlTempDiffDegrees", "decimal", title: "Action Threshold Temp (${tempScaleStr})", required: true, defaultValue: 2.0, image: getAppImg("temp_icon.png")
+							def adjust = (getTemperatureScale() == "C") ? 0.5 : 1.0
+							input "fanCtrlTempDiffDegrees", "decimal", title: "Action Threshold Temp (${tempScaleStr})", required: true, defaultValue: adjust, image: getAppImg("temp_icon.png")
 							input name: "fanCtrlOnTime", type: "enum", title: "Minimum circulate Time\n(Optional)", defaultValue: 600, metadata: [values:fanTimeSecEnum()], required: true, submitOnChange: true, image: getAppImg("timer_icon.png")
 							input name: "fanCtrlTimeBetweenRuns", type: "enum", title: "Delay Between On/Off Cycles\n(Optional)", defaultValue: 1200, metadata: [values:longTimeSecEnum()], required: true, submitOnChange: true, image: getAppImg("delay_time_icon.png")
 						}
