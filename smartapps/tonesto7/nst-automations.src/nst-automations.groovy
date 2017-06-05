@@ -2177,6 +2177,10 @@ def isFanCircConfigured() {
 	return (settings?.schMotOperateFan && settings?.schMotCirculateTstatFan && settings?.schMotFanRuleType) ? true : false
 }
 
+def getTempScaleStr() {
+	return "°${getTemperatureScale()}"
+}
+
 def getFanSwitchDesc(showOpt = true) {
 	def swDesc = ""
 	def swCnt = 0
@@ -2194,19 +2198,19 @@ def getFanSwitchDesc(showOpt = true) {
 	if(showOpt) {
 		if (settings?."${pName}FanSwitches") {
 			swDesc += (settings?."${pName}FanSwitchSpeedCtrl" || settings?."${pName}FanSwitchTriggerType" || settings?."${pName}FanSwitchHvacModeFilter") ? "\n\nFan Triggers:" : ""
-			swDesc += (settings?."${pName}FanSwitchSpeedCtrl") ? "\n  • Fan Speed Support: (Active)" : ""
-			swDesc += (settings?."${pName}FanSwitchTriggerType") ? "\n  • Fan Trigger: (${getEnumValue(switchRunEnum(), settings?."${pName}FanSwitchTriggerType")})" : ""
-			swDesc += (settings?."${pName}FanSwitchHvacModeFilter") ? "\n  • Hvac Mode Filter: (${getEnumValue(fanModeTrigEnum(), settings?."${pName}FanSwitchHvacModeFilter")})" : ""
+			swDesc += (settings?."${pName}FanSwitchSpeedCtrl") ? "\n • Fan Speed Support: (Active)" : ""
+			swDesc += (settings?."${pName}FanSwitchTriggerType") ? "\n • Fan Trigger:\n   └(${getEnumValue(switchRunEnum(), settings?."${pName}FanSwitchTriggerType")})" : ""
+			swDesc += (settings?."${pName}FanSwitchHvacModeFilter") ? "\n • Hvac Mode Filter:\n   └(${getEnumValue(fanModeTrigEnum(), settings?."${pName}FanSwitchHvacModeFilter")})" : ""
 		}
 	}
 
-	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Enabled" : ""
-	swDesc += (settings?.schMotCirculateTstatFan) ? "\n  • Fan Circulation Rule: (${getEnumValue(remSenRuleEnum("fan"), settings?.schMotFanRuleType)})" : ""
-	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTempDiffDegrees) ? ("\n • Threshold: (${settings?.fanCtrlTempDiffDegrees}${tempScaleStr})") : ""
-	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlOnTime) ? ("\n • Circulate Time : (${getEnumValue(fanTimeSecEnum(), settings?.fanCtrlOnTime)})") : ""
-	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTimeBetweenRuns) ? ("\n • Time Between Cycles:: (${getEnumValue(longTimeSecEnum(), settings?.fanCtrlTimeBetweenRuns)})") : ""
+	swDesc += (settings?.schMotCirculateTstatFan) ? "\n • Fan Circulation Enabled" : ""
+	swDesc += (settings?.schMotCirculateTstatFan) ? "\n • Fan Circulation Rule:\n   └(${getEnumValue(remSenRuleEnum("fan"), settings?.schMotFanRuleType)})" : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTempDiffDegrees) ? ("\n • Threshold: (${settings?.fanCtrlTempDiffDegrees}${getTempScaleStr()})") : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlOnTime) ? ("\n • Circulate Time: (${getEnumValue(fanTimeSecEnum(), settings?.fanCtrlOnTime)})") : ""
+	swDesc += (settings?.schMotCirculateTstatFan && settings?.fanCtrlTimeBetweenRuns) ? ("\n • Time Between Cycles:\n   └ (${getEnumValue(longTimeSecEnum(), settings?.fanCtrlTimeBetweenRuns)})") : ""
 
-	swDesc += (settings?."${pName}FanSwitches" || settings?.schMotCirculateTstatFan) ? "\n\n • Restrictions Active: (${autoScheduleOk(fanCtrlPrefix()) ? "NO" : "YES"})" : ""
+	swDesc += (settings?."${pName}FanSwitches" || settings?.schMotCirculateTstatFan) ? "\n\n • Restrictions Active: (${autoScheduleOk(fanCtrlPrefix()) ? "No" : "Yes"})" : ""
 
 	return (swDesc == "") ? null : "${swDesc}"
 }
@@ -4849,17 +4853,18 @@ def schMotModePage() {
 			section("Fan Control:") {
 				if(tStatPhys || settings?.schMotOperateFan) {
 					def desc = ""
-					def titStr = "Run External Fan while HVAC is Operating"
-					if(atomicState?.schMotTstatHasFan) { titStr += " or Use HVAC Fan for Circulation" }
+					def titStr = ""
+					if(atomicState?.schMotTstatHasFan) { titStr += "Use HVAC Fan for Circulation\nor\n" }
+					titStr += "Run External Fan while HVAC is Operating"
 					input (name: "schMotOperateFan", type: "bool", title: "${titStr}?", description: desc, required: false, defaultValue: false, submitOnChange: true, image: getAppImg("fan_control_icon.png"))
 					def fanCtrlDescStr = ""
 					def t0 = getFanSwitchDesc()
 					if(settings?.schMotOperateFan) {
 						fanCtrlDescStr += t0 ? "${t0}" : ""
+						def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
+						href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
+								required: true, image: getAppImg("configure_icon.png")
 					}
-					def fanCtrlDesc = isFanCtrlConfigured() ? "${fanCtrlDescStr}\n\nTap to modify" : null
-					href "tstatConfigAutoPage", title: "Fan Control Config", description: fanCtrlDesc ?: "Not Configured", params: ["configType":"fanCtrl"], state: (fanCtrlDesc ? "complete" : null),
-							required: true, image: getAppImg("configure_icon.png")
 				} else if(!tStatPhys) {
 					paragraph "Fan Control is not available on a VIRTUAL Thermostat", state: "complete", image: getAppImg("info_icon2.png")
 				}
@@ -5165,7 +5170,6 @@ def tstatConfigAutoPage(params) {
 						}
 					}
 				}
-
 				if(atomicState?.schMotTstatHasFan) {
 					section("Fan Circulation:") {
 						def desc = ""
