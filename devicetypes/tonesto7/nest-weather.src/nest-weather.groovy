@@ -315,6 +315,7 @@ void processEvent() {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.isBeta = eventData?.isBeta == true ? true : false
 			state.useMilitaryTime = eventData?.mt ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
@@ -1137,7 +1138,7 @@ def getWebData(params, desc, text=true) {
 	}
 }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return state?.isBeta ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def devVerInfo()	{ return getWebData([uri: "https://raw.githubusercontent.com/${gitPath()}/Data/changelog_weath.txt", contentType: "text/plain; charset=UTF-8"], "changelog") }
 

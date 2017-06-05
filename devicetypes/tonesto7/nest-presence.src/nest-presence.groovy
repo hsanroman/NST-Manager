@@ -194,6 +194,7 @@ def processEvent(data) {
 	try {
 		LogAction("------------START OF API RESULTS DATA------------", "warn")
 		if(eventData) {
+			state.isBeta = eventData?.isBeta == true ? true : false
 			state.showLogNamePrefix = eventData?.logPrefix == true ? true : false
 			state.enRemDiagLogging = eventData?.enRemDiagLogging == true ? true : false
 			state.healthMsg = eventData?.healthNotify == true ? true : false
