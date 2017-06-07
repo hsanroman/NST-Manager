@@ -37,7 +37,7 @@ definition(
 include 'asynchttp_v1'
 
 def appVersion() { "5.1.0" }
-def appVerDate() { "6-05-2017" }
+def appVerDate() { "6-06-2017" }
 def minVersions() {
 	return [
 		"automation":["val":510, "desc":"5.1.0"],
@@ -8734,7 +8734,7 @@ def appName()		{ return "${parent ? "${autoAppName()}" : "${appLabel()}"}${appDe
 def appLabel()		{ return inReview() ? "NST Manager" : "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def useNewAutoFile()	{ return true }
+def useNewAutoFile(){ return true }
 def blockOldAuto()	{ return true }
 def newAutoName()	{ return "NST Automations" }
 def autoAppName()	{ return "NST Automations" }
@@ -8742,7 +8742,7 @@ def gitRepo()		{ return "tonesto7/nest-manager"}
 def gitBranch()		{ return betaMarker() ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def developerVer()	{ return false }
-def betaMarker()	{ return true }
+def betaMarker()	{ return false }
 def appDevType()	{ return false }
 def inReview()		{ return false }
 def keepBackups()	{ return false }
