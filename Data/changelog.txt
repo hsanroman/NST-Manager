@@ -1,4 +1,16 @@
-V5.0.9 (May 13st, 2017):
+V5.1.0 (June 1st, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Support automation precedence
+ * FIXED: Bug in honoring weather station custom settings
+
+Automation App 5.1.0:
+ • UPDATED: nMode automation precedence for setting ECO.  Other automations honor override by Nest Mode automation
+ • UPDATED: Fixes to Fan Circulation to allow you to set on and off durations. Added ability for mode time restrictions
+ • FIXED: Issue in external temperature automation to check schedules for temperature settings to decide to end ECO settings
+ • Added: Use Switches as a restriction for Automations
+
+ V5.0.9 (May 13st, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
  • UPDATED: Cleanup of out of date automation children
@@ -8,7 +20,7 @@ Manager App:
 
 Automation App 5.0.5:
  • UPDATED: Ability to control which cameras turn on / off with Nest Mode automation
- 
+
 V5.0.8 (May 1st, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
@@ -17,7 +29,7 @@ Manager App:
 
 Automation App:
  • FIXED: Quieting of logs;  small bugs and optimizations
- 
+
 V5.0.7 (April 25th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:

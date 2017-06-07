@@ -36,17 +36,17 @@ definition(
 
 include 'asynchttp_v1'
 
-def appVersion() { "5.0.9" }
-def appVerDate() { "5-19-2017" }
+def appVersion() { "5.1.0" }
+def appVerDate() { "6-06-2017" }
 def minVersions() {
 	return [
-		"automation":["val":505, "desc":"5.0.5"],
-		"thermostat":["val":504, "desc":"5.0.4"],
-		"protect":["val":502, "desc":"5.0.2"],
-		"presence":["val":501, "desc":"5.0.1"],
-		"weather":["val":504, "desc":"5.0.4"],
-		"camera":["val":505, "desc":"5.0.5"],
-		"stream":["val":85, "desc":"0.8.5"]
+		"automation":["val":510, "desc":"5.1.0"],
+		"thermostat":["val":510, "desc":"5.1.0"],
+		"protect":["val":510, "desc":"5.1.0"],
+		"presence":["val":510, "desc":"5.1.0"],
+		"weather":["val":510, "desc":"5.1.0"],
+		"camera":["val":510, "desc":"5.1.0"],
+		"stream":["val":100, "desc":"1.0.0"]
 	]
 }
 
@@ -203,7 +203,7 @@ def mainPage() {
 		section("") {
 			href "changeLogPage", title: "", description: "${appInfoDesc()}", image: getAppImg("nst_manager_icon%402x.png", true)
 			if(settings?.restStreaming) {
-				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
+				def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt() || betaMarker())
 				href "pollPrefPage", title: "", state: ((atomicState?.restStreamingOn && rStrEn) ? "complete" : null), image: getAppImg("two_way_icon.png"),
 						description: "Nest Streaming: (${(!atomicState?.restStreamingOn || !rStrEn) ? "Inactive" : "Active"})"
 			}
@@ -273,16 +273,14 @@ def donationPage() {
 	return dynamicPage(name: "donationPage", title: "", nextPage: "mainPage", install: false, uninstall: false) {
 		section("") {
 			def str = ""
-			str += "Hello sorry to interupt but it has been 30 days since you installed this SmartApp.  We wanted to present this page as a one time reminder that we accept donations but do not require them."
-			str += "If you enjoy our software please remember that we have spent thousand's of hours of our spare time working on features and stability for this application and devices."
-			str += "If you have already donated please ignore and thank you very much for your support!"
+			str += "Hello User, \n\nPlease forgive the interuption but it's been 30 days since you installed/updated this SmartApp and we wanted to present you with this reminder that we do accept donations (We do not require them)."
+			str += "\n\nIf you have been enjoying our software and devices please remember that we have spent thousand's of hours of our spare time working on features and stability for those applications and devices."
+			str += "\n\nIf you have already donated please ignore and thank you very much for your support!"
 
-			str += "\n\nThanks again for using ${appName()}"
-			paragraph title: "Donation Reminder", str, required: true, state: null
+			str += "\n\nThanks again for using NST Manager"
+			paragraph str, required: true, state: null
 			href url: textDonateLink(), style:"external", required: false, title:"Donations",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("donate_icon.png")
-			//href "feedbackPage", title: "Send Us Some Feedback", description: "", image: getAppImg("feedback_icon.png")
-			paragraph "This is message will not be shown again", state: "complete"
 		}
 		def iData = atomicState?.installData
 		iData["shownDonation"] = true
@@ -383,7 +381,7 @@ def devPrefPage() {
 		}
 		if(atomicState?.cameras) {
 			section("Camera Devices:") {
-				if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
+				if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) {
 					input ("motionSndChgWaitVal", "enum", title: "Wait before Camera Motion and Sound is marked Inactive?", required: false, defaultValue: 60, metadata: [values:waitValAltEnum(true)], submitOnChange: true, image: getAppImg("motion_icon.png"))
 					atomicState.needChildUpd = true
 				} else {
@@ -554,7 +552,7 @@ def infoPage () {
 				description:"Tap to open in browser", state: "complete", image: getAppImg("info.png")
 			href url: getIssuePageUrl(), style:"embedded", required:false, title:"View | Report Issues",
 				description:"Tap to open in browser", state: "complete", image: getAppImg("issue_icon.png")
-			//href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
+			href "feedbackPage", title: "Send Developer Feedback", description: "", image: getAppImg("feedback_icon.png")
 			href "remoteDiagPage", title: "Send Logs to Developer", description: "", image: getAppImg("diagnostic_icon.png")
 		}
 		section("Credits:") {
@@ -646,7 +644,7 @@ def pollPrefPage() {
 		section("") {
 			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
 		}
-		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
+		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
 			}
@@ -736,8 +734,8 @@ def selectedRestDiscSrvcDesc() {
 
 def restDiscoveryClean() {
 	LogAction("Cleaning Out Discovered Services...", "trace", false)
-	atomicState.localNstSrvcs = [:]
-	atomicState.localRestSrvcs = [:]
+	atomicState.localNstSrvcs = [:]		// verified Nest services
+	atomicState.localRestSrvcs = [:]	// services that broadcasted, will be verified then added to localNstSrvcs list
 	atomicState.discRfshCnt = 0
 	app.updateSetting("selectedRestDevice", "")
 }
@@ -1804,7 +1802,7 @@ def getVoiceRprtPrefDesc() {
 }
 
 def getPollingConfDesc() {
-	def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt())
+	def rStrEn = (atomicState?.appData?.eventStreaming?.enabled || getDevOpt() || betaMarker())
 	def pollValDesc = (!settings?.pollValue || settings?.pollValue == "180") ? "" : (!atomicState?.streamPolling ? " (Custom)" : " (Stream)")
 	def pollStrValDesc = (!settings?.pollStrValue || settings?.pollStrValue == "180") ? "" : (!atomicState?.streamPolling ? " (Custom)" : " (Stream)")
 	def pollWeatherValDesc = (!settings?.pollWeatherValue || settings?.pollWeatherValue == "900") ? "" : " (Custom)"
@@ -1850,11 +1848,12 @@ def getWeatherConfDesc() {
 
 def getCustWeatherLoc(desc=false) {
 	def res = null
-	if(settings?.useCustWeatherLoc == false || settings?.useCustWeatherLoc == null) { return res }
-	if(settings?.custWeatherLocSrch == true && settings?.custWeatherResultItems != null) {
-		res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
-	} else if(settings?.useCustWeatherLoc == false && settings?.custLocStr != null) {
-		res = settings?.custLocStr
+	if(settings?.custWeatherLocSrch == true) {
+		if(settings?.custWeatherResultItems != null) {
+			res = desc ? (settings?.custWeatherResultItems[0]?.split("\\:"))[1].split("\\.")[0] : settings?.custWeatherResultItems[0].toString()
+		} else if(settings?.custLocStr != null) {
+			res = settings?.custLocStr
+		}
 	}
 	return res
 }
@@ -2190,7 +2189,7 @@ def askAlexaMQHandler(evt) {
 }
 
 def startStopStream() {
-	def strEn = (atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) ? true : false
+	def strEn = (atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) ? true : false
 	if((!strEn || !settings?.restStreaming) && !atomicState?.restStreamingOn) {
 		return
 	}
@@ -2515,7 +2514,7 @@ private adj_temp(tempF) {
 		LogAction("adj_temp: error temp ${tempF} is list", "error", true)
 	}
 	if(getTemperatureScale() == "C") {
-		return (tempF - 32) * (5 / 9) as Double
+		return (tempF - 32) * (5 / 9) as Double //
 	} else {
 		return tempF
 	}
@@ -2661,9 +2660,12 @@ def checkIfSwupdated() {
 	if(checkMigrationRequired()) { return true }
 	if(atomicState?.swVersion != appVersion()) {
 		LogAction("checkIfSwupdated: new version ${appVersion()}", "info", true)
+		atomicState.swVersion = appVersion()
 		def iData = atomicState?.installData
 		iData["updatedDt"] = getDtNow().toString()
 		iData["shownChgLog"] = false
+		iData["shownFeedback"] = false
+		iData["shownDonation"] = false
 		atomicState?.installData = iData
 		def cApps = getChildApps()
 		if(cApps) {
@@ -3630,15 +3632,16 @@ def updateChildData(force = false) {
 		def mobClientType = settings?.mobileClientType
 		def vRprtPrefs = getVoiceRprtPrefs()
 		def clientBl = atomicState?.clientBlacklisted == true ? true : false
-		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 35
+		def hcCamTimeout = atomicState?.appData?.healthcheck?.camTimeout ?: 120
 		def hcProtWireTimeout = atomicState?.appData?.healthcheck?.protWireTimeout ?: 35
-		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 35
+		def hcProtBattTimeout = atomicState?.appData?.healthcheck?.protBattTimeout ?: 1500
 		def hcTstatTimeout = atomicState?.appData?.healthcheck?.tstatTimeout ?: 35
-		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 3600
+		def hcLongTimeout = atomicState?.appData?.healthcheck?.longTimeout ?: 120
 		def locPresence = getLocationPresence()
 		def nPrefs = atomicState?.notificationPrefs
 		def devBannerData = atomicState?.devBannerData ?: null
 		def streamingActive = atomicState?.restStreamingOn == true ? true : false
+		def isBeta = betaMarker()
 
 		def curWeatherTemp
 		if(atomicState?.thermostats && getWeatherDeviceInst()) {
@@ -3658,6 +3661,7 @@ def updateChildData(force = false) {
 
 		def devices = app.getChildDevices(true)
 		devices?.each {
+			if(atomicState?.pollBlocked) { return true }
 			def devId = it?.deviceNetworkId
 			if(atomicState?.thermostats && atomicState?.deviceData?.thermostats[devId]) {
 				def defmin = fixTempSetting(atomicState?."${devId}_safety_temp_min" ?: null)
@@ -3674,7 +3678,7 @@ def updateChildData(force = false) {
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestTstatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
 						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs,
-						"devBannerData":devBannerData, "restStreaming":streamingActive]
+						"devBannerData":devBannerData, "restStreaming":streamingActive, "isBeta":isBeta]
 				def oldTstatData = atomicState?."oldTstatData${devId}"
 				def tDataChecksum = generateMD5_A(tData.toString())
 				atomicState."oldTstatData${devId}" = tDataChecksum
@@ -3704,7 +3708,7 @@ def updateChildData(force = false) {
 				def pData = ["data":atomicState?.deviceData?.smoke_co_alarms[devId], "mt":useMt, "debug":dbg, "showProtActEvts":(!showProtActEvts ? false : true), "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestProtVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcWireTimeout":hcProtWireTimeout, "hcBattTimeout":hcProtBattTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
-						"devBannerData":devBannerData, "restStreaming":streamingActive ]
+						"devBannerData":devBannerData, "restStreaming":streamingActive, "isBeta":isBeta ]
 				def oldProtData = atomicState?."oldProtData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldProtData${devId}" = pDataChecksum
@@ -3734,7 +3738,7 @@ def updateChildData(force = false) {
 				def camData = ["data":atomicState?.deviceData?.cameras[devId], "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix,
 						"tz":nestTz, "htmlInfo":htmlInfo, "apiIssues":api, "allowDbException":allowDbException, "latestVer":latestCamVer()?.ver?.toString(), "clientBl":clientBl,
 						"hcTimeout":hcCamTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg,
-						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive, "motionSndChgWaitVal":motionSndChgWaitVal ]
+						"streamNotify":nPrefs?.dev?.camera?.streamMsg, "devBannerData":devBannerData, "restStreaming":streamingActive, "motionSndChgWaitVal":motionSndChgWaitVal, "isBeta":isBeta ]
 				def oldCamData = atomicState?."oldCamData${devId}"
 				def cDataChecksum = generateMD5_A(camData.toString())
 				atomicState."oldCamData${devId}" = cDataChecksum
@@ -3763,7 +3767,7 @@ def updateChildData(force = false) {
 			else if(atomicState?.presDevice && devId == getNestPresId()) {
 				def pData = ["debug":dbg, "logPrefix":logNamePrefix, "tz":nestTz, "mt":useMt, "pres":locPresence, "apiIssues":api, "allowDbException":allowDbException,
 							"latestVer":latestPresVer()?.ver?.toString(), "clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType,
-							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "lastStrucDataUpd": atomicState?.lastStrucDataUpd ]
+							"enRemDiagLogging":remDiag, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "lastStrucDataUpd": atomicState?.lastStrucDataUpd, "isBeta":isBeta ]
 				def oldPresData = atomicState?."oldPresData${devId}"
 				def pDataChecksum = generateMD5_A(pData.toString())
 				atomicState."oldPresData${devId}" = pDataChecksum
@@ -3793,7 +3797,7 @@ def updateChildData(force = false) {
 				def wData = ["data":wData1, "tz":nestTz, "mt":useMt, "debug":dbg, "logPrefix":logNamePrefix, "apiIssues":api, "htmlInfo":htmlInfo,
 							"allowDbException":allowDbException, "weathAlertNotif":settings?.weathAlertNotif, "latestVer":latestWeathVer()?.ver?.toString(),
 							"clientBl":clientBl, "hcTimeout":hcLongTimeout, "mobileClientType":mobClientType, "enRemDiagLogging":remDiag,
-							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData ]
+							"healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData, "isBeta":isBeta ]
 				def oldWeatherData = atomicState?."oldWeatherData${devId}"
 				def wDataChecksum = generateMD5_A(wData.toString())
 				def showWGraphs = settings?.weatherShowGraph == false ? false : true
@@ -3839,10 +3843,10 @@ def updateChildData(force = false) {
 						def tempF = 0
 						if(getTemperatureScale() == "C") {
 							tempC = automationChildApp.getRemoteSenTemp()
-							tempF = (tempC * (9 / 5) + 32) as Integer
+							tempF = (tempC * (9 / 5) + 32) as Integer //
 						} else {
 							tempF = automationChildApp.getRemoteSenTemp()
-							tempC = (tempF - 32) * (5 / 9) as Double
+							tempC = (tempF - 32) * (5 / 9) as Double //
 						}
 						data?.ambient_temperature_c = tempC
 						data?.ambient_temperature_f = tempF
@@ -3851,20 +3855,20 @@ def updateChildData(force = false) {
 						def ctempF = 0
 						if(getTemperatureScale() == "C") {
 							ctempC = automationChildApp.getRemSenCoolSetTemp()
-							ctempF = (ctempC * (9 / 5) + 32.0) as Integer
+							ctempF = (ctempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							ctempF = automationChildApp.getRemSenCoolSetTemp()
-							ctempC = (ctempF - 32.0) * (5 / 9) as Double
+							ctempC = (ctempF - 32.0) * (5 / 9) as Double //
 						}
 
 						def htempC = 0.0
 						def htempF = 0
 						if(getTemperatureScale() == "C") {
 							htempC = automationChildApp.getRemSenHeatSetTemp()
-							htempF = (htempC * (9 / 5) + 32.0) as Integer
+							htempF = (htempC * (9 / 5) + 32.0) as Integer //
 						} else {
 							htempF = automationChildApp.getRemSenHeatSetTemp()
-							htempC = (htempF - 32.0) * (5 / 9) as Double
+							htempC = (htempF - 32.0) * (5 / 9) as Double //
 						}
 
 						if(data?.hvac_mode.toString() == "heat-cool") {
@@ -3885,7 +3889,7 @@ def updateChildData(force = false) {
 					def tData = ["data":data, "mt":useMt, "debug":dbg, "tz":nestTz, "apiIssues":api, "safetyTemps":safetyTemps, "comfortHumidity":comfortHumidity,
 						"comfortDewpoint":comfortDewpoint, "pres":locPresence, "childWaitVal":getChildWaitVal().toInteger(), "htmlInfo":htmlInfo, "allowDbException":allowDbException,
 						"latestVer":latestvStatVer()?.ver?.toString(), "vReportPrefs":vRprtPrefs, "clientBl":clientBl, "curExtTemp":curWeatherTemp, "logPrefix":logNamePrefix, "hcTimeout":hcTstatTimeout,
-						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData]
+						"mobileClientType":mobClientType, "enRemDiagLogging":remDiag, "autoSchedData":autoSchedData, "healthNotify":nPrefs?.dev?.devHealth?.healthMsg, "showGraphs":showGraphs, "devBannerData":devBannerData, "isBeta":isBeta]
 
 					def oldTstatData = atomicState?."oldvStatData${devId}"
 					def tDataChecksum = generateMD5_A(tData.toString())
@@ -3936,6 +3940,7 @@ def updateChildData(force = false) {
 		atomicState?.lastChildUpdDt = null
 		return
 	}
+	if(atomicState?.pollBlocked) { return }
 	atomicState.forceChildUpd = false
 	atomicState.needChildUpd = false
 }
@@ -4044,7 +4049,7 @@ def ok2PollMetaData() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needMetaPoll) { return true }
 	def pollTime = !settings?.pollMetaValue ? (3600 * 4) : settings?.pollMetaValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	if(val > 60) { val = 50 }
 	return ( ((getLastMetaPollSec() + val) > pollTime) ? true : false )
 }
@@ -4053,7 +4058,7 @@ def ok2PollDevice() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needDevPoll) { return true }
 	def pollTime = !settings?.pollValue ? 180 : settings?.pollValue.toInteger()
-	def val = pollTime / 3
+	def val = pollTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastDevicePollSec() + val) > pollTime) ? true : false )
@@ -4063,7 +4068,7 @@ def ok2PollStruct() {
 	if(atomicState?.pollBlocked) { return false }
 	if(atomicState?.needStrPoll) { return true }
 	def pollStrTime = !settings?.pollStrValue ? 180 : settings?.pollStrValue.toInteger()
-	def val = pollStrTime / 3
+	def val = pollStrTime / 3 //
 	val = Math.max(Math.min(val.toInteger(), 50),25)
 	//if(val > 60) { val = 50 }
 	return ( ((getLastStructPollSec() + val) > pollStrTime || !atomicState?.structData) ? true : false )
@@ -4375,6 +4380,7 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			def qnum = getQueueNumber(cmdTypeId, childId)
 			if(qnum == -1 ) { return false }
 
+			atomicState?.pollBlocked = true
 			def now = new Date()
 			def cmdData = [cmdTypeId?.toString(), cmdType?.toString(), cmdObj?.toString(), cmdObjVal, now]
 
@@ -4420,7 +4426,6 @@ def sendNestApiCmd(cmdTypeId, cmdType, cmdObj, cmdObjVal, childId) {
 			}
 
 			LogAction("${str} in Queue ${qnum} (qsize: ${tempQueue?.size()}): $cmdTypeId, $cmdType, $cmdObj, $cmdObjVal, $childId", "info", true)
-			atomicState?.pollBlocked = true
 			atomicState?.lastQcmd = cmdData
 			schedNextWorkQ(childId)
 			return true
@@ -5015,8 +5020,8 @@ def appUpdateNotify(badAuto=false) {
 			def str = ""
 			str += !blackListed ? "" : "\nBlack Listed, please ensure software is up to date then contact developer"
 			str += !badAuto ? "" : "\nInvalid or Missing Automation File, please Reinstall the correct automation file"
-			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}"
-			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}"
+			str += !appUpd ? "" : "\nManager App: v${atomicState?.appData?.updater?.versions?.app?.ver?.toString()}${betaMarker() ? " Beta" : ""}"
+			str += !autoappUpd ? "" : "\nAutomation App: v${atomicState?.appData?.updater?.versions?.autoapp?.ver?.toString()}${betaMarker() ? " Beta" : ""}"
 			str += !protUpd ? "" : "\nProtect: v${atomicState?.appData?.updater?.versions?.protect?.ver?.toString()}"
 			str += !camUpd ? "" : "\nCamera: v${atomicState?.appData?.updater?.versions?.camera?.ver?.toString()}"
 			str += !presUpd ? "" : "\nPresence: v${atomicState?.appData?.updater?.versions?.presence?.ver?.toString()}"
@@ -5444,6 +5449,7 @@ def ver2IntArray(val) {
 	def ver = val?.split("\\.")
 	return [maj:"${ver[0]?.toInteger()}",min:"${ver[1]?.toInteger()}",rev:"${ver[2]?.toInteger()}"]
 }
+
 def versionStr2Int(str) { return str ? str.toString().replaceAll("\\.", "").toInteger() : null }
 
 def getChildWaitVal() { return settings?.tempChgWaitVal ? settings?.tempChgWaitVal.toInteger() : 4 }
@@ -6865,7 +6871,7 @@ def getUse24Time()		{ return useMilitaryTime ? true : false }
 
 //Returns app State Info
 def getStateSize()	{ return state?.toString().length() }
-def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) }
+def getStateSizePerc()  { return (int) ((stateSize / 100000)*100).toDouble().round(0) } //
 
 def debugStatus() { return !appDebug ? "Off" : "On" }
 def deviceDebugStatus() { return !childDebug ? "Off" : "On" }
@@ -6881,11 +6887,11 @@ def getLocationModes() {
 }
 
 def showDonationOk() {
-	return (!atomicState?.installData?.shownDonation && getDaysSinceInstall() >= 30) ? true : false
+	return (!atomicState?.installData?.shownDonation && getDaysSinceUpdated() >= 30) ? true : false
 }
 
 def showFeedbackOk() {
-	return (!atomicState?.installData?.shownFeedback && getDaysSinceInstall() >= 7) ? true : false
+	return (!atomicState?.installData?.shownFeedback && getDaysSinceUpdated() >= 7) ? true : false
 }
 
 def showChgLogOk() {
@@ -6901,6 +6907,22 @@ def getDaysSinceInstall() {
 		return 0
 	}
 	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", instDt)
+	def stop = new Date()
+	if(start && stop) {
+		return (stop - start)
+	}
+	return 0
+}
+
+def getDaysSinceUpdated() {
+	def updDt = atomicState?.installData?.updatedDt
+	if(updDt == null || updDt == "Not Set") {
+		def iData = atomicState?.installData
+		iData["updatedDt"] = getDtNow().toString()
+		atomicState?.installData = iData
+		return 0
+	}
+	def start = Date.parse("E MMM dd HH:mm:ss z yyyy", updDt)
 	def stop = new Date()
 	if(start && stop) {
 		return (stop - start)
@@ -6961,7 +6983,7 @@ def GetTimeDiffSeconds(strtDate, stpDate=null, methName=null) {
 		def stopDt = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal)
 		def start = Date.parse("E MMM dd HH:mm:ss z yyyy", formatDt(startDt)).getTime()
 		def stop = Date.parse("E MMM dd HH:mm:ss z yyyy", stopVal).getTime()
-		def diff = (int) (long) (stop - start) / 1000
+		def diff = (int) (long) (stop - start) / 1000 //
 		LogTrace("[GetTimeDiffSeconds] Results for '$methName': ($diff seconds)")
 		return diff
 	} else { return null }
@@ -7842,14 +7864,14 @@ def createInstallDataJson() {
 		def data = []
 		if(settings?.optInAppAnalytics || settings?.optInAppAnalytics == null) {
 			data =	[
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"guid":atomicState?.installationId, "beta":betaMarker(), "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 				"installDt": atomicState?.installData?.dt, "updatedDt": atomicState?.installData?.updatedDt, "automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "apiStrReqCnt":apiStrReqCnt,
 				"apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt, "appNotifSentCnt":appNotifSentCnt, "apiRestStrEvtCnt":apiRestStrEvtCnt, "appUseMetCnt":appUseMetCnt, "devUseMetCnt":devUseMetCnt,
 				"stateUsage":"${getStateSizePerc()}%", "mobileClient":cltType, "datetime":getDtNow()?.toString(), "optOut":false
 			]
 		} else {
 			data = [
-				"guid":atomicState?.installationId, "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
+				"guid":atomicState?.installationId, "beta":betaMarker(), "versions":versions, "thermostats":tstatCnt, "protects":protCnt, "vthermostats":vstatCnt, "cameras":camCnt, "appErrorCnt":appErrCnt, "devErrorCnt":devErrCnt,
 				"apiStrReqCnt":apiStrReqCnt, "apiDevReqCnt":apiDevReqCnt, "apiMetaReqCnt":apiMetaReqCnt, "installDt": atomicState?.installData?.dt,  "updatedDt": atomicState?.installData?.updatedDt,
 				"automations":automations, "timeZone":tz, "apiCmdCnt":apiCmdCnt, "apiRestStrEvtCnt":apiRestStrEvtCnt, "stateUsage":"${getStateSizePerc()}%", "datetime":getDtNow()?.toString(), "optOut":true
 			]
@@ -8193,6 +8215,18 @@ def remSenUnlock(val, myId) {
 	return res
 }
 
+def setNModeActive(val=null) {
+	LogAction("setNModeActive: val: $val", "info", false)
+	if(automationNestModeEnabled(null)) {
+		if(val == null) {
+			return atomicState?.automationNestModeEcoActive ?: false
+		} else {
+			atomicState.automationNestModeEcoActive = val.toBoolean()
+		}
+	} else { atomicState.automationNestModeEcoActive = false }
+	return atomicState?.automationNestModeEcoActive ?: false
+}
+
 // Most of this is obsolete after upgrade to V5 is complete
 
 def initAutoApp() {
@@ -8374,11 +8408,11 @@ def fixTempSetting(Double temp) {
 	if(temp != null) {
 		if(getTemperatureScale() == "C") {
 			if(temp > 35) {    // setting was done in F
-				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double)
+				newtemp = roundTemp( (newtemp - 32.0) * (5 / 9) as Double) //
 			}
 		} else if(getTemperatureScale() == "F") {
 			if(temp < 40) {    // setting was done in C
-				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger()
+				newtemp = roundTemp( ((newtemp * (9 / 5) as Double) + 32.0) ).toInteger() //
 			}
 		}
 	}
@@ -8524,7 +8558,7 @@ def roundTemp(Double temp) {
 	if(temp == null) { return null }
 	def newtemp
 	if( getTemperatureScale() == "C") {
-		newtemp = Math.round(temp.round(1) * 2) / 2.0f
+		newtemp = Math.round(temp.round(1) * 2) / 2.0f //
 	} else {
 		if(temp instanceof Integer) {
 			//log.debug "roundTemp: ($temp) is Integer"
@@ -8700,12 +8734,12 @@ def appName()		{ return "${parent ? "${autoAppName()}" : "${appLabel()}"}${appDe
 def appLabel()		{ return inReview() ? "NST Manager" : "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def useNewAutoFile()	{ return true }
+def useNewAutoFile(){ return true }
 def blockOldAuto()	{ return true }
 def newAutoName()	{ return "NST Automations" }
 def autoAppName()	{ return "NST Automations" }
 def gitRepo()		{ return "tonesto7/nest-manager"}
-def gitBranch()		{ return "master" }
+def gitBranch()		{ return betaMarker() ? "beta" : "master" }
 def gitPath()		{ return "${gitRepo()}/${gitBranch()}"}
 def developerVer()	{ return false }
 def betaMarker()	{ return false }
@@ -8716,7 +8750,7 @@ def allowMigration()	{ return true }
 def appDevName()	{ return appDevType() ? " (Dev)" : "" }
 def appInfoDesc()	{
 	def cur = atomicState?.appData?.updater?.versions?.app?.ver.toString()
-	def beta = betaMarker() ? "" : ""
+	def beta = betaMarker() ? " Beta" : ""
 	def str = ""
 	str += "${appName()}"
 	str += isAppUpdateAvail() ? "\n• ${textVersion()} (Latest: v${cur})${beta}" : "\n• ${textVersion()}${beta}"
