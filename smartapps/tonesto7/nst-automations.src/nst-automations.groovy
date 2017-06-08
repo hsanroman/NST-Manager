@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.1.0" }
-def appVerDate() { "6-05-2017" }
+def appVersion() { "5.1.1" }
+def appVerDate() { "6-08-2017" }
 
 preferences {
 	//startPage
@@ -3968,20 +3968,19 @@ def adjustEco(on, senderAutoType=null) {
 		foundTstats = tstats?.collect { dni ->
 			def d1 = parent.getThermostatDevice(dni)
 			if(d1) {
-// TODO or if we are off, we requested off, and NMODE took over
 				def didstr = null
 				def curMode = d1?.currentnestThermostatMode?.toString()
-				//if(on && !(curMode in ["eco", "off"])) {
-				if(on) {
+				if(on && (curMode in ["eco"])) {
+					if(senderAutoType) { sendEcoActionDescToDevice(d1, senderAutoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+				}
+				if(on && !(curMode in ["eco", "off"])) {
 					didstr = "ECO"
 					setTstatMode(d1, "eco", senderAutoType)
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
 				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
-				//if(!on && curMode in ["eco"]) {
-				if(!on) {
-					//if(prevMode && prevMode != curMode) {
-					if(prevMode) {
+				if(!on && curMode in ["eco"]) {
+					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
 						setTstatMode(d1, prevMode, senderAutoType)
 					}
@@ -4086,6 +4085,7 @@ def checkNestMode() {
 				setAway(true)
 				atomicState?.nModeTstatLocAway = true
 				if(nModeSetEco) {
+					parent.setNModeActive(true) // set nMode has it in manager
 					adjustEco(true, pName)
 				}
 				if(allowNotif) {
@@ -4098,6 +4098,7 @@ def checkNestMode() {
 				LogAction("checkNestMode: ${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
 				setAway(false)
+				parent.setNModeActive(false)		// clear nMode has it in manager
 				atomicState?.nModeTstatLocAway = false
 				if(nModeSetEco) { adjustEco(false, pName) }
 				if(allowNotif) {
@@ -7004,44 +7005,26 @@ def getTstatPresence(tstat) {
 
 def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
-// TODO or if we are off, we requested off, and NMODE took over
 	if(mode) {
-		try {
-			if(autoType == "nMode") {
-				if(mode == "eco") {
-					parent.setNModeActive(true)
-					// set nMode has it in manager
-					if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-				} else {
-					parent.setNModeActive(false)
-					// clear nMode has it in manager
-				}
-			}
-			def curMode = tstat?.currentnestThermostatMode?.toString()
-			if (curMode != mode) {
-				try {
-					if(mode == "auto") { tstat.auto(); result = true }
-					else if(mode == "heat") { tstat.heat(); result = true }
-					else if(mode == "cool") { tstat.cool(); result = true }
-					else if(mode == "off") { tstat.off(); result = true }
-					else {
-						if(mode == "eco") {
-							tstat.eco(); result = true
-							LogTrace("setTstatMode mode action | type: $autoType")
-							if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-						}
+		def curMode = tstat?.currentnestThermostatMode?.toString()
+		if (curMode != mode) {
+			try {
+				if(mode == "auto") { tstat.auto(); result = true }
+				else if(mode == "heat") { tstat.heat(); result = true }
+				else if(mode == "cool") { tstat.cool(); result = true }
+				else if(mode == "off") { tstat.off(); result = true }
+				else {
+					if(mode == "eco") {
+						tstat.eco(); result = true
+						LogTrace("setTstatMode mode action | type: $autoType")
+						if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
 					}
 				}
-				catch (ex) {
-					log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
-					parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
-				}
 			}
-		}
-		catch (ex) {
-			log.error "setTstatMode() Exception: Missing parent method setNModeActive; check IDE and install instructions", ex
-			sendNofificationMsg("Warning", "Improper installation of software, check IDE logs and installation instructions")
-			parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+			catch (ex) {
+				log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
+				parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+			}
 		}
 
 		if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
