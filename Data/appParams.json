@@ -41,7 +41,7 @@
     "setupVersion": 2,
     "versions": {
       "app": {
-        "ver": "5.1.1"
+        "ver": "5.0.10"
       },
       "thermostat": {
         "ver": "5.1.0"
