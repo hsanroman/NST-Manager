@@ -1,3 +1,13 @@
+V5.1.1 (June 8th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Logging Cleanups and Added ability to display changed device data in Manager Logs
+ * FIXED: Code Cleanups
+
+Automation App 5.1.1:
+ • FIXED: NMode issue that was turn on thermostats that were turned off
+ • UPDATED: Logging Cleanups
+
 V5.1.0 (June 1st, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:

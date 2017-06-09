@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.1.0" }
-def appVerDate() { "6-05-2017" }
+def appVersion() { "5.1.1" }
+def appVerDate() { "6-08-2017" }
 
 preferences {
 	//startPage
@@ -1299,7 +1299,7 @@ def getAutoActionData() {
 }
 
 def automationGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
 	if(isRemSenConfigured() && settings?.vthermostat) {
 		atomicState.needChildUpdate = true
 	}
@@ -1361,11 +1361,9 @@ def watchDogCheck() {
 					def exceeded = d1?.currentValue("safetyTempExceeded")?.toString()
 					if(exceeded == "true") {
 						watchDogAlarmActions(d1.displayName, dni, "temp")
-						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Temp Exceeded: ${exceeded}", "warn", true)
+						LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} Safety Temp Exceeded: ${exceeded}", "warn", true)
 					} else {
-
-// This is allowing for warning if Nest has problem of system coming out of ECO while away
-
+						// This is allowing for warning if Nest has problem of system coming out of ECO while away
 						def nestModeAway = (d1?.currentpresence?.toString() == "not present") ? true : false
 						//def nestModeAway = (getNestLocPres() == "home") ? false : true
 						if(nestModeAway) {
@@ -1373,7 +1371,7 @@ def watchDogCheck() {
 							if(!(curMode in ["eco", "off" ])) {
 								watchDogAlarmActions(d1.displayName, dni, "eco")
 								def pres = d1?.currentPresence?.toString()
-								LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} is away and thermostat is not in ECO (${curMode}) (${pres})", "warn", true)
+								LogAction("watchDogCheck: | Thermostat: ${d1?.displayName} is Away and Mode Is Not in ECO | CurMode: (${curMode}) | CurrentPresence: (${pres})", "warn", true)
 							}
 						}
 					}
@@ -1489,7 +1487,7 @@ def getLastMotionInActiveSec(mySched) {
 }
 
 def automationMotionEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: '${evt?.displayName}' | Motion is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: '${evt?.displayName}' | Motion: (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		storeLastEventData(evt)
@@ -1498,11 +1496,12 @@ def automationMotionEvt(evt) {
 		def sLbl
 
 		def mySched = getCurrentSchedule()
-
 		def schedList = getScheduleList()
+		def schName = ""
 		for (cnt in schedList) {
 			sLbl = "schMot_${cnt}_"
 			def act = settings["${sLbl}SchedActive"]
+
 			if(act && settings["${sLbl}Motion"]) {
 				def str = settings["${sLbl}Motion"].toString()
 				if(str.contains( evt.displayName)) {
@@ -1518,7 +1517,7 @@ def automationMotionEvt(evt) {
 							atomicState."${sLbl}MotionInActiveDt" = getDtNow()
 						}
 					}
-					LogAction("Updating Schedule Motion Sensor State: [ Schedule: (${cnt}) | Previous Active: (${oldActive}) | Current Status: ($newActive) ]", "trace", true)
+					LogAction("Updating Schedule Motion Sensor State | Schedule: (${cnt} - ${getSchedLbl(cnt)})  | Previous Active: (${oldActive}) | Current Status: ($newActive)", "trace", true)
 					if(cnt == mySched) { dorunIn = true }
 				}
 			}
@@ -1528,7 +1527,7 @@ def automationMotionEvt(evt) {
 			if(settings["${sLbl}MPresAway"]) { if(isSomebodyHome(settings["${sLbl}MPresAway"])) { dorunIn = false } }
 		}
 		if(dorunIn) {
-			LogAction(" Motion: [ Scheduling for Delay: ($delay) | Schedule ${mySched} ]", "trace", true)
+			LogAction("Automation Schedule Motion | Scheduling Delay Check: ($delay sec) | Schedule: ($mySched - ${getSchedLbl(mySched)})", "trace", true)
 			delay = delay > 20 ? delay : 20
 			delay = delay < 60 ? delay : 60
 			scheduleAutomationEval(delay)
@@ -3263,7 +3262,7 @@ def extTmpTempCheck(cTimeOut = false) {
 }
 
 def extTmpGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
 	storeLastEventData(evt)
 	extTmpDpOrTempEvt("${evt?.name}")
 }
@@ -3552,7 +3551,7 @@ def conWatCheck(cTimeOut = false) {
 }
 
 def conWatContactEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
@@ -3771,7 +3770,7 @@ def leakWatCheck() {
 }
 
 def leakWatSensorEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
@@ -3914,7 +3913,7 @@ def isNestModesConfigured() {
 }
 
 def nModeGenericEvt(evt) {
-	LogAction("${strCapitalize(evt?.name)} Event | From: ${evt?.displayName} | Value is (${strCapitalize(evt?.value)})", "trace", true)
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	storeLastEventData(evt)
 	if(nModeDelay) {
@@ -3968,20 +3967,19 @@ def adjustEco(on, senderAutoType=null) {
 		foundTstats = tstats?.collect { dni ->
 			def d1 = parent.getThermostatDevice(dni)
 			if(d1) {
-// TODO or if we are off, we requested off, and NMODE took over
 				def didstr = null
 				def curMode = d1?.currentnestThermostatMode?.toString()
-				//if(on && !(curMode in ["eco", "off"])) {
-				if(on) {
+				if(on && (curMode in ["eco"])) {
+					if(senderAutoType) { sendEcoActionDescToDevice(d1, senderAutoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
+				}
+				if(on && !(curMode in ["eco", "off"])) {
 					didstr = "ECO"
 					setTstatMode(d1, "eco", senderAutoType)
 				}
 				def prevMode = d1?.currentpreviousthermostatMode?.toString()
 				LogAction("adjustEco: CURMODE: ${curMode} ON: ${on} PREVMODE: ${prevMode}", "trace", false)
-				//if(!on && curMode in ["eco"]) {
-				if(!on) {
-					//if(prevMode && prevMode != curMode) {
-					if(prevMode) {
+				if(!on && curMode in ["eco"]) {
+					if(prevMode && prevMode != curMode) {
 						didstr = "$prevMode"
 						setTstatMode(d1, prevMode, senderAutoType)
 					}
@@ -4086,6 +4084,7 @@ def checkNestMode() {
 				setAway(true)
 				atomicState?.nModeTstatLocAway = true
 				if(nModeSetEco) {
+					parent.setNModeActive(true) // set nMode has it in manager
 					adjustEco(true, pName)
 				}
 				if(allowNotif) {
@@ -4098,6 +4097,7 @@ def checkNestMode() {
 				LogAction("checkNestMode: ${homeDesc} Nest 'Home'", "info", true)
 				didsomething = true
 				setAway(false)
+				parent.setNModeActive(false)		// clear nMode has it in manager
 				atomicState?.nModeTstatLocAway = false
 				if(nModeSetEco) { adjustEco(false, pName) }
 				if(allowNotif) {
@@ -4551,7 +4551,7 @@ def checkOnMotion(mySched) {
 			lastInactiveMotionSec = getLastMotionInActiveSec(mySched)
 		}
 
-		LogAction("checkOnMotion: [ Active Dt: $lastActiveMotionDt ($lastActiveMotionSec sec.) | Inactive Dt: $lastInactiveMotionDt ($lastInactiveMotionSec sec.) | MotionOn: ($motionOn) ]", "trace", true)
+		LogAction("checkOnMotion: [ActiveDt: ${lastActiveMotionDt} (${lastActiveMotionSec} sec) | InActiveDt: ${lastInactiveMotionDt} (${lastInactiveMotionSec} sec) | MotionOn: ($motionOn)", "trace", false)
 
 		def ontimedelay = (settings."${sLbl}MDelayValOn"?.toInteger() ?: 60) * 1000 		// default to 60s
 		def offtimedelay = (settings."${sLbl}MDelayValOff"?.toInteger() ?: 30*60) * 1000	// default to 30 min
@@ -4575,13 +4575,13 @@ def checkOnMotion(mySched) {
 		def ontime = formatDt( ontimeNum )
 		def offtime = formatDt( offtimeNum )
 
-		LogAction("checkOnMotion: [ Active Dt: (${atomicState."${sLbl}MotionActiveDt"}) | OnTime: ($ontime) | Inactive Dt: (${atomicState?."${sLbl}MotionInActiveDt"}) | OffTime: ($offtime) ]", "info", true)
+		LogAction("checkOnMotion: [ActiveDt: (${atomicState."${sLbl}MotionActiveDt"}) | OnTime: ($ontime) | InActiveDt: (${atomicState?."${sLbl}MotionInActiveDt"}) | OffTime: ($offtime)]", "info", true)
 		def result = false
 		if(nowDt >= ontimeNum && nowDt <= offtimeNum) {
 			result = true
 		}
 		if(nowDt < ontimeNum || (result && !motionOn)) {
-			LogAction("checkOnMotion($mySched): scheduling motion check", "trace", true)
+			LogAction("checkOnMotion($mySched): Scheduling Motion Check", "trace", true)
 			scheduleAutomationEval(60)
 		}
 		return result
@@ -4611,7 +4611,7 @@ def setTstatTempCheck() {
 		def samemode = lastMode == curMode ? true : false
 
 		def mySched = getCurrentSchedule()
-		LogAction("setTstatTempCheck | Current Schedule: ${mySched ?: "None Active"}", "debug", true)
+		LogAction("setTstatTempCheck | Current Schedule: ${mySched ? getSchedLbl(mySched) : "None Active"}", "debug", false)
 		def noSched = (mySched == null) ? true : false
 
 		def previousSched = atomicState?.lastSched
@@ -4629,7 +4629,7 @@ def setTstatTempCheck() {
 			disableOverrideTemps()
 		}
 
-		LogAction("setTstatTempCheck: [Schedule: Current: ($mySched) | Previous: (${previousSched}) | None: ($noSched)]", "trace", false)
+		LogAction("setTstatTempCheck: [Schedule: Current: (${getSchedLbl(mySched)}) | Previous: (${previousSched}) | None: ($noSched)]", "trace", false)
 
 		if(noSched) {
 			LogAction("setTstatTempCheck: Skipping check [No matching Schedule]", "info", true)
@@ -7004,44 +7004,26 @@ def getTstatPresence(tstat) {
 
 def setTstatMode(tstat, mode, autoType=null) {
 	def result = false
-// TODO or if we are off, we requested off, and NMODE took over
 	if(mode) {
-		try {
-			if(autoType == "nMode") {
-				if(mode == "eco") {
-					parent.setNModeActive(true)
-					// set nMode has it in manager
-					if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-				} else {
-					parent.setNModeActive(false)
-					// clear nMode has it in manager
-				}
-			}
-			def curMode = tstat?.currentnestThermostatMode?.toString()
-			if (curMode != mode) {
-				try {
-					if(mode == "auto") { tstat.auto(); result = true }
-					else if(mode == "heat") { tstat.heat(); result = true }
-					else if(mode == "cool") { tstat.cool(); result = true }
-					else if(mode == "off") { tstat.off(); result = true }
-					else {
-						if(mode == "eco") {
-							tstat.eco(); result = true
-							LogTrace("setTstatMode mode action | type: $autoType")
-							if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
-						}
+		def curMode = tstat?.currentnestThermostatMode?.toString()
+		if (curMode != mode) {
+			try {
+				if(mode == "auto") { tstat.auto(); result = true }
+				else if(mode == "heat") { tstat.heat(); result = true }
+				else if(mode == "cool") { tstat.cool(); result = true }
+				else if(mode == "off") { tstat.off(); result = true }
+				else {
+					if(mode == "eco") {
+						tstat.eco(); result = true
+						LogTrace("setTstatMode mode action | type: $autoType")
+						if(autoType) { sendEcoActionDescToDevice(tstat, autoType) } // THIS ONLY WORKS ON NEST THERMOSTATS
 					}
 				}
-				catch (ex) {
-					log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
-					parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
-				}
 			}
-		}
-		catch (ex) {
-			log.error "setTstatMode() Exception: Missing parent method setNModeActive; check IDE and install instructions", ex
-			sendNofificationMsg("Warning", "Improper installation of software, check IDE logs and installation instructions")
-			parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+			catch (ex) {
+				log.error "setTstatMode() Exception: ${tstat?.label} does not support mode ${mode}; check IDE and install instructions", ex
+				parent?.sendExceptionData(ex, "setTstatMode", true, getAutoType())
+			}
 		}
 
 		if(result) { LogAction("setTstatMode: '${tstat?.label}' Mode set to (${strCapitalize(mode)})", "info", false) }
