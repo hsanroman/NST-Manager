@@ -56,7 +56,7 @@ metadata {
 		multiAttributeTile(name:"alarmState", type:"generic", width:6, height:4) {
 			tileAttribute("device.alarmState", key: "PRIMARY_CONTROL") {
 				attributeState("default", label:'--', icon: "st.unknown.unknown.unknown")
-				attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#44B621")
+				attributeState("ok", label:"clear", icon:"st.alarm.smoke.clear", backgroundColor:"#00a0dc")
 				attributeState("smoke-warning", label:"SMOKE!\nWARNING", icon:"st.alarm.smoke.smoke", backgroundColor:"#e8d813")
 				attributeState("smoke-emergency", label:"SMOKE!", icon:"st.alarm.smoke.smoke", backgroundColor:"#e86d13")
 				attributeState("co-warning", label:"CO!\nWARNING!", icon:"st.alarm.carbon-monoxide.carbon-monoxide", backgroundColor:"#e8d813")
@@ -64,7 +64,7 @@ metadata {
 			}
 			tileAttribute("device.batteryState", key: "SECONDARY_CONTROL") {
 				attributeState("default", label:'unknown', icon: "st.unknown.unknown.unknown")
-				attributeState("ok", label: "Battery: OK", backgroundColor: "#44B621",
+				attributeState("ok", label: "Battery: OK", backgroundColor: "#00a0dc",
 					icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_ok_v.png")
 				attributeState("replace", label: "Battery: REPLACE!", backgroundColor: "#e86d13",
 					icon: "https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/battery_low_v.png")
@@ -72,7 +72,7 @@ metadata {
 		}
 		standardTile("main2", "device.alarmState", width: 2, height: 2) {
 			state("default", label:'--', icon: "st.unknown.unknown.unknown")
-			state("ok", label:"clear", backgroundColor:"#44B621",
+			state("ok", label:"clear", backgroundColor:"#00a0dc",
 				icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/alarm_clear.png")
 			state("smoke-warning", label:"SMOKE!\nWARNING", backgroundColor:"#e8d813",
 				icon:"https://raw.githubusercontent.com/tonesto7/nest-manager/master/Images/Devices/smoke_warn.png")
