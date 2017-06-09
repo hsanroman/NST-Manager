@@ -611,6 +611,7 @@ def prefsPage() {
 			input ("useMilitaryTime", "bool", title: "Use Military Time (HH:mm)?", defaultValue: false, submitOnChange: true, required: false, image: getAppImg("military_time_icon.png"))
 			input ("disAppIcons", "bool", title: "Disable App Icons?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("no_icon.png"))
 			input ("debugAppendAppName", "bool", title: "Show App/Device Name on all Log Entries?", required: false, defaultValue: true, submitOnChange: true, image: getAppImg("log.png"))
+			input ("showDataChgdLogs", "bool", title: "Show Changed Data Items in Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_on_icon.png"))
 			atomicState.needChildUpd = true
 		}
 		section("Customize Application Label:") {
@@ -1506,6 +1507,7 @@ def debugPrefPage() {
 	def execTime = now()
 	dynamicPage(name: "debugPrefPage", install: false) {
 		section ("Application Logs") {
+			input ("showDataChgdLogs", "bool", title: "Show Changed Data Items in Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("switch_on_icon.png"))
 			input (name: "appDebug", type: "bool", title: "Show ${appName()} Logs in the IDE?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("log.png"))
 			if(appDebug) {
 				input (name: "advAppDebug", type: "bool", title: "Show Verbose Logs?", required: false, defaultValue: false, submitOnChange: true, image: getAppImg("list_icon.png"))
@@ -3478,14 +3480,15 @@ def didChange(old, newer, type, src) {
 					atomicState?.forceChildUpd = true
 					LogTrace("structure old newer not the same ${atomicState?.structures}")
 					// whatChanged(t0, t1, "/structures", "structure")
-					def chgs = getChanges(t0, t1, "/structures", "structure")
-					if(chgs) {
-						LogAction("STRUCTURE Changed ($srcStr): ${chgs}", "info", true)
-					}
+					if(settings?.showDataChgdLogs == true) {
+						def chgs = getChanges(t0, t1, "/structures", "structure")
+						if(chgs) { LogAction("STRUCTURE Changed ($srcStr): ${chgs}", "info", true) }
+					} else { LogAction("API Structure Data HAS Changed", "info", true) }
 				}
 				atomicState?.structData = newer
 			}
 			else if(type == "dev") {
+				def devChg = false
 				def tstats = atomicState?.thermostats.collect { dni ->
 					def t1 = dni.key
 					if(t1 && old && old?.thermostats && newer?.thermostats &&
@@ -3496,10 +3499,12 @@ def didChange(old, newer, type, src) {
 						LogTrace("thermostat old newer not the same ${t1}")
 						if(t1 && old && old?.thermostats && newer?.thermostats && old?.thermostats[t1] && newer?.thermostats[t1]) {
 							// whatChanged(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}", "thermostat")
-							def chgs = getChanges(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}", "thermostat")
-							if(chgs) {
-								LogAction("THERMOSTAT Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
-							}
+							if(settings?.showDataChgdLogs == true) {
+								def chgs = getChanges(old?.thermostats[t1], newer?.thermostats[t1], "/devices/thermostats/${t1}", "thermostat")
+								if(chgs) {
+									LogAction("THERMOSTAT Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
+								}
+							} else { devChg = true }
 						}
 					}
 				}
@@ -3514,10 +3519,12 @@ def didChange(old, newer, type, src) {
 						LogTrace("protect old newer not the same ${t1}")
 						if(t1 && old && old?.smoke_co_alarms && newer?.smoke_co_alarms && old?.smoke_co_alarms[t1] && newer?.smoke_co_alarms[t1]) {
 							// whatChanged(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}", "protect")
-							def chgs = getChanges(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}", "protect")
-							if(chgs) {
-								LogAction("PROTECT Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
-							}
+							if(settings?.showDataChgdLogs == true) {
+								def chgs = getChanges(old?.smoke_co_alarms[t1], newer?.smoke_co_alarms[t1], "/devices/smoke_co_alarms/${t1}", "protect")
+								if(chgs) {
+									LogAction("PROTECT Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
+								}
+							} else { devChg = true }
 						}
 					}
 				}
@@ -3532,12 +3539,17 @@ def didChange(old, newer, type, src) {
 						LogTrace("camera old newer not the same ${t1}")
 						if(t1 && old && old?.cameras && newer?.cameras && old?.cameras[t1] && newer?.cameras[t1]) {
 							//whatChanged(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}", "camera")
-							def chgs = getChanges(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}", "camera")
-							if(chgs) {
-								LogAction("CAMERA Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
-							}
+							if(settings?.showDataChgdLogs == true) {
+								def chgs = getChanges(old?.cameras[t1], newer?.cameras[t1], "/devices/cameras/${t1}", "camera")
+								if(chgs) {
+									LogAction("CAMERA Changed ($srcStr) | ${getChildDeviceLabel(t1)}: ${chgs}", "info", true)
+								}
+							} else { devChg = true }
 						}
 					}
+				}
+				if(devChg && settings?.showDataChgdLogs != true) {
+					LogAction("API Device Data HAS Changed", "info", true)
 				}
 				atomicState?.deviceData = newer
 
@@ -3547,10 +3559,12 @@ def didChange(old, newer, type, src) {
 				atomicState.needChildUpd = true
 				atomicState.metaData = newer
 				//whatChanged(old, newer, "/metadata", "metadata")
-				def chgs = getChanges(old, newer, "/metadata", "metadata")
-				if(chgs) {
-					LogAction("METADATA Changed ($srcStr): ${chgs}", "info", true)
-				}
+				if(settings?.showDataChgdLogs == true) {
+					def chgs = getChanges(old, newer, "/metadata", "metadata")
+					if(chgs) {
+						LogAction("METADATA Changed ($srcStr): ${chgs}", "info", true)
+					}
+				} else { LogAction("API MetaData Data HAS Changed", "info", true) }
 			}
 		}
 	}
