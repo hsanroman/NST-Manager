@@ -645,9 +645,12 @@ def pollPrefPage() {
 		section("") {
 			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
 		}
-		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) {
+		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
+				if(!settings?.restStreaming) {
+					paragraph title: "Streaming is an Experimental Feature", "It requires the install of our local NodeJS streaming service running on your home network. \n\n(This is a donation only feature)\nPlease send me a PM in the Community Forum if you have already donated and are interested"
+				}
 			}
 			if(settings?.restStreaming) {
 				section("Configure Streaming Service:") {
