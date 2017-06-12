@@ -645,9 +645,12 @@ def pollPrefPage() {
 		section("") {
 			paragraph "Polling Preferences", image: getAppImg("timer_icon.png")
 		}
-		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt() || betaMarker()) {
+		if(atomicState?.appData?.eventStreaming?.enabled == true || getDevOpt()) {
 			section("Rest Streaming (Experimental):") {
 				input(name: "restStreaming", title:"Enable Rest Streaming?", type: "bool", defaultValue: false, required: false, submitOnChange: true, image: getAppImg("two_way_icon.png"))
+				if(!settings?.restStreaming) {
+					paragraph title: "Streaming is an Experimental Feature", "It requires the install of our local NodeJS streaming service running on your home network. \n\n(This is a donation only feature)\nPlease send me a PM in the Community Forum if you have already donated and are interested"
+				}
 			}
 			if(settings?.restStreaming) {
 				section("Configure Streaming Service:") {
@@ -901,35 +904,57 @@ def automationsPage() {
 def automationSchedulePage() {
 	def execTime = now()
 	dynamicPage(name: "automationSchedulePage", title: "View Schedule Data..", uninstall: false) {
-		section("SmartThings Location:") {
+		section() {
 			def str = ""
 			def tz = TimeZone.getTimeZone(location.timeZone.ID)
 			def sunsetT = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunsetTime')).format('h:mm a', tz)
 			def sunriseT = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSX", location.currentValue('sunriseTime')).format('h:mm a', tz)
-			str += "Current Mode: ${location?.mode}"
-			str += "\nSunrise: ${sunriseT}"
-			str += "\nSunset: ${sunsetT}"
-			paragraph "$str", state: "complete"
+			str += "Mode: (${location?.mode})"
+			str += "\nSunrise: (${sunriseT})"
+			str += "\nSunset: (${sunsetT})"
+			paragraph title: "SmartThings Location Info:", "$str", state: "complete"
 		}
 		def schMap = []
 		def schSize = 0
-		getChildApps()?.each {
-			if(it?.getStateVal("newAutomationFile") == null) { return }
-			def schInfo = it?.getScheduleDesc()
+		getChildApps()?.each { capp ->
+			if(capp?.getStateVal("newAutomationFile") == null) { return }
+			def schedActMap = [:]
+			def schInfo = capp?.getScheduleDesc()
 			if (schInfo?.size()) {
 				schSize = schSize+1
-				def curSch = it?.getCurrentSchedule()
-				section("${it?.label}") {
-					schInfo?.each { schItem ->
+				def curSch = capp?.getCurrentSchedule()
+				schInfo?.each { schItem ->
+					section("${capp?.label}") {
 						def schNum = schItem?.key
 						def schDesc = schItem?.value
 						def schInUse = (curSch?.toInteger() == schNum?.toInteger()) ? true : false
 						if(schNum && schDesc) {
+							//def sLbl = "schMot_${schNum}_SchedActive"
+							//def aActSet = !capp?.getSettingVal(sLbl) ? false : true
 							paragraph "${schDesc}", state: schInUse ? "complete" : ""
+							//input(name: "${sLbl}", type: "bool", title: "Schedule ${schNum} Active", required: false, submitOnChange: true, defaultValue: aActSet, image: getAppImg("switch_on_icon.png"))
+							//schedActMap["$schNum"] = settings["${sLbl}"]
 						}
 					}
 				}
 			}
+			// if(schedActMap.size()) {
+			// 	log.debug "schedActMap: $schedActMap"
+			// 	def schNeedUpd = false
+			// 	schedActMap?.each { schSet ->
+			// 		def sKey = schSet?.key
+			// 		def sVal = schSet?.value
+			// 		def sLbl = "schMot_${sKey}_SchedActive"
+			// 		log.debug "schSet: $schSet | chldSet: ${capp?.getSettingVal(sLbl)}"
+			// 		def aActSet = capp?.getSettingVal(sLbl)
+			// 		if(sVal.toString() != capp?.getSettingVal(sLbl).toString()) {
+			// 			schNeedUpd = true
+			// 			LogAction("modifying schedule (${sKey}) state to (${sVal})...", "debug", true)
+			// 			capp?.updSchedActiveState(sKey.toString(), sVal.toString())
+			// 		} else { LogAction("no schedule changes detected.  Ignoring...", "info", true) }
+			// 	}
+			// 	if(schNeedUpd == true) { capp?.updateScheduleStateMap() }
+			// }
 		}
 		if(schSize < 1) {
 			section("") {
@@ -941,6 +966,22 @@ def automationSchedulePage() {
 	}
 }
 
+void processAutoSchedChgs() {
+	def sMap = atomicState?.schedActMap
+	if(sMap.size()) {
+		getChildApps()?.each { capp ->
+			sMap.each { cd ->
+				def sKey = cd?.key
+				def sVal = cd?.value
+				log.debug "cd: $cd"
+				def sLbl = "schMot_${sKey}_SchedActive"
+				if(sVal != capp?.getSettingVal(sLbl)) {
+					capp?.updateSchedActiveState(sKey, sVal)
+				}
+			}
+		}
+	}
+}
 def automationStatisticsPage() {
 	def execTime = now()
 	dynamicPage(name: "automationStatisticsPage", title: "Installed Automations Stats\n(Auto-Refreshes every 20 sec.)", refreshInterval: 20, uninstall: false) {
@@ -3991,7 +4032,7 @@ def setDeviceLabel(devId, labelStr) {
 }
 
 def tUnitStr() {
-	return "°${state?.tempUnit}"
+	return "°${getTemperatureScale()}"
 }
 
 void physDevLblHandler(devType, devId, devLbl, devStateName, apiName, abrevStr, ovrRideNames) {
