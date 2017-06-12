@@ -5770,24 +5770,26 @@ def getScheduleDesc(num = null) {
 			str += isDayRes ?	"\n │ ${isSw || isPres ? "├" : "└"} Days:${getSchRestrictDoWOk(schNum) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += isDayRes ?	"\n │ ${isSw || isPres ? "│" :"    "} └ ${dayStr}" : ""
 
-			def p1Len = schData?.p1 ? schData?.p1?.toString().length() : 0
-			def p1Str = ""
-			def p1dSize = 1
-			schData?.p1?.each { ps1 ->
-				p1Str += ps1 ? "\n ${isSw || isPres || isTemp ? "│     " : "     "} ${p1dSize < schData?.p1.size() ? "├" : "└"} ${ps1.toString()}" : ""
-				p1dSize = p1dSize+1
-			}
-			def p0Len = schData?.p0 ? schData?.p0?.toString().length() : 0
-			def p0Str = ""
-			def p0dSize = 1
-			schData?.p0?.each { ps0 ->
-				p0Str += ps0 ? "\n ${isSw || isPres || isTemp ? "│     " : "     "} ${p0dSize < schData?.p0.size() ? "├" : "└"} ${ps0.toString()}" : ""
-				p0dSize = p0dSize+1
-			}
+			// def p1Len = schData?.p1 ? schData?.p1?.toString().length() : 0
+			// def p1Str = ""
+			// def p1dSize = 1
+			// settings["${sLbl}restrictionPresAway"]?.each { ps1 ->
+			// 	p1Str += ps1 ? "\n ${isSw || isPres || isTemp ? "│     " : "     "} ${p1dSize < settings["${sLbl}restrictionPresAway"].size() ? "├" : "└"} ${ps1.toString()}${!isPresenceHome(ps1) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
+			// 	p1dSize = p1dSize+1
+			// }
+			// def p0Len = schData?.p0 ? schData?.p0?.toString().length() : 0
+			// def p0Str = ""
+			// def p0dSize = 1
+			// settings["${sLbl}restrictionPresHome"]?.each { ps0 ->
+			// 	p0Str += ps0 ? "\n ${isSw || isPres || isTemp ? "│     " : "     "} ${p0dSize < settings["${sLbl}restrictionPresHome"].size() ? "├" : "└"} ${ps0.toString()}" : ""
+			// 	p0dSize = p0dSize+1
+			// }
 			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "├" : "└"} Presence Home:${isSomebodyHome(settings["${sLbl}restrictionPresHome"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
-			str += schData?.p1 ? "$p1Str" : ""
+			//str += schData?.p1 ? "$p1Str" : ""
+			str += schData?.p1 ?	"\n │ ${(schData?.p0 || isSw) ? "│" : "   "} └ (${schData?.p1.size()} Selected)" : ""
 			str += schData?.p0 ?	"\n │ ${isSw ? "├" : "└"} Presence Away:${!isSomebodyHome(settings["${sLbl}restrictionPresAway"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
-			str += schData?.p0 ? "$p0Str" : ""
+			//str += schData?.p0 ? "$p0Str" : ""
+			str += schData?.p0 ? 	"\n │ ${isSw ? "│" : "   "} └ (${schData?.p0.size()} Selected)" : ""
 
 			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "├" : "└"} Switches On:${isSwitchOn(settings["${sLbl}restrictionSwitchOn"]) ? " (${okSym()})" : " (${notOkSym()})"}" : ""
 			str += schData?.s1 ?	"\n │ ${schData?.s0 ? "│" : "   "} └ (${schData?.s1.size()} Selected)" : ""
@@ -5801,17 +5803,17 @@ def getScheduleDesc(num = null) {
 			str += schData?.hvacm ? "\n ${tempPreBar}  └ HVAC Mode: (${strCapitalize(schData?.hvacm)})" : ""
 
 			//Motion Info
-			def m0Len = schData?.p0 ? schData?.p0?.toString().length() : 0
-			def m0Str = ""
-			def m0dSize = 1
-			schData?.m0?.each { ms0 ->
-				m0Str += ms0 ? "\n     ${isTemp || isFanEn || isRemSen || isRestrict ? "│" : " "} ${m0dSize < schData?.m0.size() ? "├" : "└"} ${ms0.toString()}" : ""
-				m0dSize = m0dSize+1
-			}
+			// def m0Len = schData?.p0 ? schData?.p0?.toString().length() : 0
+			// def m0Str = ""
+			// def m0dSize = 1
+			// schData?.m0?.each { ms0 ->
+			// 	m0Str += ms0 ? "\n     ${isTemp || isFanEn || isRemSen || isRestrict ? "│" : " "} ${m0dSize < schData?.m0.size() ? "├" : "└"} ${ms0.toString()}" : ""
+			// 	m0dSize = m0dSize+1
+			// }
 			str += isMot ?				"${isTemp || isFanEn || isRemSen || isRestrict ? "\n │\n" : "\n"} ${isRemSen ? "├" : "└"} Motion Settings:" : ""
 			str += isMot ?		 		"\n ${motPreBar ? "│" : "   "} ${(schData?.mctemp || schData?.mhtemp) ? "├" : "└"} Motion Sensors: (${schData?.m0.size()})" : ""
-			str += schData?.m0 ? "$m0Str" : ""
-			str += isMot ?				"\n ${motPreBar ? "│" : "   "} ${schData?.mctemp || schData?.mhtemp ? "│" : ""} └ (${isMotionActive(settings["${sLbl}Motion"]) ? "Active" : "None Active"})" : ""
+			//str += schData?.m0 ? "$m0Str" : ""
+			//str += isMot ?				"\n ${motPreBar ? "│" : "   "} ${schData?.mctemp || schData?.mhtemp ? "│" : ""} └ (${isMotionActive(settings["${sLbl}Motion"]) ? "Active" : "None Active"})" : ""
 			str += isMot && schData?.mctemp ? 	"\n ${motPreBar ? "│" : "   "} ${(schData?.mctemp || schData?.mhtemp) ? "├" : "└"} Mot. Cool Setpoint: (${fixTempSetting(schData?.mctemp)}${tempScaleStr})" : ""
 			str += isMot && schData?.mhtemp ? 	"\n ${motPreBar ? "│" : "   "} ${schData?.mdelayOn || schData?.mdelayOff ? "├" : "└"} Mot. Heat Setpoint: (${fixTempSetting(schData?.mhtemp)}${tempScaleStr})" : ""
 			str += isMot && schData?.mhvacm ? 	"\n ${motPreBar ? "│" : "   "} ${(schData?.mdelayOn || schData?.mdelayOff) ? "├" : "└"} Mot. HVAC Mode: (${strCapitalize(schData?.mhvacm)})" : ""
