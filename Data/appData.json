@@ -24,7 +24,7 @@
         "setupVersion": 2,
         "versions": {
             "app": {
-                "ver": "5.1.1"
+                "ver": "5.1.2"
             },
             "autoapp": {
                 "ver": "5.1.1"
@@ -80,8 +80,8 @@
         "count": 8
     },
     "eventStreaming": {
-        "enabled": false,
-        "minVersion": "0.8.5"
+        "enabled": true,
+        "minVersion": "1.0.0"
     },
     "healthcheck": {
         "camTimeout": 120,

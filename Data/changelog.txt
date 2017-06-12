@@ -1,3 +1,8 @@
+V5.1.2 (June 12th, 2017):
+▔▔▔▔▔▔▔▔▔▔▔
+Manager App:
+ • UPDATED: Enabled Rest Streaming Functionality for public (Donators Only)
+
 V5.1.1 (June 8th, 2017):
 ▔▔▔▔▔▔▔▔▔▔▔
 Manager App:
