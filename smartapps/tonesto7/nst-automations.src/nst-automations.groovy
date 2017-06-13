@@ -2952,7 +2952,7 @@ def extTmpTempOk() {
 		def retval = true
 		def tempOk = true
 
-		def dpOk = (curDp < dpLimit) ? true : false
+		def dpOk = (curDp < dpLimit || !canCool) ? true : false
 		if(!dpOk) { retval = false }
 
 		def str
