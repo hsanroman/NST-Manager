@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.1.1" }
-def appVerDate() { "6-08-2017" }
+def appVersion() { "5.1.2" }
+def appVerDate() { "6-13-2017" }
 
 preferences {
 	//startPage
@@ -1185,6 +1185,12 @@ def scheduleAutomationEval(schedtime = 20) {
 		case "schMot":
 			if(theTime == 20) {
 				theTime = 20 + random_int
+			}
+			def schWaitVal = settings?.schMotWaitVal?.toInteger() ?: 60
+			if(schWaitVal > 60) { schWaitVal = 60 }
+			def t0 = getLastschMotEvalSec() + theTime
+			if(t0 < schWaitVal) {
+				theTime = theTime + (schWaitVal - t0)  // avoid too soon wakeups
 			}
 			break
 		case "watchDog":
