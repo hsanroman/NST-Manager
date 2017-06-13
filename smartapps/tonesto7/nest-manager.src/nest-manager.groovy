@@ -40,7 +40,7 @@ def appVersion() { "5.1.2" }
 def appVerDate() { "6-12-2017" }
 def minVersions() {
 	return [
-		"automation":["val":511, "desc":"5.1.1"],
+		"automation":["val":512, "desc":"5.1.2"],
 		"thermostat":["val":510, "desc":"5.1.0"],
 		"protect":["val":510, "desc":"5.1.0"],
 		"presence":["val":510, "desc":"5.1.0"],
@@ -2982,7 +2982,7 @@ def callRestoreState(child, restId) {
 /*
 	NOTE: MIGRATION STEP 3  (Really part of STEP 3)
 	This is called by the child once it's state data has been restored and it's purpose is
-	finalize the restore setting values and disable/or remove the old automations.
+	finalize the restore setting values and disable or remove the old automations.
 	The removal is controlled by the method keepBackups().
 	PARENT METHOD
 */
@@ -3524,7 +3524,7 @@ def didChange(old, newer, type, src) {
 					if(settings?.showDataChgdLogs == true) {
 						def chgs = getChanges(t0, t1, "/structures", "structure")
 						if(chgs) { LogAction("STRUCTURE Changed ($srcStr): ${chgs}", "info", true) }
-					} else { LogAction("API Structure Data HAS Changed", "info", true) }
+					} else { LogAction("API Structure Data HAS Changed ($srcStr)", "info", true) }
 				}
 				atomicState?.structData = newer
 			}
@@ -3590,7 +3590,7 @@ def didChange(old, newer, type, src) {
 					}
 				}
 				if(devChg && settings?.showDataChgdLogs != true) {
-					LogAction("API Device Data HAS Changed", "info", true)
+					LogAction("API Device Data HAS Changed ($srcStr)", "info", true)
 				}
 				atomicState?.deviceData = newer
 
@@ -3605,7 +3605,7 @@ def didChange(old, newer, type, src) {
 					if(chgs) {
 						LogAction("METADATA Changed ($srcStr): ${chgs}", "info", true)
 					}
-				} else { LogAction("API MetaData Data HAS Changed", "info", true) }
+				} else { LogAction("API MetaData Data HAS Changed ($srcStr)", "info", true) }
 			}
 		}
 	}
@@ -4768,7 +4768,7 @@ def queueProcNestApiCmd(uri, typeId, type, obj, objVal, qnum, cmd, redir = false
 			body: data.toString()
 		]
 		LogTrace("queueProcNestApiCmd Url: $uri | params: ${params}")
-		LogAction("Processing Queued Cmd: [ObjId: ${typeId} | ObjType: ${type} | ObjKey: ${obj} | ObjVal: ${objVal} | QueueNum: ${qnum}]", "trace", true)
+		LogAction("Processing Queued Cmd: [ObjId: ${typeId} | ObjType: ${type} | ObjKey: ${obj} | ObjVal: ${objVal} | QueueNum: ${qnum} | Redirect: ${redir}]", "trace", true)
 		atomicState?.lastCmdSent = "$type: (${obj}: ${objVal})"
 
 		if(!redir && (getRecentSendCmd(qnum) > 0) && (getLastCmdSentSeconds(qnum) < 60)) {
@@ -5777,8 +5777,8 @@ def schedVoiceDesc(num, data, motion) {
 }
 
 /************************************************************************************************
-|			This Section Discovers all structures and devices on your Nest Account.				|
-|			It also Adds/Removes Devices from ST												|
+|	This Section Discovers all structures and devices on your Nest Account.			|
+|	It also Adds Removes Devices from ST							|
 *************************************************************************************************/
 
 def getNestStructures() {
@@ -8265,10 +8265,10 @@ def removeFirebaseData(pathVal) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-/********************************************************************************************
-|    						Application Name: Nest Automations								|
-|    						Author: Anthony S. (@tonesto7) | Eric S. (@E_Sch)			    |
-|********************************************************************************************/
+/************************************************************************************************
+|				Application Name: Nest Automations				|
+|				Author: Anthony S. (@tonesto7) | Eric S. (@E_Sch)		|
+|************************************************************************************************/
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 // Calls by Automation children
@@ -8463,8 +8463,8 @@ def getAutoIcon(type) {
 }
 
 // /********************************************************************************
-// |		SCHEDULE, MODE, or MOTION CHANGES ADJUST THERMOSTAT SETPOINTS			|
-// |		(AND THERMOSTAT MODE) AUTOMATION CODE									|
+// |		SCHEDULE, MODE, or MOTION CHANGES ADJUST THERMOSTAT SETPOINTS	|
+// |		(AND THERMOSTAT MODE) AUTOMATION CODE				|
 // *********************************************************************************/
 //
 def getTstatAutoDevId() {
@@ -8829,7 +8829,7 @@ def appName()		{ return "${parent ? "${autoAppName()}" : "${appLabel()}"}${appDe
 def appLabel()		{ return inReview() ? "NST Manager" : "Nest Manager" }
 def appAuthor()		{ return "Anthony S." }
 def appNamespace()	{ return "tonesto7" }
-def useNewAutoFile(){ return true }
+def useNewAutoFile()	{ return true }
 def blockOldAuto()	{ return true }
 def newAutoName()	{ return "NST Automations" }
 def autoAppName()	{ return "NST Automations" }
