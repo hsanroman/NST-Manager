@@ -27,8 +27,8 @@ definition(
 	appSetting "devOpt"
 }
 
-def appVersion() { "5.1.2" }
-def appVerDate() { "6-13-2017" }
+def appVersion() { "5.1.3" }
+def appVerDate() { "6-14-2017" }
 
 preferences {
 	//startPage
@@ -1305,7 +1305,9 @@ def getAutoActionData() {
 }
 
 def automationGenericEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	if(isRemSenConfigured() && settings?.vthermostat) {
 		atomicState.needChildUpdate = true
 	}
@@ -1342,7 +1344,9 @@ def watchDogPage() {
 }
 
 def automationSafetyTempEvt(evt) {
-	LogAction("Event | Thermostat Safety Temp Exceeded: '${evt.displayName}' (${evt.value})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("Event | Thermostat Safety Temp Exceeded: '${evt.displayName}' (${evt.value}) with a delay of ${eventDelay}ms", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		if(evt?.value == "true") {
@@ -1493,7 +1497,9 @@ def getLastMotionInActiveSec(mySched) {
 }
 
 def automationMotionEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: '${evt?.displayName}' | Motion: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: '${evt?.displayName}' | Motion: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		storeLastEventData(evt)
@@ -3268,7 +3274,9 @@ def extTmpTempCheck(cTimeOut = false) {
 }
 
 def extTmpGenericEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	storeLastEventData(evt)
 	extTmpDpOrTempEvt("${evt?.name}")
 }
@@ -3557,7 +3565,9 @@ def conWatCheck(cTimeOut = false) {
 }
 
 def conWatContactEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def conWatTstat = settings?.schMotTstat
@@ -3776,7 +3786,9 @@ def leakWatCheck() {
 }
 
 def leakWatSensorEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	else {
 		def curMode = leakWatTstat?.currentThermostatMode.toString()
@@ -3921,7 +3933,9 @@ def isNestModesConfigured() {
 }
 
 def nModeGenericEvt(evt) {
-	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)})", "trace", true)
+	def startTime = now()
+	def eventDelay = startTime - evt.date.getTime()
+	LogAction("${evt?.name.toUpperCase()} Event | Device: ${evt?.displayName} | Value: (${strCapitalize(evt?.value)}) with a delay of ${eventDelay}ms", "trace", true)
 	if(atomicState?.disableAutomation) { return }
 	storeLastEventData(evt)
 	if(nModeDelay) {
