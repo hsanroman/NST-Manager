@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 
 preferences {  }
 
-def devVer() { return "5.1.0" }
+def devVer() { return "5.1.1" }
 
 // for the UI
 metadata {
@@ -170,7 +170,7 @@ def poll() {
 	parent.refresh(this)
 }
 
-def refresh() {
+void refresh() {
 	poll()
 }
 
@@ -394,7 +394,7 @@ void setPresence() {
 	}
 }
 
-def setAway() {
+void setAway() {
 	try {
 		log.trace "setAway()..."
 		parent.setStructureAway(this, "true")
@@ -406,7 +406,7 @@ def setAway() {
 	}
 }
 
-def setHome() {
+void setHome() {
 	try {
 		log.trace "setHome()..."
 		parent.setStructureAway(this, "false")
