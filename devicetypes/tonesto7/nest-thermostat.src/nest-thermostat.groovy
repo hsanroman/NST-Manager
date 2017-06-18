@@ -13,7 +13,7 @@
 import java.text.SimpleDateFormat
 import groovy.time.*
 
-def devVer() { return "5.1.1" }
+def devVer() { return "5.1.2" }
 
 // for the UI
 metadata {
@@ -418,12 +418,12 @@ def parse(String description) {
 	LogAction("Parsing '${description}'")
 }
 
-def poll() {
+void poll() {
 	Logger("Polling parent...")
-	poll()
+	refresh()
 }
 
-def refresh() {
+void refresh() {
 	pauseEvent("false")
 	parent.refresh(this)
 }
@@ -671,7 +671,7 @@ def isCodeUpdateAvailable(newVer, curVer) {
 	return result
 }
 
-def ecoDesc(val) {
+void ecoDesc(val) {
 	ecoDescEvent(val)
 }
 
@@ -981,7 +981,7 @@ def presenceEvent(presence) {
 	} else { LogAction("Presence - Present: (${pres}) | Original State: (${val}) | State Variable: ${state?.present}") }
 }
 
-def whoMadeChanges(autoType, desc, dt) {
+void whoMadeChanges(autoType, desc, dt) {
 	// log.debug "whoMadeChanges: $autoType: $desc | dt: $dt"
 	def curType = device?.currentState("whoMadeChanges")?.value
 	def curDesc = device?.currentState("whoMadeChangesDesc")?.value
@@ -1075,7 +1075,7 @@ def operatingStateEvent(opState=null) {
 	}
 
 	if(isStateChange(device, "nestThermostatOperatingState", operState.toString())) {
-		Logger("UPDATED | nestOperatingState is (${operState.toString().capitalize()}) | Original State: (${nesthvacState.toString().capitalize()})")
+		LogAction("UPDATED | nestOperatingState is (${operState.toString().capitalize()}) | Original State: (${nesthvacState.toString().capitalize()})")
 		sendEvent(name: 'nestThermostatOperatingState', value: operState, descriptionText: "Device is ${operState}")
 	} else {
 		LogAction("nestOperatingState is (${operState}) | Original State: (${nesthvacState})")
@@ -1083,7 +1083,7 @@ def operatingStateEvent(opState=null) {
 
 	def hvacState = device.currentState("thermostatOperatingState")?.stringValue
 	if(isStateChange(device, "thermostatOperatingState", newoperState.toString())) {
-		Logger("UPDATED | OperatingState is (${newoperState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
+		LogAction("UPDATED | OperatingState is (${newoperState.toString().capitalize()}) | Original State: (${hvacState.toString().capitalize()})")
 		sendEvent(name: 'thermostatOperatingState', value: newoperState, descriptionText: "Device is ${newoperState}", displayed: true, isStateChange: true)
 	} else {
 		LogAction("OperatingState is (${newoperState}) | Original State: (${hvacState})")
@@ -1855,7 +1855,7 @@ def getHvacModes() {
 	return modesList
 }
 
-def changeMode() {
+void changeMode() {
 	//LogAction("changeMode..")
 	def currentMode = getHvacMode()
 	def lastTriedMode = currentMode ?: "off"
