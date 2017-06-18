@@ -13,7 +13,7 @@ import groovy.time.TimeCategory
 
 preferences { }
 
-def devVer() { return "5.1.1" }
+def devVer() { return "5.1.0" }
 
 metadata {
 	definition (name: "${textDevName()}", author: "Anthony S.", namespace: "tonesto7") {
@@ -223,16 +223,16 @@ def parse(String description) {
 	LogAction("Parsing '${description}'", "debug")
 }
 
-void poll() {
+def poll() {
 	Logger("polling parent...")
 	parent.refresh(this)
 }
 
-void refresh() {
+def refresh() {
 	poll()
 }
 
-void cltLiveStreamStart() {
+def cltLiveStreamStart() {
 	//log.trace "video stream start()"
 	def url = getCamPlaylistURL().toString()
 	def imgUrl = "http://cdn.device-icons.smartthings.com/camera/dlink-indoor@2x.png"
